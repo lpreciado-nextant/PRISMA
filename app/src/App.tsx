@@ -22,9 +22,15 @@ export default function App() {
   const route = useRoute();
 
   const [present, setPresent] = useState(() => sessionStorage.getItem(PRESENT_KEY) === "1");
+  const [bannerHidden, setBannerHidden] = useState(false);
   useEffect(() => {
     sessionStorage.setItem(PRESENT_KEY, present ? "1" : "0");
   }, [present]);
+
+  const togglePresent = useCallback(() => {
+    setPresent((p) => !p);
+    setBannerHidden(false);
+  }, []);
 
   /**
    * Present mode restricts the catalogue rather than hiding rows in the UI.
@@ -55,10 +61,17 @@ export default function App() {
     if (isSolutionRoute && !solution) navigate("/");
   }, [isSolutionRoute, solution]);
 
+  // Each view starts at the top; "instant" sidesteps the global smooth-scroll.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [route.path]);
+
+  const showBanner = present && !bannerHidden;
+
   return (
     <div
       className="min-h-full"
-      style={{ "--sticky-top": present ? "9.75rem" : "6rem" } as React.CSSProperties}
+      style={{ "--sticky-top": showBanner ? "9.75rem" : "6rem" } as React.CSSProperties}
     >
       <Background />
 
@@ -67,10 +80,12 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         present={present}
-        onTogglePresent={() => setPresent((p) => !p)}
+        onTogglePresent={togglePresent}
       />
 
-      {present && <PresentBanner hidden={hiddenCount} onExit={() => setPresent(false)} />}
+      {showBanner && (
+        <PresentBanner hidden={hiddenCount} onDismiss={() => setBannerHidden(true)} />
+      )}
 
       <main key={route.path}>
         {solution && asset ? (

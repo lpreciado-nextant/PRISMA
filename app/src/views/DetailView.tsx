@@ -75,7 +75,7 @@ export function DetailView({ solution, present }: { solution: Solution; present:
         Back to the library
       </button>
 
-      <section className="glass glass-sheen mt-4 overflow-hidden rounded-[26px]">
+      <section className="glass glass-lite glass-sheen mt-4 overflow-hidden rounded-[26px]">
         <Poster
           id={solution.id}
           name={solution.name}
@@ -135,7 +135,7 @@ export function DetailView({ solution, present }: { solution: Solution; present:
 
           {!present && solution.libraryNotes && (
             <div
-              className="glass rounded-[20px] p-5"
+              className="glass glass-lite rounded-[20px] p-5"
               style={{
                 borderColor: "color-mix(in srgb, var(--proto) 35%, transparent)",
                 background: "color-mix(in srgb, var(--proto) 9%, transparent)",
@@ -213,7 +213,7 @@ export function DetailView({ solution, present }: { solution: Solution; present:
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="glass glass-sheen rounded-[20px] p-6">
+    <section className="glass glass-lite glass-sheen rounded-[20px] p-6">
       <h2 className="eyebrow mb-3">{title}</h2>
       <div style={{ color: "var(--ink-2)" }}>{children}</div>
     </section>

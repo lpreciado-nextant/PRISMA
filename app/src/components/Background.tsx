@@ -16,7 +16,7 @@ export function Background() {
           height="140%"
           colorInterpolationFilters="sRGB"
         >
-          <feTurbulence type="fractalNoise" baseFrequency="0.004 0.007" numOctaves="2" seed="7" result="noise" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.004 0.007" numOctaves="1" seed="7" result="noise" />
           <feGaussianBlur in="noise" stdDeviation="3" result="soft" />
           <feDisplacementMap in="SourceGraphic" in2="soft" scale="24" xChannelSelector="R" yChannelSelector="G" />
         </filter>
@@ -30,24 +30,24 @@ export function Background() {
         }}
       />
 
+      {/* Static by design: animating these layers forces every backdrop-filter
+          panel above to re-blur the whole screen on every frame. */}
       <div
-        className="animate-drift absolute -top-40 -left-32 h-[46rem] w-[46rem] rounded-full blur-[110px]"
+        className="absolute -top-40 -left-32 h-[46rem] w-[46rem] rounded-full blur-[110px]"
         style={{ background: "color-mix(in srgb, var(--sa-ai) 60%, transparent)", opacity: "var(--aurora)" }}
       />
       <div
-        className="animate-drift absolute top-1/3 -right-40 h-[40rem] w-[40rem] rounded-full blur-[120px]"
+        className="absolute top-1/3 -right-40 h-[40rem] w-[40rem] rounded-full blur-[120px]"
         style={{
           background: "color-mix(in srgb, var(--sa-ibo) 58%, transparent)",
           opacity: "var(--aurora)",
-          animationDelay: "-9s",
         }}
       />
       <div
-        className="animate-drift absolute -bottom-52 left-1/4 h-[44rem] w-[44rem] rounded-full blur-[130px]"
+        className="absolute -bottom-52 left-1/4 h-[44rem] w-[44rem] rounded-full blur-[130px]"
         style={{
           background: "color-mix(in srgb, var(--sa-data) 55%, transparent)",
           opacity: "var(--aurora)",
-          animationDelay: "-18s",
         }}
       />
 

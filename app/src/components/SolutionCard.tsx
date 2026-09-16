@@ -18,7 +18,7 @@ export function SolutionCard({
 
   return (
     <article
-      className="glass glass-sheen lift animate-rise group flex cursor-pointer flex-col overflow-hidden rounded-[22px]"
+      className="glass glass-lite glass-sheen lift animate-rise group flex cursor-pointer flex-col overflow-hidden rounded-[22px]"
       style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}
       onClick={() => navigate(`/s/${solution.id}`)}
       onKeyDown={(e) => {

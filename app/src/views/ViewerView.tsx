@@ -68,7 +68,7 @@ export function ViewerView({
         </p>
       )}
 
-      <div className="glass relative flex-1 overflow-hidden rounded-[20px]">
+      <div className="glass glass-lite relative flex-1 overflow-hidden rounded-[20px]">
         <Stage solution={solution} asset={asset} />
       </div>
     </div>

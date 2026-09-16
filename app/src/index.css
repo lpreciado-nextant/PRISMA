@@ -38,7 +38,7 @@
   --glass-edge-hi: rgba(255, 255, 255, 0.26);
   --glass-sheen: rgba(255, 255, 255, 0.18);
   --glass-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.85);
-  --glass-blur: 34px;
+  --glass-blur: 20px;
   --aurora: 0.5;
   --sticky-top: 6rem;
 }
@@ -70,7 +70,7 @@
   --glass-edge-hi: rgba(255, 255, 255, 0.95);
   --glass-sheen: rgba(255, 255, 255, 0.9);
   --glass-shadow: 0 24px 60px -30px rgba(13, 30, 45, 0.4);
-  --glass-blur: 30px;
+  --glass-blur: 18px;
   --aurora: 0.38;
 }
 
@@ -189,8 +189,10 @@
 
   /* Refractive backdrop: the SVG displacement bends the blurred aurora at the
      surface, which is what makes the glass read as liquid rather than frosted.
-     Applied only when the runtime gate confirms Chromium (see liquidGlass.ts). */
-  :root.refract .glass {
+     Applied only when the runtime gate confirms Chromium (see liquidGlass.ts).
+     .glass-lite opts out — used on large repeated surfaces (the card grid)
+     where per-frame displacement during scroll costs more than it shows. */
+  :root.refract .glass:not(.glass-lite) {
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) url(#glass-refraction);
     backdrop-filter: blur(var(--glass-blur)) saturate(180%) url(#glass-refraction);
   }
@@ -248,7 +250,8 @@
     color: var(--ink-3);
   }
 
-  /* The product wordmark: a slowly panning gradient keeps it feeling lit. */
+  /* The product wordmark. The gradient is static: panning it repaints the
+     whole headline every frame and stalls the backdrop-filter panels above. */
   .prisma-wordmark {
     font-family: var(--font-display);
     font-weight: 700;
@@ -263,19 +266,10 @@
       var(--ink) 100%
     );
     background-size: 240% 100%;
+    background-position: 35% 50%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: gradient-pan 16s ease-in-out infinite alternate;
-  }
-
-  @keyframes gradient-pan {
-    from {
-      background-position: 0% 50%;
-    }
-    to {
-      background-position: 100% 50%;
-    }
   }
 
   .sr-only {
@@ -292,24 +286,6 @@
 }
 
 @layer utilities {
-  /* Slow drifting aurora behind the glass */
-  @keyframes drift {
-    0%,
-    100% {
-      transform: translate3d(0, 0, 0) scale(1);
-    }
-    33% {
-      transform: translate3d(4%, -6%, 0) scale(1.14);
-    }
-    66% {
-      transform: translate3d(-5%, 4%, 0) scale(0.92);
-    }
-  }
-
-  .animate-drift {
-    animation: drift 30s ease-in-out infinite;
-  }
-
   @keyframes rise {
     from {
       opacity: 0;

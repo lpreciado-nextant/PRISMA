@@ -31,7 +31,10 @@ export function initPointerSheen() {
 
   const apply = () => {
     raf = 0;
-    const el = (lastEvent?.target as Element | null)?.closest?.(".glass-sheen");
+    // Only small interactive panels track the pointer: repainting a
+    // full-width panel's sheen every mousemove frame is what made the
+    // detail page crawl.
+    const el = (lastEvent?.target as Element | null)?.closest?.(".glass-sheen.lift");
     const next = el instanceof HTMLElement ? el : null;
     if (lit && lit !== next) {
       lit.style.removeProperty("--mx");

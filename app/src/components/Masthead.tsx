@@ -31,7 +31,7 @@ export function Masthead({
             style={{ background: "var(--glass-edge-hi)" }}
             aria-hidden="true"
           />
-          <span className="hidden items-baseline gap-1.5 sm:flex">
+          <span className="hidden items-center gap-1.5 sm:flex">
             <span className="eyebrow">by</span>
             <img
               src={`./nextant-logo-${theme}.png`}
