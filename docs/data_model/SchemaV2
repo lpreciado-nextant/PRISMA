@@ -1,1 +1,236 @@
+# Nextant Solution Library — Dataverse schema (v2)
+
+This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — same base idea, refined through review: `Category` and `Use Case` were dropped as unsustainable governed tag lists, and a new `Project` concept was added to separate "the reusable Solution" from "the evidence that it's been built before."
+
+## Conventions
+
+- **Primary key vs. primary name** — every table gets an auto-generated GUID key (e.g. `nx_solutionid`) plus a required text *primary name* column, used as its display label in lookups.
+- **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` exist on every table without being modeled.
+- **Ownership** — `Solution`, `Project`, `ProjectEvidence`, and `DemoRequest` are **user/team-owned** (row-level security, since different practices submit their own work). `SpecializationArea`, `Industry`, and `Technology` are **organization-owned** (shared reference data).
+- **Native many-to-many** — every tag relationship (SA, Industry, Technology) is a native Dataverse N:N. No hand-built junction tables.
+- **Governance** — `SpecializationArea` and `Industry` are governed (only the Librarian adds new values). `Technology` is open (anyone adds a value inline; the Librarian periodically merges duplicates).
+
+---
+
+## Visual schema
+
+```mermaid
+erDiagram
+    nx_solution }o--o{ nx_specializationarea : "tag"
+    nx_solution }o--o{ nx_industry : "tag"
+    nx_solution }o--o{ nx_technology : "tag"
+    nx_solution ||--o{ nx_demoasset : "1:N"
+    nx_solution ||--o{ nx_demorequest : "1:N"
+    nx_solution ||--o{ nx_project : "1:N"
+    systemuser ||--o{ nx_solution : "Built By"
+    systemuser ||--o{ nx_demorequest : "Requested By"
+    systemuser ||--o{ nx_project : "Project Owner"
+    nx_project }o--o{ nx_technology : "tag"
+    nx_project ||--o{ nx_projectevidence : "1:N"
+
+    nx_solution {
+        guid nx_solutionid PK
+        text SolutionName
+        text Summary
+        choice PublicationStatus
+        choice Shareable
+        lookup BuiltBy FK
+    }
+    nx_demoasset {
+        guid nx_demoassetid PK
+        lookup Solution FK
+        choice AssetType
+        file File
+        url ExternalURL
+    }
+    nx_demorequest {
+        guid nx_demorequestid PK
+        lookup Solution FK
+        lookup RequestedBy FK
+        choice RequestStatus
+    }
+    nx_project {
+        guid nx_projectid PK
+        text ProjectName
+        lookup Solution FK "optional"
+        text ClientIndustry
+        text WhatWasDelivered
+        text BusinessProblem
+        lookup ProjectOwner FK
+        choice Source
+        url ExternalLink
+    }
+    nx_projectevidence {
+        guid nx_projectevidenceid PK
+        lookup Project FK
+        file File
+        choice MediaType
+    }
+```
+
+---
+
+## Reference tables
+
+Shared, organization-owned vocabularies. Every solution and project tags into these.
+
+### `nx_specializationarea`
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Specialization Area *(primary name)* | Text (100) | Yes | AI & Automation · Data Solutions · Intelligent Business Operations |
+| Sort Order | Whole Number | No | |
+
+Native N:N with `nx_solution` — a solution can span more than one specialization area.
+
+### `nx_industry`
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Industry *(primary name)* | Text (100) | Yes | "Financial services", "Manufacturing", etc. |
+| Sort Order | Whole Number | No | |
+
+Native N:N with `nx_solution`.
+
+### `nx_technology`
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Technology *(primary name)* | Text (100) | Yes | Open vocabulary — "React", "Power BI", "LangChain". Grows organically. |
+
+Native N:N with both `nx_solution` and `nx_project` — the stack tagged on a project can be more specific than the solution's general tags.
+
+---
+
+## Main table
+
+### `nx_solution`
+
+The reusable offering — the unit of value shown to a CSM.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Solution Name *(primary name)* | Text (100) | Yes | |
+| One-line Summary | Text (200) | Yes | |
+| What It Does | Text, multi-line (4000) | No | |
+| Business Value | Text, multi-line (4000) | No | |
+| Built By | Lookup → `systemuser` | Yes | |
+| Status | Choice — global | Yes | Idea / concept · Working prototype · Client demo · Live in production · Retired |
+| Publication Status | Choice — global | Yes | Draft · Pending review · Published · Retired — **field-level security, Librarian-only write** |
+| Shareable with Clients | Choice — global | Yes | Yes · Yes, with names removed · No – internal only |
+| Sample Data Level | Choice — global | Yes | Yes – all invented · Partly · No – real client data |
+| Effort / Time to Deploy | Choice — global | No | Days · Weeks · Months · Ongoing programme |
+| Thumbnail | Image | No | |
+| Date Added | Date Only | No | |
+| Library Notes | Text, multi-line (2000) | No | **Field-level security** — internal-only |
+| Search Keywords | Text (500) | No | Editorial boost terms — this is what carries "what need does it solve" now that Category/Use Case are gone |
+
+Tags into `nx_specializationarea`, `nx_industry`, `nx_technology` (all N:N).
+
+---
+
+## Tables related to Solution
+
+Each of these hangs off `nx_solution` with a required N:1 lookup, and inherits the parent's visibility rules.
+
+### `nx_demoasset` — the demo
+
+The curated, presentable asset a CSM opens and shows. Unchanged from v1.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Name *(primary name)* | Text (100) | Yes | |
+| Solution | Lookup → `nx_solution` | Yes | |
+| Asset Type | Choice — global | Yes | Self-contained HTML · Hosted web app (URL) · Power Apps · Power BI · Desktop app or script · Video walkthrough · One-pager / slide |
+| File | File | No | For self-contained HTML |
+| External URL | URL (500) | No | For hosted/embedded links |
+| Allows Embedding | Yes/No | No | |
+| Sort Order | Whole Number | No | |
+
+### `nx_demorequest` — the live-demo ask
+
+The "request a live demo" escape hatch, and a signal of which solutions the business actually pulls on.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Name *(primary name)* | Text (100) | Yes | Auto: "{Solution name} — {Requester}" |
+| Solution | Lookup → `nx_solution` | Yes | |
+| Requested By | Lookup → `systemuser` | Yes | |
+| Client / Opportunity Context | Text, multi-line (1000) | No | |
+| Needed By | Date Only | No | |
+| Request Status | Choice — global | Yes | New · Acknowledged · Scheduled · Delivered · Declined |
+
+### `nx_project` — the evidence
+
+Proof that a solution has actually been delivered somewhere. Does **not** carry the demo — that stays on `nx_demoasset` above.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Project Name *(primary name)* | Text (100) | Yes | |
+| Solution | Lookup → `nx_solution` | **No** | A project can be logged before anyone knows which Solution it belongs to. An empty value is the Librarian's queue of work still to classify. |
+| Client / Industry | Text (200) | Yes | Internal-only |
+| What Was Delivered | Text, multi-line (2000) | Yes | The proof — what actually got built |
+| Business Problem | Text, multi-line (1000) | No | Why the client needed it — carries the "what need does this solve" framing now that there's no separate category tag |
+| Project Owner | Lookup → `systemuser` | Yes | |
+| Source | Choice — global | No | Manual Entry · GitHub |
+| External Link | URL (500) | No | GitHub repo, Power BI workspace, or Power Apps link |
+| Documentation | URL (500) | No | |
+| Date Delivered | Date Only | No | |
+
+Tags into `nx_technology` (N:N) — the specific stack used on this delivery.
+
+---
+
+## Table related to Project
+
+### `nx_projectevidence` — attachments
+
+Child of `nx_project`. Multiple screenshots or videos per project.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Name *(primary name)* | Text (100) | Yes | |
+| Project | Lookup → `nx_project` | Yes | |
+| File | File | Yes | Image or video |
+| Media Type | Choice — global | No | Screenshot · Video |
+| Sort Order | Whole Number | No | |
+
+---
+
+## Relationships summary
+
+| From | To | Type |
+|---|---|---|
+| `nx_solution` | `nx_specializationarea` | N:N |
+| `nx_solution` | `nx_industry` | N:N |
+| `nx_solution` | `nx_technology` | N:N |
+| `nx_solution` | `systemuser` | N:1 |
+| `nx_demoasset` | `nx_solution` | N:1 |
+| `nx_demorequest` | `nx_solution` | N:1 |
+| `nx_demorequest` | `systemuser` | N:1 |
+| `nx_project` | `nx_solution` | N:1 (optional) |
+| `nx_project` | `systemuser` | N:1 |
+| `nx_project` | `nx_technology` | N:N |
+| `nx_projectevidence` | `nx_project` | N:1 |
+
+**8 custom tables:** `nx_solution`, `nx_specializationarea`, `nx_industry`, `nx_technology`, `nx_demoasset`, `nx_demorequest`, `nx_project`, `nx_projectevidence`.
+
+**Dropped from v1:** `nx_capability`, `nx_usecase` — both were governed tag lists that didn't hold up at scale; `Search Keywords` and `Business Problem` absorb what they were for.
+
+---
+
+## Security model
+
+| Role | `nx_solution` | `nx_demoasset` | Reference tables | `nx_demorequest` | `nx_project` | `nx_projectevidence` |
+|---|---|---|---|---|---|---|
+| Contributor | Create; Read/Write own; Read published | Same as parent | Read; Create on `nx_technology` only | Read own | Create; Read/Write own | Same as parent |
+| CSM | Read published only | Read (published parents) | Read | Create; Read own | Read (context on Solution detail) | Read |
+| Librarian | Full | Full | Full | Full | Full | Full |
+
+Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. `Publication Status` and `Library Notes` carry field-level security.
+
+## Still open
+
+- Who classifies an unlinked `nx_project` into a Solution, and how often — a standing queue, or reviewed on a schedule?
+- Whether `nx_project.Source = GitHub` ever grows into an actual sync — out of scope for now, kept as a plain choice + link field.
 
