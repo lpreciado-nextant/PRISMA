@@ -39,9 +39,9 @@ The Librarian is the **only** role that can publish. That gate is what makes it 
 
 | Name | Role |
 |---|---|
-| **Mauricio** | Delivery Manager |
-| **Luis** | Developer |
-| **Juliana** | Developer |
+| **Mauricio Cubillos** | Delivery Manager |
+| **Luis David Preciado** | Developer |
+| **Juliana Castelblanco** | Developer |
 
 ---
 
