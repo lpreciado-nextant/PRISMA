@@ -92,8 +92,9 @@ stateDiagram-v2
 2. **What does it do and why does it matter?** — What It Does, Business Value, client problem it solves. This is the step CSMs depend on most and builders resent most, so it gets inline examples and an optional AI-assist to expand terse bullets into prose.
 3. **Tag it** — Capabilities, technologies, industries, use-case tags. Type-ahead against existing values; new technologies can be created inline (that vocabulary is intentionally open), new capabilities and industries cannot (those are governed).
 4. **Attach the demo** — One or more assets. The form adapts to asset type (see §3.3).
-5. **Safety & sharing** — Shareable with clients, sample data level, client/context. These questions are asked plainly because getting them wrong is the highest-consequence error in the system.
-6. **Review & submit** — A preview of exactly how the card and detail page will look, then submit.
+5. **Images** — One card thumbnail (optional; a generated per-specialization poster covers records without one) plus any number of captioned detail-page screenshots, stored in `nx_solutionimage` (see §6.1a).
+6. **Safety & sharing** — Shareable with clients, sample data level, client/context. These questions are asked plainly because getting them wrong is the highest-consequence error in the system.
+7. **Review & submit** — A preview of exactly how the card and detail page will look, then submit.
 
 On submit the record moves to *Pending review* and the librarian queue is notified. Contributors can see the state of their own submissions at any time.
 
@@ -196,6 +197,10 @@ The [existing schema spec](../data_model/nextant-solution-library-dataverse-sche
 | `nx_usecase` | Bridges the gap between how a client describes their pain and how Nextant describes its capabilities. Governed vocabulary, seeded from real pursuits. |
 
 Both join `nx_solution` via native N:N.
+
+### 6.1a New child table: `nx_solutionimage`
+
+Detail-page screenshots beyond the card thumbnail — the submission form collects them in a dedicated Images step. The `Thumbnail` column on `nx_solution` remains the single card-grid hero image; this table carries the captioned gallery rendered on the solution detail page. 1:N to `nx_solution`, visibility inherited from the parent. Full spec in the [schema doc](../data_model/nextant-solution-library-dataverse-schema.md).
 
 ### 6.2 Additions to `nx_solution`
 

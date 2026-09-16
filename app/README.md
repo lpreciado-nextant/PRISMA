@@ -15,6 +15,8 @@ The point of this PoC is the **experience**, not the data. Everything renders fr
 | Filter state encoded in the URL so a view is pasteable | `src/lib/router.ts` |
 | Zero-result state that suggests relaxing the narrowest facet | `src/views/LibraryView.tsx` |
 | Solution detail as a CSM briefing document | `src/views/DetailView.tsx` |
+| Captioned screenshot gallery (`nx_solutionimage`) on the detail page | `src/views/DetailView.tsx` |
+| Guided seven-step submission form with draft saving, thumbnail + gallery upload | `src/views/SubmitView.tsx` |
 | Type-dependent asset behaviour (viewer / pop-out / download / request) | `src/views/DetailView.tsx` |
 | Self-contained HTML rendered in a sandbox with no same-origin access | `src/views/ViewerView.tsx` |
 | Present mode — catalogue restriction, redaction, suppressed internal notes | `src/App.tsx` |

@@ -80,6 +80,7 @@ export function DetailView({ solution, present }: { solution: Solution; present:
           id={solution.id}
           name={solution.name}
           area={solution.specializationArea}
+          src={solution.thumbnail}
           className="h-40 sm:h-52"
         />
         <div className="p-6 sm:p-8">
@@ -124,6 +125,28 @@ export function DetailView({ solution, present }: { solution: Solution; present:
           <Panel title="Why it matters">
             <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.businessValue}</p>
           </Panel>
+
+          {solution.images && solution.images.length > 0 && (
+            <Panel title={`Screenshots · ${solution.images.length}`}>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {solution.images.map((img) => (
+                  <figure key={img.id} className="m-0 overflow-hidden rounded-[14px] border" style={{ borderColor: "var(--glass-edge)" }}>
+                    <img
+                      src={img.src}
+                      alt={img.caption ?? `${solution.name} screenshot`}
+                      loading="lazy"
+                      className="aspect-[16/10] w-full object-cover"
+                    />
+                    {img.caption && (
+                      <figcaption className="px-3 py-2 text-[12.5px]" style={{ color: "var(--ink-3)" }}>
+                        {img.caption}
+                      </figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
+            </Panel>
+          )}
 
           <Panel title="Demo assets">
             <ul className="flex flex-col gap-3">

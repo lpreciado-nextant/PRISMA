@@ -26,6 +26,23 @@ export const AREAS: Record<SpecializationArea, AreaMeta> = {
 
 export const AREA_ORDER: SpecializationArea[] = ["ai", "data", "ibo"];
 
+/** Generated stand-in for an `nx_solutionimage` screenshot payload. */
+function shot(label: string, from: string, to: string): string {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400">` +
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">` +
+    `<stop offset="0" stop-color="${from}"/><stop offset="1" stop-color="${to}"/>` +
+    `</linearGradient></defs>` +
+    `<rect width="640" height="400" fill="url(#g)"/>` +
+    `<rect x="24" y="24" width="280" height="160" rx="12" fill="rgba(255,255,255,0.16)"/>` +
+    `<rect x="328" y="24" width="288" height="76" rx="12" fill="rgba(255,255,255,0.11)"/>` +
+    `<rect x="328" y="108" width="288" height="76" rx="12" fill="rgba(255,255,255,0.11)"/>` +
+    `<rect x="24" y="208" width="592" height="144" rx="12" fill="rgba(255,255,255,0.08)"/>` +
+    `<text x="32" y="384" font-family="Segoe UI, sans-serif" font-size="22" font-weight="600" fill="rgba(255,255,255,0.85)">${label}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 export const SOLUTIONS: Solution[] = [
   {
     id: "bso-quota",
@@ -51,6 +68,11 @@ export const SOLUTIONS: Solution[] = [
     capabilities: ["AI & agents", "Planning & analytics"],
     technologies: ["React", "Power Apps code app", "Dataverse", "Fluent 2", "Grounded copilot"],
     industries: ["Technology"],
+    images: [
+      { id: "bso-img-1", src: shot("Quota workspace · EMEA view", "#1C567C", "#0F2734"), caption: "The shared quota workspace, filtered to EMEA" },
+      { id: "bso-img-2", src: shot("Variance flags before submission", "#123F5D", "#57468C"), caption: "Cells outside the ±0.5% band, flagged before submit" },
+      { id: "bso-img-3", src: shot("Grounded copilot answering", "#0B6157", "#1C567C"), caption: "The copilot builds the chart you ask for" },
+    ],
     assets: [
       {
         id: "bso-html",
@@ -123,6 +145,10 @@ export const SOLUTIONS: Solution[] = [
     capabilities: ["Planning & analytics", "Workflow & approvals"],
     technologies: ["Power Apps code app", "Fluent 2", "Dataverse"],
     industries: ["Professional services"],
+    images: [
+      { id: "score-img-1", src: shot("Portfolio · where you're needed", "#57468C", "#123F5D"), caption: "The portfolio opens on this week's risk" },
+      { id: "score-img-2", src: shot("Two-minute weekly check-in", "#1C567C", "#0B6157"), caption: "The check-in pre-fills last week's answers" },
+    ],
     assets: [
       {
         id: "scorecard-html",

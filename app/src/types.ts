@@ -43,6 +43,13 @@ export interface DemoAsset {
   sortOrder: number;
 }
 
+/** A gallery row from `nx_solutionimage` — screenshots beyond the card thumbnail. */
+export interface SolutionImage {
+  id: string;
+  src: string;
+  caption?: string;
+}
+
 export interface Solution {
   id: string;
   name: string;
@@ -57,6 +64,10 @@ export interface Solution {
   sampleDataLevel: SampleDataLevel;
   clientContext?: string;
   clientContextRedacted?: string;
+  /** Data URL or image URL for the card poster; stands in for the Dataverse Image column. */
+  thumbnail?: string;
+  /** Additional screenshots shown on the detail page (`nx_solutionimage`, 1:N). */
+  images?: SolutionImage[];
   effort: EffortLevel;
   dateAdded: string;
   libraryNotes?: string;

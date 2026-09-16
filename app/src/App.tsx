@@ -6,6 +6,7 @@ import { PresentBanner } from "./components/PresentBanner";
 import { LibraryView } from "./views/LibraryView";
 import { DetailView } from "./views/DetailView";
 import { ViewerView } from "./views/ViewerView";
+import { SubmitView } from "./views/SubmitView";
 import { useTheme } from "./lib/theme";
 import { useAppUser } from "./lib/powerContext";
 import { navigate, replaceQuery, useRoute } from "./lib/router";
@@ -56,10 +57,12 @@ export default function App() {
   const asset =
     segments[2] === "demo" ? solution?.assets.find((a) => a.id === segments[3]) : undefined;
 
-  // Leaving a record that present mode just restricted should not dead-end.
+  // Leaving a record that present mode just restricted should not dead-end,
+  // and the submission form is a contributor surface — never client-facing.
   useEffect(() => {
     if (isSolutionRoute && !solution) navigate("/");
-  }, [isSolutionRoute, solution]);
+    if (present && route.path === "/submit") navigate("/");
+  }, [isSolutionRoute, solution, present, route.path]);
 
   // Each view starts at the top; "instant" sidesteps the global smooth-scroll.
   useEffect(() => {
@@ -92,6 +95,8 @@ export default function App() {
           <ViewerView solution={solution} asset={asset} present={present} />
         ) : solution ? (
           <DetailView solution={solution} present={present} />
+        ) : route.path === "/submit" && !present ? (
+          <SubmitView user={user} />
         ) : (
           <LibraryView
             catalogue={catalogue}

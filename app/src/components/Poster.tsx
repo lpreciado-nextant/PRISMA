@@ -2,10 +2,41 @@ import type { SpecializationArea } from "../types";
 import { AREAS } from "../data/solutions";
 
 /**
- * Stands in for the Dataverse Thumbnail image column. Deterministic per
- * solution so a card always looks the same between sessions.
+ * Stands in for the Dataverse Thumbnail image column: renders the uploaded
+ * image when there is one, otherwise a deterministic generated placeholder.
  */
 export function Poster({
+  id,
+  name,
+  area,
+  src,
+  className = "",
+}: {
+  id: string;
+  name: string;
+  area: SpecializationArea;
+  src?: string;
+  className?: string;
+}) {
+  if (src) {
+    return (
+      <div className={`relative overflow-hidden ${className}`}>
+        <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <div
+          className="absolute inset-x-0 bottom-0 h-16"
+          style={{
+            background:
+              "linear-gradient(to top, color-mix(in srgb, var(--ground) 55%, transparent), transparent)",
+          }}
+        />
+      </div>
+    );
+  }
+
+  return <GeneratedPoster id={id} name={name} area={area} className={className} />;
+}
+
+function GeneratedPoster({
   id,
   name,
   area,

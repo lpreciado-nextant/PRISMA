@@ -112,6 +112,18 @@ This spec assumes the code app talks to Dataverse via the Web API / Power Platfo
 
 > Asset Type gains **Client-ready one-pager / slide** alongside the original six, so downloadable collateral is modeled as just another asset rather than a separate column on `nx_solution`.
 
+### `nx_solutionimage`
+
+Detail-page screenshots beyond the card thumbnail. The `Thumbnail` Image column on `nx_solution` stays the single card-grid hero image (optional, with a generated placeholder fallback); this table carries the **gallery** — as many captioned screenshots as the story needs. Modeled as a child table rather than more Image columns on the solution because Dataverse Image columns are single-valued and the count per solution varies.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Name *(primary name)* | Single line of text (100) | Yes | e.g. auto-set to "{Solution name} — image {n}" |
+| Solution | Lookup → `nx_solution` | Yes | 1:N — a solution can have any number of gallery images |
+| Image | Image column | Yes | The screenshot payload; enable "can store full images" so the detail page isn't limited to the 144×144 thumbnail rendition |
+| Caption | Single line of text (200) | No | Shown under the image in the gallery — "what is the CSM looking at?" |
+| Sort Order | Whole Number | No | Gallery display order |
+
 ---
 
 ## Handoff table (user/team-owned)
@@ -144,16 +156,17 @@ Supports the "request a live demo" flow — the escape hatch for solutions a CSM
 | `nx_solution` | `nx_industry` | Native N:N |
 | `nx_solution` | `nx_usecase` | Native N:N |
 | `nx_demoasset` | `nx_solution` | N:1 (lookup) |
+| `nx_solutionimage` | `nx_solution` | N:1 (lookup) |
 | `nx_demorequest` | `nx_solution` | N:1 (lookup) |
 | `nx_demorequest` | `systemuser` | N:1 (lookup, built-in table) |
 
-That's 8 custom tables total (`nx_solution`, `nx_demoasset`, `nx_demorequest`, `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `nx_usecase`) plus lookups to the built-in `systemuser` table and four native N:N relationships that need no tables of their own.
+That's 9 custom tables total (`nx_solution`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `nx_usecase`) plus lookups to the built-in `systemuser` table and four native N:N relationships that need no tables of their own.
 
 ## Security model
 
 See the [end-to-end design doc](../design/end-to-end-design.md) for the full rationale. Summary:
 
-| Role | `nx_solution` | `nx_demoasset` | Reference tables | `nx_demorequest` |
+| Role | `nx_solution` | `nx_demoasset` / `nx_solutionimage` | Reference tables | `nx_demorequest` |
 |---|---|---|---|---|
 | Contributor | Create; Read/Write **own**; Read published (org) | Same as parent | Read; Create on `nx_technology` only | Read own |
 | CSM | Read **published** only | Read (published parents) | Read | Create; Read own |

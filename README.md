@@ -51,7 +51,7 @@ The Librarian is the **only** role that can publish. That gate is what makes it 
 
 `Draft → Pending review → Published → Retired`
 
-A guided six-step submission form with draft saving at every step: what is it → what does it do and why does it matter → tag it → attach the demo → safety & sharing → review & submit. Target friction budget is under 10 minutes; beyond that, builders stop submitting and G2 fails.
+A guided seven-step submission form with draft saving at every step: what is it → what does it do and why does it matter → tag it → attach the demo → images (card thumbnail + detail screenshots) → safety & sharing → review & submit. Target friction budget is under 10 minutes; beyond that, builders stop submitting and G2 fails.
 
 ### Discovery → presentation (the hero flow)
 

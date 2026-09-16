@@ -32,7 +32,13 @@ export function SolutionCard({
       aria-label={`${solution.name} — ${solution.summary}`}
     >
       <div className="relative">
-        <Poster id={solution.id} name={solution.name} area={solution.specializationArea} className="h-36" />
+        <Poster
+          id={solution.id}
+          name={solution.name}
+          area={solution.specializationArea}
+          src={solution.thumbnail}
+          className="h-36"
+        />
         <div className="absolute top-3 left-3">
           <StatusPill status={solution.status} />
         </div>

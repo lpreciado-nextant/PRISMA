@@ -43,6 +43,23 @@ export function Masthead({
         </button>
 
         <div className="ml-auto flex items-center gap-2">
+          {!present && (
+            <button
+              type="button"
+              onClick={() => navigate("/submit")}
+              className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold transition-colors duration-200"
+              style={{
+                fontFamily: "var(--font-display)",
+                borderColor: "var(--glass-edge)",
+                background: "color-mix(in srgb, var(--ink) 6%, transparent)",
+                color: "var(--ink-2)",
+              }}
+            >
+              <Icon name="plus" size={15} />
+              <span className="hidden md:inline">Submit a solution</span>
+            </button>
+          )}
+
           <PresentToggle present={present} onToggle={onTogglePresent} />
 
           <button
