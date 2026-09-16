@@ -32,12 +32,17 @@ export function LibraryView({
           <div className="flex items-center gap-3">
             <span className="eyebrow">Nextant · Solution Library</span>
           </div>
-          <h1
-            className="prisma-wordmark mt-2 text-[clamp(4rem,11vw,8.5rem)]"
-            aria-label="PRISMA"
-          >
-            PRISMA
-          </h1>
+          <div className="mt-2 flex items-center gap-[0.12em] text-[clamp(4rem,11vw,8.5rem)]">
+            <img
+              src="./prisma-mark-v2.svg"
+              alt=""
+              aria-hidden="true"
+              className="h-[0.86em] w-auto shrink-0 translate-y-[0.05em] select-none"
+            />
+            <h1 className="prisma-wordmark pr-[0.06em] text-[1em]" aria-label="PRISMA">
+              PRISMA
+            </h1>
+          </div>
           <p
             className="mt-4 max-w-[54ch] text-[clamp(17px,1.6vw,20px)]"
             style={{ color: "var(--ink-2)" }}

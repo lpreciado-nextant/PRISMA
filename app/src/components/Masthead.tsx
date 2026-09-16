@@ -22,27 +22,35 @@ export function Masthead({
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="flex cursor-pointer items-center gap-3 rounded-xl px-1.5 py-1"
+          className="flex shrink-0 cursor-pointer items-center gap-3 rounded-xl px-1.5 py-1"
           aria-label="PRISMA — back to the library"
         >
-          <span className="prisma-wordmark text-[21px]">PRISMA</span>
-          <span
-            className="hidden h-5 w-px sm:block"
-            style={{ background: "var(--glass-edge-hi)" }}
+          <img
+            src="./prisma-mark-v2.svg"
+            alt=""
             aria-hidden="true"
+            className="h-7 w-7 -mr-1.5 translate-y-[1px]"
           />
-          <span className="hidden items-center gap-1.5 sm:flex">
-            <span className="eyebrow">by</span>
-            <img
-              src={`./nextant-logo-${theme}.png`}
-              alt="Nextant"
-              className="h-[15px] w-auto"
-              style={{ transition: "opacity 0.4s ease" }}
+          <span className="flex flex-col items-start gap-0.5 lg:flex-row lg:items-center lg:gap-3">
+            <span className="prisma-wordmark text-[21px] leading-none">PRISMA</span>
+            <span
+              className="hidden h-5 w-px lg:block"
+              style={{ background: "var(--glass-edge-hi)" }}
+              aria-hidden="true"
             />
+            <span className="flex items-center gap-1.5">
+              <span className="eyebrow text-[9px] normal-case">by</span>
+              <img
+                src={`./nextant-logo-${theme}.png`}
+                alt="Nextant"
+                className="h-[13px] w-auto lg:h-[15px]"
+                style={{ transition: "opacity 0.4s ease" }}
+              />
+            </span>
           </span>
         </button>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {!present && (
             <button
               type="button"
@@ -56,7 +64,7 @@ export function Masthead({
               }}
             >
               <Icon name="plus" size={15} />
-              <span className="hidden md:inline">Submit a solution</span>
+              <span className="hidden whitespace-nowrap md:inline">Submit a solution</span>
             </button>
           )}
 
@@ -78,23 +86,29 @@ export function Masthead({
 
           {!present && (
             <div
-              className="hidden items-center gap-2.5 rounded-xl border py-1.5 pr-3.5 pl-1.5 md:flex"
+              className="hidden items-center gap-2.5 rounded-xl border py-1.5 pr-3.5 pl-1.5 lg:flex"
               style={{
                 borderColor: "var(--glass-edge)",
                 background: "color-mix(in srgb, var(--ink) 6%, transparent)",
               }}
             >
               <span
-                className="grid h-7 w-7 place-items-center rounded-lg font-mono text-[10px] font-medium"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg font-mono text-[10px] font-medium"
                 style={{ background: "var(--accent)", color: "var(--on-accent)" }}
               >
                 {initials(user.fullName)}
               </span>
               <span className="leading-tight">
-                <span className="block text-[13px] font-semibold" style={{ color: "var(--ink)" }}>
+                <span
+                  className="block max-w-[160px] truncate text-[13px] font-semibold"
+                  style={{ color: "var(--ink)" }}
+                >
                   {user.fullName}
                 </span>
-                <span className="block font-mono text-[9.5px] tracking-[0.12em] uppercase" style={{ color: "var(--ink-3)" }}>
+                <span
+                  className="block font-mono text-[9.5px] tracking-[0.12em] whitespace-nowrap uppercase"
+                  style={{ color: "var(--ink-3)" }}
+                >
                   {user.live ? "Entra ID · signed in" : "Local preview"}
                 </span>
               </span>
@@ -121,7 +135,9 @@ function PresentToggle({ present, onToggle }: { present: boolean; onToggle: () =
       }}
     >
       <Icon name="present" size={16} />
-      <span className="hidden sm:inline">{present ? "Present mode on" : "Present mode"}</span>
+      <span className="hidden whitespace-nowrap sm:inline">
+        {present ? "Present mode on" : "Present mode"}
+      </span>
       <span
         className="relative h-4 w-7 rounded-full transition-colors duration-300"
         style={{
