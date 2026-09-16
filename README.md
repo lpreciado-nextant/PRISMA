@@ -35,6 +35,16 @@ The Librarian is the **only** role that can publish. That gate is what makes it 
 
 ---
 
+## Team
+
+| Name | Role |
+|---|---|
+| **Mauricio** | Delivery Manager |
+| **Luis** | Developer |
+| **Juliana** | Developer |
+
+---
+
 ## Core flows
 
 ### Contribution → publication
