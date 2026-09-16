@@ -1,6 +1,6 @@
 # PRISMA
 
-**P**rototypes · **R**eferences · **I**nteractive **S**olutions & **M**odels · **A**utomations and Apps
+**P**rototypes · **R**eferences · **I**nteractive **S**olutions & **M**odels · **A**utomations 
 
 ![Status](https://img.shields.io/badge/status-architecture%20draft-orange) ![Platform](https://img.shields.io/badge/platform-Power%20Platform-742774) ![Data%20Layer](https://img.shields.io/badge/data%20layer-Dataverse-0078D4) ![Delivery](https://img.shields.io/badge/delivery-Code%20App-2E7D32)
 
