@@ -1,9 +1,9 @@
-# Nextant Solution Library — End-to-End Design
+# PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Draft for review
+**Status:** Draft for review · look-and-feel PoC implemented in [`app/`](../../app/README.md)
 **Last updated:** 2026-09-16
 **Owner:** _TBD_
-**Related docs:** [Dataverse schema spec](../data_model/nextant-solution-library-dataverse-schema.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
+**Related docs:** [Dataverse schema spec](../data_model/nextant-solution-library-dataverse-schema.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
 ---
 
@@ -11,7 +11,7 @@
 
 Nextant builds a steady stream of PoCs, prototypes, demos and production solutions across its three Specialization Areas — AI & Automation, Data Solutions, and Intelligent Business Operations. Today that work is scattered across individual machines, team channels, and people's memories. When a Customer Success Manager sits down with a prospect, there is no reliable way to answer *"what have we already built that proves we can do this?"*
 
-The Solution Library is an internal marketplace for that work. Builders publish what they made; a librarian curates it; CSMs browse, search, and present it live to clients.
+The Solution Library — branded **PRISMA** in the product — is an internal marketplace for that work. Builders publish what they made; a librarian curates it; CSMs browse, search, and present it live to clients.
 
 ### 1.1 Co-primary goals
 
@@ -145,7 +145,7 @@ Every solution should have at least one asset a CSM can show *without any setup*
 
 ### 3.4 Present mode
 
-Invoked from the detail page or the viewer. The CSM flips one switch before sharing their screen.
+One switch in the masthead, available from any page, flipped before the CSM shares their screen.
 
 Present mode:
 
@@ -154,7 +154,7 @@ Present mode:
 - **Applies client-safe redaction** — where a solution is flagged *Yes, with names removed*, client names in the Client/Context field and body text are replaced with a generic descriptor ("a national logistics provider"). This requires a dedicated redacted variant of the client context field rather than runtime string-scrubbing, which is not trustworthy.
 - **Changes the visual treatment** — larger type, minimal chrome, no filter rail by default, full-bleed demo viewer.
 
-Present mode state is obvious and persistent (a clear banner) so a CSM is never unsure which mode they're in. Exiting requires a deliberate action.
+Present mode state is obvious and persistent (a clear banner, dismissible without leaving the mode — the masthead toggle stays lit) so a CSM is never unsure which mode they're in. Exiting requires a deliberate action.
 
 ---
 
@@ -164,7 +164,7 @@ Present mode state is obvious and persistent (a clear banner) so a CSM is never 
 2. **Never embarrass a CSM in front of a client.** No broken embeds, no half-finished entries, no internal snark on screen, no real client data where it shouldn't be. This is why publication is gated and why present mode restricts rather than merely hides.
 3. **Contribution must feel like credit, not paperwork.** Builders see their name on the card and their work in front of clients.
 4. **Show, don't describe.** Cards are visual. Detail pages lead with the demo. The library is a showcase, not a spreadsheet with a stylesheet.
-5. **The prototype's visual language is the baseline.** The existing HTML prototype establishes the palette (steel blue `#1C567C` from the wordmark, per-specialization accents), typography (Schibsted Grotesk / Source Sans 3 / IBM Plex Mono), light and dark themes, and motion. The production app matches it.
+5. **The prototype's visual language is the baseline; the PoC is the current reference.** The HTML prototype establishes the palette (steel blue `#1C567C` from the wordmark, per-specialization accents) and typography (Schibsted Grotesk / Source Sans 3 / IBM Plex Mono), light and dark themes, and motion. The code app PoC evolves that into a liquid-glass system — translucent refractive surfaces over an aurora ground — with the PRISMA wordmark central to the identity. The production app matches the PoC.
 6. **Accessible by default.** WCAG 2.1 AA: keyboard-navigable throughout, visible focus, reduced-motion respected, semantic landmarks. Already partially implemented in the prototype and not to be regressed.
 
 ---
@@ -182,6 +182,8 @@ Present mode state is obvious and persistent (a clear banner) so a CSM is never 
 /review                 Librarian queue
 /admin/reference-data   Capabilities, industries, specialization areas, technologies
 ```
+
+> **Routing note.** A published code app is served from `/play/e/{environmentId}/a/{appId}` and never owns the path segment, so these routes are implemented as hash routes. The PoC maps: home + catalogue → `#/` (one surface — search, tabs and facet rail share the grid), detail → `#/s/:id`, viewer → `#/s/:id/demo/:assetId`, submission → `#/submit`. Present mode is a mode over every route rather than a separate `/present` wrapper, which is what keeps its state persistent. `/my-submissions`, `/review` and `/admin/reference-data` are not yet in the PoC.
 
 ---
 
@@ -264,7 +266,7 @@ The trade: this does not scale past a few thousand records. That's a deliberate,
 
 ### 7.4 Security model
 
-| Role | `nx_solution` | `nx_demoasset` | Reference tables | `nx_demorequest` |
+| Role | `nx_solution` | `nx_demoasset` / `nx_solutionimage` | Reference tables | `nx_demorequest` |
 |---|---|---|---|---|
 | Contributor | Create; Read/Write **own**; Read published (org) | Same as parent | Read; Create on `nx_technology` only | Read own |
 | CSM | Read **published** only | Read (published parents) | Read | Create; Read own |

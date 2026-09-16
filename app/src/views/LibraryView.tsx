@@ -97,8 +97,9 @@ export function LibraryView({
         )}
       </section>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
-        <FacetRail all={catalogue} filters={filters} onChange={onFilters} />
+      <div className={`mt-8 grid gap-6 ${present ? "" : "lg:grid-cols-[250px_minmax(0,1fr)]"}`}>
+        {/* Present mode drops the filter rail — minimal chrome per design §3.4. */}
+        {!present && <FacetRail all={catalogue} filters={filters} onChange={onFilters} />}
 
         <div>
           {results.length > 0 ? (

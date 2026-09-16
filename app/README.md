@@ -46,6 +46,8 @@ Not used, because code apps don't support them: Power BI `PowerBIIntegration`, S
 
 ## Running it
 
+From the repo root, double-click `run-poc.bat` — it installs dependencies if needed, builds, and serves the production bundle at `http://localhost:4173/`. Or by hand:
+
 ```powershell
 npm install
 npm run dev          # design preview at http://localhost:5173
@@ -57,7 +59,7 @@ To run it as a real code app and publish:
 
 ```powershell
 npm install --global @microsoft/power-apps-cli
-pa app init --display-name "Nextant Solution Library" --environment-id <environment-id>
+pa app init --display-name "PRISMA - Nextant Solution Library" --environment-id <environment-id>
 pa app run           # open the "Local Play" URL in your Power Platform browser profile
 npm run build
 pa app push
@@ -77,7 +79,8 @@ pa app set-setting --show-header false
 
 Deliberately out of scope so the demo shows only what the platform can actually do:
 
-- Dataverse reads and writes — the catalogue is mock data
-- The guided submission form, the librarian review queue, and demo-request writes
-- Real thumbnails, videos, and uploaded HTML payloads (generated stand-ins are used, and clearly labelled)
+- Dataverse reads and writes — the catalogue is mock data, and the submission form collects a full draft (including thumbnail and gallery uploads, kept in memory) without persisting it anywhere
+- The librarian review queue, my-submissions, demo-request writes, and reference-data admin
+- Status and shareability facets on the rail (capability / technology / industry are implemented)
+- Real demo videos and uploaded HTML payloads — generated stand-ins are used, and clearly labelled
 - Security roles and field-level security, which are platform configuration rather than app code

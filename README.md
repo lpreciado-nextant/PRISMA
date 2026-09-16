@@ -103,7 +103,7 @@ Key decisions:
 ## Data model
 
 Reference tables (organization-owned): `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `nx_usecase`.
-Core tables (user/team-owned): `nx_solution`, `nx_demoasset`, `nx_demorequest`.
+Core tables (user/team-owned): `nx_solution`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`.
 
 Vocabulary governance: capabilities, industries, use cases, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates).
 
@@ -135,14 +135,16 @@ Remaining metrics (monthly active CSMs, demos in active pursuits, live-demo requ
 ## Repository
 
 ```
+app/                                                       Working code app PoC (React + TS + Vite + Tailwind)
 docs/
   design/end-to-end-design.md                              Full end-to-end design
   data_model/nextant-solution-library-dataverse-schema.md  Dataverse schema spec
 examples/
   nextant-solution-library 1.html                          HTML prototype — the visual baseline
+run-poc.bat                                                Build and serve the PoC locally
 ```
 
-The prototype defines the palette (steel blue `#1C567C`, per-specialization accents), typography (Schibsted Grotesk / Source Sans 3 / IBM Plex Mono), light and dark themes, motion, and WCAG 2.1 AA behaviour. The production app matches it.
+The prototype defines the palette (steel blue `#1C567C`, per-specialization accents), typography (Schibsted Grotesk / Source Sans 3 / IBM Plex Mono), light and dark themes, motion, and WCAG 2.1 AA behaviour. The PoC in `app/` evolves that baseline into a liquid-glass design system — same palette and type, translucent refractive surfaces — and is the current visual reference. See [app/README.md](app/README.md) for what it implements.
 
 ---
 

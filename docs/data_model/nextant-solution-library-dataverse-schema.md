@@ -1,4 +1,4 @@
-# Nextant Solution Library — Dataverse schema spec
+# PRISMA — Nextant Solution Library — Dataverse schema spec
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Table (logical) names below use an `nx_` publisher prefix — swap for whatever your actual solution prefix is.
 
