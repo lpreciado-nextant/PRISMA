@@ -1,7 +1,7 @@
 /**
  * Shapes mirror the Dataverse schema in docs/data_model so the mock data layer
  * can be swapped for `@microsoft/power-apps` generated services without the UI
- * changing. See docs/data_model/nextant-solution-library-dataverse-schema.md.
+ * changing. See docs/data_model/SchemaV2.md.
  */
 
 export type SpecializationArea = "ai" | "data" | "ibo";
@@ -50,6 +50,14 @@ export interface SolutionImage {
   caption?: string;
 }
 
+/** A delivery-evidence link — an `nx_solutionproject` row joined with its `nx_project`. */
+export interface SolutionProject {
+  id: string;
+  /** Primary name of the linked `nx_project` row — a client engagement, internal-only. */
+  projectName: string;
+  projectOwner?: string;
+}
+
 export interface Solution {
   id: string;
   name: string;
@@ -74,9 +82,12 @@ export interface Solution {
   dateAdded: string;
   libraryNotes?: string;
   searchKeywords: string;
+  /** Native N:N tags — `nx_capability` / `nx_technology` / `nx_industry`. */
   capabilities: string[];
   technologies: string[];
   industries: string[];
+  /** Delivery evidence via `nx_solutionproject` — client names, never rendered in present mode. */
+  projects?: SolutionProject[];
   assets: DemoAsset[];
 }
 

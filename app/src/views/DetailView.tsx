@@ -207,6 +207,28 @@ export function DetailView({ solution, present }: { solution: Solution; present:
             </dl>
           </Panel>
 
+          {!present && solution.projects && solution.projects.length > 0 && (
+            <Panel title={`Delivered for · ${solution.projects.length}`}>
+              <ul className="flex flex-col gap-2.5 text-[14px]">
+                {solution.projects.map((p) => (
+                  <li key={p.id}>
+                    <span className="block font-semibold" style={{ fontFamily: "var(--font-display)" }}>
+                      {p.projectName}
+                    </span>
+                    {p.projectOwner && (
+                      <span className="block text-[12.5px]" style={{ color: "var(--ink-3)" }}>
+                        Project owner · {p.projectOwner}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-3)" }}>
+                Client engagements · hidden in present mode
+              </p>
+            </Panel>
+          )}
+
           {!present && (
             <button
               type="button"

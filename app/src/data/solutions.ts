@@ -69,6 +69,9 @@ export const SOLUTIONS: Solution[] = [
     capabilities: ["AI & agents", "Planning & analytics"],
     technologies: ["React", "Power Apps code app", "Dataverse", "Fluent 2", "Grounded copilot"],
     industries: ["Technology"],
+    projects: [
+      { id: "bso-p1", projectName: "Contoso — FY26 partner quota cycle", projectOwner: "Michael Parry" },
+    ],
     images: [
       { id: "bso-img-1", src: shot("Quota workspace · EMEA view", "#1C567C", "#0F2734"), caption: "The shared quota workspace, filtered to EMEA" },
       { id: "bso-img-2", src: shot("Variance flags before submission", "#123F5D", "#57468C"), caption: "Cells outside the ±0.5% band, flagged before submit" },
@@ -147,7 +150,7 @@ export const SOLUTIONS: Solution[] = [
       "portfolio delivery RAG health check-in engagement risk fluent dataverse executive scorecard PMO",
     capabilities: ["Planning & analytics", "Workflow & approvals"],
     technologies: ["Power Apps code app", "Fluent 2", "Dataverse"],
-    industries: ["Professional services"],
+    industries: ["Cross-industry"],
     images: [
       { id: "score-img-1", src: shot("Portfolio · where you're needed", "#57468C", "#123F5D"), caption: "The portfolio opens on this week's risk" },
       { id: "score-img-2", src: shot("Two-minute weekly check-in", "#1C567C", "#0B6157"), caption: "The check-in pre-fills last week's answers" },
@@ -263,6 +266,10 @@ export const SOLUTIONS: Solution[] = [
     capabilities: ["AI & agents", "Planning & analytics"],
     technologies: ["Power Apps", "Dataverse", "Azure OpenAI"],
     industries: ["Professional services"],
+    projects: [
+      { id: "kairo-p1", projectName: "Northwind Staffing — bench matching rollout", projectOwner: "Mauricio Cubillos" },
+      { id: "kairo-p2", projectName: "Proseware Consulting — skills baseline", projectOwner: "Mauricio Cubillos" },
+    ],
     assets: [
       {
         id: "kairo-pa",
@@ -308,6 +315,9 @@ export const SOLUTIONS: Solution[] = [
     capabilities: ["Data platform", "Planning & analytics"],
     technologies: ["Microsoft Fabric", "Power BI", "Data Factory", "Semantic model"],
     industries: ["Logistics", "Manufacturing"],
+    projects: [
+      { id: "supply-p1", projectName: "Fabrikam Logistics — inbound risk pilot", projectOwner: "Juliana Castelblanco" },
+    ],
     assets: [
       {
         id: "supply-pbi",
@@ -383,6 +393,9 @@ export const SOLUTIONS: Solution[] = [
     capabilities: ["AI & agents", "Workflow & approvals"],
     technologies: ["Copilot Studio", "Power Automate", "Dataverse", "Teams"],
     industries: ["Retail", "Professional services"],
+    projects: [
+      { id: "intake-p1", projectName: "Tailwind Traders — shared-services triage", projectOwner: "Luis David Preciado" },
+    ],
     assets: [
       {
         id: "intake-video",
