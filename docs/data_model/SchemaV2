@@ -172,12 +172,25 @@ Proof that a solution has actually been delivered somewhere. Does **not** carry 
 | What Was Delivered | Text, multi-line (2000) | Yes | The proof — what actually got built |
 | Business Problem | Text, multi-line (1000) | No | Why the client needed it — carries the "what need does this solve" framing now that there's no separate category tag |
 | Project Owner | Lookup → `systemuser` | Yes | |
-| Source | Choice — global | No | Manual Entry · GitHub |
+| Source | Choice — global | No | Manual Entry · GitHub · BPM Project Inventory — extend as new source systems are identified (e.g. a future Data Solutions equivalent) |
 | External Link | URL (500) | No | GitHub repo, Power BI workspace, or Power Apps link |
 | Documentation | URL (500) | No | |
 | Date Delivered | Date Only | No | |
 
 Tags into `nx_technology` (N:N) — the specific stack used on this delivery.
+
+### Intake triage: not every legacy record becomes a Project
+
+Nextant already has systems of record for delivered work — the BPM Project Inventory (SharePoint), individual GitHub repos, and whatever the equivalent turns out to be for Data Solutions. `nx_project` is a **curated subset** of those, not a mirror. Migrating a row is a deliberate decision, gated by four questions asked at intake:
+
+1. Is there (or could there easily be) a presentable asset — not just internal automation glue?
+2. Could the same approach be repeated for a different client?
+3. Would an external prospect recognize the problem it solves?
+4. Can it be described without breaking confidentiality? (Answered once linked, via the parent `nx_solution`'s `Shareable with Clients`.)
+
+A row that fails this — internal tooling maintenance, one-off support tied to a single stakeholder relationship, culture/ops apps with no sales relevance — stays in its source system. `nx_project` never needs to catch up to it, and the source system keeps existing independently; PRISMA doesn't replace it.
+
+This is a **process gate applied before a row is created**, not a schema field — the existence of an `nx_project` row already implies it passed. `Source` and `External Link` above already carry enough provenance to trace a row back to where it came from.
 
 ---
 
