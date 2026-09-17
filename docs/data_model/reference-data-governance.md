@@ -1,7 +1,7 @@
 # Reference data governance
 
 **Status:** Draft for review · **Last updated:** 2026-09-17
-**Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec](nextant-solution-library-dataverse-schema.md)
+**Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
 
@@ -12,7 +12,7 @@
 | Industries | `nx_industry` | **Governed** | Librarian only |
 | Technologies | `nx_technology` | **Open** | Contributors, inline at submission; librarian periodically merges duplicates |
 
-> Use case is not a vocabulary: it lives as a freeform single-line-of-text column on `nx_solution` ([schema spec](nextant-solution-library-dataverse-schema.md)).
+> Use case is not a vocabulary: it lives as a freeform single-line-of-text column on `nx_solution` ([schema spec (v2)](SchemaV2.md)).
 
 Contributor create privilege exists on `nx_technology` only ([security model](../architecture/security-model.md)).
 

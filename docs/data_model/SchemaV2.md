@@ -1,13 +1,15 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; this round simplified every tag relationship (`SpecializationArea`, `Capability`, `Industry`, `Technology`) from many-to-many to a single-valued lookup; a `Project` concept was added to separate "the reusable Solution" from "the evidence it's been built before" — though `nx_project` itself already exists in Dataverse with fixed columns, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, got its own junction table instead of a single lookup on either side.
+**Status:** Current — agreed model · **Last updated:** 2026-09-17
+
+This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Capability`, `Industry`, and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` alone remains a single-valued lookup; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — though `nx_project` itself already exists in Dataverse with fixed columns, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, got its own junction table instead of a single lookup on either side.
 
 ## Conventions
 
 - **Primary key vs. primary name** — every table gets an auto-generated GUID key (e.g. `nx_solutionid`) plus a required text *primary name* column, used as its display label in lookups.
 - **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` exist on every table without being modeled.
 - **Ownership** — `Solution`, `DemoRequest`, and `SolutionProject` are **user/team-owned** (row-level security, since different practices submit their own work). `SpecializationArea`, `Capability`, `Industry`, and `Technology` are **organization-owned** (shared reference data). `nx_project` already exists in Dataverse — its ownership model is out of scope here.
-- **Tags are single-valued lookups (1:N)** — each `Solution` points to exactly one `SpecializationArea`, one `Capability`, one `Industry`, and one `Technology` via a lookup column. No native many-to-many, no junction tables for these four.
+- **One single-valued tag, three multi-valued tags** — each `Solution` points to exactly one `SpecializationArea` via a lookup column. `Capability`, `Industry`, and `Technology` are **native N:N** relationships: a solution can carry several of each, and Dataverse creates and manages the intersect tables — no hand-built junction tables for these three.
 - **`nx_project` is fixed** — it already exists in Dataverse with its own columns. Nothing new gets added to it, and it gets no new lookup pointing out of it either. Where a Solution needs to link to *several* Projects, a small junction table (`nx_solutionproject`) sits in between instead.
 - **Governance** — `SpecializationArea`, `Capability`, and `Industry` are governed (only the Librarian adds new values). `Technology` is open (anyone adds a value inline; the Librarian periodically merges duplicates).
 
@@ -18,9 +20,9 @@ This is the current, agreed model. It replaces [nextant-solution-library-dataver
 ```mermaid
 erDiagram
     nx_specializationarea ||--o{ nx_solution : "tag (1:N)"
-    nx_capability ||--o{ nx_solution : "tag (1:N)"
-    nx_industry ||--o{ nx_solution : "tag (1:N)"
-    nx_technology ||--o{ nx_solution : "tag (1:N)"
+    nx_capability }o--o{ nx_solution : "tag (N:N)"
+    nx_industry }o--o{ nx_solution : "tag (N:N)"
+    nx_technology }o--o{ nx_solution : "tag (N:N)"
     nx_solution ||--o{ nx_demoasset : "1:N"
     nx_solution ||--o{ nx_solutionimage : "1:N"
     nx_solution ||--o{ nx_demorequest : "1:N"
@@ -33,33 +35,70 @@ erDiagram
     nx_solution {
         guid nx_solutionid PK
         text SolutionName
-        text Summary
-        text UseCase
-        choice PublicationStatus
-        choice Shareable
+        text OneLineSummary
+        text WhatItDoes
+        text BusinessValue
         lookup SpecializationArea FK
-        lookup Capability FK
-        lookup Industry FK
-        lookup Technology FK
+        text UseCase
+        text ClientContext
+        text ClientContextRedacted
         lookup BuiltBy FK
+        choice Status
+        choice PublicationStatus
+        choice ShareableWithClients
+        choice SampleDataLevel
+        choice EffortTimeToDeploy
+        image Thumbnail
+        date DateAdded
+        text LibraryNotes
+        text SearchKeywords
+    }
+    nx_specializationarea {
+        guid nx_specializationareaid PK
+        text SpecializationArea
+        text Description
+        int SortOrder
+    }
+    nx_capability {
+        guid nx_capabilityid PK
+        text Capability
+        int SortOrder
+    }
+    nx_industry {
+        guid nx_industryid PK
+        text Industry
+        int SortOrder
+    }
+    nx_technology {
+        guid nx_technologyid PK
+        text Technology
     }
     nx_demoasset {
         guid nx_demoassetid PK
+        text Name
         lookup Solution FK
         choice AssetType
         file File
         url ExternalURL
+        text EmbedHint
+        boolean AllowsEmbedding
+        int SortOrder
     }
     nx_solutionimage {
         guid nx_solutionimageid PK
+        text Name
         lookup Solution FK
         image Image
         text Caption
+        int SortOrder
     }
     nx_demorequest {
         guid nx_demorequestid PK
+        text Name
         lookup Solution FK
         lookup RequestedBy FK
+        text ClientOpportunityContext
+        date NeededBy
         choice RequestStatus
     }
     nx_project {
@@ -69,10 +108,13 @@ erDiagram
     }
     nx_solutionproject {
         guid nx_solutionprojectid PK
+        text Name
         lookup Solution FK
         lookup Project FK
     }
 ```
+
+The three N:N tag relationships (`nx_capability`, `nx_industry`, `nx_technology`) are native Dataverse many-to-many — the intersect tables exist but are platform-managed and not modeled here.
 
 `nx_project` stays untouched — no lookup added to it, no lookup pointing out of it. `nx_solutionproject` is the new junction table that lets one `Solution` link to several `Project` rows (and, structurally, vice versa), without either of those two tables needing a multi-valued column of their own.
 
@@ -80,7 +122,7 @@ erDiagram
 
 ## Reference tables
 
-Shared, organization-owned vocabularies. Every solution links back to these via a single lookup column — not a many-to-many tag.
+Shared, organization-owned vocabularies. `SpecializationArea` connects via a single lookup column on `nx_solution`; `Capability`, `Industry`, and `Technology` connect as native many-to-many tags.
 
 ### `nx_specializationarea`
 
@@ -101,16 +143,16 @@ Reintegrated after review — dropped from the first v2 draft, brought back with
 | Capability *(primary name)* | Text (100) | Yes | "AI & agents", "Planning & analytics", etc. |
 | Sort Order | Whole Number | No | Controls chip order |
 
-1:N with `nx_solution` only — a single lookup column on `nx_solution`. Not connected to `nx_project`.
+Native N:N with `nx_solution` only — a solution can carry several capabilities. Not connected to `nx_project`.
 
 ### `nx_industry`
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| Industry *(primary name)* | Text (100) | Yes | "Financial services", "Manufacturing", etc. |
+| Industry *(primary name)* | Text (100) | Yes | "Financial services", "Manufacturing", etc. Seed a **"Cross-industry"** value for industry-agnostic solutions |
 | Sort Order | Whole Number | No | |
 
-1:N with `nx_solution` — a lookup column on `nx_solution`, one industry per solution.
+Native N:N with `nx_solution` — a solution can carry several industries. Tagging at least one industry (or "Cross-industry") is expected in practice, but enforced at review, not schema-level — Dataverse can't make an N:N relationship required.
 
 ### `nx_technology`
 
@@ -118,7 +160,7 @@ Reintegrated after review — dropped from the first v2 draft, brought back with
 |---|---|---|---|
 | Technology *(primary name)* | Text (100) | Yes | Open vocabulary — "React", "Power BI", "LangChain". Grows organically. |
 
-1:N with `nx_solution` — a single lookup column on `nx_solution`.
+Native N:N with `nx_solution` — a solution can carry several technologies.
 
 ---
 
@@ -134,10 +176,7 @@ The reusable offering — the unit of value shown to a CSM.
 | One-line Summary | Text (200) | Yes | |
 | What It Does | Text, multi-line (4000) | No | |
 | Business Value | Text, multi-line (4000) | No | |
-| Specialization Area | Lookup → `nx_specializationarea` | Yes | Single-valued |
-| Capability | Lookup → `nx_capability` | No | Single-valued |
-| Industry | Lookup → `nx_industry` | Yes | Single-valued |
-| Technology | Lookup → `nx_technology` | No | Single-valued |
+| Specialization Area | Lookup → `nx_specializationarea` | Yes | Single-valued — the only single-valued tag |
 | Use Case | Text (200) | No | The client-side framing of the problem — "reduce manual invoice handling", "forecast demand". Bridges how a client describes their pain and how Nextant describes its capability. |
 | Client / Context | Text (200) | No | Freeform for now; revisit as a lookup if reporting by client is needed later. **Internal-only** — never rendered in present mode |
 | Client Context (Redacted) | Text (200) | No | The client-safe substitute shown in present mode — "a national logistics provider". Required in practice whenever Shareable with Clients is "Yes, with names removed"; enforced at review, not schema-level |
@@ -152,7 +191,7 @@ The reusable offering — the unit of value shown to a CSM.
 | Library Notes | Text, multi-line (2000) | No | **Field-level security** — internal-only |
 | Search Keywords | Text (500) | No | Editorial boost terms not naturally present in the visible text — distinct from Use Case, which frames the problem in the client's own words |
 
-Links to `nx_specializationarea`, `nx_capability`, `nx_industry`, and `nx_technology` via the four lookup columns above — 1:N, single-valued, not tags. Its link to `nx_project` (potentially several) goes through `nx_solutionproject` below, not a column here.
+Links to `nx_specializationarea` via the single lookup column above. `Capability`, `Industry`, and `Technology` are **not columns** — they attach through native N:N relationships (multi-valued tags, several per solution). Its link to `nx_project` (potentially several) goes through `nx_solutionproject` below, not a column here.
 
 ---
 
@@ -236,25 +275,27 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 | From | To | Type |
 |---|---|---|
 | `nx_specializationarea` | `nx_solution` | 1:N |
-| `nx_capability` | `nx_solution` | 1:N |
-| `nx_industry` | `nx_solution` | 1:N |
-| `nx_technology` | `nx_solution` | 1:N |
-| `nx_solution` | `systemuser` | N:1 |
-| `nx_demoasset` | `nx_solution` | N:1 |
-| `nx_solutionimage` | `nx_solution` | N:1 |
-| `nx_demorequest` | `nx_solution` | N:1 |
-| `nx_demorequest` | `systemuser` | N:1 |
-| `nx_solutionproject` | `nx_solution` | N:1 |
-| `nx_solutionproject` | `nx_project` | N:1 |
-| `nx_project` | `systemuser` | N:1 |
+| `nx_capability` | `nx_solution` | Native N:N |
+| `nx_industry` | `nx_solution` | Native N:N |
+| `nx_technology` | `nx_solution` | Native N:N |
+| `systemuser` | `nx_solution` | 1:N (Built By) |
+| `nx_solution` | `nx_demoasset` | 1:N |
+| `nx_solution` | `nx_solutionimage` | 1:N |
+| `nx_solution` | `nx_demorequest` | 1:N |
+| `systemuser` | `nx_demorequest` | 1:N (Requested By) |
+| `nx_solution` | `nx_solutionproject` | 1:N |
+| `nx_project` | `nx_solutionproject` | 1:N |
+| `systemuser` | `nx_project` | 1:N (Project Owner) |
 
-**10 tables in this model:** `nx_solution`, `nx_specializationarea`, `nx_capability`, `nx_industry`, `nx_technology`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_solutionproject`, and `nx_project` (the last one pre-existing, fixed columns — connected only through the junction table and its own existing `Project Owner` lookup to `systemuser`).
+**10 tables in this model:** `nx_solution`, `nx_specializationarea`, `nx_capability`, `nx_industry`, `nx_technology`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_solutionproject`, and `nx_project` (the last one pre-existing, fixed columns — connected only through the junction table and its own existing `Project Owner` lookup to `systemuser`). The three native N:N intersect tables are platform-managed and don't count toward the build.
 
 **Dropped from v1:** `nx_usecase` as a governed table — the concept now lives as a plain `Use Case` field on `nx_solution`.
 
 **Dropped from the first v2 draft, then reintegrated:** `nx_capability` — brought back as a reference table, scoped to a single connection (`nx_solution` only, not `nx_project`).
 
-**Dropped from the first v2 draft, and still dropped:** the SA/Industry/Technology many-to-many tags (now single-valued lookups) and `nx_projectevidence` (no attachments table).
+**Reverted from the first v2 draft:** the flattening of `Capability`, `Industry`, and `Technology` to single-valued lookups — all three are back to native N:N as in v1, since a solution's profile routinely carries more than one of each. `Industry` also moved from required to optional-with-a-`Cross-industry`-value.
+
+**Dropped from the first v2 draft, and still dropped:** `nx_projectevidence` (no attachments table).
 
 **Changed this round:** the `Solution` ↔ `Project` connection moved off both fixed tables' direct columns entirely and into a new junction table, `nx_solutionproject`. This restores the one-Solution-to-many-Projects reuse signal that a single lookup (on either side) couldn't carry, without ever touching `nx_project`'s fixed columns.
 
@@ -273,7 +314,8 @@ Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. `Pu
 ## Still open
 
 - Who creates the `nx_solutionproject` link — the Librarian during triage, or the Contributor who owns the Solution?
-- Whether a single-valued lookup is enough for `Capability` and `Technology` once a solution's profile has more than one meaningful entry — today it's one lookup column each, no multi-select.
+
+*(Resolved: `Capability`, `Industry`, and `Technology` cardinality — settled as native N:N, multi-valued. `nx_project` + `nx_solutionproject` — confirmed in scope.)*
 
 ---
 
@@ -329,16 +371,18 @@ S1 links to **both** P1 (Acería del Norte) and P2 (Retail Co X) — the reuse s
 
 ## Example: everything hanging off one Solution
 
-Zooming into a single Solution (S1) shows every other table it touches: its four reference lookups, the demo asset the CSM opens, a live-demo request raised against it, and — through the junction table — its delivery evidence.
+Zooming into a single Solution (S1) shows every other table it touches: its specialization-area lookup and N:N tags, the demo asset the CSM opens, a live-demo request raised against it, and — through the junction table — its delivery evidence.
 
 ```mermaid
 graph TD
     S1["S1 Invoice Reconciliation Assistant"]
 
     SA1[AI & Automation] -- 1:N --> S1
-    CAP1[AI & agents] -- 1:N --> S1
-    IND1[Manufacturing] -- 1:N --> S1
-    TECH1[LangChain] -- 1:N --> S1
+    CAP1[AI & agents] -- N:N --> S1
+    CAP2[Process automation] -- N:N --> S1
+    IND1[Manufacturing] -- N:N --> S1
+    TECH1[LangChain] -- N:N --> S1
+    TECH2[Power Automate] -- N:N --> S1
 
     S1 -- 1:N --> DA1["nx_demoasset<br/>Self-contained HTML"]
     S1 -- 1:N --> DR1["nx_demorequest<br/>Carlos Mejía — Needed 2026-09-25"]
@@ -347,4 +391,4 @@ graph TD
     Owner["systemuser<br/>Juliana Castelblanco"] -- "Project Owner" --> P1
 ```
 
-One Solution row is the hub: the four lookups describe *what it is* (one specialization area, one capability, one industry, one technology — no multi-select), plus a plain `Use Case` text field for how the client would phrase the problem. `nx_demoasset` is *what a CSM can show*, `nx_demorequest` is *who's asking for a live one right now*, and `nx_solutionproject` is the bridge to *proof it already happened* — pointing at a `nx_project` row this schema never modifies directly.
+One Solution row is the hub: the tags describe *what it is* (exactly one specialization area, plus as many capabilities, industries, and technologies as apply), with a plain `Use Case` text field for how the client would phrase the problem. `nx_demoasset` is *what a CSM can show*, `nx_demorequest` is *who's asking for a live one right now*, and `nx_solutionproject` is the bridge to *proof it already happened* — pointing at a `nx_project` row this schema never modifies directly.

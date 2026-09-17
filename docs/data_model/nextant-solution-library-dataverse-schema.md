@@ -1,5 +1,9 @@
 # PRISMA — Nextant Solution Library — Dataverse schema spec
 
+> **Superseded.** This is the v1 schema, kept for history. The current, agreed model is [SchemaV2.md](SchemaV2.md) — key changes there: a `Project` concept (`nx_project` + `nx_solutionproject` junction), `Industry` optional with a "Cross-industry" value, and per-solution security refinements. Do not build from this document.
+>
+> **Status:** Superseded by v2 · **Last updated:** 2026-09-17
+
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Table (logical) names below use an `nx_` publisher prefix — swap for whatever your actual solution prefix is.
 
 ## Conventions used throughout

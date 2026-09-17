@@ -3,7 +3,7 @@
 **Status:** Draft for review · look-and-feel PoC implemented in [`app/`](../../app/README.md)
 **Last updated:** 2026-09-17
 **Owner:** _TBD_
-**Related docs:** [Documentation map](../README.md) · [Dataverse schema spec](../data_model/nextant-solution-library-dataverse-schema.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
+**Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
 ---
 
@@ -189,7 +189,7 @@ Present mode state is obvious and persistent (a clear banner, dismissible withou
 
 ## 6. Data model
 
-The [existing schema spec](../data_model/nextant-solution-library-dataverse-schema.md) is the foundation and has been updated with the deltas below.
+The [schema spec (v2)](../data_model/SchemaV2.md) is the foundation and has been updated with the deltas below.
 
 ### 6.1 New reference tables
 
@@ -201,7 +201,7 @@ It joins `nx_solution` via native N:N.
 
 ### 6.1a New child table: `nx_solutionimage`
 
-Detail-page screenshots beyond the card thumbnail — the submission form collects them in a dedicated Images step. The `Thumbnail` column on `nx_solution` remains the single card-grid hero image; this table carries the captioned gallery rendered on the solution detail page. 1:N to `nx_solution`, visibility inherited from the parent. Full spec in the [schema doc](../data_model/nextant-solution-library-dataverse-schema.md).
+Detail-page screenshots beyond the card thumbnail — the submission form collects them in a dedicated Images step. The `Thumbnail` column on `nx_solution` remains the single card-grid hero image; this table carries the captioned gallery rendered on the solution detail page. 1:N to `nx_solution`, visibility inherited from the parent. Full spec in the [schema doc (v2)](../data_model/SchemaV2.md).
 
 ### 6.2 Additions to `nx_solution`
 
@@ -221,7 +221,7 @@ Supports the live-demo handoff (§3.3): solution, requester, client/opportunity 
 - **Governed (librarian-managed):** specialization areas, capabilities, industries. Contributors select from existing values only.
 - **Open (contributor-extendable):** technologies. Grows organically; the librarian periodically merges duplicates.
 
-> The full column-by-column spec, including field-level security requirements, now lives in the [schema spec](../data_model/nextant-solution-library-dataverse-schema.md).
+> The full column-by-column spec, including field-level security requirements, now lives in the [schema spec (v2)](../data_model/SchemaV2.md).
 
 ---
 

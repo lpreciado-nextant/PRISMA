@@ -107,7 +107,7 @@ Core tables (user/team-owned): `nx_solution`, `nx_demoasset`, `nx_solutionimage`
 
 Vocabulary governance: capabilities, industries, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates). Use case is a freeform text column on `nx_solution`, not a vocabulary.
 
-Full column-by-column spec: [docs/data_model/nextant-solution-library-dataverse-schema.md](docs/data_model/nextant-solution-library-dataverse-schema.md)
+Full column-by-column spec: [docs/data_model/SchemaV2.md](docs/data_model/SchemaV2.md)
 
 ---
 
