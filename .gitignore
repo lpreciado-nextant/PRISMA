@@ -1,0 +1,24 @@
+# Dependencies / build output (anywhere in the repo)
+node_modules/
+dist/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+# Local env files
+*.local
+.env
+.env.*
+
+# Batch scripts
+*.bat
