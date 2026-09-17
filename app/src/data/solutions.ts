@@ -52,6 +52,7 @@ export const SOLUTIONS: Solution[] = [
       "Two personas share one dataset. Every edit is audited against the WWIC ML3 baseline, cells outside the ±0.5% band are flagged before submission, and a grounded copilot answers questions or builds the chart you ask for. Nothing loads into MINT until the window closes clean.",
     businessValue:
       "A cycle that ran on email and 47 uploaded workbooks runs in one place, and every number that reaches the system of record carries a name and a reason.",
+    useCase: "Run a governed quota cycle without email threads and spreadsheet uploads",
     specializationArea: "ai",
     builtBy: { name: "Michael Parry", email: "mparry@nextant.com" },
     status: "Working prototype",
@@ -98,6 +99,7 @@ export const SOLUTIONS: Solution[] = [
       "Search an account and the assistant assembles the plan from MSX, MSXi, Lynx and SPM — 158 fields straight through, 60 more derived. What is left is a short list of open questions, split into the ones the account team can answer and the ones only the customer can. The workbook fills in behind the conversation and downloads complete.",
     businessValue:
       "The adoption plan stops being a workbook filled in from memory the night before a review, and the customer answers questions about their own business instead of someone guessing at them.",
+    useCase: "Assemble account adoption plans from the systems that already hold the answers",
     specializationArea: "ai",
     builtBy: { name: "Michael Parry", email: "mparry@nextant.com" },
     status: "Working prototype",
@@ -131,6 +133,7 @@ export const SOLUTIONS: Solution[] = [
       "Eight weighted dimensions roll into one 0–100 health score with a six-week trend. The portfolio opens on where you're needed this week, and the check-in form pre-fills last week's answers so a lead changes only what moved.",
     businessValue:
       "Status decks disappear and risk surfaces the week it appears rather than at the quarterly review. The check-in is short enough that leads actually complete it, which is the only reason an executive view is ever current.",
+    useCase: "Surface portfolio delivery risk the week it appears",
     specializationArea: "ibo",
     builtBy: { name: "Michael Parry", email: "mparry@nextant.com" },
     status: "Client demo",
@@ -175,6 +178,7 @@ export const SOLUTIONS: Solution[] = [
       "A requester raises an ask with amount, category and fiscal year and watches it move through team review and executive review. The budget owner decides with their remaining allocation in view, and can fund it from team budget or approve only the incremental gap.",
     businessValue:
       "Approvers stop reconstructing the allocation impact from a mail thread, nothing stalls invisibly, and finance sees committed demand before the invoice arrives.",
+    useCase: "Track every budget request from ask to purchase order in one queue",
     specializationArea: "ibo",
     builtBy: { name: "Juliana Castelblanco", email: "jcastelblanco@nextant.com" },
     status: "Working prototype",
@@ -208,6 +212,7 @@ export const SOLUTIONS: Solution[] = [
       "Upload a match video, tag rallies as they play, and the app returns shot distribution, court coverage and unforced-error patterns per player. Built end to end in under three weeks to prove how fast a bespoke vertical app can reach production.",
     businessValue:
       "A concrete answer to “can you build us something bespoke, hosted, and real?” — with a URL a prospect can open on their own phone.",
+    useCase: "Prove a bespoke vertical app can reach production in weeks",
     specializationArea: "ai",
     builtBy: { name: "Luis David Preciado", email: "lpreciado@nextant.com" },
     status: "Live in production",
@@ -242,6 +247,7 @@ export const SOLUTIONS: Solution[] = [
       "KAIRO reads role requirements, scores the bench against them, and explains every match in plain language — which skills carry the score, which are inferred from project history, and where the gap is.",
     businessValue:
       "Staffing decisions stop depending on who the resourcing manager happens to remember, and the reasoning behind a placement survives the conversation.",
+    useCase: "Match the right person to the right role from existing skills data",
     specializationArea: "data",
     builtBy: { name: "Mauricio Cubillos", email: "mcubillos@nextant.com" },
     status: "Live in production",
@@ -286,6 +292,7 @@ export const SOLUTIONS: Solution[] = [
       "Fabric pipelines land ERP, carrier, customs and weather feeds into one medallion model. A semantic layer resolves the three competing definitions of “on time”, and the report opens on the twelve shipments that will miss their window.",
     businessValue:
       "The daily supply stand-up stops arguing about whose number is right and starts deciding what to expedite.",
+    useCase: "See inbound stock risk before shipments miss their window",
     specializationArea: "data",
     builtBy: { name: "Juliana Castelblanco", email: "jcastelblanco@nextant.com" },
     status: "Client demo",
@@ -328,6 +335,7 @@ export const SOLUTIONS: Solution[] = [
       "Matches sub-ledger to GL across four entities, clusters the breaks by probable cause, and drafts the journal narrative for the accountant to approve or reject. Everything it proposes is traceable to the source rows.",
     businessValue:
       "Close moves from nine days to four, and the exceptions that remain arrive with a hypothesis attached.",
+    useCase: "Shorten month-end close by explaining reconciliation breaks",
     specializationArea: "data",
     builtBy: { name: "Mauricio Cubillos", email: "mcubillos@nextant.com" },
     status: "Working prototype",
@@ -359,6 +367,7 @@ export const SOLUTIONS: Solution[] = [
       "A Copilot Studio agent takes requests from Teams, email and the portal, classifies them against the service catalogue, asks for the one missing field it needs, then opens the right work item with the right queue and priority.",
     businessValue:
       "First-response time drops from hours to seconds, and the service desk stops spending its morning sorting mail.",
+    useCase: "Reduce manual triage of inbound service requests",
     specializationArea: "ibo",
     builtBy: { name: "Luis David Preciado", email: "lpreciado@nextant.com" },
     status: "Client demo",
@@ -399,6 +408,7 @@ export const SOLUTIONS: Solution[] = [
       "Job list, asset history, parts, photos and sign-off in one screen that works with no connection and reconciles when it finds one. Voice capture writes the visit note while the engineer's hands are busy.",
     businessValue:
       "Paperwork that used to land three days late lands before the engineer leaves site, which is the only way the invoice goes out on time.",
+    useCase: "Capture field job data offline, before the engineer leaves site",
     specializationArea: "ibo",
     builtBy: { name: "Juliana Castelblanco", email: "jcastelblanco@nextant.com" },
     status: "Idea / concept",

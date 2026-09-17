@@ -20,7 +20,7 @@
 ## Ownership
 
 - `nx_solution` and `nx_demorequest` are **user/team-owned** (row-level security by submitter).
-- Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `nx_usecase`) are **organization-owned**.
+- Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`) are **organization-owned**.
 
 ## Field-level security
 

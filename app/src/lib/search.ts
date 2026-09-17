@@ -22,6 +22,7 @@ function haystack(s: Solution): string {
     s.summary,
     s.whatItDoes,
     s.businessValue,
+    s.useCase ?? "",
     s.searchKeywords,
     s.builtBy.name,
     ...s.capabilities,

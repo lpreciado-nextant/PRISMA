@@ -94,7 +94,7 @@ Key decisions:
 
 - **Dataverse is the single source of truth.** No separate search index in v1.
 - **Assets live in Dataverse File and Image columns** — no external blob storage to provision.
-- **Native N:N relationships** for solution↔capability/technology/industry/use-case. No hand-built junction tables.
+- **Native N:N relationships** for solution↔capability/technology/industry. No hand-built junction tables.
 - **Client-side search.** At ~40 solutions, the published catalogue loads once per session and searches instantly in memory. Documented ceiling: revisit past a few thousand records.
 - **Present mode and publication status are enforced at the platform level**, not just in the UI. Unpublished records are invisible to CSMs via security roles; `Library Notes` and `Publication Status` carry field-level security.
 
@@ -102,10 +102,10 @@ Key decisions:
 
 ## Data model
 
-Reference tables (organization-owned): `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `nx_usecase`.
+Reference tables (organization-owned): `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`.
 Core tables (user/team-owned): `nx_solution`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`.
 
-Vocabulary governance: capabilities, industries, use cases, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates).
+Vocabulary governance: capabilities, industries, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates). Use case is a freeform text column on `nx_solution`, not a vocabulary.
 
 Full column-by-column spec: [docs/data_model/nextant-solution-library-dataverse-schema.md](docs/data_model/nextant-solution-library-dataverse-schema.md)
 

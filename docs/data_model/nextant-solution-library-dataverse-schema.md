@@ -7,9 +7,9 @@ This spec assumes the code app talks to Dataverse via the Web API / Power Platfo
 - **Primary key vs primary name column** — every Dataverse table auto-generates a GUID primary key (e.g. `nx_solutionid`). That's separate from the *primary name column*, the required text field used as the row's display label wherever it shows up in a lookup or subgrid. Neither needs to be defined manually beyond picking what the name column represents.
 - **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` exist on every table without being modeled. `ownerid` (who can manage the record, security-wise) is distinct from `nx_builtby` below (who gets credited on the card) — related people, not the same column.
 - **Global vs local choices** — every Choice column below is called out as **global** or **local**. Global choices are defined once and reused; use them for anything that mirrors the values on your old `Lists` tab, since that's exactly the "add a value and it becomes selectable everywhere" behavior you want.
-- **Ownership model** — `Solution` and `DemoRequest` are **user/team-owned** (they need row-level security since different practices submit their own work). `SpecializationArea`, `Capability`, `Technology`, `Industry`, and `UseCase` are **organization-owned** (shared reference data — everyone reads them, only admins/library team write to them).
-- **Native N:N over custom junction tables** — the tagging relationships (capability, technology, industry, use case) don't need any extra attributes of their own (no "date tagged", no "confidence score"), so build them as **native many-to-many relationships** rather than modeling junction tables by hand. Dataverse creates and manages the intersect table for you; you just add a subgrid to the form and query the relationship's navigation property from the code app. This drops four tables from the build.
-- **Vocabulary governance** — `Capability`, `Industry`, `UseCase`, and `SpecializationArea` are **governed**: contributors pick from existing values only, and the library team adds new ones. `Technology` is **open**: contributors can create values inline, and the library team periodically merges duplicates.
+- **Ownership model** — `Solution` and `DemoRequest` are **user/team-owned** (they need row-level security since different practices submit their own work). `SpecializationArea`, `Capability`, `Technology`, and `Industry` are **organization-owned** (shared reference data — everyone reads them, only admins/library team write to them).
+- **Native N:N over custom junction tables** — the tagging relationships (capability, technology, industry) don't need any extra attributes of their own (no "date tagged", no "confidence score"), so build them as **native many-to-many relationships** rather than modeling junction tables by hand. Dataverse creates and manages the intersect table for you; you just add a subgrid to the form and query the relationship's navigation property from the code app. This drops three tables from the build.
+- **Vocabulary governance** — `Capability`, `Industry`, and `SpecializationArea` are **governed**: contributors pick from existing values only, and the library team adds new ones. `Technology` is **open**: contributors can create values inline, and the library team periodically merges duplicates.
 
 ---
 
@@ -43,15 +43,7 @@ This spec assumes the code app talks to Dataverse via the Web API / Power Platfo
 | Industry *(primary name)* | Single line of text (100) | Yes | "Financial services", "Manufacturing", "Public sector", etc. |
 | Sort Order | Whole Number | No | Controls chip and facet order |
 
-> Modeled as a table rather than a multi-select Choice column. Multi-select Choice (`MultiSelectPicklist`) can't be filtered efficiently in Dataverse queries and can't carry sort order or future attributes — and industry is a primary CSM facet, so it needs both. Same reasoning applies to `nx_usecase`.
-
-### `nx_usecase`
-
-| Column | Type | Required | Notes |
-|---|---|---|---|
-| Use Case *(primary name)* | Single line of text (100) | Yes | The client-side framing of the problem — "reduce manual invoice handling", "forecast demand". Bridges how a client describes their pain and how Nextant describes its capabilities. |
-| Description | Multiple lines of text (plain, 500) | No | Helps contributors pick the right tag |
-| Sort Order | Whole Number | No | |
+> Modeled as a table rather than a multi-select Choice column. Multi-select Choice (`MultiSelectPicklist`) can't be filtered efficiently in Dataverse queries and can't carry sort order or future attributes — and industry is a primary CSM facet, so it needs both.
 
 ---
 
@@ -65,6 +57,7 @@ This spec assumes the code app talks to Dataverse via the Web API / Power Platfo
 | One-line Summary | Single line of text (200) | Yes | |
 | What It Does | Multiple lines of text (plain, 4000) | No | |
 | Business Value | Multiple lines of text (plain, 4000) | No | |
+| Use Case | Single line of text (200) | No | Freeform — the client-side framing of the problem the solution addresses ("reduce manual invoice handling", "forecast demand"). Was a governed `nx_usecase` reference table; folded into a text column to cut governance overhead |
 | Specialization Area | Lookup → `nx_specializationarea` | Yes | |
 | Built By | Lookup → `systemuser` | Yes | Platform table — no schema work needed, just add the lookup column |
 | Status | Choice — **global**, single-select | Yes | See `nx_solutionstatus` below — describes the solution's own maturity |
@@ -154,13 +147,12 @@ Supports the "request a live demo" flow — the escape hatch for solutions a CSM
 | `nx_solution` | `nx_capability` | Native N:N |
 | `nx_solution` | `nx_technology` | Native N:N |
 | `nx_solution` | `nx_industry` | Native N:N |
-| `nx_solution` | `nx_usecase` | Native N:N |
 | `nx_demoasset` | `nx_solution` | N:1 (lookup) |
 | `nx_solutionimage` | `nx_solution` | N:1 (lookup) |
 | `nx_demorequest` | `nx_solution` | N:1 (lookup) |
 | `nx_demorequest` | `systemuser` | N:1 (lookup, built-in table) |
 
-That's 9 custom tables total (`nx_solution`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `nx_usecase`) plus lookups to the built-in `systemuser` table and four native N:N relationships that need no tables of their own.
+That's 8 custom tables total (`nx_solution`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`) plus lookups to the built-in `systemuser` table and three native N:N relationships that need no tables of their own.
 
 ## Security model
 

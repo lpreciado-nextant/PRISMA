@@ -10,16 +10,16 @@
 | Specialization areas | `nx_specializationarea` | **Governed** | Librarian only |
 | Capabilities | `nx_capability` | **Governed** | Librarian only |
 | Industries | `nx_industry` | **Governed** | Librarian only |
-| Use-case tags | `nx_usecase` | **Governed** | Librarian only — seeded from real pursuits |
 | Technologies | `nx_technology` | **Open** | Contributors, inline at submission; librarian periodically merges duplicates |
+
+> Use case is not a vocabulary: it lives as a freeform single-line-of-text column on `nx_solution` ([schema spec](nextant-solution-library-dataverse-schema.md)).
 
 Contributor create privilege exists on `nx_technology` only ([security model](../architecture/security-model.md)).
 
 ## Why governed vocabularies
 
 - CSMs filter by these constantly — a fragmented vocabulary breaks faceting and live counts.
-- Industry and use case are modeled as tables (not multi-select Choices) because multi-select picklists can't be filtered efficiently and can't carry sort order.
-- Use-case tags bridge how a client describes their pain and how Nextant describes its capabilities; that mapping only works if the vocabulary is curated.
+- Industry is modeled as a table (not a multi-select Choice) because multi-select picklists can't be filtered efficiently and can't carry sort order.
 
 ## Why technologies stay open
 
