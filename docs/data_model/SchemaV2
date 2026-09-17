@@ -234,3 +234,72 @@ Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. `Pu
 - Who classifies an unlinked `nx_project` into a Solution, and how often — a standing queue, or reviewed on a schedule?
 - Whether `nx_project.Source = GitHub` ever grows into an actual sync — out of scope for now, kept as a plain choice + link field.
 
+---
+
+## Example: reuse across Specialization Areas, Solutions, and Projects
+
+A `Solution` can carry more than one `SpecializationArea` tag, and a `Project` can link back to that same `Solution` from multiple different clients — that repeated link is the reuse signal (G4). A `Project` with no `Solution` yet is the Librarian's classification queue.
+
+```mermaid
+graph LR
+    subgraph SA["Specialization Areas"]
+        SA1[AI & Automation]
+        SA2[Data Solutions]
+        SA3[Intelligent Business Operations]
+    end
+
+    subgraph SOL["Solutions — nx_solution"]
+        S1["S1 Invoice Reconciliation<br/>Published"]
+        S2["S2 Customer Churn Predictor<br/>Published"]
+        S3["S3 Contract Review Copilot<br/>Published"]
+        S4["S4 Warehouse Ops Dashboard<br/>Draft"]
+    end
+
+    subgraph PROJ["Projects — nx_project (evidence)"]
+        P1["P1 Acería del Norte"]
+        P2["P2 Retail Co X"]
+        P3["P3 Banco XYZ — Churn"]
+        P4["P4 Banco XYZ — Legal"]
+        P5["P5 Client TBD<br/>(Solution = empty)"]
+    end
+
+    SA1 -. tag N:N .-> S1
+    SA1 -. tag N:N .-> S3
+    SA2 -. tag N:N .-> S2
+    SA3 -. tag N:N .-> S3
+    SA3 -. tag N:N .-> S4
+
+    S1 -- 1:N --> P1
+    S1 -- 1:N --> P2
+    S2 -- 1:N --> P3
+    S3 -- 1:N --> P4
+    P5 -. unclassified .-> Librarian(["Librarian's queue"])
+
+    style S4 stroke-dasharray: 5 5
+    style P5 stroke-dasharray: 5 5
+```
+
+S1 shows up twice on the Project side (Acería del Norte and Retail Co X) — same reusable Solution, delivered to two different clients. S3 tags two Specialization Areas at once. S4 and P5 are dashed to mark the two "pending" states: an unpublished Solution and an unclassified Project.
+
+## Example: everything hanging off one Solution
+
+The diagram above only shows the SA ↔ Solution ↔ Project story. Zooming into a single Solution (S1) shows every other table it touches: reference tags, the demo asset the CSM opens, a live-demo request raised against it, and the delivery evidence — which carries its own tags and attachments.
+
+```mermaid
+graph TD
+    S1["S1 Invoice Reconciliation Assistant"]
+
+    S1 -. tag N:N .-> SA1[AI & Automation]
+    S1 -. tag N:N .-> IND1["Manufacturing, Retail"]
+    S1 -. tag N:N .-> TECH1["LangChain, Power Automate"]
+
+    S1 -- 1:N --> DA1["nx_demoasset<br/>Self-contained HTML"]
+    S1 -- 1:N --> DR1["nx_demorequest<br/>Carlos Mejía — Needed 2026-09-25"]
+    S1 -- 1:N --> P1["nx_project<br/>P1 Acería del Norte"]
+
+    P1 -. tag N:N .-> TECH2["Azure Document Intelligence"]
+    P1 -- 1:N --> EV1["nx_projectevidence<br/>Dashboard screenshot"]
+```
+
+One Solution row is the hub: the tags describe *what it is*, `nx_demoasset` is *what a CSM can show*, `nx_demorequest` is *who's asking for a live one right now*, and `nx_project` is *proof it already happened* — which can carry a more specific tech stack and its own attachments than the Solution it rolls up to.
+
