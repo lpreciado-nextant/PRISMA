@@ -137,8 +137,13 @@ Remaining metrics (monthly active CSMs, demos in active pursuits, live-demo requ
 ```
 app/                                                       Working code app PoC (React + TS + Vite + Tailwind)
 docs/
-  design/end-to-end-design.md                              Full end-to-end design
-  data_model/nextant-solution-library-dataverse-schema.md  Dataverse schema spec
+  README.md                                                Documentation map — start here
+  design/                                                  End-to-end design · design system · accessibility
+  architecture/                                            Technical architecture · security model · ADRs
+  data_model/                                              Dataverse schema spec · reference data governance
+  workflows/                                               Contribution · discovery · assets · present mode · demo requests
+  delivery/                                                Roadmap · metrics · risks · decision log
+  operations/                                              Librarian runbook · content health
 examples/
   nextant-solution-library 1.html                          HTML prototype — the visual baseline
 run-poc.bat                                                Build and serve the PoC locally
@@ -150,4 +155,4 @@ The prototype defines the palette (steel blue `#1C567C`, per-specialization acce
 
 ## Open questions
 
-See [§11 of the design doc](docs/design/end-to-end-design.md) — librarian ownership, pilot group size, launch timing, source of the initial 40 solutions, code app licensing, demo-request routing, and one-pager templates.
+Tracked in the [decision log](docs/delivery/decision-log.md) — librarian ownership, pilot group size, launch timing, source of the initial 40 solutions, code app licensing, demo-request routing, and one-pager templates.

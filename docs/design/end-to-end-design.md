@@ -3,7 +3,7 @@
 **Status:** Draft for review · look-and-feel PoC implemented in [`app/`](../../app/README.md)
 **Last updated:** 2026-09-16
 **Owner:** _TBD_
-**Related docs:** [Dataverse schema spec](../data_model/nextant-solution-library-dataverse-schema.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
+**Related docs:** [Documentation map](../README.md) · [Dataverse schema spec](../data_model/nextant-solution-library-dataverse-schema.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
 ---
 
