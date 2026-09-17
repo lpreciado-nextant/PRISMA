@@ -32,7 +32,7 @@ Retire when stale, superseded, or client-sensitive. Retired records leave search
 
 ## Reference data upkeep
 
-- Add governed values (capabilities, industries, use cases, specialization areas) as the practice evolves — contributors cannot.
+- Add governed values (capabilities, industries, specialization areas) as the practice evolves — contributors cannot.
 - Periodically merge duplicate technologies ([governance](../data_model/reference-data-governance.md)).
 - Maintain sort orders that drive tab/chip/facet ordering.
 

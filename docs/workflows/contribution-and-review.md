@@ -27,7 +27,7 @@ Guided multi-step form with draft saving at every step. **Friction budget: under
 |---|---|---|
 | 1. What is it? | Name, one-line summary, specialization area, status (idea / prototype / client demo / production / retired) | |
 | 2. What does it do and why does it matter? | What It Does, Business Value, client problem it solves | The step CSMs depend on most and builders resent most — gets inline examples and an optional AI-assist to expand terse bullets into prose |
-| 3. Tag it | Capabilities, technologies, industries, use-case tags | Type-ahead against existing values. New technologies can be created inline; capabilities and industries cannot ([governance](../data_model/reference-data-governance.md)) |
+| 3. Tag it | Capabilities, technologies, industries | Type-ahead against existing values. New technologies can be created inline; capabilities and industries cannot ([governance](../data_model/reference-data-governance.md)) |
 | 4. Attach the demo | One or more assets | Form adapts to asset type ([demo assets](demo-assets.md)) |
 | 5. Images | One card thumbnail (optional — generated poster covers records without one) + captioned detail screenshots (`nx_solutionimage`) | |
 | 6. Safety & sharing | Shareable with clients, sample data level, client/context | Asked plainly — getting these wrong is the highest-consequence error in the system. If "Yes, with names removed": fill `Client Context (Redacted)` |

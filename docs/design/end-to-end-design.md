@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
 **Status:** Draft for review · look-and-feel PoC implemented in [`app/`](../../app/README.md)
-**Last updated:** 2026-09-16
+**Last updated:** 2026-09-17
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec](../data_model/nextant-solution-library-dataverse-schema.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
@@ -90,7 +90,7 @@ stateDiagram-v2
 
 1. **What is it?** — Name, one-line summary, specialization area, status (idea / prototype / client demo / production / retired).
 2. **What does it do and why does it matter?** — What It Does, Business Value, client problem it solves. This is the step CSMs depend on most and builders resent most, so it gets inline examples and an optional AI-assist to expand terse bullets into prose.
-3. **Tag it** — Capabilities, technologies, industries, use-case tags. Type-ahead against existing values; new technologies can be created inline (that vocabulary is intentionally open), new capabilities and industries cannot (those are governed).
+3. **Tag it** — Capabilities, technologies, industries. Type-ahead against existing values; new technologies can be created inline (that vocabulary is intentionally open), new capabilities and industries cannot (those are governed).
 4. **Attach the demo** — One or more assets. The form adapts to asset type (see §3.3).
 5. **Images** — One card thumbnail (optional; a generated per-specialization poster covers records without one) plus any number of captioned detail-page screenshots, stored in `nx_solutionimage` (see §6.1a).
 6. **Safety & sharing** — Shareable with clients, sample data level, client/context. These questions are asked plainly because getting them wrong is the highest-consequence error in the system.
@@ -196,9 +196,8 @@ The [existing schema spec](../data_model/nextant-solution-library-dataverse-sche
 | Table | Rationale |
 |---|---|
 | `nx_industry` | CSMs filter by industry constantly — it's the first question a client's context raises. Modeled as a table rather than a multi-select Choice because multi-select picklists can't be filtered efficiently and can't carry sort order. |
-| `nx_usecase` | Bridges the gap between how a client describes their pain and how Nextant describes its capabilities. Governed vocabulary, seeded from real pursuits. |
 
-Both join `nx_solution` via native N:N.
+It joins `nx_solution` via native N:N.
 
 ### 6.1a New child table: `nx_solutionimage`
 
@@ -211,6 +210,7 @@ Detail-page screenshots beyond the card thumbnail — the submission form collec
 | Thumbnail | Image column | The card grid is the primary browse surface and needs a visual. A per-specialization generated placeholder covers records without one. |
 | Effort / Time to Deploy | Choice — **global**, single-select | Days · Weeks · Months · Ongoing programme. CSMs get asked "how long would this take us?" in the same breath as "can you show me?" |
 | Client Context (Redacted) | Single line of text (200) | Supplies the client-safe substitute string used in present mode. Filled in by the contributor or librarian when shareability is *Yes, with names removed*. |
+| Use Case | Single line of text (200) | Freeform client-side framing of the problem the solution addresses ("reduce manual invoice handling"). Originally a governed `nx_usecase` reference table joined via N:N; simplified to a text column to cut governance overhead. |
 
 ### 6.3 New table: `nx_demorequest`
 
@@ -218,7 +218,7 @@ Supports the live-demo handoff (§3.3): solution, requester, client/opportunity 
 
 ### 6.4 Reference data governance
 
-- **Governed (librarian-managed):** specialization areas, capabilities, industries, use-case tags. Contributors select from existing values only.
+- **Governed (librarian-managed):** specialization areas, capabilities, industries. Contributors select from existing values only.
 - **Open (contributor-extendable):** technologies. Grows organically; the librarian periodically merges duplicates.
 
 > The full column-by-column spec, including field-level security requirements, now lives in the [schema spec](../data_model/nextant-solution-library-dataverse-schema.md).
@@ -254,7 +254,7 @@ flowchart TB
 
 - **Dataverse is the single source of truth.** No separate search index in v1 (see §7.3).
 - **Assets live in Dataverse File and Image columns.** No external blob storage, no separate hosting to provision. This is what makes self-contained HTML demos viable — the payload travels with the record.
-- **Native N:N relationships** for solution↔capability, solution↔technology, solution↔industry, solution↔use-case. No hand-built junction tables.
+- **Native N:N relationships** for solution↔capability, solution↔technology, solution↔industry. No hand-built junction tables.
 - **Power Automate for notifications only** — review-queue alerts and demo-request handoffs to Teams/Outlook. No business logic lives in flows.
 - **Present mode is enforced server-side as well as client-side.** The query issued in present mode filters on shareability at the Dataverse level, so a client-visible list can never contain an internal-only record even transiently.
 
