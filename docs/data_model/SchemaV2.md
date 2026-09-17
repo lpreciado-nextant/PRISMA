@@ -369,13 +369,13 @@ graph LR
 
 S1 links to **both** P1 (Acería del Norte) and P2 (Retail Co X) — the reuse signal is back, carried by two separate `nx_solutionproject` rows, not by either fixed table. S4 (Draft) and P5 (no link yet) are dashed — the same two "pending" states as before, just represented as the *absence* of a junction row rather than an empty lookup.
 
-## Example: everything hanging off one Solution
+## Example: everything hanging off one Solution — including a Solution with no Projects yet
 
 Zooming into a single Solution (S1) shows every other table it touches: its specialization-area lookup and N:N tags, the demo asset the CSM opens, a live-demo request raised against it, and — through the junction table — its delivery evidence.
 
 ```mermaid
 graph TD
-    S1["S1 Invoice Reconciliation Assistant"]
+    S1["POC Forge"]
 
     SA1[AI & Automation] -- 1:N --> S1
     CAP1[AI & agents] -- N:N --> S1
@@ -384,11 +384,11 @@ graph TD
     TECH1[LangChain] -- N:N --> S1
     TECH2[Power Automate] -- N:N --> S1
 
-    S1 -- 1:N --> DA1["nx_demoasset<br/>Self-contained HTML"]
+    S1 -- 1:N --> DA1["nx_demoasset<br/>Hosted web app URL"]
     S1 -- 1:N --> DR1["nx_demorequest<br/>Carlos Mejía — Needed 2026-09-25"]
-    S1 -- 1:N --> J1["nx_solutionproject"]
-    J1 -- 1:N --> P1["nx_project (pre-existing)<br/>P1 Acería del Norte"]
-    Owner["systemuser<br/>Juliana Castelblanco"] -- "Project Owner" --> P1
+    S1 -.->|"no nx_solutionproject rows"| NoProj(( ))
+
+    style NoProj stroke-dasharray: 5 5
 ```
 
-One Solution row is the hub: the tags describe *what it is* (exactly one specialization area, plus as many capabilities, industries, and technologies as apply), with a plain `Use Case` text field for how the client would phrase the problem. `nx_demoasset` is *what a CSM can show*, `nx_demorequest` is *who's asking for a live one right now*, and `nx_solutionproject` is the bridge to *proof it already happened* — pointing at a `nx_project` row this schema never modifies directly.
+One Solution row is the hub: the tags describe *what it is* (exactly one specialization area, plus as many capabilities, industries, and technologies as apply), with a plain `Use Case` text field for how the client would phrase the problem. `nx_demoasset` is *what a CSM can show*, and `nx_demorequest` is *who's asking for a live one right now* — both stay populated regardless of delivery history. `nx_solutionproject` is the bridge to *proof it already happened*, and `POC Forge` simply has no rows there yet: a reusable Solution the Librarian hasn't linked to a delivered `nx_project` (still fixed, never touched directly), not an error state — it's demoable and requestable on its own until the reuse signal shows up.
