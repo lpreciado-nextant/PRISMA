@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: `Use Case` was dropped as a governed table (it now lives as a plain field on `nx_solution` instead); `Capability` was dropped and then reintegrated as a simple reference table; a `Project` concept was added to separate "the reusable Solution" from "the evidence it's been built before" — though `nx_project` itself already exists in Dataverse with fixed columns, so it never gets touched directly; and every tag relationship was simplified from many-to-many to a single-valued lookup, except Solution↔Project, which needed to stay many-sided and got its own junction table instead.
+This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; this round simplified every tag relationship (`SpecializationArea`, `Capability`, `Industry`, `Technology`) from many-to-many to a single-valued lookup; a `Project` concept was added to separate "the reusable Solution" from "the evidence it's been built before" — though `nx_project` itself already exists in Dataverse with fixed columns, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, got its own junction table instead of a single lookup on either side.
 
 ## Conventions
 
@@ -22,6 +22,7 @@ erDiagram
     nx_industry ||--o{ nx_solution : "tag (1:N)"
     nx_technology ||--o{ nx_solution : "tag (1:N)"
     nx_solution ||--o{ nx_demoasset : "1:N"
+    nx_solution ||--o{ nx_solutionimage : "1:N"
     nx_solution ||--o{ nx_demorequest : "1:N"
     nx_solution ||--o{ nx_solutionproject : "1:N"
     nx_project ||--o{ nx_solutionproject : "1:N"
@@ -48,6 +49,12 @@ erDiagram
         choice AssetType
         file File
         url ExternalURL
+    }
+    nx_solutionimage {
+        guid nx_solutionimageid PK
+        lookup Solution FK
+        image Image
+        text Caption
     }
     nx_demorequest {
         guid nx_demorequestid PK
@@ -80,6 +87,7 @@ Shared, organization-owned vocabularies. Every solution links back to these via 
 | Column | Type | Required | Notes |
 |---|---|---|---|
 | Specialization Area *(primary name)* | Text (100) | Yes | AI & Automation · Data Solutions · Intelligent Business Operations |
+| Description | Text, multi-line (500) | No | Powers the per-tab note in the public app |
 | Sort Order | Whole Number | No | |
 
 1:N with `nx_solution` — each solution has exactly one specialization area, set via a lookup column on `nx_solution`.
@@ -131,6 +139,8 @@ The reusable offering — the unit of value shown to a CSM.
 | Industry | Lookup → `nx_industry` | Yes | Single-valued |
 | Technology | Lookup → `nx_technology` | No | Single-valued |
 | Use Case | Text (200) | No | The client-side framing of the problem — "reduce manual invoice handling", "forecast demand". Bridges how a client describes their pain and how Nextant describes its capability. |
+| Client / Context | Text (200) | No | Freeform for now; revisit as a lookup if reporting by client is needed later. **Internal-only** — never rendered in present mode |
+| Client Context (Redacted) | Text (200) | No | The client-safe substitute shown in present mode — "a national logistics provider". Required in practice whenever Shareable with Clients is "Yes, with names removed"; enforced at review, not schema-level |
 | Built By | Lookup → `systemuser` | Yes | |
 | Status | Choice — global | Yes | Idea / concept · Working prototype · Client demo · Live in production · Retired |
 | Publication Status | Choice — global | Yes | Draft · Pending review · Published · Retired — **field-level security, Librarian-only write** |
@@ -159,8 +169,21 @@ The curated, presentable asset a CSM opens and shows. Unchanged from v1. Require
 | Asset Type | Choice — global | Yes | Self-contained HTML · Hosted web app (URL) · Power Apps · Power BI · Desktop app or script · Video walkthrough · One-pager / slide |
 | File | File | No | For self-contained HTML |
 | External URL | URL (500) | No | For hosted/embedded links |
+| Embed Hint | Text, multi-line (500) | No | The "sign-in may stall in this frame" style note shown in the viewer |
 | Allows Embedding | Yes/No | No | |
 | Sort Order | Whole Number | No | |
+
+### `nx_solutionimage` — the gallery
+
+Detail-page screenshots beyond the card thumbnail. Unchanged from v1. The `Thumbnail` image column on `nx_solution` stays the single card-grid hero image; this table carries as many captioned screenshots as the story needs. Required lookup to `nx_solution`; inherits the parent's visibility rules.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Name *(primary name)* | Text (100) | Yes | Auto: "{Solution name} — image {n}" |
+| Solution | Lookup → `nx_solution` | Yes | |
+| Image | Image | Yes | The screenshot payload; enable "can store full images" so the detail page isn't limited to the thumbnail rendition |
+| Caption | Text (200) | No | Shown under the image in the gallery |
+| Sort Order | Whole Number | No | Gallery display order |
 
 ### `nx_demorequest` — the live-demo ask
 
@@ -218,13 +241,14 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 | `nx_technology` | `nx_solution` | 1:N |
 | `nx_solution` | `systemuser` | N:1 |
 | `nx_demoasset` | `nx_solution` | N:1 |
+| `nx_solutionimage` | `nx_solution` | N:1 |
 | `nx_demorequest` | `nx_solution` | N:1 |
 | `nx_demorequest` | `systemuser` | N:1 |
 | `nx_solutionproject` | `nx_solution` | N:1 |
 | `nx_solutionproject` | `nx_project` | N:1 |
 | `nx_project` | `systemuser` | N:1 |
 
-**9 tables in this model:** `nx_solution`, `nx_specializationarea`, `nx_capability`, `nx_industry`, `nx_technology`, `nx_demoasset`, `nx_demorequest`, `nx_solutionproject`, and `nx_project` (the last one pre-existing, fixed columns — connected only through the junction table and its own existing `Project Owner` lookup to `systemuser`).
+**10 tables in this model:** `nx_solution`, `nx_specializationarea`, `nx_capability`, `nx_industry`, `nx_technology`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_solutionproject`, and `nx_project` (the last one pre-existing, fixed columns — connected only through the junction table and its own existing `Project Owner` lookup to `systemuser`).
 
 **Dropped from v1:** `nx_usecase` as a governed table — the concept now lives as a plain `Use Case` field on `nx_solution`.
 
@@ -238,7 +262,7 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 
 ## Security model
 
-| Role | `nx_solution` | `nx_demoasset` | Reference tables | `nx_demorequest` | `nx_solutionproject` |
+| Role | `nx_solution` | `nx_demoasset` / `nx_solutionimage` | Reference tables | `nx_demorequest` | `nx_solutionproject` |
 |---|---|---|---|---|---|
 | Contributor | Create; Read/Write own; Read published | Same as parent | Read; Create on `nx_technology` only | Read own | Create; Read/Write own |
 | CSM | Read published only | Read (published parents) | Read | Create; Read own | Read (context on Solution detail) |
