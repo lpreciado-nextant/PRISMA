@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PRISMA — A Design Story</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=Source+Sans+3:ital,wght@0,300..700;1,300..700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+/* ============================================================
+   PRISMA design-story deck — built with the app's real tokens
+   ============================================================ */
+
+:root, [data-theme="dark"] {
+  color-scheme: dark;
+  --ground: #05080c;
+  --ground-2: #0a121b;
+  --ink: #e9eff4;
+  --ink-2: #a3b1bc;
+  --ink-3: #74838f;
+  --accent: #7fb6d9;
+  --accent-deep: #1c567c;
+  --on-accent: #06131c;
+  --sa-ai: #7fb6d9;
+  --sa-data: #4fbfab;
+  --sa-ibo: #a99ae6;
+  --live: #5fd3a2;
+  --proto: #e0b860;
+  --idea: #9bb0bf;
+  --glass-bg: rgba(255,255,255,0.028);
+  --glass-bg-2: rgba(255,255,255,0.05);
+  --glass-edge: rgba(255,255,255,0.12);
+  --glass-edge-hi: rgba(255,255,255,0.26);
+  --glass-sheen: rgba(255,255,255,0.18);
+  --glass-shadow: 0 24px 60px -24px rgba(0,0,0,0.85);
+  --glass-blur: 20px;
+  --aurora: 0.5;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --ground: #eef2f6;
+  --ground-2: #dbe6f0;
+  --ink: #0d161d;
+  --ink-2: #47565f;
+  --ink-3: #6d7c88;
+  --accent: #1c567c;
+  --accent-deep: #123f5d;
+  --on-accent: #ffffff;
+  --sa-ai: #1c567c;
+  --sa-data: #0b6157;
+  --sa-ibo: #57468c;
+  --live: #0b6145;
+  --proto: #7c5408;
+  --idea: #5b6b77;
+  --glass-bg: rgba(255,255,255,0.32);
+  --glass-bg-2: rgba(255,255,255,0.48);
+  --glass-edge: rgba(255,255,255,0.66);
+  --glass-edge-hi: rgba(255,255,255,0.95);
+  --glass-sheen: rgba(255,255,255,0.9);
+  --glass-shadow: 0 24px 60px -30px rgba(13,30,45,0.4);
+  --glass-blur: 18px;
+  --aurora: 0.38;
+}
+
+:root {
+  --font-display: "Schibsted Grotesk","Helvetica Neue",Helvetica,Arial,sans-serif;
+  --font-body: "Source Sans 3","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-mono: "IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --ease-sheet: cubic-bezier(0.32,0.72,0,1);
+  --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  transition: background .6s ease, color .6s ease;
+}
+
+h1,h2,h3,h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+::selection { background: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* ---- aurora ground (mirrors Background.tsx) ---------------- */
+.bg {
+  position: fixed; inset: 0; z-index: -1;
+  overflow: hidden; pointer-events: none;
+}
+.bg .wash {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 60%),
+    var(--ground);
+  transition: background .6s ease;
+}
+.bg .blob {
+  position: absolute; border-radius: 50%;
+  opacity: var(--aurora);
+  transition: opacity .4s ease, background .6s ease;
+}
+.bg .blob.ai   { top: -10rem; left: -8rem;  width: 46rem; height: 46rem; filter: blur(110px); background: color-mix(in srgb, var(--sa-ai) 60%, transparent); }
+.bg .blob.ibo  { top: 33%;    right: -10rem; width: 40rem; height: 40rem; filter: blur(120px); background: color-mix(in srgb, var(--sa-ibo) 58%, transparent); }
+.bg .blob.data { bottom: -13rem; left: 25%; width: 44rem; height: 44rem; filter: blur(130px); background: color-mix(in srgb, var(--sa-data) 55%, transparent); }
+.bg .grid {
+  position: absolute; inset: 0; opacity: .35;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(100% 70% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(100% 70% at 50% 0%, #000 0%, transparent 75%);
+}
+
+/* ---- liquid glass surface (mirrors index.css) -------------- */
+.glass {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 0 var(--glass-edge-hi),
+    inset 0 -1px 0 0 color-mix(in srgb, var(--glass-edge) 40%, transparent);
+  border-radius: 20px;
+  transition:
+    background .5s var(--ease-sheet),
+    border-color .5s var(--ease-sheet),
+    box-shadow .5s var(--ease-sheet);
+}
+html.refract .glass.refracted {
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) url(#glass-refraction);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%) url(#glass-refraction);
+}
+
+/* pointer sheen — specular highlight tracking --mx/--my (set by JS) */
+.glass::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    240px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in srgb, var(--glass-sheen) 60%, transparent),
+    transparent 65%
+  );
+  transition: opacity .35s ease;
+}
+.glass:hover::after { opacity: 1; }
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+  .glass::after { display: none; }
+}
+
+/* ---- deck chrome ------------------------------------------- */
+.deck { position: fixed; inset: 0; }
+
+.slide {
+  position: absolute; inset: 0;
+  display: flex;
+  padding: 5.5rem 4rem 5rem;
+  opacity: 0; visibility: hidden;
+  transform: translateY(26px) scale(.985);
+  transition: opacity .55s var(--ease-sheet), transform .55s var(--ease-sheet), visibility 0s linear .55s;
+  overflow-y: auto;
+}
+.slide.active {
+  opacity: 1; visibility: visible;
+  transform: translateY(0) scale(1);
+  transition: opacity .55s var(--ease-sheet) .12s, transform .55s var(--ease-sheet) .12s, visibility 0s;
+}
+/* margin:auto centers without clipping when content overflows the viewport */
+.slide-inner { width: min(1120px, 100%); margin: auto; }
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: .74rem; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 1rem;
+}
+.slide h2 { font-size: clamp(1.9rem, 3.4vw, 2.9rem); margin-bottom: .5rem; }
+.lede { font-size: 1.13rem; color: var(--ink-2); max-width: 62ch; margin: .4rem 0 1.8rem; }
+.lede strong, p strong { color: var(--ink); font-weight: 600; }
+.mono { font-family: var(--font-mono); font-size: .8rem; color: var(--ink-3); }
+
+.cols { display: grid; gap: 1.4rem; }
+.cols.two { grid-template-columns: 1fr 1fr; }
+.cols.three { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 900px) {
+  .cols.two, .cols.three { grid-template-columns: 1fr; }
+  .slide { padding: 5rem 1.4rem 6rem; }
+}
+
+.panel { padding: 1.5rem 1.6rem; }
+.panel h3 { font-size: 1.06rem; margin-bottom: .5rem; }
+.panel p { margin: .35rem 0; color: var(--ink-2); font-size: .95rem; }
+
+/* nav */
+.navbar {
+  position: fixed; top: 1.1rem; left: 50%; transform: translateX(-50%);
+  z-index: 40; display: flex; align-items: center; gap: 1rem;
+  padding: .55rem 1.1rem; border-radius: 999px;
+}
+.navbar .wordmark {
+  font-family: var(--font-display); font-weight: 700; letter-spacing: .34em;
+  font-size: .8rem; color: var(--ink);
+}
+.navbar .wordmark span { color: var(--accent); }
+.navbar .slide-title { font-family: var(--font-mono); font-size: .72rem; color: var(--ink-3); letter-spacing: .06em; }
+
+button.chrome {
+  font-family: var(--font-mono); font-size: .75rem;
+  background: var(--glass-bg-2); color: var(--ink);
+  border: 1px solid var(--glass-edge); border-radius: 999px;
+  padding: .4rem .85rem; cursor: pointer;
+  transition: background .3s ease, border-color .3s ease, transform .3s var(--ease-spring);
+}
+button.chrome:hover { border-color: var(--glass-edge-hi); transform: translateY(-1px); }
+
+.arrows {
+  position: fixed; bottom: 1.4rem; right: 1.6rem; z-index: 40;
+  display: flex; gap: .5rem;
+}
+.arrows button.chrome { width: 2.6rem; height: 2.6rem; padding: 0; font-size: 1rem; }
+
+.dots {
+  position: fixed; bottom: 1.75rem; left: 50%; transform: translateX(-50%);
+  z-index: 40; display: flex; gap: .55rem;
+}
+.dots button {
+  width: .55rem; height: .55rem; border-radius: 50%;
+  border: 1px solid var(--glass-edge-hi);
+  background: transparent; cursor: pointer; padding: 0;
+  transition: background .3s ease, transform .3s var(--ease-spring);
+}
+.dots button.on { background: var(--accent); border-color: var(--accent); transform: scale(1.35); }
+
+.progress {
+  position: fixed; top: 0; left: 0; height: 2px; z-index: 50;
+  background: linear-gradient(90deg, var(--sa-ai), var(--sa-data), var(--sa-ibo));
+  transition: width .5s var(--ease-sheet);
+}
+
+.hint {
+  position: fixed; bottom: 1.7rem; left: 1.6rem; z-index: 40;
+  font-family: var(--font-mono); font-size: .68rem; color: var(--ink-3); letter-spacing: .05em;
+}
+
+/* ---- slide 1 : title --------------------------------------- */
+.title-slide { text-align: center; }
+.title-slide .wordmark-hero {
+  font-family: var(--font-display); font-weight: 800;
+  font-size: clamp(4rem, 13vw, 9.5rem);
+  letter-spacing: .16em; margin-left: .16em; /* optical centering */
+  line-height: 1;
+  background: linear-gradient(115deg, var(--ink) 20%, var(--accent) 50%, var(--ink) 80%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  animation: shimmer 7s ease-in-out infinite;
+}
+@keyframes shimmer { 0%,100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
+.title-slide .sub {
+  font-size: clamp(1rem, 2vw, 1.3rem); color: var(--ink-2);
+  margin-top: 1.2rem;
+}
+.title-slide .tagline { margin-top: 2.6rem; }
+
+/* ---- prism svg --------------------------------------------- */
+.prism-stage { display: flex; justify-content: center; margin: .5rem 0 1.5rem; }
+.prism-stage svg { width: min(680px, 100%); height: auto; overflow: visible; }
+.beam-in { stroke: var(--ink); stroke-width: 2.5; opacity: .85; }
+.beam-out { stroke-width: 3; stroke-linecap: round; opacity: 0; transition: opacity .6s ease .1s; }
+.prism-stage.lit .beam-out { opacity: .95; }
+.prism-stage .beam-label {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em;
+  fill: var(--ink-2); opacity: 0; transition: opacity .6s ease .35s;
+}
+.prism-stage.lit .beam-label { opacity: 1; }
+.prism-body {
+  fill: var(--glass-bg-2); stroke: var(--glass-edge-hi); stroke-width: 1.5;
+  cursor: pointer; transition: fill .4s ease;
+}
+.prism-body:hover { fill: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pulse-dot { fill: var(--ink); animation: travel 2.6s linear infinite; }
+@keyframes travel { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+
+/* ---- swatches ---------------------------------------------- */
+.swatch-row { display: flex; flex-wrap: wrap; gap: 1rem; }
+.swatch {
+  flex: 1 1 150px; border-radius: 16px; padding: 1rem;
+  border: 1px solid var(--glass-edge);
+  min-height: 7.5rem; display: flex; flex-direction: column; justify-content: flex-end;
+  transition: transform .35s var(--ease-spring);
+}
+.swatch:hover { transform: translateY(-4px); }
+.swatch .name { font-family: var(--font-display); font-weight: 600; font-size: .95rem; }
+.swatch .hex { font-family: var(--font-mono); font-size: .72rem; opacity: .85; }
+
+/* ---- glass playground -------------------------------------- */
+.playground {
+  border-radius: 24px; overflow: hidden; position: relative;
+  min-height: 21rem; border: 1px solid var(--glass-edge);
+}
+.playground .mini-aurora { position: absolute; inset: 0; background: var(--ground-2); }
+.playground .mini-aurora i { position: absolute; border-radius: 50%; display: block; }
+.playground .mini-aurora i:nth-child(1) { top: -4rem; left: -3rem; width: 18rem; height: 18rem; filter: blur(48px); background: color-mix(in srgb, var(--sa-ai) 70%, transparent); }
+.playground .mini-aurora i:nth-child(2) { bottom: -5rem; right: -2rem; width: 17rem; height: 17rem; filter: blur(52px); background: color-mix(in srgb, var(--sa-ibo) 65%, transparent); }
+.playground .mini-aurora i:nth-child(3) { top: 40%; left: 38%; width: 13rem; height: 13rem; filter: blur(44px); background: color-mix(in srgb, var(--sa-data) 65%, transparent); }
+.playground .mini-aurora .txt {
+  position: absolute; inset: 0; padding: 1.4rem;
+  font-family: var(--font-mono); font-size: .72rem; line-height: 2.1;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  white-space: pre-wrap; user-select: none;
+}
+.play-card {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: min(23rem, 78%); padding: 1.4rem 1.5rem;
+  background: rgba(255,255,255, var(--play-fill, 0.06));
+  backdrop-filter: blur(var(--play-blur, 20px)) saturate(var(--play-sat, 180%));
+  -webkit-backdrop-filter: blur(var(--play-blur, 20px)) saturate(var(--play-sat, 180%));
+  border: 1px solid rgba(255,255,255, var(--play-edge, 0.16));
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255,255,255, calc(var(--play-edge, 0.16) * 1.8));
+}
+[data-theme="light"] .play-card {
+  background: rgba(255,255,255, calc(var(--play-fill, 0.06) * 6));
+}
+.play-card h4 { font-size: 1rem; }
+.play-card p { font-size: .84rem; color: var(--ink-2); margin: .3rem 0 0; }
+.controls { display: grid; gap: .9rem; margin-top: 1.2rem; }
+.controls label {
+  display: grid; grid-template-columns: 11rem 1fr 4.2rem; align-items: center; gap: .9rem;
+  font-family: var(--font-mono); font-size: .74rem; color: var(--ink-2);
+}
+.controls output { text-align: right; color: var(--ink); }
+input[type="range"] {
+  appearance: none; -webkit-appearance: none;
+  height: 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--ink-3) 40%, transparent);
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--ground);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* ---- compare (frosted vs liquid) --------------------------- */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1.3rem; }
+@media (max-width: 900px) { .compare { grid-template-columns: 1fr; } }
+.compare .pane {
+  position: relative; border-radius: 22px; overflow: hidden;
+  min-height: 15rem; border: 1px solid var(--glass-edge);
+}
+.compare .pane .mini-aurora { position: absolute; inset: 0; background: var(--ground-2); }
+.compare .pane .sheet {
+  position: absolute; inset: 12%;
+  border-radius: 18px;
+  background: var(--glass-bg-2);
+  border: 1px solid var(--glass-edge-hi);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: .75rem; letter-spacing: .12em; color: var(--ink-2);
+}
+html.refract .compare .pane.liquid .sheet {
+  backdrop-filter: blur(16px) saturate(180%) url(#glass-refraction);
+  -webkit-backdrop-filter: blur(16px) saturate(180%) url(#glass-refraction);
+}
+.compare .caption { font-size: .88rem; color: var(--ink-2); margin-top: .6rem; }
+
+/* ---- typography specimens ---------------------------------- */
+.spec { padding: 1.5rem 1.7rem; }
+.spec .sample { margin: .3rem 0 .8rem; }
+.spec.display .sample { font-family: var(--font-display); font-size: 2.2rem; font-weight: 700; letter-spacing: -0.022em; }
+.spec.body .sample { font-family: var(--font-body); font-size: 1.05rem; color: var(--ink-2); }
+.spec.mono-spec .sample { font-family: var(--font-mono); font-size: .85rem; color: var(--ink-2); letter-spacing: .04em; }
+.spec .role { font-family: var(--font-mono); font-size: .7rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+
+/* ---- easing demo ------------------------------------------- */
+.ease-lab { padding: 1.5rem 1.7rem; }
+.ease-track { position: relative; height: 3rem; margin: .8rem 0; border-radius: 12px; background: var(--glass-bg); border: 1px dashed var(--glass-edge); }
+.ease-ball {
+  position: absolute; top: 50%; left: .5rem; width: 2rem; height: 2rem;
+  transform: translateY(-50%); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: .55rem; color: var(--on-accent);
+  background: var(--accent);
+}
+.ease-track.go .ease-ball.sheet-ease { transition: left 1.1s var(--ease-sheet); left: calc(100% - 2.5rem); }
+.ease-track.go .ease-ball.spring-ease { transition: left 1.1s var(--ease-spring); left: calc(100% - 2.5rem); }
+
+/* ---- component wireframes ---------------------------------- */
+.wire { padding: 1.2rem 1.3rem; }
+.wire h4 { font-size: .92rem; margin-bottom: .15rem; }
+.wire p { font-size: .82rem; color: var(--ink-2); margin: .2rem 0 .8rem; }
+.wire .sketch { border-radius: 12px; border: 1px solid var(--glass-edge); padding: .7rem; display: grid; gap: .45rem; background: var(--glass-bg); }
+.wire .bar { height: .55rem; border-radius: 999px; background: color-mix(in srgb, var(--ink-3) 45%, transparent); }
+.wire .bar.hi { background: color-mix(in srgb, var(--accent) 70%, transparent); }
+.wire .bar.w40 { width: 40%; } .wire .bar.w60 { width: 60%; } .wire .bar.w80 { width: 80%; }
+.wire .chiprow { display: flex; gap: .35rem; }
+.wire .chip { height: .8rem; width: 2.4rem; border-radius: 999px; border: 1px solid var(--glass-edge-hi); background: transparent; }
+.wire .thumb { height: 3rem; border-radius: 8px; background: linear-gradient(120deg, color-mix(in srgb, var(--sa-ai) 45%, transparent), color-mix(in srgb, var(--sa-ibo) 45%, transparent)); }
+
+/* ---- stack cards ------------------------------------------- */
+.stack-card { padding: 1.3rem 1.4rem; }
+.stack-card .logo { font-family: var(--font-mono); font-size: .68rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); }
+.stack-card h4 { font-size: 1.02rem; margin: .3rem 0 .3rem; }
+.stack-card p { font-size: .87rem; color: var(--ink-2); margin: 0; }
+
+/* ---- principles -------------------------------------------- */
+.principle { padding: 1.3rem 1.5rem; border-left: 3px solid var(--accent); }
+.principle h4 { font-size: 1rem; }
+.principle p { font-size: .9rem; color: var(--ink-2); margin: .35rem 0 0; }
+
+.status-dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; margin-right: .45rem; vertical-align: baseline; }
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- Displacement map consumed by the refract backdrop chain (Chromium only) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="glass-refraction" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.004 0.007" numOctaves="1" seed="7" result="noise"/>
+    <feGaussianBlur in="noise" stdDeviation="3" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="24" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="bg" aria-hidden="true">
+  <div class="wash"></div>
+  <div class="blob ai"></div>
+  <div class="blob ibo"></div>
+  <div class="blob data"></div>
+  <div class="grid"></div>
+</div>
+
+<div class="progress" id="progress"></div>
+
+<nav class="navbar glass" aria-label="Deck controls">
+  <span class="wordmark">PRIS<span>MA</span></span>
+  <span class="slide-title" id="slideTitle"></span>
+  <button class="chrome" id="themeToggle" aria-label="Toggle light and dark theme">☾ dark</button>
+</nav>
+
+<main class="deck" id="deck">
+
+  <!-- 1 · Title -->
+  <section class="slide" data-title="a design story">
+    <div class="slide-inner title-slide">
+      <div class="wordmark-hero">PRISMA</div>
+      <p class="sub">The design language of the Nextant Solution Library</p>
+      <p class="sub mono tagline">design · components · frameworks — the thinking, not the prototype</p>
+    </div>
+  </section>
+
+  <!-- 2 · The name -->
+  <section class="slide" data-title="the name">
+    <div class="slide-inner">
+      <p class="kicker">01 · Naming</p>
+      <h2>One light in. A spectrum out.</h2>
+      <p class="lede">A prism takes a single beam and reveals the spectrum that was always inside it.
+      PRISMA does the same with a client's question: one problem statement goes in, and the full
+      range of what Nextant has already built comes out — split across its three Specialization Areas.</p>
+
+      <div class="prism-stage" id="prismStage">
+        <svg viewBox="0 0 680 300" role="img" aria-label="A beam of light entering a prism and splitting into three coloured beams labelled AI and Automation, Data Solutions, and Intelligent Business Operations">
+          <line class="beam-in" x1="20" y1="150" x2="285" y2="150"/>
+          <circle class="pulse-dot" r="4" style="offset-path: path('M20 150 L285 150')"/>
+          <polygon class="prism-body" id="prismBody" points="340,55 255,225 425,225"/>
+          <line class="beam-out" x1="392" y1="140" x2="640" y2="70"  style="stroke: var(--sa-ai)"/>
+          <line class="beam-out" x1="400" y1="160" x2="640" y2="150" style="stroke: var(--sa-data)"/>
+          <line class="beam-out" x1="392" y1="180" x2="640" y2="230" style="stroke: var(--sa-ibo)"/>
+          <text class="beam-label" x="470" y="92">AI &amp; AUTOMATION</text>
+          <text class="beam-label" x="470" y="143">DATA SOLUTIONS</text>
+          <text class="beam-label" x="470" y="216">INTELLIGENT BUSINESS OPS</text>
+        </svg>
+      </div>
+      <p class="mono" style="text-align:center">click the prism · the metaphor is also the information architecture</p>
+
+      <div class="cols three" style="margin-top:1.6rem">
+        <div class="glass panel"><h3>It's about revelation</h3><p>The library doesn't create the work — it makes visible what was already there, scattered across machines, channels, and memory.</p></div>
+        <div class="glass panel"><h3>It's about light</h3><p>Light is the raw material of the whole visual system: the aurora ground, the glass surfaces, the sheen. The name sets up the material.</p></div>
+        <div class="glass panel"><h3>It sits beside Nextant</h3><p>Short, international, pronounceable in every language the team speaks. A product name, not a department acronym.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · From Nextant, modernized -->
+  <section class="slide" data-title="from nextant">
+    <div class="slide-inner">
+      <p class="kicker">02 · Brand lineage</p>
+      <h2>The Nextant blue, treated as light</h2>
+      <p class="lede">The base colour is lifted straight from the Nextant wordmark — steel blue <strong>#1C567C</strong>.
+      The modernization isn't a new palette; it's a new <strong>treatment</strong>: instead of using the blue as paint,
+      PRISMA uses it as a light source. In dark theme it brightens into a luminous
+      <strong>#7FB6D9</strong>; in light theme the original steel blue carries the accent itself.</p>
+
+      <div class="swatch-row">
+        <div class="swatch" style="background:#1C567C; color:#fff">
+          <span class="name">Nextant steel blue</span><span class="hex">#1C567C · the origin</span>
+        </div>
+        <div class="swatch" style="background:#123F5D; color:#fff">
+          <span class="name">Accent deep</span><span class="hex">#123F5D · pressed / emphatic</span>
+        </div>
+        <div class="swatch" style="background:#7FB6D9; color:#06131C">
+          <span class="name">Accent (dark theme)</span><span class="hex">#7FB6D9 · the blue as light</span>
+        </div>
+        <div class="swatch" style="background:linear-gradient(120deg,#1C567C,#7FB6D9); color:#fff">
+          <span class="name">One hue, two energies</span><span class="hex">paint → light</span>
+        </div>
+      </div>
+
+      <div class="cols two" style="margin-top:1.6rem">
+        <div class="glass panel"><h3>Continuity, not rebrand</h3><p>Everyone inside Nextant should feel the family resemblance instantly. The hue never changes — only its luminosity and role adapt per theme.</p></div>
+        <div class="glass panel"><h3>Contrast is a hard rule</h3><p>Every accent pairing must pass WCAG AA in <em>both</em> themes. The dark-theme brightening of the blue is a contrast decision as much as an aesthetic one.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · The aurora ground -->
+  <section class="slide" data-title="the aurora ground">
+    <div class="slide-inner">
+      <p class="kicker">03 · Light</p>
+      <h2>Glass needs something to refract</h2>
+      <p class="lede">Beneath every surface sits the <strong>aurora ground</strong>: three large colour fields —
+      one per Specialization Area — blurred over 100px, over a near-black (or paper-light) base, with a
+      hairline grid fading in from the top. Without it, backdrop blur has nothing to work with and every
+      glass panel reads as flat grey. The aurora is the reason the glass feels alive.</p>
+
+      <div class="glass panel" style="margin-bottom:1.4rem">
+        <div class="controls">
+          <label>aurora intensity
+            <input type="range" id="auroraRange" min="0" max="100" value="50" />
+            <output id="auroraOut">0.50</output>
+          </label>
+        </div>
+        <p class="mono" style="margin-top:.8rem">this slider drives the real --aurora token behind this very deck</p>
+      </div>
+
+      <div class="cols three">
+        <div class="glass panel"><h3><span class="status-dot" style="background:var(--sa-ai)"></span>AI field</h3><p>Top-left. The accent-blue blob anchors the brand colour into the environment itself.</p></div>
+        <div class="glass panel"><h3><span class="status-dot" style="background:var(--sa-ibo)"></span>IBO field</h3><p>Right edge. Violet keeps the ground from reading monochrome and cold.</p></div>
+        <div class="glass panel"><h3><span class="status-dot" style="background:var(--sa-data)"></span>Data field</h3><p>Bottom. Teal completes the spectrum — the prism metaphor rendered as environment.</p></div>
+      </div>
+
+      <div class="glass panel" style="margin-top:1.4rem">
+        <h3>Deliberately static</h3>
+        <p>The fields do not animate. Every glass panel above them re-blurs its backdrop when the backdrop changes —
+        animating the aurora would force a full-screen re-blur on every frame. Perceived motion comes from
+        <em>you</em> scrolling glass over the field, not from the field moving. This is a performance decision
+        disguised as a calm aesthetic.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Liquid glass anatomy -->
+  <section class="slide" data-title="liquid glass · anatomy">
+    <div class="slide-inner">
+      <p class="kicker">04 · Material</p>
+      <h2>The anatomy of a glass surface</h2>
+      <p class="lede">A PRISMA panel is not "a div with blur". It's five layers working together —
+      and depth comes from <strong>layered translucency, not drop shadows alone</strong>. Play with the recipe:</p>
+
+      <div class="cols two">
+        <div class="playground">
+          <div class="mini-aurora">
+            <i></i><i></i><i></i>
+            <div class="txt">nx_solution
+nx_demoasset
+nx_solutionimage
+capability · technology · industry
+draft → pending review → published</div>
+          </div>
+          <div class="play-card" id="playCard">
+            <h4>A glass panel</h4>
+            <p>Low-alpha fill · backdrop blur + saturate · 1px edge · inset top highlight · deep soft shadow.</p>
+          </div>
+        </div>
+        <div class="glass panel">
+          <h3>The recipe, live</h3>
+          <div class="controls">
+            <label>backdrop blur
+              <input type="range" id="blurRange" min="0" max="40" value="20" />
+              <output id="blurOut">20px</output>
+            </label>
+            <label>fill alpha
+              <input type="range" id="fillRange" min="0" max="30" value="6" />
+              <output id="fillOut">0.06</output>
+            </label>
+            <label>edge alpha
+              <input type="range" id="edgeRange" min="0" max="100" value="16" />
+              <output id="edgeOut">0.16</output>
+            </label>
+            <label>saturation
+              <input type="range" id="satRange" min="100" max="260" value="180" />
+              <output id="satOut">180%</output>
+            </label>
+          </div>
+          <p style="margin-top:1rem">Notes from the token file: the fill is barely there
+          (<span class="mono">rgba(255,255,255,.028)</span> in dark theme) — the <em>blur</em> does the work.
+          The 1px edge plus an inset top highlight is what sells the pane as physical: light catching a polished rim.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Frosted vs liquid -->
+  <section class="slide" data-title="frosted vs liquid">
+    <div class="slide-inner">
+      <p class="kicker">05 · Refraction</p>
+      <h2>What makes it <em>liquid</em>, not frosted</h2>
+      <p class="lede">Frosted glass just blurs. Liquid glass <strong>bends</strong>. An SVG displacement map
+      (fractal noise → soft blur → displacement) sits in the backdrop-filter chain and warps the blurred
+      aurora at the surface — the subtle waviness of looking through old window glass.</p>
+
+      <div class="compare">
+        <div>
+          <div class="pane frosted">
+            <div class="mini-aurora"><i style="position:absolute;top:-3rem;left:-2rem;width:14rem;height:14rem;border-radius:50%;filter:blur(40px);background:color-mix(in srgb,var(--sa-ai) 70%,transparent)"></i><i style="position:absolute;bottom:-4rem;right:-2rem;width:14rem;height:14rem;border-radius:50%;filter:blur(44px);background:color-mix(in srgb,var(--sa-data) 65%,transparent)"></i></div>
+            <div class="sheet">FROSTED · blur only</div>
+          </div>
+          <p class="caption">Blur + saturate. Clean, but inert — the backdrop is smoothed into fog.</p>
+        </div>
+        <div>
+          <div class="pane liquid">
+            <div class="mini-aurora"><i style="position:absolute;top:-3rem;left:-2rem;width:14rem;height:14rem;border-radius:50%;filter:blur(40px);background:color-mix(in srgb,var(--sa-ai) 70%,transparent)"></i><i style="position:absolute;bottom:-4rem;right:-2rem;width:14rem;height:14rem;border-radius:50%;filter:blur(44px);background:color-mix(in srgb,var(--sa-data) 65%,transparent)"></i></div>
+            <div class="sheet">LIQUID · blur + displacement</div>
+          </div>
+          <p class="caption">The displacement map bends the light field at the surface — the pane gains optics.<span class="mono" id="refractNote"></span></p>
+        </div>
+      </div>
+
+      <div class="cols two" style="margin-top:1.4rem">
+        <div class="glass panel"><h3>Gated at runtime</h3><p>SVG displacement inside <span class="mono">backdrop-filter</span> only renders on Chromium — elsewhere it can invalidate the whole chain and kill the blur. So refraction is feature-detected and applied as a progressive enhancement, never assumed.</p></div>
+        <div class="glass panel"><h3>Spent where it shows</h3><p>Large repeated surfaces (the card grid) opt out via a "lite" variant: per-frame displacement during scroll costs more than it shows. The effect is a spice, budgeted like one.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · Colour & themes -->
+  <section class="slide" data-title="colour & themes">
+    <div class="slide-inner">
+      <p class="kicker">06 · Colour system</p>
+      <h2>Two first-class themes, one spectrum</h2>
+      <p class="lede">Light and dark are both primary — a CSM may present in a bright client boardroom or a dim
+      war-room. Every token has a hand-tuned value per theme; nothing is auto-inverted.
+      <strong>Try the toggle in the top bar</strong> — this whole deck re-lights.</p>
+
+      <h3 style="margin-bottom:.7rem">Specialization accents <span class="mono">— each area owns a colour, used on cards, tabs, chips, and generated posters</span></h3>
+      <div class="swatch-row" style="margin-bottom:1.4rem">
+        <div class="swatch" style="background:var(--sa-ai); color:var(--on-accent)"><span class="name">AI &amp; Automation</span><span class="hex" data-var="--sa-ai"></span></div>
+        <div class="swatch" style="background:var(--sa-data); color:var(--on-accent)"><span class="name">Data Solutions</span><span class="hex" data-var="--sa-data"></span></div>
+        <div class="swatch" style="background:var(--sa-ibo); color:var(--on-accent)"><span class="name">Intelligent Business Ops</span><span class="hex" data-var="--sa-ibo"></span></div>
+      </div>
+
+      <h3 style="margin-bottom:.7rem">Status colours <span class="mono">— maturity at a glance, muted so they inform rather than shout</span></h3>
+      <div class="swatch-row">
+        <div class="swatch glass" style="min-height:5rem"><span class="name"><span class="status-dot" style="background:var(--live)"></span>Live / production</span><span class="hex" data-var="--live"></span></div>
+        <div class="swatch glass" style="min-height:5rem"><span class="name"><span class="status-dot" style="background:var(--proto)"></span>Prototype / demo</span><span class="hex" data-var="--proto"></span></div>
+        <div class="swatch glass" style="min-height:5rem"><span class="name"><span class="status-dot" style="background:var(--idea)"></span>Idea</span><span class="hex" data-var="--idea"></span></div>
+      </div>
+
+      <div class="glass panel" style="margin-top:1.4rem">
+        <h3>The dark→light shift is a physics change</h3>
+        <p>In dark theme, colours are <em>emitters</em> — bright, luminous, low-saturation fills over near-black.
+        In light theme they become <em>pigments</em> — deep, ink-like, sitting on paper. Same identities, different physics.
+        And every pairing passes WCAG AA contrast in both.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · Typography -->
+  <section class="slide" data-title="typography">
+    <div class="slide-inner">
+      <p class="kicker">07 · Typography</p>
+      <h2>Three voices, three jobs</h2>
+      <p class="lede">The system separates <strong>what speaks</strong> (display), <strong>what explains</strong> (body),
+      and <strong>what labels</strong> (mono). Each family was chosen for a temperament, not a trend.</p>
+
+      <div class="cols three">
+        <div class="glass spec display">
+          <span class="role">Display · Schibsted Grotesk</span>
+          <div class="sample">Reveal the spectrum</div>
+          <p style="font-size:.88rem;color:var(--ink-2);margin:0">Confident, slightly compressed grotesk with real personality at weight.
+          Tight <span class="mono">-0.022em</span> tracking on headings; balanced wrapping. It carries the wordmark energy.</p>
+        </div>
+        <div class="glass spec body">
+          <span class="role">Body · Source Sans 3</span>
+          <div class="sample">A CSM goes from a client's problem statement to a presentable demo in under two minutes, without asking anyone for help.</div>
+          <p style="font-size:.88rem;color:var(--ink-2);margin:0">Transparent and effortless at paragraph length — the reading voice for solution
+          summaries and business value, at a generous 1.55 line height.</p>
+        </div>
+        <div class="glass spec mono-spec">
+          <span class="role">Mono · IBM Plex Mono</span>
+          <div class="sample">nx_solution · status: PUBLISHED<br/>shareable_with_clients: true<br/>sample_data: SYNTHETIC</div>
+          <p style="font-size:.88rem;color:var(--ink-2);margin:0">Metadata, keys, statuses, and system truth. When something is mono,
+          it means "this is the record speaking, not the prose."</p>
+        </div>
+      </div>
+
+      <div class="glass panel" style="margin-top:1.4rem">
+        <h3>A noted dependency</h3>
+        <p>The families load from Google Fonts today; if the tenant enforces a strict CSP, all three will be self-hosted.
+        Recorded as a soft dependency, not an afterthought.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 · Motion & accessibility -->
+  <section class="slide" data-title="motion & access">
+    <div class="slide-inner">
+      <p class="kicker">08 · Motion &amp; accessibility</p>
+      <h2>Purposeful motion, universal access</h2>
+      <p class="lede">Motion is short and semantic — it explains a state change, then gets out of the way.
+      Nothing decorative sits on the CSM hero path, because that path is used live in front of clients.</p>
+
+      <div class="cols two">
+        <div class="glass ease-lab">
+          <h3>Two easings, two meanings</h3>
+          <p style="font-size:.9rem;color:var(--ink-2)">Sheets and panels use a decisive settle; small interactive
+          elements get a spring with a hint of overshoot — glass has mass.</p>
+          <div class="ease-track" id="track1"><div class="ease-ball sheet-ease">sheet</div></div>
+          <p class="mono">--ease-sheet · cubic-bezier(0.32, 0.72, 0, 1)</p>
+          <div class="ease-track" id="track2"><div class="ease-ball spring-ease">sprg</div></div>
+          <p class="mono">--ease-spring · cubic-bezier(0.34, 1.56, 0.64, 1)</p>
+          <button class="chrome" id="easeBtn" style="margin-top:.8rem">▶ run</button>
+        </div>
+        <div style="display:grid;gap:1.3rem">
+          <div class="glass panel"><h3>The sheen follows your pointer</h3><p>Small interactive panels track the cursor with a specular highlight — a single delegated, frame-throttled listener writing two CSS variables. Light on a curved surface, computed for pennies.</p></div>
+          <div class="glass panel"><h3>Reduced motion is honoured, structurally</h3><p><span class="mono">prefers-reduced-motion</span> disables the shimmer, the sheen tracking, and non-essential transitions — including in this deck. Not an option buried in settings; a media query obeyed everywhere.</p></div>
+          <div class="glass panel"><h3>WCAG 2.1 AA is a floor</h3><p>Full keyboard navigation, visible <span class="mono">:focus-visible</span> rings in accent colour, semantic landmarks, contrast verified per theme. Try tabbing through this deck.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · Component thinking -->
+  <section class="slide" data-title="component thinking">
+    <div class="slide-inner">
+      <p class="kicker">09 · Components</p>
+      <h2>A small set, each with one job</h2>
+      <p class="lede">The interface is composed from seven core pieces. Shown here as <strong>thought, not product</strong> —
+      the shapes of the ideas, before the pixels.</p>
+
+      <div class="cols three">
+        <div class="glass wire">
+          <h4>Masthead</h4><p>Wordmark, search, present-mode toggle, theme switch. The one persistent surface.</p>
+          <div class="sketch"><div style="display:flex;gap:.5rem;align-items:center"><div class="bar hi" style="width:3rem"></div><div class="bar" style="flex:1"></div><div class="chip"></div><div class="chip"></div></div></div>
+        </div>
+        <div class="glass wire">
+          <h4>Solution card</h4><p>Poster, name, one-liner, status badge, capability chips. The unit of discovery.</p>
+          <div class="sketch"><div class="thumb"></div><div class="bar hi w60"></div><div class="bar w80"></div><div class="chiprow"><div class="chip"></div><div class="chip"></div><div class="chip"></div></div></div>
+        </div>
+        <div class="glass wire">
+          <h4>Facet rail</h4><p>Additive filters with live counts and removable chips. Narrowing, never dead-ends.</p>
+          <div class="sketch"><div class="bar hi w40"></div><div class="bar w60"></div><div class="bar w80"></div><div class="bar w60"></div><div class="chiprow"><div class="chip"></div><div class="chip"></div></div></div>
+        </div>
+        <div class="glass wire">
+          <h4>Poster</h4><p>Generated per-specialization placeholder — no record ever looks unfinished for lacking a screenshot.</p>
+          <div class="sketch"><div class="thumb" style="height:4rem"></div></div>
+        </div>
+        <div class="glass wire">
+          <h4>Badges</h4><p>Status and shareability, always visible. The highest-consequence metadata never hides in a detail view.</p>
+          <div class="sketch"><div class="chiprow"><div class="chip" style="border-color:var(--live)"></div><div class="chip" style="border-color:var(--proto)"></div><div class="chip" style="border-color:var(--idea)"></div></div></div>
+        </div>
+        <div class="glass wire">
+          <h4>Present banner</h4><p>A persistent, unmistakable indicator that the safety register is active. Impossible to forget which mode you're in.</p>
+          <div class="sketch"><div class="bar hi" style="width:100%"></div></div>
+        </div>
+      </div>
+
+      <div class="glass panel" style="margin-top:1.4rem">
+        <h3>Plus one invisible component: the background</h3>
+        <p>The aurora ground is itself a component — everything glass sits on it. The design system treats the
+        environment as a first-class citizen, not a body style.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11 · Frameworks -->
+  <section class="slide" data-title="frameworks">
+    <div class="slide-inner">
+      <p class="kicker">10 · Frameworks</p>
+      <h2>Chosen for the constraint, not the résumé</h2>
+      <p class="lede">PRISMA ships as a <strong>Power Apps code app</strong> — full custom code, delivered inside
+      the Power Platform with Entra ID SSO and Dataverse behind it. That constraint drove every framework choice.</p>
+
+      <div class="cols three">
+        <div class="glass stack-card"><span class="logo">UI</span><h4>React 19 + TypeScript</h4><p>Component model matches the design system's component thinking; strict types mirror the Dataverse schema so the mock data and the future live data share one shape.</p></div>
+        <div class="glass stack-card"><span class="logo">Build</span><h4>Vite</h4><p>Instant feedback while tuning glass and motion — a design system this optical is built by looking, and the loop has to be seconds.</p></div>
+        <div class="glass stack-card"><span class="logo">Styling</span><h4>Tailwind v4 + CSS tokens</h4><p>All identity lives in CSS custom properties (theme-swappable at the root); Tailwind handles layout. The glass surfaces are hand-written CSS — some things deserve prose.</p></div>
+        <div class="glass stack-card"><span class="logo">Platform</span><h4>Power Apps code app</h4><p>Published under the tenant's <span class="mono">/play/…</span> path — which dictates hash-based routing and relative asset paths. Real constraints, designed for from day one.</p></div>
+        <div class="glass stack-card"><span class="logo">Data</span><h4>Dataverse</h4><p>Single source of truth: solutions, demo assets, images, and governed reference data. The UI is built against its exact shape so the swap-in is a data-layer change, not a redesign.</p></div>
+        <div class="glass stack-card"><span class="logo">Identity</span><h4>Entra ID SSO</h4><p>Internal users only; clients never hold a credential. The CSM is always the authenticated driver — presenting is screen-sharing, never sharing access.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · Principles & close -->
+  <section class="slide" data-title="principles">
+    <div class="slide-inner">
+      <p class="kicker">11 · Principles</p>
+      <h2>The rules the design will not break</h2>
+      <p class="lede">Aesthetics can evolve; these cannot. They are the contract between the design and the
+      moment it exists for — a CSM live on a client screen.</p>
+
+      <div class="cols two">
+        <div class="glass principle"><h4>Present mode restricts — it never merely hides</h4><p>Client-safe filtering happens before anything renders, never as cosmetic hiding. If it's not safe to show, it isn't in the room.</p></div>
+        <div class="glass principle"><h4>Redaction is data, not string-scrubbing</h4><p>Client-sensitive text lives in a dedicated redacted field. Safety is structural, never a runtime find-and-replace.</p></div>
+        <div class="glass principle"><h4>Untrusted content stays behind glass — literally</h4><p>User-supplied demo HTML renders only inside a sandboxed frame with no access to the host app.</p></div>
+        <div class="glass principle"><h4>The hero flow is sacred</h4><p>Search → grid → detail → viewer stays fast and unobstructed. Any addition to that path has to earn its click.</p></div>
+      </div>
+
+      <div class="title-slide" style="margin-top:3.2rem; text-align:center">
+        <div class="wordmark-hero" style="font-size:clamp(2.6rem,6vw,4.5rem)">PRISMA</div>
+        <p class="sub" style="font-size:1rem">One light in. A spectrum out.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="dots" id="dots" role="tablist" aria-label="Slides"></div>
+<div class="arrows">
+  <button class="chrome" id="prevBtn" aria-label="Previous slide">←</button>
+  <button class="chrome" id="nextBtn" aria-label="Next slide">→</button>
+</div>
+<div class="hint">← → navigate · T theme</div>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll(".slide")];
+  const dots = document.getElementById("dots");
+  const progress = document.getElementById("progress");
+  const slideTitle = document.getElementById("slideTitle");
+  let current = 0;
+
+  slides.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-label", `Slide ${i + 1}: ${s.dataset.title}`);
+    b.addEventListener("click", () => go(i));
+    dots.appendChild(b);
+  });
+
+  function go(i) {
+    current = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((s, j) => s.classList.toggle("active", j === current));
+    [...dots.children].forEach((d, j) => d.classList.toggle("on", j === current));
+    progress.style.width = `${((current + 1) / slides.length) * 100}%`;
+    slideTitle.textContent = `${String(current + 1).padStart(2, "0")} / ${slides.length} · ${slides[current].dataset.title}`;
+    slides[current].scrollTop = 0;
+    if (location.hash !== `#/${current + 1}`) location.hash = `#/${current + 1}`;
+  }
+
+  window.addEventListener("hashchange", () => {
+    const n = parseInt(location.hash.replace("#/", ""), 10);
+    if (Number.isFinite(n) && n - 1 !== current) go(n - 1);
+  });
+
+  document.getElementById("prevBtn").addEventListener("click", () => go(current - 1));
+  document.getElementById("nextBtn").addEventListener("click", () => go(current + 1));
+  document.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLInputElement) return;
+    if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") { e.preventDefault(); go(current + 1); }
+    if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); go(current - 1); }
+    if (e.key === "Home") go(0);
+    if (e.key === "End") go(slides.length - 1);
+    if (e.key.toLowerCase() === "t") toggleTheme();
+  });
+
+  // theme
+  const themeBtn = document.getElementById("themeToggle");
+  function setTheme(t) {
+    document.documentElement.dataset.theme = t;
+    themeBtn.textContent = t === "dark" ? "☾ dark" : "☀ light";
+    refreshHexes();
+  }
+  function toggleTheme() {
+    setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  }
+  themeBtn.addEventListener("click", toggleTheme);
+
+  // live hex readouts for theme-aware swatches
+  function refreshHexes() {
+    requestAnimationFrame(() => {
+      const cs = getComputedStyle(document.documentElement);
+      document.querySelectorAll("[data-var]").forEach((el) => {
+        el.textContent = cs.getPropertyValue(el.dataset.var).trim();
+      });
+    });
+  }
+  refreshHexes();
+
+  // refraction gate — same check as the app's liquidGlass.ts
+  const isChromium = /Chrom(e|ium)/.test(navigator.userAgent);
+  if (isChromium && CSS.supports("backdrop-filter", "blur(4px) url(#x)")) {
+    document.documentElement.classList.add("refract");
+  } else {
+    const note = document.getElementById("refractNote");
+    if (note) note.textContent = " (refraction requires Chromium — showing blur-only fallback, exactly as the app would)";
+  }
+
+  // prism interaction
+  const prismStage = document.getElementById("prismStage");
+  const prismBody = document.getElementById("prismBody");
+  prismBody.addEventListener("click", () => prismStage.classList.toggle("lit"));
+  // auto-light when the slide is reached
+  new MutationObserver(() => {
+    if (slides[1].classList.contains("active")) setTimeout(() => prismStage.classList.add("lit"), 700);
+  }).observe(slides[1], { attributes: true, attributeFilter: ["class"] });
+
+  // aurora slider drives the real token
+  const auroraRange = document.getElementById("auroraRange");
+  const auroraOut = document.getElementById("auroraOut");
+  auroraRange.addEventListener("input", () => {
+    const v = auroraRange.value / 100;
+    document.documentElement.style.setProperty("--aurora", v);
+    auroraOut.textContent = v.toFixed(2);
+  });
+
+  // glass playground
+  const play = document.getElementById("playCard");
+  const bind = (id, out, cssVar, fmt) => {
+    const input = document.getElementById(id);
+    const output = document.getElementById(out);
+    input.addEventListener("input", () => {
+      const { value, label } = fmt(input.value);
+      play.style.setProperty(cssVar, value);
+      output.textContent = label;
+    });
+  };
+  bind("blurRange", "blurOut", "--play-blur", (v) => ({ value: `${v}px`, label: `${v}px` }));
+  bind("fillRange", "fillOut", "--play-fill", (v) => ({ value: v / 100, label: (v / 100).toFixed(2) }));
+  bind("edgeRange", "edgeOut", "--play-edge", (v) => ({ value: v / 100, label: (v / 100).toFixed(2) }));
+  bind("satRange", "satOut", "--play-sat", (v) => ({ value: `${v}%`, label: `${v}%` }));
+
+  // pointer sheen — single delegated, frame-throttled listener (as slide 08 describes)
+  if (matchMedia("(pointer: fine)").matches && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    let raf = 0, last = null;
+    document.addEventListener("pointermove", (e) => {
+      last = e;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const g = last.target instanceof Element && last.target.closest(".glass");
+        if (!g) return;
+        const r = g.getBoundingClientRect();
+        g.style.setProperty("--mx", `${last.clientX - r.left}px`);
+        g.style.setProperty("--my", `${last.clientY - r.top}px`);
+      });
+    }, { passive: true });
+  }
+
+  // easing lab
+  document.getElementById("easeBtn").addEventListener("click", () => {
+    const t1 = document.getElementById("track1");
+    const t2 = document.getElementById("track2");
+    t1.classList.remove("go"); t2.classList.remove("go");
+    void t1.offsetWidth; // restart transition
+    t1.classList.add("go"); t2.classList.add("go");
+  });
+
+  // start (support deep-link #/n)
+  const fromHash = parseInt(location.hash.replace("#/", ""), 10);
+  go(Number.isFinite(fromHash) ? fromHash - 1 : 0);
+})();
+</script>
+</body>
+</html>
