@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Draft for review · **Last updated:** 2026-09-17
+**Status:** Draft for review, including contributor, calendar and project controls · **Last updated:** 2026-09-18
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -17,10 +17,13 @@
 | CSM | Read **published** only | Read (published parents) | Read | Create; Read own |
 | Librarian | Full (org) | Full | Full | Full |
 
+`nx_solutioncontributor` follows parent Solution access: Contributors can create/read/write/delete rows only for Solutions they can manage; CSMs read rows for published parents; Librarians have full access. Enforce this through ownership/sharing and platform validation, not by assuming a lookup inherits security. Builder credit grants no additional rights. Business calendars and holiday rows are organization-owned, readable by all internal roles and writable only by Librarians; referenced calendar versions are immutable. Full constraints: [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
+
 ## Ownership
 
-- `nx_solution` and `nx_demorequest` are **user/team-owned** (row-level security by submitter).
-- Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`) are **organization-owned**.
+- `nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest` and `nx_solutionproject` are **user/team-owned** (row-level security; contributor rows align with the Solution owner/team).
+- Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `nx_businesscalendar`, `nx_businesscalendarholiday`) are **organization-owned**.
+- `nx_project` retains its existing ownership/security model. Per [schema v2](../data_model/SchemaV2.md#security-model), Contributors create/read/write their own `nx_solutionproject` rows, CSMs read links for detail context, and Librarians have full access. A junction lookup grants no access to the linked Project itself. Client engagement names are omitted in present mode.
 
 ## Field-level security
 
@@ -42,3 +45,4 @@ Microsoft Entra ID SSO. Internal Nextant users only — clients never log in. In
 | Dedicated redacted client-context field (`Client Context (Redacted)`) — no runtime string-scrubbing | Schema + [present mode](../workflows/present-mode.md) |
 | User-supplied HTML rendered in a sandboxed iframe, restrictive policy, no same-origin access to the host app | Asset viewer |
 | Librarian review of uploaded HTML files | [Librarian runbook](../operations/librarian-runbook.md) |
+| Per-person dates, allocation, calendar and effort breakdown omitted in present mode; names and total effort may remain | Detail view; not a security boundary for bundled mock data |

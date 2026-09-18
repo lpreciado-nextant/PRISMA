@@ -1,6 +1,6 @@
 # Discovery & presentation — the CSM hero flow
 
-**Status:** Draft for review · **Last updated:** 2026-09-17
+**Status:** Draft for review, including contributor search and effort · **Last updated:** 2026-09-18
 **Source:** [End-to-end design §3.2](../design/end-to-end-design.md#32-discovery--presentation-the-csm-path)
 **Measure:** problem statement → presentable demo in **under two minutes**, unaided (G1). Anything that adds a click to this path needs to earn it.
 
@@ -23,7 +23,7 @@ flowchart LR
 ## Search
 
 - Fast and forgiving; results update as the CSM types.
-- Matches across: name, summary, what-it-does, business value, tags, and the editorial `Search Keywords` field.
+- Matches across: name, summary, what-it-does, business value, all builder names, tags, and the editorial `Search Keywords` field.
 - **Zero-result states** suggest relaxing the most restrictive active facet rather than showing an empty page.
 
 ## Facets
@@ -41,10 +41,11 @@ For CSMs who don't yet know what they're looking for: three specialization-area 
 The CSM's briefing document:
 
 - What it does and business value
-- Who built it, with a direct contact path
+- Everyone who built it, with individual contact paths
 - The client/context it came from
 - Tags and the asset list ([demo assets](demo-assets.md))
-- Effort / time to deploy (Days · Weeks · Months · Ongoing programme)
+- Total calculated effort hours, summed across contributors; not elapsed deployment time
+- Per-person dates, allocation, business calendar and calculated hours, omitted in present mode ([calculation contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort))
 - Internal-only content (library notes) — visible to internal viewers, **never in present mode**
 
 From here: open the demo in the viewer, download the one-pager, [request a live demo](demo-requests.md), or enter [present mode](present-mode.md).

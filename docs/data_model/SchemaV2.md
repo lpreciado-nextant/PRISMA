@@ -1,17 +1,20 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Current — agreed model · **Last updated:** 2026-09-17
+**Status:** Authoritative agreed model; legacy schema companion synchronized · **Last updated:** 2026-09-18
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Capability`, `Industry`, and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` alone remains a single-valued lookup; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — though `nx_project` itself already exists in Dataverse with fixed columns, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, got its own junction table instead of a single lookup on either side.
 
 ## Conventions
 
+The [legacy v1 entry point](nextant-solution-library-dataverse-schema.md) was synchronized with this model on 2026-09-18 at the user's request. It retains its original layout but is no longer an unchanged historical snapshot; this v2 document remains authoritative. References to v1 below describe its original design history.
+
 - **Primary key vs. primary name** — every table gets an auto-generated GUID key (e.g. `nx_solutionid`) plus a required text *primary name* column, used as its display label in lookups.
 - **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` exist on every table without being modeled.
-- **Ownership** — `Solution`, `DemoRequest`, and `SolutionProject` are **user/team-owned** (row-level security, since different practices submit their own work). `SpecializationArea`, `Capability`, `Industry`, and `Technology` are **organization-owned** (shared reference data). `nx_project` already exists in Dataverse — its ownership model is out of scope here.
+- **Ownership** — `Solution`, `SolutionContributor`, `DemoAsset`, `SolutionImage`, `DemoRequest`, and `SolutionProject` are **user/team-owned** (row-level security, since different practices submit their own work). `SpecializationArea`, `Capability`, `Industry`, `Technology`, `BusinessCalendar`, and `BusinessCalendarHoliday` are **organization-owned** (shared reference data). `nx_project` already exists in Dataverse — its ownership model is out of scope here.
 - **One single-valued tag, three multi-valued tags** — each `Solution` points to exactly one `SpecializationArea` via a lookup column. `Capability`, `Industry`, and `Technology` are **native N:N** relationships: a solution can carry several of each, and Dataverse creates and manages the intersect tables — no hand-built junction tables for these three.
 - **`nx_project` is fixed** — it already exists in Dataverse with its own columns. Nothing new gets added to it, and it gets no new lookup pointing out of it either. Where a Solution needs to link to *several* Projects, a small junction table (`nx_solutionproject`) sits in between instead.
-- **Governance** — `SpecializationArea`, `Capability`, and `Industry` are governed (only the Librarian adds new values). `Technology` is open (anyone adds a value inline; the Librarian periodically merges duplicates).
+- **Governance** — `SpecializationArea`, `Capability`, `Industry`, `BusinessCalendar`, and its holiday rows are governed (only the Librarian adds new values). `Technology` is open (anyone adds a value inline; the Librarian periodically merges duplicates).
+- **Builder credit is multi-person** — `nx_solutioncontributor` carries one row per Solution/person, including that person's effort inputs. It replaces the single `Built By` lookup and `Effort / Time to Deploy` choice on `nx_solution`; it is not a native N:N because the relationship has attributes. Credit is independent of `ownerid` and does not grant access.
 
 ---
 
@@ -28,7 +31,10 @@ erDiagram
     nx_solution ||--o{ nx_demorequest : "1:N"
     nx_solution ||--o{ nx_solutionproject : "1:N"
     nx_project ||--o{ nx_solutionproject : "1:N"
-    systemuser ||--o{ nx_solution : "Built By"
+    nx_solution ||--o{ nx_solutioncontributor : "1:N"
+    systemuser ||--o{ nx_solutioncontributor : "Built By"
+    nx_businesscalendar ||--o{ nx_solutioncontributor : "calendar"
+    nx_businesscalendar ||--o{ nx_businesscalendarholiday : "holidays"
     systemuser ||--o{ nx_demorequest : "Requested By"
     systemuser ||--o{ nx_project : "Project Owner"
 
@@ -42,12 +48,10 @@ erDiagram
         text UseCase
         text ClientContext
         text ClientContextRedacted
-        lookup BuiltBy FK
         choice Status
         choice PublicationStatus
         choice ShareableWithClients
         choice SampleDataLevel
-        choice EffortTimeToDeploy
         image Thumbnail
         date DateAdded
         text LibraryNotes
@@ -58,6 +62,28 @@ erDiagram
         text SpecializationArea
         text Description
         int SortOrder
+    }
+    nx_solutioncontributor {
+        guid nx_solutioncontributorid PK
+        text Name
+        lookup Solution FK
+        lookup BuiltBy FK
+        date StartDate
+        date EndDate
+        decimal AllocationPercent
+        lookup BusinessCalendar FK
+    }
+    nx_businesscalendar {
+        guid nx_businesscalendarid PK
+        text Name
+        date CoverageStart
+        date CoverageEnd
+    }
+    nx_businesscalendarholiday {
+        guid nx_businesscalendarholidayid PK
+        text Name
+        lookup BusinessCalendar FK
+        date HolidayDate
     }
     nx_capability {
         guid nx_capabilityid PK
@@ -162,6 +188,30 @@ Native N:N with `nx_solution` — a solution can carry several industries. Taggi
 
 Native N:N with `nx_solution` — a solution can carry several technologies.
 
+### `nx_businesscalendar` — business-day calendar version
+
+Organization-owned, Librarian-managed. A calendar specifies Monday-Friday workdays and a complete holiday schedule for an explicit coverage period. Weekends and holidays are full non-working days; the working day is fixed at eight hours. Partial days, personal leave and alternative workweeks are not modeled.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Name *(primary name)* | Text (100) | Yes | Identifies the US calendar version or coverage, e.g. "US business calendar (2026)" |
+| Coverage Start | Date Only | Yes | First date with a complete, reviewed holiday schedule |
+| Coverage End | Date Only | Yes | Last covered date; must be on or after Coverage Start |
+
+All contributors use the **US business calendar** automatically, with Monday-Friday workdays excluding observed US federal holidays. There is no calendar selector or alternative calendar policy. The PoC includes only `us-federal-2026` from the [OPM 2026 schedule](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/#url=2026), covering January 1-December 31, including July 3 as observed Independence Day. State-specific and company holidays are not included. Legacy mock records and restored session drafts are reassigned to this calendar and recalculated. The lookup remains for versioned coverage; production writers must enforce the US-only policy too.
+
+A version may cover multiple years, but calculations must reject ranges extending outside its coverage. Freeze a calendar and its holidays once referenced: use a new version for extensions or corrections, and explicitly reassign contributions after review if recalculation is intended. Prevent deletion of referenced calendars. Production enforcement must cover non-UI writes too; no Dataverse automation is implemented by the mock PoC.
+
+### `nx_businesscalendarholiday` — calendar exclusions
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Name *(primary name)* | Text (100) | Yes | Holiday or observed-day label |
+| Business Calendar | Lookup → `nx_businesscalendar` | Yes | The version whose working days this excludes |
+| Holiday Date | Date Only | Yes | Must fall within calendar coverage; enter the observed date explicitly |
+
+Organization-owned. Alternate key: `(Business Calendar, Holiday Date)` prevents duplicates. A holiday on Saturday/Sunday does not subtract another day. An observed weekday holiday is a separate explicit date, never inferred. The mock app projects these rows into the calendar's `holidays` date array.
+
 ---
 
 ## Main table
@@ -180,12 +230,10 @@ The reusable offering — the unit of value shown to a CSM.
 | Use Case | Text (200) | No | The client-side framing of the problem — "reduce manual invoice handling", "forecast demand". Bridges how a client describes their pain and how Nextant describes its capability. |
 | Client / Context | Text (200) | No | Freeform for now; revisit as a lookup if reporting by client is needed later. **Internal-only** — never rendered in present mode |
 | Client Context (Redacted) | Text (200) | No | The client-safe substitute shown in present mode — "a national logistics provider". Required in practice whenever Shareable with Clients is "Yes, with names removed"; enforced at review, not schema-level |
-| Built By | Lookup → `systemuser` | Yes | |
 | Status | Choice — global | Yes | Idea / concept · Working prototype · Client demo · Live in production · Retired |
 | Publication Status | Choice — global | Yes | Draft · Pending review · Published · Retired — **field-level security, Librarian-only write** |
 | Shareable with Clients | Choice — global | Yes | Yes · Yes, with names removed · No – internal only |
 | Sample Data Level | Choice — global | Yes | Yes – all invented · Partly · No – real client data |
-| Effort / Time to Deploy | Choice — global | No | Days · Weeks · Months · Ongoing programme |
 | Thumbnail | Image | No | |
 | Date Added | Date Only | No | |
 | Library Notes | Text, multi-line (2000) | No | **Field-level security** — internal-only |
@@ -193,9 +241,39 @@ The reusable offering — the unit of value shown to a CSM.
 
 Links to `nx_specializationarea` via the single lookup column above. `Capability`, `Industry`, and `Technology` are **not columns** — they attach through native N:N relationships (multi-valued tags, several per solution). Its link to `nx_project` (potentially several) goes through `nx_solutionproject` below, not a column here.
 
+Builders and effort now live in `nx_solutioncontributor`, not columns on `nx_solution`. Total effort is derived from its contributor rows.
+
 ---
 
 ## Tables related to Solution
+
+### `nx_solutioncontributor` — builders and effort
+
+One row per person credited on a Solution. User/team-owned, with access aligned to the parent Solution. A required lookup does **not** automatically inherit Dataverse security: configure and validate ownership/sharing so child rows cannot expose unpublished parent information. The Solution owner/team and Librarian manage these rows; merely being selected in `Built By` grants no permissions.
+
+| Column | Type | Required | Notes |
+|---|---|---|---|
+| Name *(primary name)* | Text (100) | Yes | Auto-generated display label from Solution/person; truncate to 100 characters, never use as identity |
+| Solution | Lookup → `nx_solution` | Yes | Parent reusable offering |
+| Built By | Lookup → `systemuser` | Yes | One credited person; multiple people require multiple rows |
+| Start Date | Date Only | Yes | Inclusive first date of the person's contribution |
+| End Date | Date Only | Yes | Inclusive last date; must be on or after Start Date |
+| Allocation (%) | Decimal Number (2 decimal places, 0-100) | Yes | Constant allocation over this date range; 50 means half of each eight-hour business day; 0 is permitted |
+| Business Calendar | Lookup → `nx_businesscalendar` | Yes | Automatically assigned US calendar version, not user-selectable; must cover the entire date range |
+
+Alternate key: `(Solution, Built By)` enforces one effort record per person per Solution. At least one complete contributor is required before submission/publication; a 1:N relationship cannot itself enforce a minimum child count. Incomplete form drafts may be saved locally, but submission rejects missing people, duplicate people, invalid dates/calendars and invalid allocations. Enforce the same rules on all production writes, not only in the UI.
+
+**Derived values, not editable columns:**
+
+- `Business Days`: count Monday-Friday dates between Start Date and End Date, **inclusive**, excluding each distinct holiday in the automatically assigned US calendar. Date-only arithmetic must not shift with time zone or daylight-saving changes.
+- `Effort Hours`: `round(Business Days * 8 * AllocationPercent / 100, 2)` for each contributor. Apply rounding only after the multiplication.
+- `Total Effort Hours`: sum the rounded contributor hours, displayed to at most two decimals. Different people working simultaneously contribute separately; this is not elapsed duration. Do not combine their allocations before applying their individual date ranges/calendars.
+
+Example: 2026-09-07 through 2026-09-18 contains ten weekdays. With September 7 excluded and allocation 50%, the contribution is `9 * 8 * 0.5 = 36 hours`. A second person at 100% over the same nine business days adds 72 hours, for 108 total hours. A same-day weekday counts as one; a weekend/holiday-only range yields zero.
+
+These are capacity-based calculated hours, not actual time entries or an estimate of deployment lead time. Allocation changes within a person's period, cross-solution over-allocation checks and timesheets are outside this model. The app calculates from loaded contributor/calendar data; no Dataverse calculated-column capability or stored total is assumed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
+
+**Migration:** create a contributor row for each former `nx_solution.Built By` value. Dates and allocation require explicit confirmation; do not infer them from the old Days/Weeks/Months choice. Assign the US calendar version and verify coverage. Keep legacy values during a real migration until backfill is verified, then retire the old lookup/choice and any unused global choice. The PoC's dates and allocations are illustrative, not historical work records. Demo calendars have been removed; mock records and restored drafts use the OPM-based US calendar, which can change their calculated totals. The legacy schema companion now reflects these rules too.
 
 ### `nx_demoasset` — the demo
 
@@ -278,7 +356,10 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 | `nx_capability` | `nx_solution` | Native N:N |
 | `nx_industry` | `nx_solution` | Native N:N |
 | `nx_technology` | `nx_solution` | Native N:N |
-| `systemuser` | `nx_solution` | 1:N (Built By) |
+| `nx_solution` | `nx_solutioncontributor` | 1:N |
+| `systemuser` | `nx_solutioncontributor` | 1:N (Built By) |
+| `nx_businesscalendar` | `nx_solutioncontributor` | 1:N |
+| `nx_businesscalendar` | `nx_businesscalendarholiday` | 1:N |
 | `nx_solution` | `nx_demoasset` | 1:N |
 | `nx_solution` | `nx_solutionimage` | 1:N |
 | `nx_solution` | `nx_demorequest` | 1:N |
@@ -287,9 +368,9 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 | `nx_project` | `nx_solutionproject` | 1:N |
 | `systemuser` | `nx_project` | 1:N (Project Owner) |
 
-**10 tables in this model:** `nx_solution`, `nx_specializationarea`, `nx_capability`, `nx_industry`, `nx_technology`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_solutionproject`, and `nx_project` (the last one pre-existing, fixed columns — connected only through the junction table and its own existing `Project Owner` lookup to `systemuser`). The three native N:N intersect tables are platform-managed and don't count toward the build.
+**13 tables in this model:** `nx_solution`, `nx_solutioncontributor`, `nx_businesscalendar`, `nx_businesscalendarholiday`, `nx_specializationarea`, `nx_capability`, `nx_industry`, `nx_technology`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_solutionproject`, and `nx_project` (the last one pre-existing, fixed columns — connected only through the junction table and its own existing `Project Owner` lookup to `systemuser`). The three native N:N intersect tables are platform-managed and don't count toward the build.
 
-**Dropped from v1:** `nx_usecase` as a governed table — the concept now lives as a plain `Use Case` field on `nx_solution`.
+**Dropped before the original v1 spec:** `nx_usecase` as a governed table — the concept already lived as a plain `Use Case` field on `nx_solution` in v1 and remains so here.
 
 **Dropped from the first v2 draft, then reintegrated:** `nx_capability` — brought back as a reference table, scoped to a single connection (`nx_solution` only, not `nx_project`).
 
@@ -310,6 +391,8 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 | Librarian | Full | Full | Full | Full | Full |
 
 Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. `Publication Status` and `Library Notes` carry field-level security. `nx_project`'s own security model lives with the existing table, not here.
+
+`nx_solutioncontributor`: Contributor create/read/write/delete only where they can manage the parent Solution; CSM read only for published parents; Librarian full access. Business calendars and holiday rows are readable by all internal roles and writable only by Librarians. Enforce calendar immutability and contributor uniqueness/validation at the platform boundary. Per-person dates, allocations and calendar breakdowns are omitted from present-mode rendering; builder names and total effort remain available. Present mode is not a security boundary for the bundled mock data.
 
 ## Still open
 
@@ -384,6 +467,13 @@ graph TD
     TECH1[LangChain] -- N:N --> S1
     TECH2[Power Automate] -- N:N --> S1
 
+    S1 -- 1:N --> SC1["nx_solutioncontributor<br/>Builder 1: dates, allocation"]
+    S1 -- 1:N --> SC2["nx_solutioncontributor<br/>Builder 2: dates, allocation"]
+    Builder1[systemuser] -- "Built By" --> SC1
+    Builder2[systemuser] -- "Built By" --> SC2
+    Calendar[nx_businesscalendar] -- 1:N --> SC1
+    Calendar -- 1:N --> SC2
+    Calendar -- 1:N --> Holidays[nx_businesscalendarholiday]
     S1 -- 1:N --> DA1["nx_demoasset<br/>Self-contained HTML"]
     S1 -- 1:N --> DR1["nx_demorequest<br/>Carlos Mejía — Needed 2026-09-25"]
     S1 -- 1:N --> J1["nx_solutionproject"]

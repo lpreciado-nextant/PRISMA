@@ -1,6 +1,6 @@
 # Librarian runbook
 
-**Status:** Draft — to be refined with the librarian team · **Last updated:** 2026-09-17
+**Status:** Draft — contributor/calendar review included; refine with librarian team · **Last updated:** 2026-09-18
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
@@ -19,6 +19,9 @@ Queue at `/review`; new submissions arrive via Teams/Outlook notification.
 - [ ] If shareability is *Yes, with names removed*: `Client Context (Redacted)` is filled with a generic descriptor and no client name leaks anywhere in body text
 - [ ] Tags are sensible; no duplicate technologies introduced
 - [ ] Thumbnail present or the generated poster is acceptable
+- [ ] At least one unique credited person; inclusive dates and 0-100% allocation (up to two decimals) are complete and credible
+- [ ] Assigned US calendar version covers every contribution; derived hours match the [schema calculation](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort), not timesheet actuals or deployment lead time
+- [ ] Project links, if present, meet [intake criteria](../data_model/SchemaV2.md#intake-triage-not-every-legacy-record-gets-linked-to-a-solution); client engagement names and per-person effort details do not appear in present mode
 
 **Outcomes:** approve (→ *Published*) or request changes (→ *Draft*, with a note to the contributor).
 
@@ -35,6 +38,7 @@ Retire when stale, superseded, or client-sensitive. Retired records leave search
 - Add governed values (capabilities, industries, specialization areas) as the practice evolves — contributors cannot.
 - Periodically merge duplicate technologies ([governance](../data_model/reference-data-governance.md)).
 - Maintain sort orders that drive tab/chip/facet ordering.
+- Review US federal holiday coverage and publish a new calendar version before the current period expires; the PoC currently covers only 2026. Do not edit referenced calendar versions or silently recalculate production history ([calendar stewardship](../data_model/reference-data-governance.md#calendar-stewardship)).
 
 ## Recurring duties
 

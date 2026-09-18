@@ -1,8 +1,21 @@
 # PRISMA — Nextant Solution Library
 
+**Status:** Mock-data PoC published; local contributor/search and US-only effort updates not yet deployed; full implementation planned.
+**Last updated:** 2026-09-18
+
 An internal marketplace for the PoCs, prototypes, demos, and production solutions Nextant builds across its three Specialization Areas — **AI & Automation**, **Data Solutions**, and **Intelligent Business Operations**.
 
 Builders publish what they made, a librarian curates it, and Customer Success Managers browse, search, and present it live to clients. Built as a **Power Platform code app** (React + TypeScript) over **Dataverse**, with Microsoft Entra ID SSO for internal Nextant users only.
+
+## Published PoC
+
+**[Open PRISMA PoC](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/69a956d5-2180-4ad6-9136-136c48cc197f?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)** - published on 2026-09-18. Requires app access and a Power Apps Premium licence.
+
+The deployed app uses mock data, with no Dataverse persistence. Build and upload succeeded; hosted UI validation is pending. See [deployment details and update commands](app/README.md#poc-deployment).
+
+The local app additionally supports multiple builders, searchable person selection, individual dates/allocation and US-calendar effort calculations. These updates have not been published to the hosted app.
+
+The sections below describe the target product, not the current PoC's implemented capabilities.
 
 ---
 
@@ -53,11 +66,13 @@ The Librarian is the **only** role that can publish. That gate is what makes it 
 
 A guided seven-step submission form with draft saving at every step: what is it → what does it do and why does it matter → tag it → attach the demo → images (card thumbnail + detail screenshots) → safety & sharing → review & submit. Target friction budget is under 10 minutes; beyond that, builders stop submitting and G2 fails.
 
+The first step includes multiple builders, searchable by name or email without duplicates. Each person has inclusive start/end dates and allocation (0-100%). The US business calendar is assigned automatically with no dropdown. Effort hours are previewed per person and summed for the solution; [workflow details](docs/workflows/contribution-and-review.md).
+
 ### Discovery → presentation (the hero flow)
 
 Search or browse → results grid with facet rail → solution detail → asset viewer → present mode.
 
-Search matches across name, summary, what-it-does, business value, tags, and an editorial keyword field, updating as the CSM types. Facets (specialization, capability, technology, industry, status, shareability) are additive, show live counts, and are URL-encoded so a filtered view can be bookmarked or pasted into Teams.
+Search matches across name, summary, what-it-does, business value, all builder names, tags, and an editorial keyword field, updating as the CSM types. Facets (specialization, capability, technology, industry, status, shareability) are additive, show live counts, and are URL-encoded so a filtered view can be bookmarked or pasted into Teams.
 
 ### Present mode
 
@@ -94,7 +109,7 @@ Key decisions:
 
 - **Dataverse is the single source of truth.** No separate search index in v1.
 - **Assets live in Dataverse File and Image columns** — no external blob storage to provision.
-- **Native N:N relationships** for solution↔capability/technology/industry. No hand-built junction tables.
+- **Native N:N relationships** for solution↔capability/technology/industry; no hand-built junction tables for these tags. Contributor effort uses a child table with relationship attributes; project evidence uses `nx_solutionproject`.
 - **Client-side search.** At ~40 solutions, the published catalogue loads once per session and searches instantly in memory. Documented ceiling: revisit past a few thousand records.
 - **Present mode and publication status are enforced at the platform level**, not just in the UI. Unpublished records are invisible to CSMs via security roles; `Library Notes` and `Publication Status` carry field-level security.
 
@@ -102,12 +117,19 @@ Key decisions:
 
 ## Data model
 
-Reference tables (organization-owned): `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`.
-Core tables (user/team-owned): `nx_solution`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`.
+Reference tables (organization-owned): `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `nx_businesscalendar`, `nx_businesscalendarholiday`.
+Core/child tables (user/team-owned): `nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_solutionproject`.
+Existing table: `nx_project`, with fixed columns and its existing Project Owner lookup to `systemuser`; connected to Solutions only through `nx_solutionproject`.
 
-Vocabulary governance: capabilities, industries, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates). Use case is a freeform text column on `nx_solution`, not a vocabulary.
+**13 tables total:** 12 new custom tables plus the existing Project table; native N:N intersect tables and built-in `systemuser` are excluded from that count.
+
+`nx_solutioncontributor` replaces the single builder lookup and solution-wide effort category. One row per Solution/person stores dates, allocation and the automatically assigned US calendar version. Person hours = business days × 8 × allocation / 100, rounded to two decimals; total effort sums those rounded hours. The current calendar covers 2026, excludes observed US federal holidays and weekends, and rejects out-of-coverage dates. These are capacity-based hours, not actual timesheets or deployment lead time.
+
+Vocabulary governance: capabilities, industries, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates). Calendar versions and holiday rows are Librarian-managed. Use case is a freeform text column on `nx_solution`, not a vocabulary. Industry tags are optional at schema level, with at least one industry or "Cross-industry" expected at review.
 
 Full column-by-column spec: [docs/data_model/SchemaV2.md](docs/data_model/SchemaV2.md)
+
+The [original schema entry point](docs/data_model/nextant-solution-library-dataverse-schema.md) is now a synchronized companion, not an unchanged v1 snapshot. V2 remains authoritative.
 
 ---
 
