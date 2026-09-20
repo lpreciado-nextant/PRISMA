@@ -332,9 +332,9 @@ graph LR
     end
 
     subgraph SOL["Solutions — nx_solution"]
-        S1["S1 Invoice Reconciliation<br/>Published"]
-        S2["S2 Customer Churn Predictor<br/>Published"]
-        S3["S3 Contract Review Copilot<br/>Published"]
+        S1["AgendaPilot<br/>Published"]
+        S2["LedgerSense<br/>Published"]
+        S3["POC Forge"]
         S4["S4 Warehouse Ops Dashboard<br/>Draft"]
     end
 
@@ -342,14 +342,12 @@ graph LR
         J1[( )]
         J2[( )]
         J3[( )]
-        J4[( )]
     end
 
     subgraph PROJ["Projects — nx_project (pre-existing)"]
-        P1["P1 Acería del Norte"]
-        P2["P2 Retail Co X"]
-        P3["P3 Banco XYZ — Churn"]
-        P4["P4 Banco XYZ — Legal"]
+        P1["P1 TDC App"]
+        P2["P2 WWL Academy Onboarding Ops. Support"]
+        P3["P3 Elevate"]
         P5["P5 Client TBD<br/>(no link yet)"]
     end
 
@@ -361,34 +359,10 @@ graph LR
     S1 --> J1 --> P1
     S1 --> J2 --> P2
     S2 --> J3 --> P3
-    S3 --> J4 --> P4
 
+    style S3 stroke-dasharray: 5 5
     style S4 stroke-dasharray: 5 5
     style P5 stroke-dasharray: 5 5
 ```
 
-S1 links to **both** P1 (Acería del Norte) and P2 (Retail Co X) — the reuse signal is back, carried by two separate `nx_solutionproject` rows, not by either fixed table. S4 (Draft) and P5 (no link yet) are dashed — the same two "pending" states as before, just represented as the *absence* of a junction row rather than an empty lookup.
-
-## Example: everything hanging off one Solution — including a Solution with no Projects yet
-
-Zooming into a single Solution (S1) shows every other table it touches: its specialization-area lookup and N:N tags, the demo asset the CSM opens, a live-demo request raised against it, and — through the junction table — its delivery evidence.
-
-```mermaid
-graph TD
-    S1["POC Forge"]
-
-    SA1[AI & Automation] -- 1:N --> S1
-    CAP1[AI & agents] -- N:N --> S1
-    CAP2[Process automation] -- N:N --> S1
-    IND1[Manufacturing] -- N:N --> S1
-    TECH1[LangChain] -- N:N --> S1
-    TECH2[Power Automate] -- N:N --> S1
-
-    S1 -- 1:N --> DA1["nx_demoasset<br/>Hosted web app URL"]
-    S1 -- 1:N --> DR1["nx_demorequest<br/>Carlos Mejía — Needed 2026-09-25"]
-    S1 -.->|"no nx_solutionproject rows"| NoProj(( ))
-
-    style NoProj stroke-dasharray: 5 5
-```
-
-One Solution row is the hub: the tags describe *what it is* (exactly one specialization area, plus as many capabilities, industries, and technologies as apply), with a plain `Use Case` text field for how the client would phrase the problem. `nx_demoasset` is *what a CSM can show*, and `nx_demorequest` is *who's asking for a live one right now* — both stay populated regardless of delivery history. `nx_solutionproject` is the bridge to *proof it already happened*, and `POC Forge` simply has no rows there yet: a reusable Solution the Librarian hasn't linked to a delivered `nx_project` (still fixed, never touched directly), not an error state — it's demoable and requestable on its own until the reuse signal shows up.
+`AgendaPilot` links to **both** P1 (TDC App) and P2 (WWL Academy Onboarding Ops. Support) — the reuse signal is back, carried by two separate `nx_solutionproject` rows, not by either fixed table. `POC Forge`, S4 (Draft), and P5 (no link yet) are all dashed — Published or not, a Solution simply has no `nx_solutionproject` rows until the Librarian links it to a delivered Project.
