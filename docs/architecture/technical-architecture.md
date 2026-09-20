@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Draft for review · **Last updated:** 2026-09-17
+**Status:** Draft for review, including contributor/calendar architecture · **Last updated:** 2026-09-18
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -38,6 +38,13 @@ Each carries an ADR — see [decision records](decisions/README.md).
 | Assets live in Dataverse File and Image columns — no external blob storage | [ADR-0004](decisions/adr-0004-assets-in-dataverse.md) |
 | Present mode is enforced server-side as well as client-side | [ADR-0005](decisions/adr-0005-present-mode-server-side-enforcement.md) |
 | Power Automate for notifications only — no business logic in flows | [ADR-0006](decisions/adr-0006-power-automate-notifications-only.md) |
+| Contributor-level effort derived from inclusive dates, allocation and an automatically assigned US calendar | [ADR-0007](decisions/adr-0007-contributor-effort.md) |
+
+## Contributor data
+
+The current [schema](../data_model/SchemaV2.md) contains 13 tables, including the existing, unchanged `nx_project`. `nx_solutioncontributor` carries each builder's dates/allocation; governed `nx_businesscalendar` and holiday rows support deterministic effort calculation. `nx_solutionproject` connects reusable offerings to existing delivery evidence without modifying Project columns.
+
+The PoC computes hours in `app/src/lib/effort.ts` from mock rows and the 2026 US federal holiday schedule. No calendar selector is offered. Person search is local name/email matching in the submission form, not a live-directory query. Production still requires Dataverse services, child ownership/sharing, validation and calendar version enforcement; no persistence or deployment is implied by these local changes.
 
 ## Code app constraints
 

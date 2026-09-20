@@ -1,5 +1,8 @@
 # AGENTS.md
 
+**Status:** Active guidance for the published mock-data PoC.
+**Last updated:** 2026-09-18
+
 Guidance for coding agents working in the PRISMA repository.
 
 ## What this project is
@@ -35,11 +38,35 @@ npm run lint     # eslint
 
 Or from the repo root, `run-poc.bat` installs, builds, and serves the production bundle at `http://localhost:4173/`.
 
-`npm run dev` warns that `power.config.json` is missing — **expected** until the app is initialized against a Power Platform environment. Don't try to fix it.
+## PoC deployment
+
+The app was published as **PRISMA PoC** on 2026-09-18. Build and upload succeeded; hosted UI validation is still pending.
+
+- **Environment ID:** `ce09ad9b-57d1-e5df-9400-8ce973c86213`
+- **App ID:** `69a956d5-2180-4ad6-9136-136c48cc197f`
+- **Deployment configuration:** [app/power.config.json](app/power.config.json), with build output `dist` and entry point `index.html`.
+- **Live app, sharing, and deployment details:** [app/README.md#poc-deployment](app/README.md#poc-deployment).
+
+Use the existing configuration to update this app. Do not rerun `pa app init`, clear the app ID, rename the app, or change the target environment unless explicitly requested. If the configuration is missing, confirm the intended target before initializing anything.
+
+Only publish when the user requests deployment; ordinary code or documentation edits do not authorize an upload. Run from `app/`:
+
+```powershell
+npm install
+npx pa auth login    # if sign-in is needed; complete it in the browser
+npm run build
+npx pa app push      # only after a successful build
+```
+
+The CLI is a project development dependency; prefer `npx pa`. Use `npx pa app run` for Local Play testing in the signed-in Power Platform browser profile. Never request passwords or tokens in chat.
+
+Before pushing, verify the configured name and IDs. After pushing, report the returned app URL and distinguish build/upload success from browser verification. The hosted smoke test covers search, detail, viewer, present mode, and image/font loading.
+
+Code apps must be enabled in the target environment. Publishing requires edit access; demo users need app sharing and Power Apps Premium licences. Publishing does not add Dataverse persistence. Compiled assets are publicly retrievable, so bundled mock data must remain non-sensitive; present mode is not a security boundary for bundled data.
 
 ## Hard constraints — Power Apps code app
 
-A published code app is served from `/play/e/{environmentId}/a/{appId}`. These rules are not stylistic; violating them breaks the published app:
+A published code app is served under a platform-owned path (this deployment uses `/play/e/{environmentId}/app/{appId}`). These rules are not stylistic; violating them breaks the published app:
 
 - **Hash routing only.** All navigation goes through `window.location.hash` via `src/lib/router.ts`. Never introduce path-based routing or a router library that owns the path segment. Routes: `#/`, `#/s/:id`, `#/s/:id/demo/:assetId`, `#/submit`.
 - **Single-page app, no server-side code.** No API routes, no SSR, no build-time secrets, nothing sensitive in the bundle.

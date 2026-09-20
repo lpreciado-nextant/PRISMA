@@ -1,6 +1,6 @@
 # Present mode
 
-**Status:** Draft for review · **Last updated:** 2026-09-17
+**Status:** Draft for review, including contributor metadata · **Last updated:** 2026-09-18
 **Source:** [End-to-end design §3.4](../design/end-to-end-design.md#34-present-mode)
 **Principle:** never embarrass a CSM in front of a client. Present mode **restricts** rather than merely hides.
 
@@ -10,7 +10,7 @@ One switch in the masthead, available from any page, flipped before the CSM shar
 
 | Behaviour | Detail |
 |---|---|
-| Suppresses internal-only content | Library notes, publication status, review history, builder-facing metadata |
+| Suppresses internal-only content | Library notes, publication status, review history, per-person dates, allocation, calendar and effort breakdown; builder names and aggregate effort hours may remain |
 | Restricts the catalogue | Only solutions flagged *Shareable with clients*. Internal-only solutions disappear from search and browse entirely — there is no way to accidentally surface one |
 | Applies client-safe redaction | Where flagged *Yes, with names removed*, the dedicated `Client Context (Redacted)` field replaces client names ("a national logistics provider"). Never runtime string-scrubbing — it is not trustworthy |
 | Changes the visual treatment | Larger type, minimal chrome, no filter rail by default, full-bleed demo viewer |

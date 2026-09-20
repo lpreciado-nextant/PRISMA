@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Draft for review · look-and-feel PoC implemented in [`app/`](../../app/README.md)
-**Last updated:** 2026-09-17
+**Status:** Draft for review · searchable contributors and US-only effort implemented in the mock [`app/`](../../app/README.md)
+**Last updated:** 2026-09-18
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
@@ -88,7 +88,7 @@ stateDiagram-v2
 
 **Guided multi-step submission form**, with draft saving at every step. The steps mirror how a builder actually thinks about their work, not how the database is shaped:
 
-1. **What is it?** — Name, one-line summary, specialization area, status (idea / prototype / client demo / production / retired).
+1. **What is it?** — Name, one-line summary, specialization area, status (idea / prototype / client demo / production / retired), and one or more builders, searchable by name or email. Each builder has inclusive start/end dates and an allocation percentage. The US business calendar is assigned automatically with no selector; calculated effort is previewed per person and in total. Duplicate people are excluded; the PoC searches mock people rather than a live directory.
 2. **What does it do and why does it matter?** — What It Does, Business Value, client problem it solves. This is the step CSMs depend on most and builders resent most, so it gets inline examples and an optional AI-assist to expand terse bullets into prose.
 3. **Tag it** — Capabilities, technologies, industries. Type-ahead against existing values; new technologies can be created inline (that vocabulary is intentionally open), new capabilities and industries cannot (those are governed).
 4. **Attach the demo** — One or more assets. The form adapts to asset type (see §3.3).
@@ -98,7 +98,7 @@ stateDiagram-v2
 
 On submit the record moves to *Pending review* and the librarian queue is notified. Contributors can see the state of their own submissions at any time.
 
-**Editing a published record** returns it to *Pending review* for material changes (summary, business value, assets, sharing flags) but not for trivial ones (typo in library notes). The librarian sees a diff of what changed.
+**Editing a published record** returns it to *Pending review* for material changes (summary, business value, assets, sharing flags, contributor or effort inputs) but not for trivial ones (typo in library notes). The librarian sees a diff of what changed.
 
 ### 3.2 Discovery → presentation (the CSM path)
 
@@ -124,7 +124,7 @@ flowchart LR
 
 **Browse** is the alternative for CSMs who don't yet know what they're looking for: three specialization-area tabs, each with a short framing note and a visual card grid. Cards carry a thumbnail, name, one-liner, specialization colour coding, status badge, and capability chips — enough to triage without clicking.
 
-**Solution detail** is the CSM's briefing document: what it does, business value, who built it (with a direct contact path), the client/context it came from, tags, and the asset list. Internal-only content (library notes) is visible here to internal viewers and never in present mode.
+**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths), total calculated effort hours, the client/context it came from, tags, and the asset list. Per-person dates, allocation, calendar and effort breakdown are internal-only and omitted in present mode, alongside library notes. Builder names and total effort may remain visible for a shareable solution. Effort is capacity-based, not elapsed deployment time or a timesheet.
 
 ### 3.3 Demo assets
 
@@ -208,7 +208,6 @@ Detail-page screenshots beyond the card thumbnail — the submission form collec
 | Column | Type | Rationale |
 |---|---|---|
 | Thumbnail | Image column | The card grid is the primary browse surface and needs a visual. A per-specialization generated placeholder covers records without one. |
-| Effort / Time to Deploy | Choice — **global**, single-select | Days · Weeks · Months · Ongoing programme. CSMs get asked "how long would this take us?" in the same breath as "can you show me?" |
 | Client Context (Redacted) | Single line of text (200) | Supplies the client-safe substitute string used in present mode. Filled in by the contributor or librarian when shareability is *Yes, with names removed*. |
 | Use Case | Single line of text (200) | Freeform client-side framing of the problem the solution addresses ("reduce manual invoice handling"). Originally a governed `nx_usecase` reference table joined via N:N; simplified to a text column to cut governance overhead. |
 
@@ -216,9 +215,17 @@ Detail-page screenshots beyond the card thumbnail — the submission form collec
 
 Supports the live-demo handoff (§3.3): solution, requester, client/opportunity context, needed-by date, and a request status (New · Acknowledged · Scheduled · Delivered · Declined).
 
+### 6.3a Contributors and business-calendar effort
+
+Replace the single `Built By` lookup and solution-wide `Effort / Time to Deploy` choice with `nx_solutioncontributor`: one row per Solution/person, with a `systemuser` lookup, Date Only start/end dates, allocation (0-100%), and a business-calendar lookup. Contributor credit does not change record ownership or grant edit access.
+
+`nx_businesscalendar` and `nx_businesscalendarholiday` are Librarian-governed reference data. Business days are Monday-Friday within the inclusive date range, excluding the automatically assigned US calendar's holidays. Per-person hours = business days × 8 × allocation / 100, rounded to two decimals; solution hours sum those rounded person totals. Reject invalid dates, reversed ranges, unknown calendars and dates outside calendar coverage. Calendars are versioned by new records rather than changing holiday data already used by contributions.
+
+The schema owns the full contract and migration notes; see [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md). All contributors use the US business calendar automatically, with no calendar selector: Monday-Friday excluding observed US federal holidays. The PoC includes only the 2026 OPM schedule; state-specific and company holidays are not included. Legacy mock records and restored session drafts are reassigned to this calendar and their effort is recalculated.
+
 ### 6.4 Reference data governance
 
-- **Governed (librarian-managed):** specialization areas, capabilities, industries. Contributors select from existing values only.
+- **Governed (librarian-managed):** specialization areas, capabilities, industries, business calendars and their holidays. Contributors select existing tags; the US calendar is assigned automatically.
 - **Open (contributor-extendable):** technologies. Grows organically; the librarian periodically merges duplicates.
 
 > The full column-by-column spec, including field-level security requirements, now lives in the [schema spec (v2)](../data_model/SchemaV2.md).
@@ -254,7 +261,7 @@ flowchart TB
 
 - **Dataverse is the single source of truth.** No separate search index in v1 (see §7.3).
 - **Assets live in Dataverse File and Image columns.** No external blob storage, no separate hosting to provision. This is what makes self-contained HTML demos viable — the payload travels with the record.
-- **Native N:N relationships** for solution↔capability, solution↔technology, solution↔industry. No hand-built junction tables.
+- **Native N:N relationships** for solution↔capability, solution↔technology, solution↔industry. No hand-built junction tables for these tags. `nx_solutionproject` is an explicit junction for delivery evidence; `nx_solutioncontributor` is a child table carrying per-person effort attributes.
 - **Power Automate for notifications only** — review-queue alerts and demo-request handoffs to Teams/Outlook. No business logic lives in flows.
 - **Present mode is enforced server-side as well as client-side.** The query issued in present mode filters on shareability at the Dataverse level, so a client-visible list can never contain an internal-only record even transiently.
 
