@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** PoC published to Power Apps; local searchable contributors, multi-person effort and US-only calendar not yet deployed; hosted UI validation pending.
+**Status:** PoC published to Power Apps, including searchable contributors, multi-person effort, US-only calendar and updated submission hints; standalone submission walkthrough available; hosted UI validation pending.
 **Last updated:** 2026-09-18
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -62,6 +62,21 @@ npm run build        # TypeScript + production bundle
 npm run lint
 ```
 
+## Submission presentation
+
+Open [the interactive submission walkthrough](../presentation/submission.html) directly in a browser; no server is required. Seven chapters pair the actual PoC submission form with explanations of the decisions, data and limitations at each step. The walkthrough includes an editable BSO Quota example, a blank-start option, light/dark themes, chapter navigation and a simulated review handoff. Chapter controls let a presenter jump directly to any stage; the form's own Continue and Submit controls retain their validation.
+
+The presentation imports `SubmitView`, `SolutionCard`, the people picker, effort calculations, icons and design tokens from the PoC rather than maintaining copies. Its draft uses a separate session-storage key, leaving the PoC draft untouched. Images remain in memory only. No submission, notification or publication reaches Dataverse.
+
+Rebuild the standalone HTML after changing its source or shared components:
+
+```powershell
+cd app
+npm run build:presentation
+```
+
+The entry point is `src/presentation/SubmissionPresentation.tsx`; `scripts/build-submission.mjs` bundles JavaScript, CSS and the logo into the HTML. Fonts retain the PoC's Google Fonts dependency and use fallback fonts offline. This local build does not publish or alter the deployed Power Apps app.
+
 ## Contributor effort
 
 The current [schema](../docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) replaces a Solution's single builder and effort category with contributor rows. Each has a person, inclusive start/end dates, allocation (0-100%) and an automatically assigned US business calendar. Hours = Monday-Friday business days excluding calendar holidays × 8 × allocation / 100, rounded per person to two decimals and then summed. These are calculated capacity hours, not timesheet actuals or deployment duration.
@@ -74,7 +89,7 @@ All contributors use **US business calendar (2026)** automatically, with no cale
 
 **[Open PRISMA PoC](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/69a956d5-2180-4ad6-9136-136c48cc197f?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)**
 
-Published on 2026-09-18. The production build and `pa app push` succeeded; the hosted UI still needs a browser smoke test of search, detail, viewer, present mode, and asset loading.
+Updated on 2026-09-18 with searchable contributors, multi-person effort, the US-only calendar and submission field descriptions with examples only in placeholders. The latest update aligns contributor fields and protects the first contributor from removal. The production build, all seven tests, lint and `pa app push` succeeded; contributor layout and removal were also checked locally at desktop and mobile widths. The hosted UI still needs a browser smoke test of search, detail, viewer, present mode, submission hints, contributor controls and asset loading.
 
 | Setting | Value |
 |---|---|
