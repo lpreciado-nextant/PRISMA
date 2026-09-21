@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "appId": null,
+  "appDisplayName": "PRISMA",
+  "region": "prod",
+  "environmentId": "ce09ad9b-57d1-e5df-9400-8ce973c86213",
+  "description": "Backend-connected PRISMA; separate from the mock UI PoC",
+  "buildPath": "dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:5174",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "solutions": {
+          "entitySetName": "nx_solutions",
+          "logicalName": "nx_solution"
+        },
+        "solutioncontributors": {
+          "entitySetName": "nx_solutioncontributors",
+          "logicalName": "nx_solutioncontributor"
+        },
+        "solutionimages": {
+          "entitySetName": "nx_solutionimages",
+          "logicalName": "nx_solutionimage"
+        },
+        "demoassets": {
+          "entitySetName": "nx_demoassets",
+          "logicalName": "nx_demoasset"
+        },
+        "demorequests": {
+          "entitySetName": "nx_demorequests",
+          "logicalName": "nx_demorequest"
+        },
+        "specializationareas": {
+          "entitySetName": "nx_specializationareas",
+          "logicalName": "nx_specializationarea"
+        },
+        "capabilities": {
+          "entitySetName": "nx_capabilities",
+          "logicalName": "nx_capability"
+        },
+        "technologies": {
+          "entitySetName": "nx_technologies",
+          "logicalName": "nx_technology"
+        },
+        "industries": {
+          "entitySetName": "nx_industries",
+          "logicalName": "nx_industry"
+        },
+        "consultants": {
+          "entitySetName": "cr6b0_consultants",
+          "logicalName": "cr6b0_consultant"
+        },
+        "projects": {
+          "entitySetName": "cr6b0_projects",
+          "logicalName": "cr6b0_project"
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}

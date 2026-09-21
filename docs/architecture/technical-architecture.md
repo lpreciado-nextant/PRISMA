@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Draft for review; PRISMA_Dev environment context recorded; controlled submission transitions specified; production integration and code-based US calendar app alignment pending · **Last updated:** 2026-09-21
+**Status:** PAC inventory verified; separate connected-app integration planned; full read/write publication gate agreed; backend enforcement pending · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -9,7 +9,56 @@
 
 The Power Platform solution **`PRISMA_Dev`** exists in **Nextant Pulse**, environment ID **`ce09ad9b-57d1-e5df-9400-8ce973c86213`** (not Nextant Pulse Prod). In the Power Apps maker portal, select that environment and open **Solutions > PRISMA_Dev**.
 
-This Power Platform solution is distinct from both the published code app **PRISMA PoC** and the catalogue's `nx_solution` records. The solution's component inventory, publisher prefix and managed/unmanaged type are not established here; its existence does not confirm that the code app or planned Dataverse components have been added to it. The PoC still has no Dataverse persistence. App IDs, publishing commands and verification status are maintained in the [deployment details](../../app/README.md#poc-deployment).
+This Power Platform solution is distinct from both the published code app **PRISMA PoC** and the catalogue's `nx_solution` records. PAC CLI inspection on 2026-09-21 confirmed unmanaged solution version `1.0.0.1`, solution ID `adddc940-98ff-4b2f-9c8a-e89245c2fc33`, publisher `nx`, customization prefix `nx`, and choice-value prefix `12506`. The Dataverse URL is `https://nextantpulse.crm.dynamics.com/`.
+
+The export includes **PRISMA PoC** (`cr6b0_prismapoc_c440f`, CodeApp type 4); `pac code list` returned only the existing PoC app. Its connection/database references are empty. App IDs, publishing commands and verification status are maintained in the [deployment details](../../app/README.md#poc-deployment). No connected PRISMA app was published during inspection.
+
+### Verified solution inventory
+
+Evidence: `pac solution list`, FetchXML queries through `pac env fetch`, and an unmanaged `pac solution export` inspected as XML. This was read-only exploration; no table, role, relationship or business record was changed. The temporary export includes the PoC package and is not a schema-only artifact to commit.
+
+| Live logical table | Rows visible to inspection caller | UI mapping / integration note |
+|---|---:|---|
+| `nx_solution` | 0 | Core catalogue; `nx_solutionname`, `nx_onelinesummary`, `nx_whatitdoes`, `nx_businessvalue`, `nx_usecase`; specialization and capability are lookups, not string enums/N:N capability tags |
+| `nx_solutioncontributor` | 0 | `nx_builtby` references `cr6b0_consultant`; direct/calendar effort fields; no calendar lookup |
+| `nx_solutionimage` | 0 | Gallery image column `nx_imagefile`, caption and sort order |
+| `nx_demoasset` | 0 | File column `nx_filemedia`, asset choice, external URL and embedding fields; name column is `nx_demoassetid1` |
+| `nx_demorequest` | 1 | Requester references Consultant; do not delete or replace the existing row when seeding |
+| `nx_specializationarea` | 3 | Resolve Dataverse IDs to UI area keys explicitly |
+| `nx_capability` | 2 | Single capability lookup per Solution |
+| `nx_technology` | 8 | Native N:N with Solution |
+| `nx_industry` | 4 | Native N:N with Solution |
+| `cr6b0_consultant` | Not queried | Reused people directory; fetch only name/email/ID and agreed eligibility fields |
+| `cr6b0_project` | Not queried | Reused delivery evidence; native N:N with Solution; preserve existing security and schema |
+
+The export has 11 table definitions; the solution-component query reports 14 Entity components, including relationship infrastructure. Native N:N definitions include `nx_Solution_nx_Technology_nx_Technology`, `nx_Solution_nx_Industry_nx_Industry` and `nx_Solution_cr6b0_Project_cr6b0_Project`. Do not implement the PoC's historical `nx_solutionproject` junction model.
+
+The **PRISMA Librarian** field-security profile grants read/create/update for `nx_publicationstatus`, `nx_clientsafereviewed` and `nx_librarynote`. This is not a table security role or proof of user membership. Review Outcome/Comments are present in the schema but absent from that profile's exported permissions. No security-role, plug-in or Custom API components were found in this solution. The export also carries two existing Project business rules, not PRISMA transition handlers. Environment-wide components and effective permissions require separate verification; absence from this solution is not proof of absence from the environment.
+
+### Live-schema gaps to resolve
+
+- All 11 exported tables are **UserOwned**, including the four reference tables and Consultant. The design's organization-owned assumption is not the deployed model. Prefer explicit organization-level reference Read privileges with controlled writes; do not recreate tables or change existing Consultant/Project security without approval.
+- `nx_reviewoutcome` and `nx_reviewcomments` have `IsSecured=0`. Publication status, clearance and Library Notes have `IsSecured=1`. Enable and configure the agreed review-field protection before enabling contributor writes, and verify read access to publication status for catalogue queries.
+- `nx_capability` is ApplicationRequired although incomplete drafts permit no capability. Align metadata with conditional submit/approve validation. Solution name is required with maximum length 850, while the app contract is 100. Several live text columns are 4000, and DemoAsset name is `nx_demoassetid1` (850). Apply documented client/server limits deliberately; do not assume generated max lengths equal product limits.
+- Publication and maturity choices have no configured default (`AppDefaultValue=-1`); creation must supply the agreed state. Publication values are Published `125060000`, Retired `125060001`, Pending review `125060002`, Draft `125060003`. Maturity values are Live in production `125060000`, Idea / concept `125060001`, Client demo `125060002`, Retired `125060003`, Working prototype `125060004`.
+- Child-to-parent relationships currently use `NoCascade` for Assign/Share/Unshare and `RemoveLink` for Delete. A parent lookup does not propagate access or guarantee child cleanup. Define and enforce ownership, sharing/revocation and deletion for every child and file.
+
+Track decisions and required owners in the [decision log](../delivery/decision-log.md). These observations do not authorize changes to shared environment security or destructive table recreation.
+
+## Connected-app integration plan
+
+Keep **PRISMA PoC** as the live UI test app. Create **PRISMA** with a separate configuration and eventual app ID in the same environment. Separate app IDs isolate deployments, not Dataverse security or environments. Never copy the PoC app ID into the new target or add live data sources to the PoC configuration.
+
+**Local foundation completed (2026-09-21):** [app/connected/power.config.json](../../app/connected/power.config.json) is initialized as PRISMA with no app ID and registers all 11 inventoried tables. PAC generated models/services and the schema files they import in this isolated directory. The generated services pass TypeScript validation against the installed SDK, and repository lint passes. The PoC configuration was verified unchanged. There is no connected UI entry point, deployed app, runtime read/write verification or backend transition implementation yet. Generation is not completion of the following milestones; see [setup commands](../../app/README.md#connected-prisma-target).
+
+1. **Isolate the app target.** Reuse the existing React views/design tokens through a shared source boundary. Give the connected target its own Power Apps configuration, generated services, entry point and output. Preserve existing PoC commands and browser storage. Confirm both builds and ensure the connected bundle excludes the mock catalogue and IndexedDB submission adapter.
+2. **Generate and verify contracts.** Generate Dataverse models/services from live metadata in the new target. Map real logical names, GUIDs, choice integers, lookup navigation names and native N:N relationships to the UI model. Unknown choices must fail explicitly, not silently use a default. Paginate reads; use explicit column selections; handle permission failures distinctly from empty results. Update the mock-era calendar/project assumptions without copying their persistence model.
+3. **Close backend security gaps before writes.** Verify ownership types, effective roles and field permissions. Implement published-row/child sharing and revocation; Dataverse roles do not express a predicate such as 'Published only'. Protect review fields and internal notes while allowing authorized contributors to read their feedback. Confirm a least-privilege librarian identity and a contributor/CSM test identity; builder credit is not record ownership.
+4. **Implement controlled writes.** Deliver the synchronous Custom APIs and direct-write/child/media guards specified in [ADR-0008](decisions/adr-0008-controlled-submission-transitions.md). Save incomplete named drafts, submit, return, approve and invalidate approval on material edits. Use caller identity and expected row versions, not browser email keys or client approval flags. Define authorized deletion and child cleanup explicitly. Enforce US holidays for 2020-2035 on the server as well as the client.
+5. **Connect the complete UI.** Load catalogue/reference data; hydrate authorized contributors, tags, media and internal delivery context. Connect own submissions and librarian review to authorized services. Stage images/files while Draft; report failed/partial uploads and clean up safely. Replace Data URLs with authenticated downloads/object URLs and revoke them. Keep user HTML sandboxed. No mock fallback, no local-only successful saves, and no assumption that Consultant IDs are systemuser IDs.
+6. **Verify and publish only the new app.** Test save/reload from another session, incomplete drafts, media round-trips, submit/return/resubmit/approve, edit withdrawal, permission denials, direct-write bypass attempts, stale-version conflicts, child access and deletion. Verify present-mode server filters and projection, with no transient internal data on mode changes. Test with non-admin identities and approved non-sensitive fixtures. Then build, publish PRISMA, add/verify its solution membership, configure sharing, and run the authenticated hosted smoke test. Full read/write is the chosen first-release gate; do not publish a read-only placeholder.
+
+Reference-data counts do not prove vocabulary completeness. Review the two live capabilities against the submission UI before any seed migration. Do not seed the mock catalogue automatically or modify existing Consultant/Project records. File/image operations and invocation of the controlled APIs through the installed SDK must be proven in Local Play before selecting the final client transport. The current Microsoft SDK documents generated file/image helpers as preview; verify the installed generator rather than assuming those helpers exist.
 
 ## System shape
 

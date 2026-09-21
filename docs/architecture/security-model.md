@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Agreed draft/review field protections and controlled transition contract; platform enforcement pending · **Last updated:** 2026-09-21
+**Status:** Agreed target security model; PAC inventory exposes ownership and field-security gaps; enforcement pending · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -20,6 +20,8 @@
 `nx_solutioncontributor` follows parent Solution access: Contributors can create/read/write/delete rows only for Solutions they can manage; CSMs read rows for published parents; Librarians have full access. Enforce this through ownership/sharing and platform validation, not by assuming a lookup inherits security. Builder credit grants no additional rights. Full constraints: [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
 ## Ownership
+
+**Deployment gap (PAC export, 2026-09-21):** all 11 exported tables are UserOwned, including reference tables and Consultant. The organization-owned statements below describe the target design, not the live environment. Resolve [Q8](../delivery/decision-log.md) before implementation; do not recreate existing tables. Solution child links currently use NoCascade for assign/share/unshare and RemoveLink for delete, so the parent-access contract requires explicit enforcement. Dataverse security roles cannot grant 'published only' access as a row predicate: publication/unpublication must grant/revoke appropriate row and child access without exposing drafts through another API.
 
 - `nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, and `nx_demorequest` are **user/team-owned** (row-level security; contributor rows align with the Solution owner/team).
 - Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`) are **organization-owned**, and so is `cr6b0_consultant`.
@@ -45,7 +47,7 @@ Use narrowly scoped service execution for protected-field updates only after cal
 
 State and related metadata transitions are transactional; file payload uploads are staged separately, not claimed to be atomic with a record transaction. Concurrent edits/reviews must fail visibly rather than approving an obsolete version. Power Automate sends notifications only after committed changes and never authorizes or validates a transition.
 
-The PoC mirrors validation and preserves protected fields from its current stored record, but browser storage and the visible librarian preview are not production authorization or cross-tab concurrency enforcement. No Custom APIs, plug-ins or field-security profiles have been deployed.
+The PoC mirrors validation and preserves protected fields from its current stored record, but browser storage and the visible librarian preview are not production authorization or cross-tab concurrency enforcement. PAC inspection found no Custom API, plug-in or security-role components in `PRISMA_Dev`; environment-wide effective permissions remain unverified. A **PRISMA Librarian** field-security profile does exist and covers publication status, clearance and Library Notes. Review Outcome/Comments are currently unsecured and absent from its permissions. Profile membership and contributor/CSM reads require verification before connected writes are enabled.
 
 ## Authentication
 

@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Browser-local draft/review flow with dedicated review fields, submission validation, required authored draft names, in-card submission status and confirmed owner-only deletion published to PRISMA PoC on 2026-09-21; PRISMA_Dev solution recorded in Nextant Pulse. Build and upload succeeded; authenticated hosted UI verification remains pending.
+**Status:** PRISMA PoC remains the published browser-local UI test app; separate unpublished PRISMA target initialized with 11 generated Dataverse services. Connected UI and controlled writes pending; full read/write required before publication. PoC authenticated hosted UI verification remains pending.
 **Last updated:** 2026-09-21
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -118,7 +118,7 @@ The returned hosted link redirected to Microsoft sign-in in the verification bro
 | App ID | `69a956d5-2180-4ad6-9136-136c48cc197f` |
 | Build output / entry point | `dist` / `index.html` |
 
-In [Power Apps](https://make.powerapps.com), select **Nextant Pulse** (not Nextant Pulse Prod), then **Solutions > PRISMA_Dev** to open the existing solution. `PRISMA_Dev` is the Power Platform solution name, not the code app display name. Its existence does not establish which components it contains or whether PRISMA PoC has been added to it; see [environment and solution context](../docs/architecture/technical-architecture.md#environment-and-solution).
+In [Power Apps](https://make.powerapps.com), select **Nextant Pulse** (not Nextant Pulse Prod), then **Solutions > PRISMA_Dev** to open the existing solution. `PRISMA_Dev` is the Power Platform solution name, not the code app display name. PAC inspection on 2026-09-21 confirmed that PRISMA PoC is included in this unmanaged solution; see the [verified inventory](../docs/architecture/technical-architecture.md#verified-solution-inventory).
 
 The existing [power.config.json](power.config.json) targets this deployment. Do not run `pa app init` again to update it.
 
@@ -153,6 +153,28 @@ npx pa app push
 ```
 
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
+
+## Connected PRISMA target
+
+The separate [connected/power.config.json](connected/power.config.json) targets **PRISMA** in the same Nextant Pulse environment, with `appId: null`, local URL `http://localhost:5174`, and its own future `dist` output. It has not been published and does not yet have a runnable UI entry point. Port 5174 is configuration only; no connected-app dev server is running. Existing PoC commands, app ID, source entry point and persistence remain unchanged.
+
+PAC generated live models/services for all 11 inventoried tables under [connected/src/generated/index.ts](connected/src/generated/index.ts), plus required metadata under `connected/.power/schemas/`. Keep both generated directories with this target; services import their schema configuration. Generation reads metadata, not business records, and does not create or modify Dataverse rows. Generated CRUD methods do not implement the authorization/transition guarantees in [ADR-0008](../docs/architecture/decisions/adr-0008-controlled-submission-transitions.md); do not wire direct status/review writes into the UI.
+
+The verified non-interactive command, run from `app/connected/`, is:
+
+```powershell
+pac code add-data-source --apiId dataverse --table nx_solution --environment https://nextantpulse.crm.dynamics.com
+```
+
+Substitute another live logical table name only when adding an unregistered source. Do not run it in `app/`, which targets the mock PoC. The organization URL is not the `/api/data/v9.2` Web API endpoint. PAC 2.10.1 succeeded with the explicit URL; the earlier `pa` attempt rejected an advertised environment flag and then prompted for an organization URL without one.
+
+Generated services type-check against the installed SDK, all 11 table registrations are verified, and `npm run lint` passes. Type-check from `app/`:
+
+```powershell
+npx tsc --noEmit --strict --skipLibCheck --target ES2022 --lib ES2022,DOM,DOM.Iterable --module ESNext --moduleResolution bundler --verbatimModuleSyntax connected/src/generated/index.ts
+```
+
+**Release gate:** full read/write contribution, file/image persistence, authorized review, concurrency and present-mode enforcement must pass before publishing PRISMA. Metadata generation is not a runtime data-access or permission test. The [integration plan and live-schema gaps](../docs/architecture/technical-architecture.md#connected-app-integration-plan) describe the remaining work. Do not publish a placeholder, copy the PoC app ID, or replace the PoC's mock data source.
 
 ---
 

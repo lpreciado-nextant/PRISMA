@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Agreed design; authored draft names required; PRISMA_Dev environment context recorded; draft and review-field contracts aligned with the local PoC; broader model alignment and code-based US calendar coverage for 2020-2035 pending; production integration pending
+**Status:** Agreed design; separate mock PoC and connected PRISMA apps agreed; full read/write required before connected-app publication; production integration pending
 **Last updated:** 2026-09-21
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
@@ -105,6 +105,8 @@ The local **Review queue** at `#/review` supports pending, changes-requested and
 `Review Outcome` (None / Changes requested / Approved) and contributor-readable `Review Comments` (up to 4000 characters) are dedicated fields on Solution, separate from internal editorial Library Notes. They describe the latest decision, not current approval: contributor saves and resubmissions preserve them while clearing Client Safe Reviewed. Returned records are Draft + Changes requested and require fresh acknowledgment. Approval replaces the latest feedback, including clearing it when no comment is supplied. Review fields are excluded from the CSM projection and present mode. This is not review history; no new review table is introduced.
 
 Production save/submit/review operations use synchronous Dataverse Custom APIs and plug-ins with caller authorization, state validation and optimistic concurrency. Contributors may request transitions on records they can edit but cannot write protected review/publication fields directly; only a librarian may request approval. These are planned platform operations, not SPA API routes or deployed services. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md).
+
+**Deployment separation (2026-09-21):** keep the existing **PRISMA PoC** live app as the mock-data UI test environment, including its browser-local submission/review simulations. Build **PRISMA** as a separate code app connected to the existing Dataverse tables in Nextant Pulse / `PRISMA_Dev`. Do not rename, reinitialize or repoint the PoC. Share the visual components, but isolate app configuration, generated services, build output and persistence. The connected app must not fall back to mock data or local-only saves. Full read/write contribution, media and authorized review must pass verification before its first publication; a read-only release is not the selected milestone. See the [integration plan](../architecture/technical-architecture.md#connected-app-integration-plan).
 
 **Saving edits to a published record** removes it from the published catalogue and clears client-safe review approval: explicit draft saves return to *Draft*, while submitting returns to *Pending review*. Simply opening the editor does not withdraw a record. Require a fresh safety acknowledgment. Production librarian review will include a diff; librarian-only note corrections may remain published.
 
