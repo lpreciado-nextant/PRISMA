@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Safety-first submission revision published to Nextant Pulse on 2026-09-21. Build and upload succeeded; authenticated hosted UI verification pending.
+**Status:** Browser-local drafts, editing and librarian review implemented locally, not deployed. The prior safety-first revision was published on 2026-09-21; authenticated hosted UI verification remains pending.
 **Last updated:** 2026-09-21
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -23,6 +23,8 @@ The point of this PoC is the **experience**, not the data. Everything renders fr
 | Captioned screenshot gallery (`nx_solutionimage`) on the detail page | `src/views/DetailView.tsx` |
 | Six-step safety-first form, required detail images, optional thumbnail and local media | `src/views/SubmitView.tsx` |
 | My submissions, inspection and editing; no welcome page | `src/views/MySubmissionsView.tsx`, `src/App.tsx` |
+| Browser-persisted drafts/media and publish/return lifecycle | `src/lib/submissions.ts` |
+| Librarian queue, inspection, required return comments and explicit approval | `src/views/ReviewView.tsx` |
 | Searchable tag pickers with case-insensitive technology deduplication | `src/views/SubmitView.tsx` |
 | Type-dependent asset behaviour (viewer / pop-out / download / request) | `src/views/DetailView.tsx` |
 | Self-contained HTML rendered in a sandbox with no same-origin access | `src/views/ViewerView.tsx` |
@@ -33,7 +35,9 @@ Present mode **restricts the catalogue** rather than hiding rows: the source lis
 
 Eligibility requires Published, Safety Acknowledged and librarian-controlled Client Safe Reviewed. Client identity, projects and notes are removed from the present-mode catalogue before search/render; only separately authored anonymous context is shown. Acknowledgment replaces the old sharing/sample-data fields but never grants approval.
 
-Submissions appear in **My submissions** as Pending review, without changing the published catalogue. They and their media remain in memory across navigation until reload. Text drafts use tab storage; media is not restored. No notification, Dataverse write or actual librarian queue entry occurs. New attachments support images, HTML, MP4/WebM video and PDF/PPT/PPTX documents; existing catalogue URL formats remain readable but cannot be newly submitted. See [media rules and local limits](../docs/workflows/demo-assets.md).
+**Save draft & close** stores incomplete submissions and media in browser-local IndexedDB. Saved drafts reopen from **My submissions**, including after reload. Submitting moves them to Pending review. The **Review queue** (`#/review`) supports inspection, approval/publication and return-to-Draft with required comments. Feedback appears in My submissions and the editor. Saving edits to a published record withdraws it until re-approved. Published local records join the mock catalogue and remain subject to present-mode safety filtering.
+
+All saves are confined to this origin/browser profile, are subject to quota and eviction, and disappear if site data is cleared. Save failures leave changes open; no Dataverse writes or notifications occur. Review access is simulated, not authorization. Use non-sensitive test data only. Unsaved text has a temporary tab backup; unsaved media remains in memory. New attachments support images, HTML, MP4/WebM video and PDF/PPT/PPTX documents; existing catalogue URL formats remain readable but cannot be newly submitted. See [media rules and local limits](../docs/workflows/demo-assets.md).
 
 ---
 
@@ -145,8 +149,8 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 Deliberately out of scope so the demo shows only what the platform can actually do:
 
-- Dataverse reads/writes and durable submission/media persistence
-- Librarian review UI, demo-request writes, reference-data admin and optional AI writing assistance
+- Dataverse reads/writes, shared production persistence and notifications
+- Production review authorization, revision diffs/history, demo-request writes, reference-data admin and optional AI writing assistance
 - Status facets on the rail (capability / technology / industry are implemented)
 - Permission-dependent media submission and access-request controls; some existing catalogue demos still use stand-ins
 - Security roles and field-level security, which are platform configuration rather than app code

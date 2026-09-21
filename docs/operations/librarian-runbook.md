@@ -1,13 +1,17 @@
 # Librarian runbook
 
-**Status:** Planned review workflow, aligned with safety-first submission; UI deferred · **Last updated:** 2026-09-21
+**Status:** Browser-local review UI implemented; production authorization and notifications pending · **Last updated:** 2026-09-21
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
 
 ## Reviewing a submission
 
-Planned queue at `/review`, with Teams/Outlook notifications in production. Neither exists in the current PoC; contributor submissions remain local and pending.
+The local queue is at `#/review`, also available from the masthead outside present mode. Tabs show Pending review, Changes requested and Published; search by name, summary or owner and filter by specialization. Open a submission to inspect its full detail, screenshots, contributor effort and attachments. Review attachment routes preserve the return path to the queue record; uploaded HTML stays sandboxed.
+
+To approve, check the independent client-safety confirmation and choose **Approve & publish**. To return, enter actionable comments and choose **Return for changes**; blank comments are not accepted. The contributor sees the latest comments in My submissions and the editor, corrects the Draft and submits it again. Decisions and media are saved in this browser and survive reload; they are not shared with other browsers or written to Dataverse. Storage failures leave the decision open for retry.
+
+Access is simulated for this UI PoC. It is not a production librarian role check, and no Teams/Outlook notifications are sent. Use non-sensitive test records only. Production roles and field-level security remain required.
 
 **Checklist before approving:**
 
@@ -25,7 +29,7 @@ Planned queue at `/review`, with Teams/Outlook notifications in production. Neit
 
 **Outcomes:** approve client-safe content (set Client Safe Reviewed and Published), or request changes (Draft with a note). Acknowledgment never grants clearance. Material edits clear Client Safe Reviewed and require fresh acknowledgment.
 
-**Re-reviews:** a contributor edit to a published record returns it to *Pending review* with a diff of what changed. Trivial edits (typo in library notes) don't re-enter the queue; an auto-approve path for minor edits mitigates bottleneck risk (R4).
+**Re-reviews:** submitting contributor edits to a published record returns it to *Pending review*; saving unfinished edits returns it to *Draft*. Either save withdraws it from the catalogue and clears client-safe approval. Opening the editor alone changes nothing. A diff and audit history remain production follow-up work. Trivial librarian-only note corrections may remain published; the PoC does not implement this separate editing path.
 
 **SLA:** _TBD — set with the librarian team (see risk R4: more than one librarian, SLA on review)._
 

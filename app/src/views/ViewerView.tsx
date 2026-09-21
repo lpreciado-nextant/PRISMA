@@ -9,12 +9,14 @@ export function ViewerView({
   solution,
   asset,
   present,
+  backPath,
 }: {
   solution: Solution;
   asset: DemoAsset;
   present: boolean;
+  backPath?: string;
 }) {
-  const close = useCallback(() => navigate(`/s/${solution.id}`), [solution.id]);
+  const close = useCallback(() => navigate(backPath ?? `/s/${solution.id}`), [solution.id, backPath]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

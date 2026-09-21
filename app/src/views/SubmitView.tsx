@@ -105,12 +105,13 @@ function loadDraft(draftKey: string): Draft {
   }
 }
 
-export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChange, onSubmitted, initialSolution }: {
+export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChange, onSubmitted, onSaveDraft, initialSolution }: {
   user: AppUser;
   draftKey?: string;
   activeStep?: number;
   onStepChange?: (step: number) => void;
-  onSubmitted?: (solution: Solution) => void;
+  onSubmitted?: (solution: Solution) => void | Promise<void>;
+  onSaveDraft?: (solution: Solution) => Promise<void>;
   initialSolution?: Solution;
 }) {
   const [internalStep, setInternalStep] = useState(0);
@@ -129,7 +130,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       industries: initialSolution.industries, contributors: initialSolution.contributors,
       thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
-      redacted: initialSolution.clientContextRedacted ?? "", safetyAcknowledged: false,
+      redacted: initialSolution.clientContextRedacted ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
     } : loadDraft(draftKey);
     if (saved.contributors.length) return saved;
     return { ...saved, contributors: [{
@@ -142,9 +143,15 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   });
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submissionId, setSubmissionId] = useState(() => initialSolution?.id ?? crypto.randomUUID());
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [storageError, setStorageError] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [imageUploads, setImageUploads] = useState(0);
+  const mediaBusy = uploading || imageUploads > 0;
+  const imageBusyChanged = (busy: boolean) => setImageUploads((count) => count + (busy ? 1 : -1));
 
   // Draft saving at every step — the design's contribution-friction requirement.
   // Image data URLs stay in memory only: they can blow the storage quota.
@@ -190,7 +197,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const contributorsValid = draft.contributors.length > 0 && contributionResults.every((result) => !result.error);
   const basicsValid = Boolean(draft.name.trim() && draft.summary.trim()) && contributorsValid && (!draft.clientContext.trim() || Boolean(draft.redacted.trim()));
   const safetyValid = draft.safetyAcknowledged;
-  const mediaValid = draft.images.length > 0 && !uploading;
+  const mediaValid = draft.images.length > 0 && !mediaBusy;
   const stepValid = safetyValid && (step === 1 ? basicsValid : step === 4 ? mediaValid : true);
   const totalHours = Math.round(contributionResults.reduce((total, result) => total + result.hours, 0) * 100) / 100;
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
@@ -198,6 +205,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
   const preview: Solution = useMemo(
     () => ({
+      ...initialSolution,
       id: "preview",
       name: draft.name || "Untitled solution",
       summary: draft.summary || "The one-line summary appears here.",
@@ -215,15 +223,33 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       clientContextRedacted: draft.redacted || undefined,
       thumbnail: draft.thumbnail || undefined,
       images: draft.images.map(({ id, src, caption }) => ({ id, src, caption: caption || undefined })),
-      dateAdded: new Date().toISOString().slice(0, 10),
-      searchKeywords: "",
+      dateAdded: initialSolution?.dateAdded ?? new Date().toISOString().slice(0, 10),
+      searchKeywords: initialSolution?.searchKeywords ?? "",
       capabilities: draft.capabilities,
       technologies: draft.technologies,
       industries: draft.industries,
       assets: draft.assets,
     }),
-    [draft],
+    [draft, initialSolution],
   );
+
+  const persist = async (asDraft: boolean) => {
+    if (saving || mediaBusy || (!asDraft && (!basicsValid || !safetyValid || !mediaValid))) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const solution: Solution = { ...preview, id: submissionId, name: draft.name.trim(), summary: draft.summary.trim(), publicationStatus: asDraft ? "Draft" : "Pending review" };
+      if (asDraft) await onSaveDraft?.(solution);
+      else await onSubmitted?.(solution);
+      try { sessionStorage.removeItem(draftKey); } catch { setSavedAt(null); }
+      if (asDraft) navigate("/my-submissions");
+      else setSubmitted(true);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save. Your changes are still open here.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (submitted) {
     return (
@@ -239,7 +265,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           <h1 className="mt-2 text-[26px] font-bold">Now it's pending review</h1>
           <p className="mx-auto mt-3 max-w-[46ch] text-[15.5px]" style={{ color: "var(--ink-2)" }}>
             <b style={{ color: "var(--ink)" }}>{draft.name || "Your solution"}</b> is pending review in this local preview.
-            No notification was sent and nothing was published. Submissions and media remain available until this page is reloaded.
+            No notification was sent and nothing was published. {onSaveDraft ? "Submissions and media are saved in this browser." : "This walkthrough does not save submissions."}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <button type="button" onClick={() => navigate("/my-submissions")} className="cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold" style={{ fontFamily: "var(--font-display)", background: "var(--accent)", color: "var(--on-accent)" }}>
@@ -251,6 +277,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                 if (initialSolution) { navigate("/submit"); return; }
                 setDraft({ ...EMPTY_DRAFT, contributors: [{ id: crypto.randomUUID(), builtBy: { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName }, startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID }] });
                 setStep(0);
+                setSubmissionId(crypto.randomUUID());
                 setSubmitted(false);
               }}
               className="cursor-pointer rounded-xl border px-4 py-2.5 text-[14px] font-semibold"
@@ -278,22 +305,30 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
       <div className="animate-rise mt-4">
         <p className="eyebrow">Contributor · guided submission</p>
-        <h1 className="mt-2 text-[clamp(1.7rem,3.2vw,2.3rem)] font-bold" style={{ letterSpacing: "-0.03em" }}>
-          Put your work on the shelf
+        <h1 className="mt-2 text-[28px] font-bold">
+          {initialSolution ? "Edit submission" : "Put your work on the shelf"}
         </h1>
         <p className="mt-2 max-w-[58ch] text-[15.5px]" style={{ color: "var(--ink-2)" }}>
-          Six steps to a client-ready submission. Text drafts save in this tab; media stays in memory.
+          {initialSolution?.publicationStatus === "Published" ? "Saving changes removes this record from the library until it is approved again." : onSaveDraft ? "Drafts and submissions are saved in this browser only." : "Walkthrough only. Text backups stay in this tab; media stays in memory."}
           {savedAt && (
             <span className="font-mono text-[11px]" style={{ color: "var(--ink-3)" }}>
               {" "}
-              · saved {savedAt}
+              · text backup {savedAt}
             </span>
           )}
         </p>
       </div>
 
+      {initialSolution?.libraryNotes && <section aria-label="Librarian feedback" className="mt-5 border-l-2 pl-4" style={{ borderColor: "var(--proto)" }}>
+        <h2 className="text-[15px] font-semibold">Librarian feedback</h2>
+        <p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{initialSolution.libraryNotes}</p>
+      </section>}
+      {onSaveDraft && <button type="button" disabled={saving || mediaBusy} onClick={() => void persist(true)} className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40" style={{ borderColor: "var(--glass-edge)" }}><Icon name="file" />{saving ? "Saving..." : "Save draft & close"}</button>}
+      {saveError && <p role="alert" className="mt-3 text-[14px]">{saveError}</p>}
+
       {storageError && <p role="alert" className="mt-3 text-[14px]">{storageError}</p>}
 
+      <fieldset disabled={saving} className="min-w-0">
       <ol className="mt-6 flex flex-wrap gap-2" aria-label="Submission steps">
         {STEPS.map((label, i) => {
           const state = i === step ? "current" : i < step ? "done" : "todo";
@@ -489,6 +524,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                 </div>
               ) : (
                 <UploadZone
+                  onBusyChange={imageBusyChanged}
                   onFiles={(srcs) => srcs[0] && set("thumbnail", srcs[0])}
                   line="Upload a screenshot for the card — it lands in the solution's Dataverse Image column."
                   sub="PNG or JPG · 16:10 reads best"
@@ -542,6 +578,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                 {draft.images.length < MAX_GALLERY && (
                   <UploadZone
                     multiple
+                    onBusyChange={imageBusyChanged}
                     onFiles={(srcs) =>
                       setDraft((current) => ({ ...current, images: [
                         ...current.images,
@@ -616,7 +653,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           </StepShell>
         )}
 
-        <div className="mt-8 flex items-center gap-3" style={{ borderTop: "1px solid var(--glass-edge)", paddingTop: "1.25rem" }}>
+        <div className="mt-8 flex flex-wrap items-center gap-3" style={{ borderTop: "1px solid var(--glass-edge)", paddingTop: "1.25rem" }}>
           {step > 0 && (
             <button type="button" onClick={() => setStep((s) => s - 1)} className="cursor-pointer rounded-xl border px-4 py-2.5 text-[14px] font-semibold" style={{ fontFamily: "var(--font-display)", borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}>
               Back
@@ -638,19 +675,17 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           ) : (
             <button
               type="button"
-              onClick={() => { if (basicsValid && safetyValid && mediaValid) {
-                onSubmitted?.({ ...preview, id: initialSolution?.id ?? crypto.randomUUID(), publicationStatus: "Pending review" });
-                setSubmitted(true);
-              } }}
-              disabled={!basicsValid || !safetyValid || !mediaValid}
+              onClick={() => void persist(false)}
+              disabled={saving || !basicsValid || !safetyValid || !mediaValid}
               className="cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               style={{ fontFamily: "var(--font-display)", background: "var(--live)", color: "var(--ground)" }}
             >
-              Submit for review
+              {saving ? "Saving..." : "Submit for review"}
             </button>
           )}
         </div>
       </div>
+      </fieldset>
     </div>
   );
 }
@@ -958,11 +993,13 @@ function TagPicker({
 
 function UploadZone({
   onFiles,
+  onBusyChange,
   line,
   sub,
   multiple,
 }: {
   onFiles: (dataUrls: string[]) => void;
+  onBusyChange: (busy: boolean) => void;
   line: string;
   sub: string;
   multiple?: boolean;
@@ -989,6 +1026,7 @@ function UploadZone({
             return;
           }
           setBusy(true);
+          onBusyChange(true);
           setError("");
           try {
             const sources = await Promise.all(files.map(async (file) => {
@@ -1000,7 +1038,7 @@ function UploadZone({
             }));
             onFiles(sources);
           } catch { setError("An image could not be read. Choose a valid PNG, JPG or WebP file."); }
-          finally { setBusy(false); }
+          finally { setBusy(false); onBusyChange(false); }
         }}
       />
       <Icon name="grid" size={20} />

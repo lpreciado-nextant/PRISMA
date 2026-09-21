@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Agreed design; local mock submission revision implemented; model alignment and code-based US calendar coverage for 2020-2035 pending; production integration pending
+**Status:** Agreed design; browser-local drafts, editing and librarian review implemented; model alignment and code-based US calendar coverage for 2020-2035 pending; production integration pending
 **Last updated:** 2026-09-21
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
@@ -84,6 +84,7 @@ stateDiagram-v2
     Published --> Retired: Stale, superseded, or client-sensitive
     Retired --> Published: Refreshed and re-approved
     Published --> PendingReview: Contributor edits a published record
+    Published --> Draft: Contributor saves unfinished edits
 ```
 
 **Guided multi-step submission form**, with draft saving at every step. The steps mirror how a builder actually thinks about their work, not how the database is shaped:
@@ -95,9 +96,11 @@ stateDiagram-v2
 5. **Media** — Require one to six detail images, with optional captions. Thumbnail remains optional with generated-poster fallback. Optional videos, one-pagers/slides and self-contained HTML share this step. Capability-specific hints explain useful outcomes and confidentiality requirements.
 6. **Review & submit** — Client-visible card preview plus a summary clearly separating internal client identity and anonymous context. Validate acknowledgment, contributor effort, client context and required images again at submit.
 
-On submit the record moves to *Pending review*. The production workflow will notify the librarian; the PoC does not. Direct navigation connects the library, submission form and **My submissions**, with inspection and editing; no welcome screen. PoC submissions/media survive navigation in memory but not reload. Text drafts save in tab storage. Librarian UI design is deferred, not the review requirement. Dataverse remains the only planned persistence/storage service.
+On submit the record moves to *Pending review*. The production workflow will notify the librarian; the PoC does not. Direct navigation connects the library, submission form and **My submissions**, with inspection and editing; no welcome screen. **Save draft & close** accepts incomplete records at any step. Explicit draft saves, submissions, review decisions and media persist in browser-local IndexedDB across reloads. Unsaved text has a tab-local backup; unsaved media remains in memory. Browser data can be cleared or evicted and does not sync across devices; this is not production persistence. Dataverse remains the only planned production persistence/storage service.
 
-**Editing a published record** returns it to *Pending review* and clears client-safe review approval for material changes (summary, business value, media, client context, contributor or effort inputs). Require a fresh safety acknowledgment. Production librarian review will include a diff; librarian-only note corrections may remain published.
+The local **Review queue** at `#/review` supports pending, changes-requested and published views, search and specialization filtering. A librarian preview can inspect the record and sandboxed attachments, explicitly confirm client safety to approve and publish, or return it to Draft with required comments. Contributors see the latest comments in My submissions and the editor and can resubmit. Review access is simulated for UI evaluation, not authorization; production requires Dataverse roles and field-level security. Review and contributor surfaces are inaccessible in present mode.
+
+**Saving edits to a published record** removes it from the published catalogue and clears client-safe review approval: explicit draft saves return to *Draft*, while submitting returns to *Pending review*. Simply opening the editor does not withdraw a record. Require a fresh safety acknowledgment. Production librarian review will include a diff; librarian-only note corrections may remain published.
 
 ### 3.2 Discovery → presentation (the CSM path)
 

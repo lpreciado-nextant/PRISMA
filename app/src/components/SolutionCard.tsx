@@ -9,10 +9,12 @@ export function SolutionCard({
   solution,
   present,
   index,
+  onOpen,
 }: {
   solution: Solution;
   present: boolean;
   index: number;
+  onOpen?: () => void;
 }) {
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
   const builderNames = solution.contributors.map((contributor) => contributor.builtBy.name).join(", ");
@@ -21,11 +23,12 @@ export function SolutionCard({
     <article
       className="glass glass-lite glass-sheen lift animate-rise group flex cursor-pointer flex-col overflow-hidden rounded-[22px]"
       style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}
-      onClick={() => navigate(`/s/${solution.id}`)}
+      onClick={() => onOpen ? onOpen() : navigate(`/s/${solution.id}`)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          navigate(`/s/${solution.id}`);
+          if (onOpen) onOpen();
+          else navigate(`/s/${solution.id}`);
         }
       }}
       tabIndex={0}

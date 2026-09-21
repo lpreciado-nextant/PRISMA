@@ -51,6 +51,7 @@ export function Masthead({
         </button>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          {!present && <button type="button" onClick={() => navigate("/review")} title="Review queue (librarian preview)" aria-label="Review queue (librarian preview)" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="shield" size={15} /><span className="hidden whitespace-nowrap xl:inline">Review queue</span></button>}
           {!present && <button type="button" onClick={() => navigate("/my-submissions")} title="My submissions" aria-label="My submissions" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}>
             <Icon name="file" size={15} /><span className="hidden whitespace-nowrap md:inline">My submissions</span>
           </button>}

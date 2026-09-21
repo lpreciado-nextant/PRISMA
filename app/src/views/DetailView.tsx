@@ -59,7 +59,10 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit }: { solution: Solution; present: boolean; onEdit?: () => void }) {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath }: {
+  solution: Solution; present: boolean; onEdit?: () => void; onBack?: () => void;
+  backLabel?: string; reviewActions?: React.ReactNode; assetBasePath?: string;
+}) {
   const area = AREAS[solution.specializationArea];
   const assets = [...solution.assets].sort((a, b) => a.sortOrder - b.sortOrder);
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
@@ -73,15 +76,16 @@ export function DetailView({ solution, present, onEdit }: { solution: Solution; 
     <div className="animate-rise mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
       <button
         type="button"
-        onClick={() => navigate(onEdit ? "/my-submissions" : "/")}
+        onClick={() => onBack ? onBack() : navigate(onEdit ? "/my-submissions" : "/")}
         className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold"
         style={{ fontFamily: "var(--font-display)", color: "var(--ink-2)" }}
       >
         <Icon name="chevronLeft" size={15} />
-        {onEdit ? "My submissions" : "Back to the library"}
+        {backLabel ?? (onEdit ? "My submissions" : "Back to the library")}
       </button>
       {onEdit && <button className="ml-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px]" style={{ borderColor: "var(--glass-edge)" }} onClick={onEdit}><Icon name="file" />Edit submission</button>}
-      {onEdit && <p className="mt-3 text-[13px]" style={{ color: "var(--proto)" }}>Pending review. Local preview only; not published.</p>}
+      {onEdit && <p className="mt-3 text-[13px]" style={{ color: "var(--proto)" }}>{solution.publicationStatus}. Local preview only.</p>}
+      {reviewActions}
 
       <section className="glass glass-lite glass-sheen mt-4 overflow-hidden rounded-[26px]">
         <Poster
@@ -159,7 +163,7 @@ export function DetailView({ solution, present, onEdit }: { solution: Solution; 
           <Panel title="Demo assets">
             <ul className="flex flex-col gap-3">
               {assets.map((asset) => (
-                <AssetRow key={asset.id} solution={solution} asset={asset} />
+                <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} />
               ))}
             </ul>
           </Panel>
@@ -305,12 +309,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function AssetRow({ solution, asset }: { solution: Solution; asset: DemoAsset }) {
+function AssetRow({ solution, asset, basePath }: { solution: Solution; asset: DemoAsset; basePath?: string }) {
   const behaviour = behaviourFor(asset);
 
   const act = () => {
     if (behaviour.mode === "viewer") {
-      navigate(`/s/${solution.id}/demo/${asset.id}`);
+      navigate(`${basePath ?? `/s/${solution.id}`}/demo/${asset.id}`);
     } else if (behaviour.mode === "external" && asset.externalUrl) {
       window.open(asset.externalUrl, "_blank", "noopener,noreferrer");
     } else if (behaviour.mode === "download" && asset.fileData) {
