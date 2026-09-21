@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative agreed model; draft/review contract aligned locally; broader model and code-based US calendar app alignment pending; Dataverse implementation pending · **Last updated:** 2026-09-21
+**Status:** Authoritative agreed model; authored draft names required; existing PRISMA_Dev solution recorded; draft/review contract aligned locally; broader model and code-based US calendar app alignment pending; Dataverse implementation pending · **Last updated:** 2026-09-21
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Industry` and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` and (as of this round) `Capability` are single-valued lookups; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — the underlying table already exists in Dataverse with fixed columns as `cr6b0_project`, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, is a **native N:N** relationship (no attributes needed on the link itself, so no custom junction table).
 
@@ -13,6 +13,8 @@ This is the current, agreed model. It replaces [nextant-solution-library-dataver
 6. `Review Outcome` and `Review Comments` are added to `nx_solution`. Drafts permit missing summary/capability and effort inputs; completeness is enforced at submit/publication through controlled transitions. No review-history table is added.
 
 ## Conventions
+
+**Power Platform context:** `PRISMA_Dev` already exists in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`). See [environment and solution details](../architecture/technical-architecture.md#environment-and-solution). This records the solution's existence, not completion or inclusion of the tables below. Confirm its publisher prefix before creating new components; the solution name alone does not establish that prefix.
 
 The [legacy v1 entry point](nextant-solution-library-dataverse-schema.md) was synchronized with this model on 2026-09-18 at the user's request. It retains its original layout but is no longer an unchanged historical snapshot; this v2 document remains authoritative. References to v1 below describe its original design history.
 
@@ -201,7 +203,7 @@ The reusable offering — the unit of value shown to a CSM.
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| Solution Name *(primary name)* | Text (100) | Yes | Blank drafts receive reserved label `Untitled solution`; replace it with an authored name before submission |
+| Solution Name *(primary name)* | Text (100) | Yes | Authored nonblank name required for draft saves; legacy `Untitled solution` is not accepted |
 | One-line Summary | Text (200) | At submit/publication | Optional column metadata so incomplete drafts can be saved; nonblank at the transition boundary |
 | What It Does | Text, multi-line (4000) | No | |
 | Business Value | Text, multi-line (4000) | No | |
@@ -229,7 +231,7 @@ Builders and effort now live in `nx_solutioncontributor`, not columns on `nx_sol
 
 Use the same Solution and child tables for drafts and submitted records; no draft table, JSON payload column or review-history table is introduced. `ownerid` determines ownership, not builder credit or the PoC's email key. My submissions queries records the caller owns or is authorized to edit under the agreed team-ownership policy; it does not equate `createdby` with the current owner.
 
-At draft creation, supply valid specialization/maturity defaults, the reserved name when blank, Publication Status Draft, Review Outcome None, and both safety booleans false. Summary and Capability use optional column metadata. Drafts may omit contributors/images entirely; contributor rows require a selected person, parent, generated name and effort mode, but active effort inputs can remain null until submission. Empty person-picker rows are UI-only and are not written to Dataverse. Blank numeric/date inputs map to null, never zero, NaN or empty-string dates. Supplied values must still satisfy column types, lengths, ranges, lookup validity and unique-person constraints; invalid editor values stay client-side for correction.
+Every draft save requires an authored, nonblank solution name of at most 100 characters, not the legacy reserved label `Untitled solution`. Existing unnamed drafts remain readable and must be renamed before saving again. At draft creation, supply valid specialization/maturity defaults, Publication Status Draft, Review Outcome None, and both safety booleans false. Summary and Capability use optional column metadata. Drafts may omit contributors/images entirely; contributor rows require a selected person, parent, generated name and effort mode, but active effort inputs can remain null until submission. Empty person-picker rows are UI-only and are not written to Dataverse. Blank numeric/date inputs map to null, never zero, NaN or empty-string dates. Supplied values must still satisfy column types, lengths, ranges, lookup validity and unique-person constraints; invalid editor values stay client-side for correction.
 
 At submit and publication, synchronously validate authored name (not the reserved label), summary, specialization, exactly one capability, at least one unique contributor with complete valid maturity-selected effort, fresh safety acknowledgment, anonymous context when Client / Context is set, and one to six stored detail images. Complete all required file uploads before the transition. App validation improves usability but is not the production enforcement boundary.
 

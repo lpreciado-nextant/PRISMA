@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Agreed design; draft and review-field contracts aligned with the local PoC; broader model alignment and code-based US calendar coverage for 2020-2035 pending; production integration pending
+**Status:** Agreed design; authored draft names required; PRISMA_Dev environment context recorded; draft and review-field contracts aligned with the local PoC; broader model alignment and code-based US calendar coverage for 2020-2035 pending; production integration pending
 **Last updated:** 2026-09-21
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
@@ -100,7 +100,7 @@ On submit the record moves to *Pending review*. The production workflow will not
 
 The local **Review queue** at `#/review` supports pending, changes-requested and published views, search and specialization filtering. A librarian preview can inspect the record and sandboxed attachments, explicitly confirm client safety to approve and publish, or return it to Draft with required comments. Contributors see the latest comments in My submissions and the editor and can resubmit. Review access is simulated for UI evaluation, not authorization; production requires Dataverse roles and field-level security. Review and contributor surfaces are inaccessible in present mode.
 
-**Draft and review contract:** a blank draft name receives the reserved label `Untitled solution`, which must be replaced before submission. Summary and capability may be absent in Draft; selected contributors may have incomplete effort inputs, and media is optional until submission. Submitting and approving both require a non-placeholder name, summary, exactly one capability, unique complete contributors, safety acknowledgment, anonymous context when a client is named, and one to six detail images. Production column constraints still apply to supplied values; empty person-picker rows remain UI state rather than Dataverse rows. See [schema validation](../data_model/SchemaV2.md#draft-and-transition-contract).
+**Draft and review contract:** saving a draft requires an authored, nonblank solution name of at most 100 characters. The legacy reserved label `Untitled solution` is not accepted; existing unnamed drafts remain readable but must be named before saving again. Summary and capability may be absent in Draft; selected contributors may have incomplete effort inputs, and media is optional until submission. Submitting and approving both require a non-placeholder name, summary, exactly one capability, unique complete contributors, safety acknowledgment, anonymous context when a client is named, and one to six detail images. Production column constraints still apply to supplied values; empty person-picker rows remain UI state rather than Dataverse rows. See [schema validation](../data_model/SchemaV2.md#draft-and-transition-contract).
 
 `Review Outcome` (None / Changes requested / Approved) and contributor-readable `Review Comments` (up to 4000 characters) are dedicated fields on Solution, separate from internal editorial Library Notes. They describe the latest decision, not current approval: contributor saves and resubmissions preserve them while clearing Client Safe Reviewed. Returned records are Draft + Changes requested and require fresh acknowledgment. Approval replaces the latest feedback, including clearing it when no comment is supplied. Review fields are excluded from the CSM projection and present mode. This is not review history; no new review table is introduced.
 
@@ -268,6 +268,8 @@ flowchart TB
 ```
 
 ### 7.2 Key decisions
+
+**Existing environment context:** The Power Platform solution `PRISMA_Dev` exists in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`, not Nextant Pulse Prod). This is distinct from the **PRISMA PoC** code app and does not imply that planned Dataverse components are implemented. See [environment and solution details](../architecture/technical-architecture.md#environment-and-solution).
 
 - **Dataverse is the single source of truth.** No separate search index in v1 (see §7.3).
 - **Assets live in Dataverse File and Image columns.** No external blob storage, no separate hosting to provision. This is what makes self-contained HTML demos viable — the payload travels with the record.

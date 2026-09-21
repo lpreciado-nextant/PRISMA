@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Browser-local draft/review flow aligned with dedicated review fields and submission validation, not deployed. The prior safety-first revision was published on 2026-09-21; authenticated hosted UI verification remains pending.
+**Status:** Browser-local draft/review flow with dedicated review fields, submission validation and required authored draft names published to PRISMA PoC on 2026-09-21; in-card submission status and confirmed owner-only deletion implemented locally, not yet deployed; PRISMA_Dev solution recorded in Nextant Pulse. Build and upload succeeded; authenticated hosted UI verification remains pending.
 **Last updated:** 2026-09-21
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -22,7 +22,7 @@ The point of this PoC is the **experience**, not the data. Everything renders fr
 | Searchable Person field by name/email, keyboard selection and duplicate prevention | `src/views/SubmitView.tsx` |
 | Captioned screenshot gallery (`nx_solutionimage`) on the detail page | `src/views/DetailView.tsx` |
 | Six-step safety-first form, required detail images, optional thumbnail and local media | `src/views/SubmitView.tsx` |
-| My submissions, inspection and editing; no welcome page | `src/views/MySubmissionsView.tsx`, `src/App.tsx` |
+| My submissions, inspection, editing and confirmed owner-only deletion; no welcome page | `src/views/MySubmissionsView.tsx`, `src/App.tsx` |
 | Browser-persisted drafts/media and publish/return lifecycle | `src/lib/submissions.ts` |
 | Librarian queue, inspection, required return comments and explicit approval | `src/views/ReviewView.tsx` |
 | Searchable tag pickers with case-insensitive technology deduplication | `src/views/SubmitView.tsx` |
@@ -37,7 +37,9 @@ Eligibility requires Published, Safety Acknowledged and librarian-controlled Cli
 
 **Save draft & close** stores incomplete submissions and media in browser-local IndexedDB. Saved drafts reopen from **My submissions**, including after reload. Submitting moves them to Pending review. The **Review queue** (`#/review`) supports inspection, approval/publication and return-to-Draft with required comments. Feedback appears in My submissions and the editor. Saving edits to a published record withdraws it until re-approved. Published local records join the mock catalogue and remain subject to present-mode safety filtering.
 
-Dedicated `reviewOutcome` and `reviewComments` (4000 characters) hold the latest librarian decision, separate from Library Notes. Contributor saves preserve them but always clear current approval; present mode strips both. Returning clears acknowledgment so resubmission requires a fresh confirmation. Submit and approve both validate identity, exactly one capability, effort, safety, anonymous context and required images; drafts can remain incomplete. Blank draft names get `Untitled solution` and reopen as an empty input.
+My submissions shows publication/review status inside each card and allows deletion of owned records in any publication state after confirmation. Deletion checks ownership inside the IndexedDB transaction and removes the record and embedded media before updating the UI; published records also leave the library. Failures keep the card and show an error for retry. This is browser-local PoC behavior, not Dataverse authorization or a production deletion policy.
+
+Dedicated `reviewOutcome` and `reviewComments` (4000 characters) hold the latest librarian decision, separate from Library Notes. Contributor saves preserve them but always clear current approval; present mode strips both. Returning clears acknowledgment so resubmission requires a fresh confirmation. Submit and approve both validate identity, exactly one capability, effort, safety, anonymous context and required images. Draft saves require an authored, nonblank solution name of at most 100 characters; other fields can remain incomplete. Legacy `Untitled solution` drafts reopen as an empty input and must be named before saving again. Temporary session text backups remain separate from saved drafts.
 
 Older browser submissions with the `changesRequested` envelope key are migrated on load: copy identifiable legacy feedback without deleting original Library Notes, preserve media/identity and write the normalized shape at the next explicit save. This is not a Dataverse migration. Production nullable columns, owner mapping, controlled transitions and concurrency are specified in [SchemaV2](../docs/data_model/SchemaV2.md#draft-and-transition-contract) and [ADR-0008](../docs/architecture/decisions/adr-0008-controlled-submission-transitions.md), not implemented as services here. The existing 2026 mock calendar and broader legacy catalogue mappings remain separate alignment work.
 
@@ -97,21 +99,26 @@ The current [schema](../docs/data_model/SchemaV2.md#nx_solutioncontributor--buil
 
 The submission form adds/removes contributors, saves inputs in the session draft, validates calendar coverage and previews totals. Its Person field searches the mock people list by name or email, excludes already assigned people and supports arrow keys/Enter or pointer selection. Escape or leaving the field restores the committed selection; unmatched search text is never stored as a person. This is not a live directory integration. Catalogue search includes every builder. Detail shows a person-by-person breakdown internally; present mode keeps builder names and total hours but omits dates/allocation/calendar details.
 
-Calendar-mode contributors use **US business calendar (2026)** automatically, without a dropdown: Monday-Friday excluding the eleven [OPM observed federal holidays](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/#url=2026). Coverage is January 1-December 31, 2026. Direct-mode contributors need no dates or calendar. Mock idea/prototype totals were preserved as direct hours; production migration needs explicit confirmation, reviewed calendars and server-enforced validation ([ADR-0007](../docs/architecture/decisions/adr-0007-contributor-effort.md)). No Dataverse tables were created and the app was not published.
+Calendar-mode contributors use **US business calendar (2026)** automatically, without a dropdown: Monday-Friday excluding the eleven [OPM observed federal holidays](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/#url=2026). Coverage is January 1-December 31, 2026. Direct-mode contributors need no dates or calendar. Mock idea/prototype totals were preserved as direct hours; production migration needs explicit confirmation, reviewed calendars and server-enforced validation ([ADR-0007](../docs/architecture/decisions/adr-0007-contributor-effort.md)). No Dataverse tables were created; the current PoC deployment is recorded below.
 
 ## PoC deployment
 
 **[Open PRISMA PoC](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/69a956d5-2180-4ad6-9136-136c48cc197f?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)**
 
-Updated on 2026-09-21 in **Nextant Pulse** (not Nextant Pulse Prod) with the six-step safety-first submission, maturity-based effort, unified media, local My submissions/editing, themed dropdowns and compact add-technology input. The production build, all ten tests, lint and `pa app push` succeeded. The hosted link redirected to Microsoft sign-in in the verification browser; an authenticated smoke test of search, detail, viewer, present mode, submission controls and image/font loading remains pending. Submissions and uploaded media still have no Dataverse persistence and are lost on reload.
+Updated on 2026-09-21 in **Nextant Pulse** (not Nextant Pulse Prod) with browser-local draft/media persistence, My submissions editing, librarian approval/return UI, dedicated review outcome/comments, legacy draft migration and submit/approval validation. The latest upload also includes the shared themed review dropdown, draft-save button in the card footer and required authored draft names. The production build, all 16 tests, lint and `npx pa app push` succeeded. App name, app ID and environment ID were verified and left unchanged.
+
+The returned hosted link redirected to Microsoft sign-in in the verification browser. Upload success is confirmed; an authenticated hosted smoke test of search, detail, viewer, present mode, draft/review controls and image/font loading remains pending. Saved submissions and media survive reload only in the same hosted browser origin/profile; localhost drafts do not transfer. No Dataverse persistence, production review authorization, Custom APIs or plug-ins were deployed. The librarian workspace remains a simulated PoC surface.
 
 | Setting | Value |
 |---|---|
 | Display name | PRISMA PoC |
 | Environment name | Nextant Pulse |
 | Environment ID | `ce09ad9b-57d1-e5df-9400-8ce973c86213` |
+| Power Platform solution | `PRISMA_Dev` |
 | App ID | `69a956d5-2180-4ad6-9136-136c48cc197f` |
 | Build output / entry point | `dist` / `index.html` |
+
+In [Power Apps](https://make.powerapps.com), select **Nextant Pulse** (not Nextant Pulse Prod), then **Solutions > PRISMA_Dev** to open the existing solution. `PRISMA_Dev` is the Power Platform solution name, not the code app display name. Its existence does not establish which components it contains or whether PRISMA PoC has been added to it; see [environment and solution context](../docs/architecture/technical-architecture.md#environment-and-solution).
 
 The existing [power.config.json](power.config.json) targets this deployment. Do not run `pa app init` again to update it.
 

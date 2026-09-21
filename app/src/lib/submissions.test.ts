@@ -77,11 +77,20 @@ test("legacy browser feedback migrates without deleting notes, media or identity
   assert.equal(ambiguous.solution.libraryNotes, "Please revise.");
 });
 
-test("incomplete drafts save, but submit and approval require complete valid data", () => {
-  const incomplete = { ...solution, name: "", summary: "", capabilities: [], contributors: [], images: [], safetyAcknowledged: false };
-  assert.equal(saveContribution(incomplete, "Draft").name, "Untitled solution");
+test("drafts require an authored name, including when editing an existing draft", () => {
+  for (const name of ["", " \t\n ", "Untitled solution", "x".repeat(101)]) {
+    assert.throws(() => saveContribution({ ...solution, name }, "Draft"), /Enter a solution name/);
+    assert.throws(() => saveContribution({ ...solution, name }, "Draft", solution), /Enter a solution name/);
+  }
+  assert.equal(saveContribution({ ...solution, name: "  Named draft  " }, "Draft").name, "Named draft");
+  assert.equal(saveContribution({ ...solution, name: "x".repeat(100) }, "Draft").name.length, 100);
+});
+
+test("named incomplete drafts save, but submit and approval require complete valid data", () => {
+  const incomplete = { ...solution, summary: "", capabilities: [], contributors: [], images: [], safetyAcknowledged: false };
+  assert.equal(saveContribution(incomplete, "Draft").name, solution.name);
   const invalid: Solution[] = [
-    incomplete, { ...solution, name: "Untitled solution" }, { ...solution, summary: "" },
+    incomplete, { ...solution, summary: "" },
     { ...solution, capabilities: [] }, { ...solution, capabilities: ["AI & agents", "Data platform"] },
     { ...solution, clientContext: "Internal client", clientContextRedacted: "" },
     { ...solution, contributors: [] }, { ...solution, contributors: [...solution.contributors, ...solution.contributors] },

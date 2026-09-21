@@ -10,6 +10,7 @@ import type {
 import { AREA_ORDER, AREAS, BUILDERS, BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID, SOLUTIONS } from "../data/solutions";
 import { Chip } from "../components/Badges";
 import { Icon } from "../components/Icon";
+import { SelectPicker } from "../components/SelectPicker";
 import { SolutionCard } from "../components/SolutionCard";
 import { navigate } from "../lib/router";
 import type { AppUser } from "../lib/powerContext";
@@ -196,7 +197,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
     }
   });
   const contributorsValid = draft.contributors.length > 0 && contributionResults.every((result) => !result.error);
-  const basicsValid = Boolean(draft.name.trim() && draft.summary.trim()) && contributorsValid && (!draft.clientContext.trim() || Boolean(draft.redacted.trim()));
+  const nameValid = Boolean(draft.name.trim()) && draft.name.trim() !== UNTITLED_SOLUTION && draft.name.length <= 100;
+  const basicsValid = nameValid && Boolean(draft.summary.trim()) && contributorsValid && (!draft.clientContext.trim() || Boolean(draft.redacted.trim()));
   const safetyValid = draft.safetyAcknowledged;
   const mediaValid = draft.images.length > 0 && !mediaBusy;
   const capabilityValid = draft.capabilities.length === 1;
@@ -236,7 +238,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   );
 
   const persist = async (asDraft: boolean) => {
-    if (saving || mediaBusy || (!asDraft && (!basicsValid || !safetyValid || !mediaValid || !capabilityValid))) return;
+    if (saving || mediaBusy || !nameValid || (!asDraft && (!basicsValid || !safetyValid || !mediaValid || !capabilityValid))) return;
     setSaving(true);
     setSaveError("");
     try {
@@ -326,7 +328,6 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         <h2 className="text-[15px] font-semibold">Librarian feedback</h2>
         <p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{initialSolution.reviewComments}</p>
       </section>}
-      {onSaveDraft && <button type="button" disabled={saving || mediaBusy} onClick={() => void persist(true)} className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40" style={{ borderColor: "var(--glass-edge)" }}><Icon name="file" />{saving ? "Saving..." : "Save draft & close"}</button>}
       {saveError && <p role="alert" className="mt-3 text-[14px]">{saveError}</p>}
 
       {storageError && <p role="alert" className="mt-3 text-[14px]">{storageError}</p>}
@@ -663,6 +664,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
               Back
             </button>
           )}
+          {onSaveDraft && <button type="button" disabled={saving || mediaBusy || !nameValid} onClick={() => void persist(true)} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40" style={{ borderColor: "var(--glass-edge)" }}><Icon name="file" />{saving ? "Saving..." : "Save draft & close"}</button>}
           <span className="ml-auto font-mono text-[10.5px] tracking-[0.12em] uppercase" style={{ color: "var(--ink-3)" }}>
             Step {step + 1} of {STEPS.length}
           </span>
@@ -726,93 +728,6 @@ function Field({ label, required, hint, children }: { label: string; required?: 
       </span>
       {children}
     </label>
-  );
-}
-
-function SelectPicker<Value extends string>({ label, value, options, onChange }: {
-  label: string;
-  value: Value;
-  options: readonly Value[];
-  onChange: (value: Value) => void;
-}) {
-  const id = useId();
-  const [open, setOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const select = (option: Value) => {
-    onChange(option);
-    setOpen(false);
-  };
-
-  return (
-    <div className="relative min-w-0">
-      <button
-        type="button"
-        role="combobox"
-        aria-label={label}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls={open ? `${id}-list` : undefined}
-        aria-activedescendant={open ? `${id}-option-${activeIndex}` : undefined}
-        className={`${inputCls} flex cursor-pointer items-center justify-between gap-3 text-left`}
-        onClick={() => {
-          setActiveIndex(Math.max(0, options.indexOf(value)));
-          setOpen(!open);
-        }}
-        onBlur={() => setOpen(false)}
-        onKeyDown={(event) => {
-          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-            event.preventDefault();
-            setOpen(true);
-            setActiveIndex((current) => !open
-              ? Math.max(0, options.indexOf(value))
-              : (current + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length);
-          } else if (event.key === "Home" || event.key === "End") {
-            event.preventDefault();
-            setOpen(true);
-            setActiveIndex(event.key === "Home" ? 0 : options.length - 1);
-          } else if ((event.key === "Enter" || event.key === " ") && open) {
-            event.preventDefault();
-            select(options[activeIndex]);
-          } else if (event.key === "Escape" && open) {
-            event.preventDefault();
-            event.stopPropagation();
-            setOpen(false);
-          } else if (event.key.length === 1 && event.key !== " " && !event.ctrlKey && !event.metaKey && !event.altKey) {
-            const match = options.findIndex((option) => option.toLowerCase().startsWith(event.key.toLowerCase()));
-            if (match >= 0) {
-              event.preventDefault();
-              setOpen(true);
-              setActiveIndex(match);
-            }
-          }
-        }}
-      >
-        <span className="min-w-0 break-words">{value}</span>
-        <Icon name="chevronDown" className="shrink-0" />
-      </button>
-      {open && (
-        <div className="absolute top-full right-0 left-0 z-20 mt-1 rounded-lg border p-1 shadow-lg" style={{ background: "var(--ground)", borderColor: "var(--glass-edge)", color: "var(--ink)" }}>
-          <ul id={`${id}-list`} role="listbox" aria-label={label} className="max-h-60 overflow-y-auto">
-            {options.map((option, index) => (
-              <li
-                key={option}
-                id={`${id}-option-${index}`}
-                role="option"
-                aria-selected={option === value}
-                ref={(element) => { if (index === activeIndex) element?.scrollIntoView({ block: "nearest" }); }}
-                className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-[14px] break-words hover:bg-(--glass-edge)"
-                style={{ background: index === activeIndex ? "var(--glass-edge)" : undefined }}
-                onPointerDown={(event) => event.preventDefault()}
-                onClick={(event) => { event.preventDefault(); select(option); }}
-              >
-                <span className="min-w-0 font-semibold">{option}</span>
-                <span className="w-4 shrink-0">{option === value && <Icon name="check" />}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
   );
 }
 

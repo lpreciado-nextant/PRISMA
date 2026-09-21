@@ -1,6 +1,6 @@
 # ADR-0008 - Controlled submission transitions
 
-**Status:** Accepted; production implementation pending
+**Status:** Accepted, amended to require authored draft names; production implementation pending
 **Date:** 2026-09-21
 **Last updated:** 2026-09-21
 
@@ -10,7 +10,7 @@ Contributors must save incomplete drafts, submit and revise their work, while on
 
 ## Decision
 
-- Keep drafts and submitted records in the existing Solution/child tables. Use optional column metadata for submission-only fields and synchronous conditional validation at submit/publication. Supply the reserved draft name and valid required defaults. Persist only selected-person contributor rows; null represents missing effort inputs.
+- Keep drafts and submitted records in the existing Solution/child tables. Use optional column metadata for submission-only fields and synchronous conditional validation at submit/publication. Require an authored, nonblank solution name of at most 100 characters on every draft save, rejecting the legacy reserved label, and supply valid required defaults. Persist only selected-person contributor rows; null represents missing effort inputs.
 - Add Review Outcome (None / Changes requested / Approved) and Review Comments (4000 characters) to Solution. They hold the latest librarian decision, survive contributor edits and resubmission, and never imply current publication eligibility. No review-history table is added.
 - Implement future production save-draft, submit and review commands as Dataverse Custom APIs backed by synchronous plug-ins. Validate caller access, source state, expected row version and the complete persisted record/children before committing transitions. No SPA server routes are introduced.
 - Keep publication, clearance and review fields protected from direct contributor writes. Scoped handler execution can clear approval or request pending state on behalf of an authorized contributor, but only an authorized librarian can request approval. Preserve server-stored review fields on contributor edits rather than trusting supplied values.

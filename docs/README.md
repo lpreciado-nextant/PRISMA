@@ -1,8 +1,10 @@
 # PRISMA documentation
 
-**Status:** Living, including synchronized schema references · **Last updated:** 2026-09-18
+**Status:** Living, including synchronized schema references and PRISMA_Dev environment context · **Last updated:** 2026-09-21
 
 Documentation map for the PRISMA — Nextant Solution Library project. The [end-to-end design](design/end-to-end-design.md) is the overview; each aspect below has a dedicated living document.
+
+**Environment and solution:** `PRISMA_Dev` exists in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`). The [technical architecture](architecture/technical-architecture.md#environment-and-solution) owns this context; [PoC deployment details](../app/README.md#poc-deployment) cover the separate PRISMA PoC code app and publishing commands.
 
 ## Map
 

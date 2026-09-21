@@ -2,9 +2,11 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to v2, including draft/review contract and approved code-based US calendar policy; production integration and broader app alignment pending · **Last updated:** 2026-09-21
+> **Status:** Maintained companion to v2, including authored draft names, PRISMA_Dev context, draft/review contract and approved code-based US calendar policy; production integration and broader app alignment pending · **Last updated:** 2026-09-21
 
-This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Table (logical) names below use an `nx_` publisher prefix — swap for whatever your actual solution prefix is.
+This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Proposed new table names below use an `nx_` publisher prefix; confirm the actual publisher prefix before creating components. The fixed `cr6b0_project` and `cr6b0_consultant` names remain as specified in v2.
+
+The Power Platform solution **`PRISMA_Dev`** already exists in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`). Its existence does not confirm implementation or membership of these tables; see [environment and solution details](../architecture/technical-architecture.md#environment-and-solution).
 
 ## Conventions used throughout
 
@@ -61,7 +63,7 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| Solution Name *(primary name)* | Single line of text (100) | Yes | Blank draft gets reserved `Untitled solution`; authored replacement required before submit |
+| Solution Name *(primary name)* | Single line of text (100) | Yes | Authored nonblank name required for draft saves; legacy `Untitled solution` is not accepted |
 | One-line Summary | Single line of text (200) | At submit/publication | Optional column metadata allows incomplete drafts; nonblank at transition boundary |
 | What It Does | Multiple lines of text (plain, 4000) | No | |
 | Business Value | Multiple lines of text (plain, 4000) | No | |
@@ -87,7 +89,7 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 
 > **Field-level security and controlled transitions required.** Contributors cannot directly write publication/review fields. Authorized synchronous Dataverse operations save drafts, submit, return and approve; only a librarian can request approval. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [security model](../architecture/security-model.md).
 
-Drafts use these same tables. Permit absent summary/capability, no images, and no contributors or selected contributors with nullable effort inputs. Generate a draft name and valid specialization/maturity defaults. Persist only selected-person child rows; blank numeric/date values become null. Require complete valid data at submission and approval, not merely in the form. Supplied values still obey column constraints. The authoritative [draft and transition contract](SchemaV2.md#draft-and-transition-contract) defines operation preconditions, protected fields, optimistic concurrency, owner mapping and conservative legacy-browser migration.
+Drafts use these same tables. Permit absent summary/capability, no images, and no contributors or selected contributors with nullable effort inputs. Require an authored, nonblank solution name of at most 100 characters on every draft save and supply valid specialization/maturity defaults. Legacy unnamed drafts remain readable but require a name before saving again. Persist only selected-person child rows; blank numeric/date values become null. Require complete valid data at submission and approval, not merely in the form. Supplied values still obey column constraints. The authoritative [draft and transition contract](SchemaV2.md#draft-and-transition-contract) defines operation preconditions, protected fields, optimistic concurrency, owner mapping and conservative legacy-browser migration.
 
 `Review Outcome` is the latest decision and remains unchanged on contributor saves/resubmission. Changes requested means Draft + outcome Changes requested; pending re-reviews belong to Pending review even when the last outcome is Changes requested. Return clears both safety booleans; approval replaces Review Comments (clears it when blank). Outcome Approved alone never permits presentation. Library Notes stay separate and unchanged. No review-history table or reviewer/time columns are introduced.
 

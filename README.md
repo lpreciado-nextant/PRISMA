@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library
 
-**Status:** Mock-data PoC published; local contributor/search and effort updates not yet deployed; code-based US calendar policy approved, app alignment pending.
+**Status:** Mock-data PoC published; PRISMA_Dev solution recorded; local contributor/search and effort updates not yet deployed; code-based US calendar policy approved, app alignment pending.
 **Last updated:** 2026-09-21
 
 An internal marketplace for the PoCs, prototypes, demos, and production solutions Nextant builds across its three Specialization Areas — **AI & Automation**, **Data Solutions**, and **Intelligent Business Operations**.
@@ -12,6 +12,8 @@ Builders publish what they made, a librarian curates it, and Customer Success Ma
 **[Open PRISMA PoC](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/69a956d5-2180-4ad6-9136-136c48cc197f?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)** - published on 2026-09-18. Requires app access and a Power Apps Premium licence.
 
 The deployed app uses mock data, with no Dataverse persistence. Build and upload succeeded; hosted UI validation is pending. See [deployment details and update commands](app/README.md#poc-deployment).
+
+The Power Platform solution **`PRISMA_Dev`** exists in **Nextant Pulse** (environment ID: `ce09ad9b-57d1-e5df-9400-8ce973c86213`, not Nextant Pulse Prod). This is distinct from the published code app named **PRISMA PoC**; see [environment and solution context](docs/architecture/technical-architecture.md#environment-and-solution).
 
 The local app additionally supports multiple builders, searchable person selection, individual dates/allocation and effort calculations using its 2026 in-memory US federal holiday calendar. These updates have not been published to the hosted app. The agreed code-based calendar policy for 2020-2035, without calendar tables or contributor calendar IDs, remains pending app alignment.
 

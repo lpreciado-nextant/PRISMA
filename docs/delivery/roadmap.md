@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Living, revised submission scope agreed · **Last updated:** 2026-09-21
+**Status:** Living, revised submission scope agreed; existing PRISMA_Dev solution recorded · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §9](../design/end-to-end-design.md#9-delivery-phases)
 
 Phases 2 and 3 justify the project to a CSM; phase 4 keeps it alive. Neither can be dropped.
@@ -15,6 +15,7 @@ Phases 2 and 3 justify the project to a CSM; phase 4 keeps it alive. Neither can
 
 ## Current state
 
+- **Power Platform solution:** `PRISMA_Dev` exists in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`, not Nextant Pulse Prod). This does not mark the foundation schema/security work complete; see [environment and solution context](../architecture/technical-architecture.md#environment-and-solution).
 - **Look-and-feel PoC** implemented in [`app/`](../../app/README.md) — the visual and interaction reference for phases 2–4. Mock in-memory data shaped like the Dataverse schema.
 - Design doc and schema spec drafted for review.
 

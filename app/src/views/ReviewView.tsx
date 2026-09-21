@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Icon } from "../components/Icon";
+import { SelectPicker } from "../components/SelectPicker";
+import type { SpecializationArea } from "../types";
 import { AREA_ORDER, AREAS } from "../data/solutions";
 import { REVIEW_COMMENT_LIMIT, type SubmissionEntry } from "../lib/submissions";
 import { navigate } from "../lib/router";
@@ -21,7 +23,7 @@ export function ReviewView({ entries, selectedId, onDecision }: {
 }) {
   const [filter, setFilter] = useState<ReviewFilter>("Pending review");
   const [query, setQuery] = useState("");
-  const [area, setArea] = useState("");
+  const [area, setArea] = useState<SpecializationArea | "">("");
   const [comments, setComments] = useState("");
   const [clientSafe, setClientSafe] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -96,7 +98,9 @@ export function ReviewView({ entries, selectedId, onDecision }: {
     </div>
     <div className="my-5 flex flex-wrap gap-4">
       <label className="flex min-w-0 flex-1 basis-64 items-center gap-2 rounded-lg border px-3" style={{ borderColor: "var(--glass-edge)" }}><Icon name="search" /><input type="search" aria-label="Search review queue" placeholder="Search submissions or owners" value={query} onChange={(event) => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent py-2.5 text-[14px]" /></label>
-      <select aria-label="Specialization area" value={area} onChange={(event) => setArea(event.target.value)} className="max-w-full rounded-lg border bg-(--ground) px-3 py-2 text-[14px]" style={{ borderColor: "var(--glass-edge)" }}><option value="">All specializations</option>{AREA_ORDER.map((id) => <option key={id} value={id}>{AREAS[id].name}</option>)}</select>
+      <div className="w-full min-w-0 sm:w-[340px]">
+        <SelectPicker label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={setArea} getLabel={(id) => id ? AREAS[id].name : "All specializations"} />
+      </div>
     </div>
     <p className="text-[13px]" role="status" style={{ color: "var(--ink-2)" }}>{visible.length} {visible.length === 1 ? "submission" : "submissions"}</p>
     {!visible.length ? <div className="py-16 text-center"><Icon name="check" size={26} className="mx-auto" /><h2 className="mt-4 text-[20px]">{query || area ? "No matching submissions" : filter === "Pending review" ? "Nothing awaiting review" : "No submissions in this status"}</h2></div> : <ul className="mt-3">

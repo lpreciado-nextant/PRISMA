@@ -1,9 +1,15 @@
 # Technical architecture
 
-**Status:** Draft for review; controlled submission transitions specified; production integration and code-based US calendar app alignment pending · **Last updated:** 2026-09-21
+**Status:** Draft for review; PRISMA_Dev environment context recorded; controlled submission transitions specified; production integration and code-based US calendar app alignment pending · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
+
+## Environment and solution
+
+The Power Platform solution **`PRISMA_Dev`** exists in **Nextant Pulse**, environment ID **`ce09ad9b-57d1-e5df-9400-8ce973c86213`** (not Nextant Pulse Prod). In the Power Apps maker portal, select that environment and open **Solutions > PRISMA_Dev**.
+
+This Power Platform solution is distinct from both the published code app **PRISMA PoC** and the catalogue's `nx_solution` records. The solution's component inventory, publisher prefix and managed/unmanaged type are not established here; its existence does not confirm that the code app or planned Dataverse components have been added to it. The PoC still has no Dataverse persistence. App IDs, publishing commands and verification status are maintained in the [deployment details](../../app/README.md#poc-deployment).
 
 ## System shape
 

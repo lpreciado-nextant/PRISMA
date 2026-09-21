@@ -15,7 +15,7 @@ import { useAppUser } from "./lib/powerContext";
 import { navigate, replaceQuery, useRoute } from "./lib/router";
 import { filtersFromQuery, filtersToQuery, type Filters } from "./lib/search";
 import { presentCatalogue } from "./lib/catalogue";
-import { loadSubmissions, reviewContribution, saveContribution, storeSubmission, type SubmissionEntry } from "./lib/submissions";
+import { deleteSubmission, loadSubmissions, reviewContribution, saveContribution, storeSubmission, type SubmissionEntry } from "./lib/submissions";
 
 const PRESENT_KEY = "nsl.present";
 
@@ -46,6 +46,13 @@ export default function App() {
     const existing = submissions.find((entry) => entry.solution.id === solution.id);
     if (existing && existing.owner !== owner) throw new Error("You can only edit your own submissions.");
     await persistEntry({ owner, solution: saveContribution(solution, status, existing?.solution) });
+  };
+  const removeSubmission = async (id: string) => {
+    const existing = submissions.find((entry) => entry.solution.id === id);
+    if (!existing || existing.owner !== owner) throw new Error("You can only delete your own submissions.");
+    await deleteSubmission(id, owner);
+    setSubmissions((current) => current.filter((entry) => entry.solution.id !== id));
+    try { sessionStorage.removeItem(`nsl.edit.${id}`); } catch { return; }
   };
 
   const [present, setPresent] = useState(() => sessionStorage.getItem(PRESENT_KEY) === "1");
@@ -144,7 +151,7 @@ export default function App() {
         ) : isSubmissionRoute && !present && (!segments[1] || editing) ? (
           <SubmitView user={user} initialSolution={editing} draftKey={editing ? `nsl.edit.${editing.id}` : `nsl.draft.v2.${owner}`} onSubmitted={(solution) => saveSubmission(solution, "Pending review")} onSaveDraft={(solution) => saveSubmission(solution, "Draft")} />
         ) : route.path === "/my-submissions" && !present ? (
-          <MySubmissionsView entries={ownedEntries} />
+          <MySubmissionsView entries={ownedEntries} onDelete={removeSubmission} />
         ) : (
           <LibraryView
             catalogue={catalogue}

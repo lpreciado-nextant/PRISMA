@@ -10,14 +10,19 @@ export function SolutionCard({
   present,
   index,
   onOpen,
+  showPublicationStatus = false,
 }: {
   solution: Solution;
   present: boolean;
   index: number;
   onOpen?: () => void;
+  showPublicationStatus?: boolean;
 }) {
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
   const builderNames = solution.contributors.map((contributor) => contributor.builtBy.name).join(", ");
+  const publicationStatus = showPublicationStatus && !present
+    ? solution.publicationStatus === "Draft" && solution.reviewOutcome === "Changes requested" ? "Changes requested" : solution.publicationStatus
+    : undefined;
 
   return (
     <article
@@ -33,7 +38,7 @@ export function SolutionCard({
       }}
       tabIndex={0}
       role="button"
-      aria-label={`${solution.name} — ${solution.summary}`}
+      aria-label={`${solution.name} — ${solution.summary}${publicationStatus ? ` — ${publicationStatus}` : ""}`}
     >
       <div className="relative">
         <Poster
@@ -67,6 +72,7 @@ export function SolutionCard({
             <Chip key={t}>{t}</Chip>
           ))}
         </div>
+        {publicationStatus && <span className="text-[13px] font-semibold" style={{ color: solution.publicationStatus === "Published" ? "var(--live)" : "var(--proto)" }}>{publicationStatus}</span>}
       </div>
 
       <div

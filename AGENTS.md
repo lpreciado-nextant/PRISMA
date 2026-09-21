@@ -1,7 +1,7 @@
 # AGENTS.md
 
-**Status:** Active guidance for the published mock-data PoC.
-**Last updated:** 2026-09-18
+**Status:** Active guidance for the published mock-data PoC and existing PRISMA_Dev solution.
+**Last updated:** 2026-09-21
 
 Guidance for coding agents working in the PRISMA repository.
 
@@ -42,7 +42,9 @@ Or from the repo root, `run-poc.bat` installs, builds, and serves the production
 
 The app was published as **PRISMA PoC** on 2026-09-18. Build and upload succeeded; hosted UI validation is still pending.
 
+- **Environment name:** Nextant Pulse (not Nextant Pulse Prod).
 - **Environment ID:** `ce09ad9b-57d1-e5df-9400-8ce973c86213`
+- **Power Platform solution:** `PRISMA_Dev` already exists in this environment. It is distinct from the code app display name, PRISMA PoC. See [environment and solution context](docs/architecture/technical-architecture.md#environment-and-solution); do not infer component membership or Dataverse integration from its existence.
 - **App ID:** `69a956d5-2180-4ad6-9136-136c48cc197f`
 - **Deployment configuration:** [app/power.config.json](app/power.config.json), with build output `dist` and entry point `index.html`.
 - **Live app, sharing, and deployment details:** [app/README.md#poc-deployment](app/README.md#poc-deployment).
