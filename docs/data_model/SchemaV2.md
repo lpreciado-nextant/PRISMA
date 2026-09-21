@@ -1,12 +1,12 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative agreed model; legacy schema companion synchronized; safety-first submission and maturity-based effort · **Last updated:** 2026-09-21
+**Status:** Authoritative agreed model; code-based US calendar policy approved, app alignment pending · **Last updated:** 2026-09-21
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Industry` and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` and (as of this round) `Capability` are single-valued lookups; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — the underlying table already exists in Dataverse with fixed columns as `cr6b0_project`, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, is a **native N:N** relationship (no attributes needed on the link itself, so no custom junction table).
 
 **Changed in this round (2026-09-21):**
 1. `nx_capability` moved from native N:N to a **1:N** relationship — each `nx_solution` now carries a single `Capability` lookup, same shape as `SpecializationArea`.
-2. `nx_businesscalendar` and `nx_businesscalendarholiday` are **removed**. `nx_solutioncontributor` no longer carries a `Business Calendar` lookup, and `Business Days` is now a straight Monday–Friday count with no holiday exclusion — see the updated derivation below.
+2. `nx_businesscalendar` and `nx_businesscalendarholiday` are **removed**, along with the contributor's `Business Calendar` lookup. US federal holiday exclusions are retained in code for 2020-2035; this overrides the earlier weekday-only proposal. See the updated derivation below.
 3. Every lookup that pointed to the platform `systemuser` table (`Built By`, `Requested By`, `Project Owner`) now points to a new custom table, **`cr6b0_consultant`**.
 4. `nx_project` is renamed to **`cr6b0_project`** throughout — same pre-existing, fixed-column table, correct name.
 5. `Solution` ↔ `Project` no longer goes through a custom junction table (`nx_solutionproject` is **dropped**); it is now a **native N:N** relationship between `nx_solution` and `cr6b0_project`, since the link carries no attributes of its own.
@@ -239,22 +239,23 @@ One row per person credited on a Solution. User/team-owned, with access aligned 
 | End Date | Date Only | Conditional | Required in Calendar mode; inclusive last date, not before Start Date |
 | Allocation (%) | Decimal Number (2 decimal places, 0-100) | Conditional | Required in Calendar mode; constant allocation; zero permitted |
 
-No `Business Calendar` lookup — that table was removed from the model (see "Changed in this round" above); Calendar mode's `Business Days` is a plain Monday–Friday count over Start Date/End Date, no holiday exclusion.
+No `Business Calendar` lookup or calendar tables. Calendar mode uses one code-based US federal holiday policy, with no calendar selector.
 
 Alternate key: `(Solution, Built By)` enforces one effort record per person per Solution. Require at least one complete contributor at submit/publication; a 1:N relationship cannot itself enforce a minimum child count. Validate only the active mode: direct hours in Direct mode, or dates/allocation in Calendar mode. Maturity changes preserve draft inputs but change the active mode for every contributor; never use stale inactive values in totals. Conditional validation must be enforced on all production writes, not just the UI.
 
 **Derived values, not editable columns:**
 
-- `Business Days`: count Monday-Friday dates between Start Date and End Date, **inclusive**. No holiday exclusion — the business-calendar/holiday concept was dropped from this model, so every weekday in range counts. Date-only arithmetic must not shift with time zone or daylight-saving changes.
+- `Business Days`: count Monday-Friday dates between Start Date and End Date, **inclusive**, excluding observed nationwide US federal holidays under the [OPM schedule](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/). Calculate holidays in code for supported dates 2020-01-01 through 2035-12-31; reject invalid dates, reversed ranges, and dates outside coverage rather than falling back to weekdays. Date-only arithmetic must not shift with time zone or daylight-saving changes.
+- Apply holiday rules appropriate to each year, including Juneteenth from 2021 onward. Fixed-date holidays on Saturday are observed Friday; those on Sunday are observed Monday. Include observed dates in range even when the holiday's nominal date belongs to an adjacent year (for example, New Year's Day 2022 observed on 2021-12-31). State-specific, company, and regional-only holidays are not included. No calendar records or contributor calendar IDs are stored.
 - `Effort Hours`: for Calendar-mode contributors, `round(Business Days * 8 * AllocationPercent / 100, 2)`. Apply rounding only after the multiplication.
 - In Direct mode, `Effort Hours` equals validated `Direct Hours`; business days do not apply.
 - `Total Effort Hours`: sum the rounded contributor hours, displayed to at most two decimals. Different people working simultaneously contribute separately; this is not elapsed duration. Do not combine their allocations before applying their individual date ranges.
 
-Example: 2026-09-07 through 2026-09-18 contains ten weekdays. At allocation 50%, the contribution is `10 * 8 * 0.5 = 40 hours`. A second person at 100% over the same ten business days adds 80 hours, for 120 total hours. A same-day weekday counts as one; a weekend-only range yields zero.
+Example: 2026-09-07 through 2026-09-18 contains ten weekdays minus Labor Day on September 7, giving nine business days. At allocation 50%, the contribution is `9 * 8 * 0.5 = 36 hours`. A second person at 100% over the same nine business days adds 72 hours, for 108 total hours. A same-day non-holiday weekday counts as one; a weekend-only or holiday-only range yields zero.
 
 Calendar-mode hours represent capacity; Direct-mode hours represent reported effort. Neither is a timesheet system or an estimate of deployment lead time. Demo effort is not a production estimate. Allocation changes within a person's period and cross-solution over-allocation/capacity checks remain out of scope. The app calculates from loaded contributor data; no Dataverse calculated-column capability or stored total is assumed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
 
-**Migration:** create a contributor row for each former `nx_solution.Built By` value. Dates and allocation require explicit confirmation; do not infer them from the old Days/Weeks/Months choice. Keep legacy values during a real migration until backfill is verified, then retire the old lookup/choice and any unused global choice. The PoC's dates and allocations are illustrative, not historical work records. The legacy schema companion now reflects these rules too.
+**Migration:** create a contributor row for each former `nx_solution.Built By` value. Dates and allocation require explicit confirmation; do not infer them from the old Days/Weeks/Months choice. Keep legacy values during a real migration until backfill is verified, then retire the old lookup/choice and any unused global choice. The PoC's dates and allocations are illustrative, not historical work records. When implementing the code-based policy, remove obsolete calendar IDs from mock contributors and restored drafts while preserving their dates, allocations, direct hours, and existing 2026 totals. The current app still uses the 2026 in-memory calendar; multi-year support is pending. No live integration or deployment is authorized by this policy change.
 
 ### `nx_demoasset` — the demo
 
@@ -350,7 +351,7 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 
 **Dropped from the first v2 draft, and still dropped:** `nx_projectevidence` (no attachments table).
 
-**Removed this round:** `nx_businesscalendar` and `nx_businesscalendarholiday`. `nx_solutioncontributor.Business Days` is now a plain Monday–Friday count with no holiday exclusion.
+**Removed this round:** `nx_businesscalendar` and `nx_businesscalendarholiday`, not holiday exclusions. `nx_solutioncontributor.Business Days` retains observed US federal holiday exclusions, enforced in code for 2020-2035.
 
 **Changed this round:** every lookup to the platform `systemuser` table now points to the new custom table `cr6b0_consultant`. `nx_project` is renamed `cr6b0_project` (same pre-existing table). The `Solution` ↔ `Project` connection is a **native N:N** relationship between `nx_solution` and `cr6b0_project` — no custom junction table, since the link carries no attributes of its own.
 

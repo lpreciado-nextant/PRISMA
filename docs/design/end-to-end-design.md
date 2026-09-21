@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Agreed submission revision, searchable contributors and effort implemented in the local mock [`app/`](../../app/README.md); production integration pending
+**Status:** Agreed design; local mock submission revision implemented; model alignment and code-based US calendar coverage for 2020-2035 pending; production integration pending
 **Last updated:** 2026-09-21
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
@@ -89,7 +89,7 @@ stateDiagram-v2
 **Guided multi-step submission form**, with draft saving at every step. The steps mirror how a builder actually thinks about their work, not how the database is shaped:
 
 1. **Before you start** — Required safety acknowledgment replaces the former sharing and sample-data classifications. Submit only authorized, client-safe descriptions and media using invented or anonymized data. Client identity is allowed only in the dedicated internal field. Acknowledgment is not approval.
-2. **What is it?** — Name, summary, specialization area, capability (single-valued, same picker style as specialization area), maturity, optional internal client and separately authored anonymous presentation context. Require the anonymous context when a client is supplied. Credit at least one unique contributor, searchable by name/email. Ideas and working prototypes use direct hours per person; client demos and production use inclusive start/end dates and an allocation percentage, with calculated effort (a plain Monday-Friday day count, no holiday exclusion) previewed per person and in total. Duplicate people are excluded; the PoC searches mock people rather than a live directory.
+2. **What is it?** — Name, summary, specialization area, capability (single-valued, same picker style as specialization area), maturity, optional internal client and separately authored anonymous presentation context. Require the anonymous context when a client is supplied. Credit at least one unique contributor, searchable by name/email. Ideas and working prototypes use direct hours per person; client demos and production use inclusive start/end dates and an allocation percentage, with calculated effort (Monday-Friday excluding observed US federal holidays, enforced in code) previewed per person and in total. Duplicate people are excluded; the PoC searches mock people rather than a live directory.
 3. **What & why** — Separate actions/results from business value. Optional AI writing assistance is deferred; contributors may paste existing approved wording unchanged.
 4. **Tag it** — Search capabilities, technologies and industries. Capabilities/industries remain governed; new technologies are allowed with case-insensitive duplicate prevention.
 5. **Media** — Require one to six detail images, with optional captions. Thumbnail remains optional with generated-poster fallback. Optional videos, one-pagers/slides and self-contained HTML share this step. Capability-specific hints explain useful outcomes and confidentiality requirements.
@@ -220,9 +220,9 @@ Replace the single `Built By` lookup and solution-wide `Effort / Time to Deploy`
 
 Effort Mode follows maturity: Direct for ideas/prototypes, Calendar for client demos/production. Direct Hours is a nonnegative two-decimal input; dates/allocation are not required in Direct mode. Switching maturity preserves draft inputs but validates and totals only the active mode.
 
-In Calendar mode, `Business Days` is a plain Monday-Friday count within the inclusive date range — no holiday exclusion; there is no business-calendar concept in this model. Per-person hours = business days × 8 × allocation / 100, rounded to two decimals; solution hours sum those rounded person totals. Reject invalid dates and reversed ranges.
+In Calendar mode, `Business Days` counts Monday-Friday within the inclusive date range, excluding observed US federal holidays calculated in code for 2020-2035. There are no calendar tables, calendar lookup, or calendar selector. Apply the federal holiday rules appropriate to each year; state-specific and company holidays are excluded from the policy. Per-person hours = business days × 8 × allocation / 100, rounded to two decimals; solution hours sum those rounded person totals. Reject invalid dates, reversed ranges, and dates outside supported coverage. Existing 2026 mock and restored-draft totals must remain unchanged.
 
-The schema owns the full contract and migration notes; see [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md), which documents the removal of the earlier business-calendar mechanism.
+The schema owns the full contract and migration notes; see [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md). The agreed code-based US calendar policy supersedes the weekday-only proposal while retaining the removal of calendar tables. The current mock app still uses its 2026 in-memory calendar; multi-year support and removal of calendar IDs remain pending implementation.
 
 ### 6.4 Reference data governance
 

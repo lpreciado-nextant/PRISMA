@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library
 
-**Status:** Mock-data PoC published; local contributor/search and effort updates not yet deployed; full implementation planned.
+**Status:** Mock-data PoC published; local contributor/search and effort updates not yet deployed; code-based US calendar policy approved, app alignment pending.
 **Last updated:** 2026-09-21
 
 An internal marketplace for the PoCs, prototypes, demos, and production solutions Nextant builds across its three Specialization Areas — **AI & Automation**, **Data Solutions**, and **Intelligent Business Operations**.
@@ -13,7 +13,7 @@ Builders publish what they made, a librarian curates it, and Customer Success Ma
 
 The deployed app uses mock data, with no Dataverse persistence. Build and upload succeeded; hosted UI validation is pending. See [deployment details and update commands](app/README.md#poc-deployment).
 
-The local app additionally supports multiple builders, searchable person selection, individual dates/allocation and effort calculations (a plain Monday-Friday day count). These updates have not been published to the hosted app.
+The local app additionally supports multiple builders, searchable person selection, individual dates/allocation and effort calculations using its 2026 in-memory US federal holiday calendar. These updates have not been published to the hosted app. The agreed code-based calendar policy for 2020-2035, without calendar tables or contributor calendar IDs, remains pending app alignment.
 
 The sections below describe the target product, not the current PoC's implemented capabilities.
 
@@ -66,7 +66,7 @@ The Librarian is the **only** role that can publish. That gate is what makes it 
 
 A guided seven-step submission form with draft saving at every step: what is it → what does it do and why does it matter → tag it → attach the demo → images (card thumbnail + detail screenshots) → safety & sharing → review & submit. Target friction budget is under 10 minutes; beyond that, builders stop submitting and G2 fails.
 
-The first step includes specialization area, capability (both single-valued lookups), and multiple builders, searchable by name or email without duplicates. Each person has inclusive start/end dates and allocation (0-100%). Effort hours (a plain Monday-Friday day count, no holiday exclusion) are previewed per person and summed for the solution; [workflow details](docs/workflows/contribution-and-review.md).
+The first step includes specialization area, capability (both single-valued lookups), and multiple builders, searchable by name or email without duplicates. Ideas and working prototypes use direct hours. For client demos and production, each person has inclusive start/end dates and allocation (0-100%); effort uses Monday-Friday excluding observed US federal holidays, enforced in code for 2020-2035. Hours are previewed per person and summed for the solution; [workflow details](docs/workflows/contribution-and-review.md).
 
 ### Discovery → presentation (the hero flow)
 
@@ -123,7 +123,7 @@ Existing table: `cr6b0_project`, with fixed columns and its existing Project Own
 
 **11 tables total:** 9 new custom tables plus `cr6b0_consultant` plus the existing Project table; native N:N intersect tables (technology, industry, and Solution↔Project) are excluded from that count.
 
-`nx_solutioncontributor` replaces the single builder lookup and solution-wide effort category. One row per Solution/person stores dates and allocation. Person hours = business days × 8 × allocation / 100, rounded to two decimals; total effort sums those rounded hours. `Business Days` is a plain Monday-Friday count between Start Date and End Date, inclusive — there is no calendar/holiday concept in this model. These are capacity-based hours, not actual timesheets or deployment lead time.
+`nx_solutioncontributor` replaces the single builder lookup and solution-wide effort category. In Calendar mode, one row per Solution/person stores dates and allocation. Person hours = business days × 8 × allocation / 100, rounded to two decimals; total effort sums those rounded hours. `Business Days` counts Monday-Friday between Start Date and End Date, inclusive, excluding observed US federal holidays calculated in code for 2020-2035. There are no calendar tables or contributor calendar lookups; dates outside supported coverage are rejected. These are capacity-based hours, not actual timesheets or deployment lead time. Ideas and working prototypes use directly reported hours instead. See the [schema contract](docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
 Vocabulary governance: capabilities, industries, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates). `Capability` is single-valued, same shape as `Specialization Area`, not a tag. Use case is a freeform text column on `nx_solution`, not a vocabulary. Industry tags are optional at schema level, with at least one industry or "Cross-industry" expected at review.
 

@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Draft for review, including contributor architecture · **Last updated:** 2026-09-21
+**Status:** Draft for review; code-based US calendar policy approved, app alignment pending · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -38,13 +38,13 @@ Each carries an ADR — see [decision records](decisions/README.md).
 | Assets live in Dataverse File and Image columns — no external blob storage | [ADR-0004](decisions/adr-0004-assets-in-dataverse.md) |
 | Present mode is enforced server-side as well as client-side | [ADR-0005](decisions/adr-0005-present-mode-server-side-enforcement.md) |
 | Power Automate for notifications only — no business logic in flows | [ADR-0006](decisions/adr-0006-power-automate-notifications-only.md) |
-| Contributor-level effort derived from inclusive dates and allocation, no holiday exclusion (business-calendar mechanism removed — see ADR-0007's update note) | [ADR-0007](decisions/adr-0007-contributor-effort.md) |
+| Contributor-level effort derived from inclusive dates and allocation, excluding observed US federal holidays in code for 2020-2035 without calendar tables | [ADR-0007](decisions/adr-0007-contributor-effort.md) |
 
 ## Contributor data
 
-The current [schema](../data_model/SchemaV2.md) contains 11 tables, including the existing, unchanged `cr6b0_project`. `nx_solutioncontributor` carries each builder's dates/allocation and derives effort from a plain Monday-Friday day count. The `Solution`↔`cr6b0_project` link is a native N:N relationship — no junction table — connecting reusable offerings to existing delivery evidence without modifying Project columns.
+The current [schema](../data_model/SchemaV2.md) contains 11 tables, including the existing, unchanged `cr6b0_project`. `nx_solutioncontributor` carries each builder's dates/allocation and derives Calendar-mode effort from Monday-Friday dates excluding observed US federal holidays calculated in code, with no calendar tables or contributor calendar lookup. The `Solution`↔`cr6b0_project` link is a native N:N relationship — no junction table — connecting reusable offerings to existing delivery evidence without modifying Project columns.
 
-The PoC computes hours in `app/src/lib/effort.ts` from mock rows using a straight weekday count, with no holiday exclusion. Person search is local name/email matching in the submission form, not a live-directory query. Production still requires Dataverse services, child ownership/sharing and validation enforcement; no persistence or deployment is implied by these local changes.
+The PoC computes hours in `app/src/lib/effort.ts` from mock rows using its 2026 in-memory US federal holiday calendar. The agreed code-based 2020-2035 policy and removal of calendar IDs are pending app alignment; existing 2026 totals must remain unchanged. Person search is local name/email matching in the submission form, not a live-directory query. Production still requires Dataverse services, child ownership/sharing and validation enforcement; no persistence or deployment is implied by this documentation change.
 
 ## Code app constraints
 

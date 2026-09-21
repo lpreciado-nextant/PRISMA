@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Draft for review · **Last updated:** 2026-09-21
+**Status:** Draft for review; code-based US calendar policy approved · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -36,4 +36,4 @@ Reference data is seeded in Phase 1, before any CSM sees the app ([roadmap](../d
 
 ## Business days
 
-There is no business calendar or holiday reference data in this model — the concept was removed. `Business Days` on `nx_solutioncontributor` is a plain Monday-Friday count between Start Date and End Date, inclusive, with no holiday exclusion; working days are eight hours. See [schema v2](SchemaV2.md#nx_solutioncontributor--builders-and-effort) and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
+There are no business-calendar or holiday reference tables and no Librarian-maintained calendar records. `Business Days` on `nx_solutioncontributor` counts Monday-Friday between Start Date and End Date, inclusive, excluding observed US federal holidays calculated in code for 2020-2035; working days are eight hours. Policy changes require a reviewed code change and regression checks, not reference-data editing. Existing 2026 effort totals must remain unchanged when the app adopts multi-year coverage. See [schema v2](SchemaV2.md#nx_solutioncontributor--builders-and-effort) for holiday rules and coverage validation, and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) for the decision history.

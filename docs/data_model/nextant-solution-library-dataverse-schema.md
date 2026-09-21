@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to v2, including agreed submission revision · **Last updated:** 2026-09-21
+> **Status:** Maintained companion to v2, including approved code-based US calendar policy; app alignment pending · **Last updated:** 2026-09-21
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Table (logical) names below use an `nx_` publisher prefix — swap for whatever your actual solution prefix is.
 
@@ -112,13 +112,13 @@ Required lookups do not automatically inherit Dataverse security. Configure and 
 
 Alternate key: `(Solution, Built By)` prevents duplicate people. Require at least one complete contributor. Validate only the active mode: direct hours, or dates/allocation. Preserve inactive draft inputs on maturity changes, but never total them. Apply the same rules to production writes, not just the UI.
 
-**Calculation:** count Monday-Friday dates in the inclusive range — no holiday exclusion; the business-calendar/holiday concept was dropped from this model, so every weekday in range counts. Person hours = `round(business days * 8 * allocation / 100, 2)`; Solution hours = sum of those rounded person totals. Use date-only arithmetic unaffected by time zones or daylight-saving changes. Weekend-only periods yield zero. Example: September 7-18, 2026 at 50% covers ten weekdays, giving `10 * 8 * 0.5 = 40 hours`.
+**Calculation:** count Monday-Friday dates in the inclusive range, excluding observed US federal holidays calculated in code for 2020-2035. No calendar tables, lookup, or selector are required. Reject invalid dates, reversed ranges, and dates outside coverage; use year-appropriate holiday rules and account for observed dates crossing year boundaries, as specified in the [contributor contract](SchemaV2.md#nx_solutioncontributor--builders-and-effort). Person hours = `round(business days * 8 * allocation / 100, 2)`; Solution hours = sum of those rounded person totals. Use date-only arithmetic unaffected by time zones or daylight-saving changes. Weekend-only or holiday-only periods yield zero. Example: September 7-18, 2026 at 50% covers nine business days after excluding Labor Day, giving `9 * 8 * 0.5 = 36 hours`.
 
 In Direct mode, use validated Direct Hours without a calendar. Calendar hours represent capacity; direct hours represent reported effort. Neither is deployment duration or a timesheet. Full calculation and migration rules: [contributor contract](SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
 The Person field searches names/emails, excludes already assigned people, and supports keyboard/pointer selection. Only a selected known person is stored; search text is not a person record. The current PoC searches mock people, not a live directory. See [contribution workflow](../workflows/contribution-and-review.md).
 
-**Migration:** create a contributor row for each former builder, confirm dates/allocation explicitly. Never infer hours from the old Days/Weeks/Months category. Legacy demo calendar-based totals are removed from the PoC; mock records and restored drafts use the plain weekday count and recalculate. No real Dataverse migration or deployment has been performed.
+**Migration:** create a contributor row for each former builder, confirm dates/allocation explicitly. Never infer hours from the old Days/Weeks/Months category. App alignment must remove obsolete calendar IDs from mock records and restored drafts without changing their dates, allocations, direct hours, or existing 2026 totals. The app still uses its 2026 in-memory calendar; code-based 2020-2035 support is pending. No real Dataverse migration or deployment has been performed.
 
 ### `nx_demoasset`
 

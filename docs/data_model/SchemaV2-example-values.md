@@ -1,6 +1,6 @@
 # Nextant Solution Library — example row per table (SchemaV2)
 
-**Status:** Illustrative companion, aligned with revised submission columns · **Last updated:** 2026-09-21
+**Status:** Illustrative companion, aligned with revised submission columns and code-based US holiday policy · **Last updated:** 2026-09-21
 **Companion to:** [SchemaV2.md](SchemaV2.md)
 
 One illustrative row per table in the v2 model, all pointing at the same story so the relationships stay traceable: **S1 — Invoice Reconciliation Assistant**, the same example used in SchemaV2's diagrams. GUIDs below are placeholders (`{table}-001` style), not real Dataverse ids. Sample data only — no real client information.
@@ -85,7 +85,7 @@ Both rows use **Effort Mode = Calendar** and **Direct Hours = not applicable**, 
 | sc-001 | Invoice Reconciliation Assistant — Juliana Castelblanco | sol-001 | con-001 — Juliana Castelblanco | Calendar | — | 2026-09-07 | 2026-09-18 | 50 |
 | sc-002 | Invoice Reconciliation Assistant — Luis Preciado | sol-001 | con-002 — Luis Preciado | Calendar | — | 2026-09-08 | 2026-09-18 | 100 |
 
-Derived (not stored): sc-001 → 10 business days × 8h × 50% = **40 effort hours**; sc-002 → 9 business days × 8h × 100% = **72 effort hours**; `Total Effort Hours` for sol-001 = **112**.
+Derived (not stored): sc-001 → 9 business days × 8h × 50% = **36 effort hours**, excluding Labor Day on 2026-09-07; sc-002 → 9 business days × 8h × 100% = **72 effort hours**, since its range starts after Labor Day; `Total Effort Hours` for sol-001 = **108**. Observed US federal holidays are calculated in code under the agreed 2020-2035 policy, with no calendar table or contributor calendar lookup.
 
 ### `nx_demoasset`
 
