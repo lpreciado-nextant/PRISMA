@@ -1,6 +1,6 @@
 # Demo assets
 
-**Status:** Agreed unified Media submission; legacy catalogue formats retained · **Last updated:** 2026-09-21
+**Status:** Agreed unified Media submission; PoC video limit raised to 500 MB; legacy catalogue formats retained · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
@@ -25,7 +25,7 @@ New submissions use a single Media step: **images, videos, one-pagers/slides, an
 - Self-contained HTML renders in a **sandboxed iframe** with a restrictive policy and no same-origin access to the host app; files are librarian-reviewed before publication ([security model](../architecture/security-model.md)).
 - Hosted URLs are subject to the periodic link-health check ([content health](../operations/content-health.md)).
 
-In the PoC, PNG/JPG/WebP images are decoded locally (5 MB each). Optional HTML, MP4/WebM and PDF/PPT/PPTX attachments are limited to six files, 25 MB each. Uploaded HTML uses a restrictive CSP and sandbox without same-origin access; network resources are blocked. Media lasts in memory until reload, not in tab storage or Dataverse. These local limits do not configure Dataverse column limits.
+In the PoC, PNG/JPG/WebP images are decoded locally (5 MB each). Optional attachments are limited to six files: MP4/WebM videos up to 500 MB each, and HTML or PDF/PPT/PPTX documents up to 25 MB each. Uploaded HTML uses a restrictive CSP and sandbox without same-origin access; network resources are blocked. Media lasts in memory until reload, not in tab storage or Dataverse. Videos are read as data URLs, so large files require additional browser memory; the size limit is not a playback-performance guarantee. These local limits do not configure Dataverse column limits.
 
 ## Viewer
 

@@ -561,7 +561,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             <Field label="Additional media format">
               <SelectPicker label="Additional media format" value={draft.assetType} options={ASSET_OPTIONS} onChange={(value) => set("assetType", value)} />
             </Field>
-            <Field label="Attach additional media" hint="Optional. HTML, MP4/WebM video, or PDF/PPT/PPTX documents. Up to 25 MB each; up to 6 additional files. Local preview only.">
+            <Field label="Attach additional media" hint="Optional. MP4/WebM videos up to 500 MB each; HTML and PDF/PPT/PPTX documents up to 25 MB each. Up to 6 additional files. Local preview only.">
               <input type="file" disabled={uploading || draft.assets.length >= 6} accept={draft.assetType === "Self-contained HTML file" ? ".html,.htm" : draft.assetType === "Video walkthrough only" ? ".mp4,.webm" : ".pdf,.ppt,.pptx"}
                 onChange={async (event) => {
                   const file = event.target.files?.[0];
@@ -570,7 +570,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                   const type = draft.assetType;
                   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
                   const allowed = type === "Self-contained HTML file" ? ["html", "htm"] : type === "Video walkthrough only" ? ["mp4", "webm"] : ["pdf", "ppt", "pptx"];
-                  if (!allowed.includes(extension) || !file.size || file.size > 25 * 1024 * 1024) { setUploadError("Choose a supported, non-empty file of 25 MB or less."); return; }
+                  const maxSizeMb = type === "Video walkthrough only" ? 500 : 25;
+                  if (!allowed.includes(extension) || !file.size || file.size > maxSizeMb * 1024 * 1024) { setUploadError(`Choose a supported, non-empty file of ${maxSizeMb} MB or less.`); return; }
                   setUploading(true);
                   setUploadError("");
                   try {
