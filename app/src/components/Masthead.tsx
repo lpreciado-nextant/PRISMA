@@ -18,7 +18,7 @@ export function Masthead({
 }) {
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6">
-      <div className="glass glass-sheen mx-auto flex min-h-16 w-full max-w-[1340px] flex-wrap items-center gap-2 rounded-[20px] px-3 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-0">
+      <div className="glass glass-sheen @container mx-auto flex min-h-16 w-full max-w-[1340px] flex-wrap items-center gap-2 rounded-[20px] px-3 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-0">
         <button
           type="button"
           onClick={() => navigate("/")}
@@ -31,10 +31,10 @@ export function Masthead({
             aria-hidden="true"
             className="h-7 w-7 -mr-1.5 translate-y-[1px]"
           />
-          <span className="flex flex-col items-start gap-0.5 lg:flex-row lg:items-center lg:gap-3">
+          <span className="flex flex-col items-start gap-0.5 @[1240px]:flex-row @[1240px]:items-center @[1240px]:gap-3">
             <span className="prisma-wordmark text-[21px] leading-none">PRISMA</span>
             <span
-              className="hidden h-5 w-px lg:block"
+              className="hidden h-5 w-px @[1240px]:block"
               style={{ background: "var(--glass-edge-hi)" }}
               aria-hidden="true"
             />
@@ -43,7 +43,7 @@ export function Masthead({
               <img
                 src={`./nextant-logo-${theme}.png`}
                 alt="Nextant"
-                className="h-[13px] w-auto lg:h-[15px]"
+                className="h-[13px] w-auto @[1240px]:h-[15px]"
                 style={{ transition: "opacity 0.4s ease" }}
               />
             </span>
@@ -51,9 +51,9 @@ export function Masthead({
         </button>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-          {!present && <button type="button" onClick={() => navigate("/review")} title="Review queue (librarian preview)" aria-label="Review queue (librarian preview)" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="shield" size={15} /><span className="hidden whitespace-nowrap xl:inline">Review queue</span></button>}
+          {!present && <button type="button" onClick={() => navigate("/review")} title="Review queue (librarian preview)" aria-label="Review queue (librarian preview)" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="shield" size={15} /><span className="hidden whitespace-nowrap @[1240px]:inline">Review queue</span></button>}
           {!present && <button type="button" onClick={() => navigate("/my-submissions")} title="My submissions" aria-label="My submissions" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}>
-            <Icon name="file" size={15} /><span className="hidden whitespace-nowrap md:inline">My submissions</span>
+            <Icon name="file" size={15} /><span className="hidden whitespace-nowrap @[1080px]:inline">My submissions</span>
           </button>}
           {!present && (
             <button
@@ -70,7 +70,7 @@ export function Masthead({
               }}
             >
               <Icon name="plus" size={15} />
-              <span className="hidden whitespace-nowrap md:inline">Submit a solution</span>
+              <span className="hidden whitespace-nowrap @[1080px]:inline">Submit a solution</span>
             </button>
           )}
 
@@ -92,7 +92,7 @@ export function Masthead({
 
           {!present && (
             <div
-              className="hidden items-center gap-2.5 rounded-xl border py-1.5 pr-3.5 pl-1.5 lg:flex"
+              className="hidden items-center gap-2.5 rounded-xl border py-1.5 pr-3.5 pl-1.5 @[880px]:flex"
               style={{
                 borderColor: "var(--glass-edge)",
                 background: "color-mix(in srgb, var(--ink) 6%, transparent)",
@@ -143,11 +143,11 @@ function PresentToggle({ present, onToggle }: { present: boolean; onToggle: () =
       }}
     >
       <Icon name="present" size={16} />
-      <span className="hidden whitespace-nowrap sm:inline">
+      <span className="hidden whitespace-nowrap @[560px]:inline">
         {present ? "Present mode on" : "Present mode"}
       </span>
       <span
-        className="relative hidden h-4 w-7 rounded-full transition-colors duration-300 sm:block"
+        className="relative hidden h-4 w-7 rounded-full transition-colors duration-300 @[560px]:block"
         style={{
           background: present
             ? "color-mix(in srgb, var(--on-accent) 45%, transparent)"
