@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Local safety-first submission revision implemented; published Power Apps deployment still reflects the September 18 version. No upload performed for this revision.
+**Status:** Safety-first submission revision published to Nextant Pulse on 2026-09-21. Build and upload succeeded; authenticated hosted UI verification pending.
 **Last updated:** 2026-09-21
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -95,11 +95,12 @@ Calendar-mode contributors use **US business calendar (2026)** automatically, wi
 
 **[Open PRISMA PoC](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/69a956d5-2180-4ad6-9136-136c48cc197f?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)**
 
-Updated on 2026-09-18 with searchable contributors, multi-person effort, the US-only calendar and submission field descriptions with examples only in placeholders. The latest update aligns contributor fields and protects the first contributor from removal. The production build, all seven tests, lint and `pa app push` succeeded; contributor layout and removal were also checked locally at desktop and mobile widths. The hosted UI still needs a browser smoke test of search, detail, viewer, present mode, submission hints, contributor controls and asset loading.
+Updated on 2026-09-21 in **Nextant Pulse** (not Nextant Pulse Prod) with the six-step safety-first submission, maturity-based effort, unified media, local My submissions/editing, themed dropdowns and compact add-technology input. The production build, all ten tests, lint and `pa app push` succeeded. The hosted link redirected to Microsoft sign-in in the verification browser; an authenticated smoke test of search, detail, viewer, present mode, submission controls and image/font loading remains pending. Submissions and uploaded media still have no Dataverse persistence and are lost on reload.
 
 | Setting | Value |
 |---|---|
 | Display name | PRISMA PoC |
+| Environment name | Nextant Pulse |
 | Environment ID | `ce09ad9b-57d1-e5df-9400-8ce973c86213` |
 | App ID | `69a956d5-2180-4ad6-9136-136c48cc197f` |
 | Build output / entry point | `dist` / `index.html` |
