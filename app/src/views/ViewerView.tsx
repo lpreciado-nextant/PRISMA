@@ -82,7 +82,7 @@ function Stage({ solution, asset }: { solution: Solution; asset: DemoAsset }) {
     return (
       <iframe
         title={`${solution.name} demo`}
-        srcDoc={demoSrcDoc(solution, resolveColor(accent))}
+        srcDoc={asset.htmlContent !== undefined ? restrictHtml(asset.htmlContent) : demoSrcDoc(solution, resolveColor(accent))}
         // No allow-same-origin: an uploaded asset must never reach the host app.
         sandbox="allow-scripts"
         referrerPolicy="no-referrer"
@@ -104,6 +104,7 @@ function Stage({ solution, asset }: { solution: Solution; asset: DemoAsset }) {
   }
 
   if (asset.assetType === "Video walkthrough only") {
+    if (asset.fileData) return <video controls className="h-full w-full" src={asset.fileData} aria-label={asset.name} />;
     return <VideoStage name={solution.name} />;
   }
 
@@ -118,6 +119,15 @@ function Stage({ solution, asset }: { solution: Solution; asset: DemoAsset }) {
       </div>
     </div>
   );
+}
+
+function restrictHtml(content: string): string {
+  const document = new DOMParser().parseFromString(content, "text/html");
+  const policy = document.createElement("meta");
+  policy.httpEquiv = "Content-Security-Policy";
+  policy.content = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+  document.head.prepend(policy);
+  return `<!doctype html>${document.documentElement.outerHTML}`;
 }
 
 function VideoStage({ name }: { name: string }) {

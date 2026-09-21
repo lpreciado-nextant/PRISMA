@@ -15,13 +15,6 @@ export type SolutionStatus =
 
 export type PublicationStatus = "Draft" | "Pending review" | "Published" | "Retired";
 
-export type Shareability = "Yes" | "Yes, with names removed" | "No – internal only";
-
-export type SampleDataLevel =
-  | "Yes – all data is invented"
-  | "Partly – some real figures"
-  | "No – contains real client data";
-
 export interface BusinessCalendar {
   id: string;
   name: string;
@@ -33,6 +26,8 @@ export interface BusinessCalendar {
 export interface SolutionContributor {
   id: string;
   builtBy: { id: string; name: string; email: string };
+  effortMode?: "direct" | "calendar";
+  directHours?: number;
   startDate: string;
   endDate: string;
   allocation: number;
@@ -52,6 +47,8 @@ export interface DemoAsset {
   id: string;
   name: string;
   assetType: AssetType;
+  fileData?: string;
+  htmlContent?: string;
   externalUrl?: string;
   embedHint?: string;
   allowsEmbedding: boolean;
@@ -85,8 +82,8 @@ export interface Solution {
   contributors: SolutionContributor[];
   status: SolutionStatus;
   publicationStatus: PublicationStatus;
-  shareable: Shareability;
-  sampleDataLevel: SampleDataLevel;
+  safetyAcknowledged: boolean;
+  clientSafeReviewed: boolean;
   clientContext?: string;
   clientContextRedacted?: string;
   /** Data URL or image URL for the card poster; stands in for the Dataverse Image column. */

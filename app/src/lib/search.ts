@@ -23,6 +23,8 @@ function haystack(s: Solution): string {
     s.whatItDoes,
     s.businessValue,
     s.useCase ?? "",
+    s.clientContext ?? "",
+    s.clientContextRedacted ?? "",
     s.searchKeywords,
     ...s.contributors.map((contributor) => contributor.builtBy.name),
     ...s.capabilities,

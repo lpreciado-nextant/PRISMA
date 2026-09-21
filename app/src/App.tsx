@@ -7,10 +7,13 @@ import { LibraryView } from "./views/LibraryView";
 import { DetailView } from "./views/DetailView";
 import { ViewerView } from "./views/ViewerView";
 import { SubmitView } from "./views/SubmitView";
+import { MySubmissionsView } from "./views/MySubmissionsView";
+import type { Solution } from "./types";
 import { useTheme } from "./lib/theme";
 import { useAppUser } from "./lib/powerContext";
 import { navigate, replaceQuery, useRoute } from "./lib/router";
 import { filtersFromQuery, filtersToQuery, type Filters } from "./lib/search";
+import { presentCatalogue } from "./lib/catalogue";
 
 const PRESENT_KEY = "nsl.present";
 
@@ -21,6 +24,12 @@ export default function App() {
   const [theme, toggleTheme] = useTheme();
   const user = useAppUser();
   const route = useRoute();
+  const [submissions, setSubmissions] = useState<{ owner: string; solution: Solution }[]>([]);
+  const ownedSubmissions = submissions.filter((entry) => entry.owner === user.userPrincipalName).map((entry) => entry.solution);
+  const saveSubmission = (solution: Solution) => setSubmissions((current) => [
+    { owner: user.userPrincipalName, solution: { ...solution, publicationStatus: "Pending review", clientSafeReviewed: false } },
+    ...current.filter((entry) => entry.solution.id !== solution.id || entry.owner !== user.userPrincipalName),
+  ]);
 
   const [present, setPresent] = useState(() => sessionStorage.getItem(PRESENT_KEY) === "1");
   const [bannerHidden, setBannerHidden] = useState(false);
@@ -28,10 +37,10 @@ export default function App() {
     sessionStorage.setItem(PRESENT_KEY, present ? "1" : "0");
   }, [present]);
 
-  const togglePresent = useCallback(() => {
+  const togglePresent = () => {
     setPresent((p) => !p);
     setBannerHidden(false);
-  }, []);
+  };
 
   /**
    * Present mode restricts the catalogue rather than hiding rows in the UI.
@@ -39,7 +48,7 @@ export default function App() {
    * internal-only record can never reach the client's screen, even transiently.
    */
   const catalogue = useMemo(
-    () => (present ? PUBLISHED.filter((s) => s.shareable !== "No – internal only") : PUBLISHED),
+    () => (present ? presentCatalogue(PUBLISHED) : PUBLISHED),
     [present],
   );
   const hiddenCount = PUBLISHED.length - catalogue.length;
@@ -52,8 +61,12 @@ export default function App() {
   );
 
   const segments = route.path.split("/").filter(Boolean);
+  const recordId = segments[1];
   const isSolutionRoute = segments[0] === "s";
-  const solution = isSolutionRoute ? catalogue.find((s) => s.id === segments[1]) : undefined;
+  const isSubmissionRoute = segments[0] === "submit";
+  const editing = isSubmissionRoute ? ownedSubmissions.find((entry) => entry.id === segments[1]) : undefined;
+  const ownSolution = !present && isSolutionRoute ? ownedSubmissions.find((entry) => entry.id === segments[1]) : undefined;
+  const solution = isSolutionRoute ? ownSolution ?? catalogue.find((s) => s.id === segments[1]) : undefined;
   const asset =
     segments[2] === "demo" ? solution?.assets.find((a) => a.id === segments[3]) : undefined;
 
@@ -61,8 +74,9 @@ export default function App() {
   // and the submission form is a contributor surface — never client-facing.
   useEffect(() => {
     if (isSolutionRoute && !solution) navigate("/");
-    if (present && route.path === "/submit") navigate("/");
-  }, [isSolutionRoute, solution, present, route.path]);
+    if (present && (isSubmissionRoute || route.path === "/my-submissions")) navigate("/");
+    if (!present && isSubmissionRoute && recordId && !editing) navigate("/my-submissions");
+  }, [isSolutionRoute, solution, present, route.path, isSubmissionRoute, editing, recordId]);
 
   // Each view starts at the top; "instant" sidesteps the global smooth-scroll.
   useEffect(() => {
@@ -94,9 +108,11 @@ export default function App() {
         {solution && asset ? (
           <ViewerView solution={solution} asset={asset} present={present} />
         ) : solution ? (
-          <DetailView solution={solution} present={present} />
-        ) : route.path === "/submit" && !present ? (
-          <SubmitView user={user} />
+          <DetailView solution={solution} present={present} onEdit={ownSolution ? () => navigate(`/submit/${solution.id}`) : undefined} />
+        ) : isSubmissionRoute && !present && (!segments[1] || editing) ? (
+          <SubmitView user={user} initialSolution={editing} draftKey={editing ? `nsl.edit.${editing.id}` : undefined} onSubmitted={saveSubmission} />
+        ) : route.path === "/my-submissions" && !present ? (
+          <MySubmissionsView solutions={ownedSubmissions} />
         ) : (
           <LibraryView
             catalogue={catalogue}

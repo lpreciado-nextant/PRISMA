@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { calculateEffort } from "./effort.ts";
+import { calculateEffort, usesDirectHours } from "./effort.ts";
 import type { BusinessCalendar, SolutionContributor } from "../types.ts";
 import { BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID, SOLUTIONS } from "../data/solutions.ts";
 import { matchesQuery } from "./search.ts";
@@ -13,6 +13,21 @@ const contributor: SolutionContributor = {
   id: "contribution", builtBy: { id: "person", name: "Test Person", email: "test@example.com" },
   startDate: "2026-09-07", endDate: "2026-09-18", allocation: 50, calendarId: "test",
 };
+
+test("ideas and prototypes use direct hours; demos and production use calendar effort", () => {
+  assert.equal(usesDirectHours("Idea / concept"), true);
+  assert.equal(usesDirectHours("Working prototype"), true);
+  assert.equal(usesDirectHours("Client demo"), false);
+  assert.equal(usesDirectHours("Live in production"), false);
+  const direct = { ...contributor, effortMode: "direct" as const, startDate: "", endDate: "" };
+  for (const directHours of [0, 0.25, 5, 12.34]) {
+    assert.deepEqual(calculateEffort({ ...direct, directHours }, undefined), { businessDays: 0, hours: directHours });
+  }
+  for (const directHours of [undefined, -1, NaN, Infinity, 1.234]) {
+    assert.throws(() => calculateEffort({ ...direct, directHours }, undefined));
+  }
+  assert.equal(calculateEffort({ ...contributor, effortMode: "calendar", directHours: 999 }, calendar).hours, 36);
+});
 
 test("inclusive weekdays exclude unique holidays, not weekends twice", () => {
   assert.deepEqual(calculateEffort(contributor, calendar), { businessDays: 9, hours: 36 });

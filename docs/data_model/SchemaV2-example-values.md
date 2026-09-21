@@ -1,6 +1,7 @@
 # Nextant Solution Library — example row per table (SchemaV2)
 
-**Companion to:** [SchemaV2.md](SchemaV2.md) · **Last updated:** 2026-09-20
+**Status:** Illustrative companion, aligned with revised submission columns · **Last updated:** 2026-09-21
+**Companion to:** [SchemaV2.md](SchemaV2.md)
 
 One illustrative row per table in the v2 model, all pointing at the same story so the relationships stay traceable: **S1 — Invoice Reconciliation Assistant**, the same example used in SchemaV2's diagrams. GUIDs below are placeholders (`{table}-001` style), not real Dataverse ids. Sample data only — no real client information.
 
@@ -65,8 +66,8 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | Client Context (Redacted) | A regional manufacturing company |
 | Status | Client demo |
 | Publication Status | Published |
-| Shareable with Clients | Yes, with names removed |
-| Sample Data Level | Partly |
+| Safety Acknowledged | Yes |
+| Client Safe Reviewed | Yes, after librarian verification of anonymized text and media |
 | Thumbnail | invoice-reconciliation-thumb.png |
 | Date Added | 2026-06-02 |
 | Library Notes | Pilot feedback logged in ADR-0007 effort tracking. |
@@ -79,6 +80,8 @@ Tags on this row: `Capability` = AI & agents, Process automation · `Industry` =
 ## Tables related to Solution
 
 ### `nx_solutioncontributor`
+
+Both rows use **Effort Mode = Calendar** and **Direct Hours = not applicable**, because the parent is a Client demo. Ideas and working prototypes instead require Direct Hours and do not require the calendar inputs below.
 
 | nx_solutioncontributorid | Name | Solution | Built By | Start Date | End Date | Allocation (%) | Business Calendar |
 |---|---|---|---|---|---|---|---|

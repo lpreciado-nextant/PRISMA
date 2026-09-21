@@ -1,8 +1,7 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import type {
   AssetType,
-  SampleDataLevel,
-  Shareability,
+  DemoAsset,
   Solution,
   SolutionContributor,
   SolutionStatus,
@@ -14,16 +13,14 @@ import { Icon } from "../components/Icon";
 import { SolutionCard } from "../components/SolutionCard";
 import { navigate } from "../lib/router";
 import type { AppUser } from "../lib/powerContext";
-import { calculateEffort } from "../lib/effort";
+import { calculateEffort, usesDirectHours } from "../lib/effort";
 
-/** Mirrors §3.1 of the end-to-end design: seven steps, draft saving throughout. */
 const STEPS = [
+  "Before you start",
   "What is it?",
   "What & why",
   "Tag it",
-  "Attach the demo",
-  "Images",
-  "Safety & sharing",
+  "Media",
   "Review & submit",
 ] as const;
 
@@ -40,12 +37,10 @@ interface Draft {
   technologies: string[];
   industries: string[];
   assetType: AssetType;
-  assetUrl: string;
-  allowsEmbedding: boolean;
+  assets: DemoAsset[];
   thumbnail: string;
   images: { id: string; src: string; caption: string }[];
-  shareable: Shareability;
-  sampleData: SampleDataLevel;
+  safetyAcknowledged: boolean;
   clientContext: string;
   redacted: string;
   contributors: SolutionContributor[];
@@ -62,18 +57,16 @@ const EMPTY_DRAFT: Draft = {
   technologies: [],
   industries: [],
   assetType: "Self-contained HTML file",
-  assetUrl: "",
-  allowsEmbedding: true,
+  assets: [],
   thumbnail: "",
   images: [],
-  shareable: "Yes",
-  sampleData: "Yes – all data is invented",
+  safetyAcknowledged: false,
   clientContext: "",
   redacted: "",
   contributors: [],
 };
 
-const DRAFT_KEY = "nsl.draft";
+const DRAFT_KEY = "nsl.draft.v2";
 
 const STATUS_OPTIONS: SolutionStatus[] = [
   "Idea / concept",
@@ -84,24 +77,8 @@ const STATUS_OPTIONS: SolutionStatus[] = [
 
 const ASSET_OPTIONS: AssetType[] = [
   "Self-contained HTML file",
-  "Hosted web app (URL)",
-  "Power Apps",
-  "Power BI",
   "Video walkthrough only",
-  "Desktop app or script",
   "Client-ready one-pager / slide",
-];
-
-const SHARE_OPTIONS: { value: Shareability; hint: string }[] = [
-  { value: "Yes", hint: "Safe to show any client as-is." },
-  { value: "Yes, with names removed", hint: "Shareable once the client name is redacted." },
-  { value: "No – internal only", hint: "Never appears in present mode." },
-];
-
-const SAMPLE_OPTIONS: SampleDataLevel[] = [
-  "Yes – all data is invented",
-  "Partly – some real figures",
-  "No – contains real client data",
 ];
 
 function optionsFrom(key: "capabilities" | "industries" | "technologies"): string[] {
@@ -128,12 +105,13 @@ function loadDraft(draftKey: string): Draft {
   }
 }
 
-export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChange, onSubmitted }: {
+export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChange, onSubmitted, initialSolution }: {
   user: AppUser;
   draftKey?: string;
   activeStep?: number;
   onStepChange?: (step: number) => void;
-  onSubmitted?: () => void;
+  onSubmitted?: (solution: Solution) => void;
+  initialSolution?: Solution;
 }) {
   const [internalStep, setInternalStep] = useState(0);
   const step = activeStep ?? internalStep;
@@ -143,7 +121,16 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
     onStepChange?.(value);
   };
   const [draft, setDraft] = useState<Draft>(() => {
-    const saved = loadDraft(draftKey);
+    const saved: Draft = initialSolution ? {
+      ...EMPTY_DRAFT, name: initialSolution.name, summary: initialSolution.summary,
+      area: initialSolution.specializationArea, status: initialSolution.status,
+      whatItDoes: initialSolution.whatItDoes, businessValue: initialSolution.businessValue,
+      capabilities: initialSolution.capabilities, technologies: initialSolution.technologies,
+      industries: initialSolution.industries, contributors: initialSolution.contributors,
+      thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
+      assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
+      redacted: initialSolution.clientContextRedacted ?? "", safetyAcknowledged: false,
+    } : loadDraft(draftKey);
     if (saved.contributors.length) return saved;
     return { ...saved, contributors: [{
       id: crypto.randomUUID(),
@@ -155,28 +142,41 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   });
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [storageError, setStorageError] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   // Draft saving at every step — the design's contribution-friction requirement.
   // Image data URLs stay in memory only: they can blow the storage quota.
   useEffect(() => {
+    if (submitted) {
+      try { sessionStorage.removeItem(draftKey); } catch { return; }
+      return;
+    }
     const t = setTimeout(() => {
-      sessionStorage.setItem(draftKey, JSON.stringify({ ...draft, thumbnail: "", images: [] }));
-      setSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      try {
+        sessionStorage.setItem(draftKey, JSON.stringify({ ...draft, thumbnail: "", images: [], assets: [] }));
+        setSavedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setStorageError("");
+      } catch {
+        setStorageError("Draft storage is unavailable. Keep this page open until you submit.");
+      }
     }, 400);
     return () => clearTimeout(t);
-  }, [draft, draftKey]);
+  }, [draft, draftKey, submitted]);
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
 
-  const needsRedaction = draft.shareable === "Yes, with names removed";
+  const directEffort = usesDirectHours(draft.status);
+  const normalizedContributors = draft.contributors.map((contributor) => ({ ...contributor, effortMode: directEffort ? "direct" as const : "calendar" as const }));
   const builders = [...new Map([
     ...BUILDERS,
     BUILDERS.find((builder) => builder.email.toLowerCase() === user.userPrincipalName.toLowerCase()) ??
       { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName },
     ...draft.contributors.map((contributor) => contributor.builtBy),
   ].filter((builder) => builder.id).map((builder) => [builder.email.toLowerCase(), builder])).values()];
-  const contributionResults = draft.contributors.map((contributor) => {
+  const contributionResults = normalizedContributors.map((contributor) => {
     try {
       if (!contributor.builtBy.id) throw new Error("Select a contributor.");
       if (draft.contributors.filter((entry) => entry.builtBy.id === contributor.builtBy.id).length > 1) {
@@ -188,9 +188,10 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
     }
   });
   const contributorsValid = draft.contributors.length > 0 && contributionResults.every((result) => !result.error);
-  const basicsValid = Boolean(draft.name.trim() && draft.summary.trim()) && contributorsValid;
-  const safetyValid = !needsRedaction || draft.redacted.trim().length > 0;
-  const stepValid = step === 0 ? basicsValid : step === 5 ? safetyValid : true;
+  const basicsValid = Boolean(draft.name.trim() && draft.summary.trim()) && contributorsValid && (!draft.clientContext.trim() || Boolean(draft.redacted.trim()));
+  const safetyValid = draft.safetyAcknowledged;
+  const mediaValid = draft.images.length > 0 && !uploading;
+  const stepValid = safetyValid && (step === 1 ? basicsValid : step === 4 ? mediaValid : true);
   const totalHours = Math.round(contributionResults.reduce((total, result) => total + result.hours, 0) * 100) / 100;
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
     set("contributors", draft.contributors.map((contributor) => contributor.id === id ? { ...contributor, ...patch } : contributor));
@@ -203,11 +204,13 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       whatItDoes: draft.whatItDoes,
       businessValue: draft.businessValue,
       specializationArea: draft.area,
-      contributors: draft.contributors,
+      contributors: draft.contributors.map((contributor) => ({
+        ...contributor, effortMode: usesDirectHours(draft.status) ? "direct" : "calendar",
+      })),
       status: draft.status,
       publicationStatus: "Draft",
-      shareable: draft.shareable,
-      sampleDataLevel: draft.sampleData,
+      safetyAcknowledged: draft.safetyAcknowledged,
+      clientSafeReviewed: false,
       clientContext: draft.clientContext || undefined,
       clientContextRedacted: draft.redacted || undefined,
       thumbnail: draft.thumbnail || undefined,
@@ -217,7 +220,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       capabilities: draft.capabilities,
       technologies: draft.technologies,
       industries: draft.industries,
-      assets: [],
+      assets: draft.assets,
     }),
     [draft],
   );
@@ -235,19 +238,18 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           <p className="eyebrow mt-6">Submitted</p>
           <h1 className="mt-2 text-[26px] font-bold">Now it's pending review</h1>
           <p className="mx-auto mt-3 max-w-[46ch] text-[15.5px]" style={{ color: "var(--ink-2)" }}>
-            The librarian has been notified. Nothing reaches a client's screen unreviewed — once
-            approved, <b style={{ color: "var(--ink)" }}>{draft.name || "your solution"}</b> is
-            published and your name is on the card.
+            <b style={{ color: "var(--ink)" }}>{draft.name || "Your solution"}</b> is pending review in this local preview.
+            No notification was sent and nothing was published. Submissions and media remain available until this page is reloaded.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={() => navigate("/")} className="cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold" style={{ fontFamily: "var(--font-display)", background: "var(--accent)", color: "var(--on-accent)" }}>
-              Back to the library
+            <button type="button" onClick={() => navigate("/my-submissions")} className="cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold" style={{ fontFamily: "var(--font-display)", background: "var(--accent)", color: "var(--on-accent)" }}>
+              My submissions
             </button>
             <button
               type="button"
               onClick={() => {
-                sessionStorage.removeItem(draftKey);
-                setDraft(EMPTY_DRAFT);
+                if (initialSolution) { navigate("/submit"); return; }
+                setDraft({ ...EMPTY_DRAFT, contributors: [{ id: crypto.randomUUID(), builtBy: { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName }, startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID }] });
                 setStep(0);
                 setSubmitted(false);
               }}
@@ -280,7 +282,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           Put your work on the shelf
         </h1>
         <p className="mt-2 max-w-[58ch] text-[15.5px]" style={{ color: "var(--ink-2)" }}>
-          Seven short steps, under ten minutes. Your draft saves as you type
+          Six steps to a client-ready submission. Text drafts save in this tab; media stays in memory.
           {savedAt && (
             <span className="font-mono text-[11px]" style={{ color: "var(--ink-3)" }}>
               {" "}
@@ -290,6 +292,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         </p>
       </div>
 
+      {storageError && <p role="alert" className="mt-3 text-[14px]">{storageError}</p>}
+
       <ol className="mt-6 flex flex-wrap gap-2" aria-label="Submission steps">
         {STEPS.map((label, i) => {
           const state = i === step ? "current" : i < step ? "done" : "todo";
@@ -297,7 +301,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             <li key={label}>
               <button
                 type="button"
-                onClick={() => i < step && setStep(i)}
+                onClick={() => i < step && (i === 0 || safetyValid) && setStep(i)}
                 aria-current={state === "current" ? "step" : undefined}
                 className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold ${i < step ? "cursor-pointer" : "cursor-default"}`}
                 style={{
@@ -328,6 +332,22 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
       <div key={step} className="glass glass-lite glass-sheen animate-rise mt-5 rounded-[24px] p-6 sm:p-8">
         {step === 0 && (
+          <StepShell title="Before you start" lede="Your work will help CSMs present solutions to clients. Prepare a client-safe story before adding content.">
+            <ul className="list-disc space-y-4 pl-5 text-[15px]">
+              <li>Use invented or anonymized data in descriptions, screenshots, videos, documents and HTML. Remove confidential figures, names and identifying details.</li>
+              <li>Only attach material you are authorized to share. Acknowledging this does not replace librarian review.</li>
+              <li>The dedicated client field is internal only. Write a separate anonymous description for presentations, or leave both fields empty for work without a client.</li>
+            </ul>
+            <label className="flex cursor-pointer items-start gap-3 text-[15px]">
+              <input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={(event) => set("safetyAcknowledged", event.target.checked)} />
+              <span>I understand and will submit only authorized, client-safe content, with client identity confined to the internal client field.</span>
+            </label>
+          </StepShell>
+        )}
+
+        {step > 0 && !safetyValid && <p role="alert">Accept the safety requirements in Before you start to continue.</p>}
+
+        {step === 1 && safetyValid && (
           <StepShell title="What is it?" lede="The card's first impression — name it like a product, not a project code.">
             <Field label="Solution name" required hint="Give the solution a short, recognizable product name.">
               <input className={inputCls} value={draft.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Ledger Reconciler" maxLength={100} />
@@ -353,8 +373,15 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                 ))}
               </div>
             </Field>
+            <Field label="Who was this developed for?" hint="Optional. Client and engagement name for internal discovery only; never included in present mode.">
+              <input className={inputCls} value={draft.clientContext} onChange={(event) => set("clientContext", event.target.value)} placeholder="e.g. Fabrikam Logistics, FY26 pilot" maxLength={200} />
+            </Field>
+            <Field label="How should we describe this client?" required={Boolean(draft.clientContext.trim())} hint="Client-visible context without names or identifying details. Leave empty if this work has no client.">
+              <input className={inputCls} value={draft.redacted} onChange={(event) => set("redacted", event.target.value)} placeholder="e.g. a national logistics provider" maxLength={200} />
+            </Field>
             <section aria-labelledby="contributors-heading" className="mt-2 min-w-0 border-t pt-5" style={{ borderColor: "var(--glass-edge)" }}>
               <h3 id="contributors-heading" className="text-[17px] font-semibold">Built by & effort</h3>
+              <p className="mt-1 text-[13px]" style={{ color: "var(--ink-2)" }}>{directEffort ? "Enter each person's hours, including preparation and discovery." : "Estimated capacity: inclusive US business days, excluding federal holidays, multiplied by 8 hours and allocation."}</p>
               {draft.contributors.map((contributor, index) => {
                 const calendar = BUSINESS_CALENDARS.find((entry) => entry.id === contributor.calendarId);
                 const result = contributionResults[index];
@@ -369,6 +396,9 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                           onChange={(builtBy) => updateContributor(contributor.id, { builtBy })}
                         />
                       </div>
+                      {directEffort ? <Field label="Hours contributed" required>
+                        <input type="number" className={inputCls} min={0} step={0.01} value={contributor.directHours ?? ""} onChange={(event) => updateContributor(contributor.id, { directHours: event.target.value === "" ? undefined : Number(event.target.value) })} />
+                      </Field> : <>
                       <Field label="Start date" required>
                         <input type="date" className={`${inputCls} min-w-0`} min={calendar?.startDate} max={calendar?.endDate} value={contributor.startDate} onChange={(event) => updateContributor(contributor.id, { startDate: event.target.value })} />
                       </Field>
@@ -378,9 +408,10 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                       <Field label="Allocation (%)" required>
                         <input type="number" className={inputCls} min={0} max={100} step={0.01} value={Number.isFinite(contributor.allocation) ? contributor.allocation : ""} onChange={(event) => updateContributor(contributor.id, { allocation: event.target.value === "" ? NaN : Number(event.target.value) })} />
                       </Field>
+                      </>}
                       <div className="flex min-w-0 items-center justify-between gap-3 sm:col-span-2">
                         <p id={`effort-${contributor.id}`} aria-live="polite" className="text-[13px]" style={{ color: result.error ? "var(--proto)" : "var(--ink-2)" }}>
-                          {result.error || `${result.businessDays} business days · ${result.hours.toLocaleString()} hours`}
+                          {result.error || `${directEffort ? "" : `${result.businessDays} business days · `}${result.hours.toLocaleString()} hours`}
                         </p>
                         {index > 0 && (
                           <button type="button" className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg border" style={{ borderColor: "var(--glass-edge)" }} title="Remove contributor" aria-label={`Remove contributor ${index + 1}`} onClick={() => set("contributors", draft.contributors.filter((entry, entryIndex) => entryIndex === 0 || entry.id !== contributor.id))}>
@@ -403,7 +434,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           </StepShell>
         )}
 
-        {step === 1 && (
+        {step === 2 && safetyValid && (
           <StepShell
             title="What does it do, and why does it matter?"
             lede="The step CSMs depend on most. Write for the person who wasn't there."
@@ -421,7 +452,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           </StepShell>
         )}
 
-        {step === 2 && (
+        {step === 3 && safetyValid && (
           <StepShell title="Tag it" lede="Tags are how a CSM finds this in eight months. Capabilities and industries are governed; technologies are open.">
             <TagPicker label="Capabilities" governed options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(v) => set("capabilities", v)} />
             <TagPicker label="Technologies" options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
@@ -429,51 +460,15 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           </StepShell>
         )}
 
-        {step === 3 && (
-          <StepShell title="Attach the demo" lede="Every solution needs at least one asset a CSM can show with no setup.">
-            <Field label="Asset type">
-              <div className="flex flex-wrap gap-2">
-                {ASSET_OPTIONS.map((t) => (
-                  <Chip key={t} active={draft.assetType === t} onClick={() => set("assetType", t)}>
-                    {t}
-                  </Chip>
-                ))}
-              </div>
-            </Field>
-            {draft.assetType === "Self-contained HTML file" || draft.assetType === "Video walkthrough only" || draft.assetType === "Client-ready one-pager / slide" ? (
-              <div
-                className="grid place-items-center rounded-[16px] border border-dashed px-6 py-10 text-center"
-                style={{ borderColor: "var(--glass-edge-hi)", color: "var(--ink-3)" }}
-              >
-                <Icon name="download" size={22} />
-                <p className="mt-2 text-[14px]">
-                  Drop the file here — it lives in a Dataverse File column, no external storage.
-                </p>
-                <p className="mt-1 font-mono text-[10.5px] tracking-[0.1em] uppercase">Mock — upload disabled in the PoC</p>
-              </div>
-            ) : (
-              <>
-                <Field label="URL" hint="Paste the full link to the demo or asset. Power Apps and Power BI links open in a new tab.">
-                  <input className={inputCls} value={draft.assetUrl} onChange={(e) => set("assetUrl", e.target.value)} placeholder="https://demo.example.com/ledger" type="url" maxLength={500} />
-                </Field>
-                {draft.assetType === "Hosted web app (URL)" && (
-                  <Field label="Embedding">
-                    <div className="flex flex-wrap gap-2">
-                      <Chip active={draft.allowsEmbedding} onClick={() => set("allowsEmbedding", true)}>Embeds in the viewer</Chip>
-                      <Chip active={!draft.allowsEmbedding} onClick={() => set("allowsEmbedding", false)}>Refuses frames — pop out</Chip>
-                    </div>
-                  </Field>
-                )}
-              </>
-            )}
-          </StepShell>
-        )}
-
-        {step === 4 && (
+        {step === 4 && safetyValid && (
           <StepShell
-            title="Images"
-            lede="One thumbnail for the card, and as many screenshots as the story needs on the detail page. All optional."
+            title="Media"
+            lede="At least one detail image is required. Add an optional thumbnail, video, one-pager or slide deck, or self-contained HTML demo."
           >
+            <div className="border-l-2 pl-4 text-[14px]" style={{ borderColor: "var(--accent)", color: "var(--ink-2)" }}>
+              <MediaGuidance capabilities={draft.capabilities} />
+              <p className="mt-2">Remove confidential data and client identifiers from every attachment before uploading.</p>
+            </div>
             <Field label="Card thumbnail" hint="The card grid's hero image — without one, the card gets a generated poster">
               {draft.thumbnail ? (
                 <div className="flex items-center gap-4">
@@ -503,7 +498,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
             <Field
               label={`Detail screenshots · ${draft.images.length}/${MAX_GALLERY}`}
-              hint="Shown as a gallery on the detail page — each is a row in the images table"
+              required
+              hint="At least one image showing the experience or outcome. A thumbnail alone does not meet this requirement."
             >
               <div className="flex flex-col gap-3">
                 {draft.images.length > 0 && (
@@ -547,14 +543,14 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                   <UploadZone
                     multiple
                     onFiles={(srcs) =>
-                      set("images", [
-                        ...draft.images,
-                        ...srcs.slice(0, MAX_GALLERY - draft.images.length).map((src) => ({
+                      setDraft((current) => ({ ...current, images: [
+                        ...current.images,
+                        ...srcs.slice(0, MAX_GALLERY - current.images.length).map((src) => ({
                           id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
                           src,
                           caption: "",
                         })),
-                      ])
+                      ] }))
                     }
                     line="Add detail screenshots — flows, dashboards, the moments worth narrating."
                     sub={`Up to ${MAX_GALLERY} · select several at once`}
@@ -562,56 +558,60 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                 )}
               </div>
             </Field>
+            <Field label="Additional media format">
+              <SelectPicker label="Additional media format" value={draft.assetType} options={ASSET_OPTIONS} onChange={(value) => set("assetType", value)} />
+            </Field>
+            <Field label="Attach additional media" hint="Optional. HTML, MP4/WebM video, or PDF/PPT/PPTX documents. Up to 25 MB each; up to 6 additional files. Local preview only.">
+              <input type="file" disabled={uploading || draft.assets.length >= 6} accept={draft.assetType === "Self-contained HTML file" ? ".html,.htm" : draft.assetType === "Video walkthrough only" ? ".mp4,.webm" : ".pdf,.ppt,.pptx"}
+                onChange={async (event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (!file) return;
+                  const type = draft.assetType;
+                  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+                  const allowed = type === "Self-contained HTML file" ? ["html", "htm"] : type === "Video walkthrough only" ? ["mp4", "webm"] : ["pdf", "ppt", "pptx"];
+                  if (!allowed.includes(extension) || !file.size || file.size > 25 * 1024 * 1024) { setUploadError("Choose a supported, non-empty file of 25 MB or less."); return; }
+                  setUploading(true);
+                  setUploadError("");
+                  try {
+                    const asset: DemoAsset = { id: crypto.randomUUID(), name: file.name, assetType: type, allowsEmbedding: type !== "Client-ready one-pager / slide", sortOrder: draft.assets.length + 1 };
+                    if (type === "Self-contained HTML file") asset.htmlContent = await file.text();
+                    else asset.fileData = await readDataUrl(file);
+                    setDraft((current) => ({ ...current, assets: [...current.assets, asset].slice(0, 6) }));
+                  } catch { setUploadError("This file could not be read. Try another file."); }
+                  finally { setUploading(false); }
+                }} />
+            </Field>
+            {uploading && <p role="status">Reading attachment...</p>}
+            {uploadError && <p role="alert">{uploadError}</p>}
+            <ul className="space-y-4">
+              {draft.assets.map((asset) => <li key={asset.id} className="flex min-w-0 items-center gap-3 border-b pb-3" style={{ borderColor: "var(--glass-edge)" }}>
+                <Icon name="file" /><span className="min-w-0 flex-1 break-words">{asset.name}</span>
+                <button type="button" title="Remove attachment" aria-label={`Remove ${asset.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center" onClick={() => set("assets", draft.assets.filter((entry) => entry.id !== asset.id))}><Icon name="close" /></button>
+              </li>)}
+            </ul>
           </StepShell>
         )}
 
-        {step === 5 && (
-          <StepShell
-            title="Safety & sharing"
-            lede="The highest-consequence answers in the form — they decide what a client can ever see."
-          >
-            <Field label="Shareable with clients" required>
-              <div className="flex flex-col gap-2">
-                {SHARE_OPTIONS.map(({ value, hint }) => (
-                  <RadioRow key={value} label={value} hint={hint} checked={draft.shareable === value} onSelect={() => set("shareable", value)} />
-                ))}
-              </div>
-            </Field>
-            <Field label="Sample data level" required>
-              <div className="flex flex-col gap-2">
-                {SAMPLE_OPTIONS.map((value) => (
-                  <RadioRow key={value} label={value} checked={draft.sampleData === value} onSelect={() => set("sampleData", value)} />
-                ))}
-              </div>
-            </Field>
-            <Field label="Client / context" hint="Name the client and the engagement or pilot. Internal only; never shown in present mode.">
-              <input className={inputCls} value={draft.clientContext} onChange={(e) => set("clientContext", e.target.value)} placeholder="e.g. Fabrikam Logistics, FY26 pilot" maxLength={200} />
-            </Field>
-            {needsRedaction && (
-              <Field label="Client context (redacted)" required hint="Describe the context without client names or identifying details. This version is shown in present mode.">
-                <input className={inputCls} value={draft.redacted} onChange={(e) => set("redacted", e.target.value)} placeholder="e.g. a national logistics provider" maxLength={200} />
-              </Field>
-            )}
-          </StepShell>
-        )}
-
-        {step === 6 && (
+        {step === 5 && safetyValid && (
           <StepShell title="Review & submit" lede="Exactly how the card will look on the shelf once the librarian approves it.">
             <div className="pointer-events-none mx-auto w-full max-w-[400px]">
-              <SolutionCard solution={preview} present={false} index={0} />
+              <SolutionCard solution={preview} present index={0} />
             </div>
             <dl className="grid gap-2 text-[14px] sm:grid-cols-2">
-              <ReviewRow label="Asset">{draft.assetType}</ReviewRow>
+              <ReviewRow label="Attachments">{draft.assets.length} additional files</ReviewRow>
               <ReviewRow label="Built by">{draft.contributors.map((contributor) => contributor.builtBy.name).join(", ")}</ReviewRow>
               <ReviewRow label="Total effort">{totalHours.toLocaleString()} hours</ReviewRow>
               <ReviewRow label="Images">
                 {draft.thumbnail ? "Thumbnail" : "Generated poster"} · {draft.images.length}{" "}
                 {draft.images.length === 1 ? "screenshot" : "screenshots"}
               </ReviewRow>
-              <ReviewRow label="Shareable">{draft.shareable}</ReviewRow>
-              <ReviewRow label="Sample data">{draft.sampleData}</ReviewRow>
-              <ReviewRow label="Goes to">Librarian review queue</ReviewRow>
+              <ReviewRow label="Safety">{safetyValid ? "Acknowledged; review required" : "Not acknowledged"}</ReviewRow>
+              <ReviewRow label="Client (internal)">{draft.clientContext || "No client"}</ReviewRow>
+              <ReviewRow label="Public context">{draft.redacted || "None"}</ReviewRow>
+              <ReviewRow label="Next state">Pending review (local)</ReviewRow>
             </dl>
+            {(!basicsValid || !mediaValid) && <p role="alert">Complete Identity & effort and add at least one detail image before submitting.</p>}
           </StepShell>
         )}
 
@@ -637,8 +637,11 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           ) : (
             <button
               type="button"
-              onClick={() => { if (basicsValid && safetyValid) { setSubmitted(true); onSubmitted?.(); } }}
-              disabled={!basicsValid || !safetyValid}
+              onClick={() => { if (basicsValid && safetyValid && mediaValid) {
+                onSubmitted?.({ ...preview, id: initialSolution?.id ?? crypto.randomUUID(), publicationStatus: "Pending review" });
+                setSubmitted(true);
+              } }}
+              disabled={!basicsValid || !safetyValid || !mediaValid}
               className="cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               style={{ fontFamily: "var(--font-display)", background: "var(--live)", color: "var(--ground)" }}
             >
@@ -683,6 +686,93 @@ function Field({ label, required, hint, children }: { label: string; required?: 
       </span>
       {children}
     </label>
+  );
+}
+
+function SelectPicker<Value extends string>({ label, value, options, onChange }: {
+  label: string;
+  value: Value;
+  options: readonly Value[];
+  onChange: (value: Value) => void;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const select = (option: Value) => {
+    onChange(option);
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative min-w-0">
+      <button
+        type="button"
+        role="combobox"
+        aria-label={label}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={open ? `${id}-list` : undefined}
+        aria-activedescendant={open ? `${id}-option-${activeIndex}` : undefined}
+        className={`${inputCls} flex cursor-pointer items-center justify-between gap-3 text-left`}
+        onClick={() => {
+          setActiveIndex(Math.max(0, options.indexOf(value)));
+          setOpen(!open);
+        }}
+        onBlur={() => setOpen(false)}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            setOpen(true);
+            setActiveIndex((current) => !open
+              ? Math.max(0, options.indexOf(value))
+              : (current + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length);
+          } else if (event.key === "Home" || event.key === "End") {
+            event.preventDefault();
+            setOpen(true);
+            setActiveIndex(event.key === "Home" ? 0 : options.length - 1);
+          } else if ((event.key === "Enter" || event.key === " ") && open) {
+            event.preventDefault();
+            select(options[activeIndex]);
+          } else if (event.key === "Escape" && open) {
+            event.preventDefault();
+            event.stopPropagation();
+            setOpen(false);
+          } else if (event.key.length === 1 && event.key !== " " && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            const match = options.findIndex((option) => option.toLowerCase().startsWith(event.key.toLowerCase()));
+            if (match >= 0) {
+              event.preventDefault();
+              setOpen(true);
+              setActiveIndex(match);
+            }
+          }
+        }}
+      >
+        <span className="min-w-0 break-words">{value}</span>
+        <Icon name="chevronDown" className="shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-full right-0 left-0 z-20 mt-1 rounded-lg border p-1 shadow-lg" style={{ background: "var(--ground)", borderColor: "var(--glass-edge)", color: "var(--ink)" }}>
+          <ul id={`${id}-list`} role="listbox" aria-label={label} className="max-h-60 overflow-y-auto">
+            {options.map((option, index) => (
+              <li
+                key={option}
+                id={`${id}-option-${index}`}
+                role="option"
+                aria-selected={option === value}
+                ref={(element) => { if (index === activeIndex) element?.scrollIntoView({ block: "nearest" }); }}
+                className="flex cursor-pointer items-center justify-between gap-3 rounded-md px-3 py-2 text-[14px] break-words hover:bg-(--glass-edge)"
+                style={{ background: index === activeIndex ? "var(--glass-edge)" : undefined }}
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={(event) => { event.preventDefault(); select(option); }}
+              >
+                <span className="min-w-0 font-semibold">{option}</span>
+                <span className="w-4 shrink-0">{option === value && <Icon name="check" />}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -777,37 +867,26 @@ function PersonPicker({ value, options, onChange }: {
   );
 }
 
-function RadioRow({ label, hint, checked, onSelect }: { label: string; hint?: string; checked: boolean; onSelect: () => void }) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={checked}
-      onClick={onSelect}
-      className="flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors duration-200"
-      style={{
-        borderColor: checked ? "var(--accent)" : "var(--glass-edge)",
-        background: checked ? "color-mix(in srgb, var(--accent) 12%, transparent)" : "transparent",
-      }}
-    >
-      <span
-        className="grid h-4 w-4 shrink-0 place-items-center rounded-full border"
-        style={{ borderColor: checked ? "var(--accent)" : "var(--glass-edge-hi)" }}
-      >
-        {checked && <span className="h-2 w-2 rounded-full" style={{ background: "var(--accent)" }} />}
-      </span>
-      <span>
-        <span className="block text-[14px] font-semibold" style={{ color: "var(--ink)" }}>
-          {label}
-        </span>
-        {hint && (
-          <span className="block text-[12.5px]" style={{ color: "var(--ink-3)" }}>
-            {hint}
-          </span>
-        )}
-      </span>
-    </button>
-  );
+function MediaGuidance({ capabilities }: { capabilities: string[] }) {
+  const isAgent = capabilities.some((value) => /ai|agent/i.test(value));
+  const isData = capabilities.some((value) => /data|analytics/i.test(value));
+  const isWorkflow = capabilities.some((value) => /workflow|approval/i.test(value));
+  return <div className="space-y-1">
+    {isAgent && <p>AI & agents: show a user request, the agent's response and the outcome. A simple interaction diagram or explanatory slide works too.</p>}
+    {isData && <p>Data & analytics: show a dashboard and the decision it enables. A clear data-source or integration diagram can explain reusable connections.</p>}
+    {isWorkflow && <p>Workflows: show the important before-and-after steps and the result for the user.</p>}
+    {!isAgent && !isData && !isWorkflow && <p>Show the experience and its business outcome. Use screenshots or explanatory diagrams that a client can understand without technical context.</p>}
+  </div>;
+}
+
+function readDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("File could not be read."));
+    reader.onabort = () => reject(new Error("File reading was cancelled."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function TagPicker({
@@ -826,37 +905,53 @@ function TagPicker({
   allowNew?: boolean;
 }) {
   const [newTag, setNewTag] = useState("");
+  const [query, setQuery] = useState("");
   const toggle = (v: string) =>
     onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
-  const all = [...new Set([...options, ...selected])];
+  const all = [...new Map([...options, ...selected].map((value) => [value.trim().toLowerCase(), value])).values()];
+  const filtered = all.filter((value) => value.toLowerCase().includes(query.trim().toLowerCase()));
 
   return (
-    <Field label={label} hint={governed ? "Governed — librarian-managed vocabulary" : "Name a tool, platform, or language used to build the solution. Add missing technologies one at a time with Enter."}>
-      <div className="flex flex-wrap gap-2">
-        {all.map((v) => (
+    <fieldset className="min-w-0">
+      <legend className="mb-2 text-[14px] font-semibold">{label}</legend>
+      <p className="mb-2 text-[12px]" style={{ color: "var(--ink-2)" }}>{governed ? "Librarian-managed vocabulary" : "Tools, platforms and languages used to build the solution"}</p>
+      <input type="search" className={inputCls} aria-label={`Search ${label.toLowerCase()}`} placeholder={`Search ${label.toLowerCase()}`} value={query} onChange={(event) => setQuery(event.target.value)} />
+      <div className="mt-3 flex max-h-60 flex-wrap gap-2 overflow-y-auto">
+        {filtered.map((v) => (
           <Chip key={v} active={selected.includes(v)} onClick={() => toggle(v)}>
             {v}
           </Chip>
         ))}
+        {!filtered.length && <p className="text-[13px]">No matching tags.</p>}
+      </div>
+      {query && <p className="mt-2 text-[12px]">Selected: {selected.join(", ") || "None"}</p>}
         {allowNew && (
-          <span className="inline-flex items-center gap-1">
+          <div className="mt-3 flex w-64 max-w-full items-center gap-2">
             <input
-              className={`${inputCls} h-8 w-40 rounded-full px-3 py-0 text-[12.5px]`}
+              className="h-8 min-w-0 flex-1 rounded-full border border-(--glass-edge) bg-transparent px-3 py-1 text-[12.5px] font-medium text-(--ink) outline-none placeholder:text-(--ink-3) focus:border-(--accent)"
+              style={{ background: "color-mix(in srgb, var(--ink) 6%, transparent)" }}
               value={newTag}
               onChange={(e) => setNewTag(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newTag.trim()) {
-                  onChange([...selected, newTag.trim()]);
+                  e.preventDefault();
+                  const value = all.find((entry) => entry.toLowerCase() === newTag.trim().toLowerCase()) ?? newTag.trim();
+                  if (!selected.some((entry) => entry.toLowerCase() === value.toLowerCase())) onChange([...selected, value]);
                   setNewTag("");
                 }
               }}
-              placeholder="e.g. Azure Functions"
-              aria-label={`Add a new ${label.toLowerCase()} tag`}
+              placeholder="Add a new technology"
+              aria-label="Add a new technology"
+              maxLength={100}
             />
-          </span>
+            <button type="button" title="Add new technology" aria-label="Add new technology" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full border border-(--glass-edge) disabled:cursor-not-allowed disabled:opacity-40" disabled={!newTag.trim()} onClick={() => {
+              const value = all.find((entry) => entry.toLowerCase() === newTag.trim().toLowerCase()) ?? newTag.trim();
+              if (value && !selected.some((entry) => entry.toLowerCase() === value.toLowerCase())) onChange([...selected, value]);
+              setNewTag("");
+            }}><Icon name="plus" /></button>
+          </div>
         )}
-      </div>
-    </Field>
+    </fieldset>
   );
 }
 
@@ -871,6 +966,8 @@ function UploadZone({
   sub: string;
   multiple?: boolean;
 }) {
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   return (
     <label
       className="grid cursor-pointer place-items-center rounded-[16px] border border-dashed px-6 py-8 text-center transition-colors duration-200 hover:border-(--accent)"
@@ -878,28 +975,39 @@ function UploadZone({
     >
       <input
         type="file"
-        accept="image/*"
+        accept="image/png,image/jpeg,image/webp"
+        disabled={busy}
         multiple={multiple}
         className="sr-only"
-        onChange={(e) => {
+        onChange={async (e) => {
           const files = [...(e.target.files ?? [])];
-          if (files.length === 0) return;
-          Promise.all(
-            files.map(
-              (file) =>
-                new Promise<string>((resolve) => {
-                  const reader = new FileReader();
-                  reader.onload = () => resolve(String(reader.result));
-                  reader.readAsDataURL(file);
-                }),
-            ),
-          ).then(onFiles);
           e.target.value = "";
+          if (files.length === 0) return;
+          if (files.length > MAX_GALLERY || files.some((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type) || !file.size || file.size > 5 * 1024 * 1024)) {
+            setError("Choose up to six PNG, JPG or WebP images, each non-empty and no larger than 5 MB.");
+            return;
+          }
+          setBusy(true);
+          setError("");
+          try {
+            const sources = await Promise.all(files.map(async (file) => {
+              const source = await readDataUrl(file);
+              const image = new Image();
+              image.src = source;
+              await image.decode();
+              return source;
+            }));
+            onFiles(sources);
+          } catch { setError("An image could not be read. Choose a valid PNG, JPG or WebP file."); }
+          finally { setBusy(false); }
         }}
       />
       <Icon name="grid" size={20} />
       <p className="mt-2 text-[14px]">{line}</p>
       <p className="mt-1 font-mono text-[10.5px] tracking-[0.1em] uppercase">{sub}</p>
+      <p className="mt-1 text-[12px]">5 MB per image</p>
+      {busy && <p role="status">Reading images...</p>}
+      {error && <p role="alert">{error}</p>}
     </label>
   );
 }

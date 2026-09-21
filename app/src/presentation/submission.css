@@ -16,7 +16,7 @@
 .presentation-source { color: var(--ink-2); font-size: 13px; padding-bottom: 3px; }
 .presentation-source > span:first-child { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--live); }
 .presentation-source-detail { display: block; font-size: 12px; margin-top: 4px; }
-.presentation-chapters { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 0 40px; }
+.presentation-chapters { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 0 40px; }
 .presentation-chapters button { display: flex; flex-direction: column; text-align: left; gap: 8px; padding: 14px 12px 15px; border-top: 1px solid var(--glass-edge); border-bottom: 2px solid var(--glass-edge); cursor: pointer; color: var(--ink-2); font: 600 12px/1.4 var(--font-display); }
 .presentation-chapters button:hover { background: var(--glass-bg-2); color: var(--ink); }
 .presentation-chapters [aria-current="step"] { border-bottom-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }

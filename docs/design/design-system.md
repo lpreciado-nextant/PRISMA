@@ -1,6 +1,6 @@
 # Design system
 
-**Status:** Living · **Last updated:** 2026-09-17
+**Status:** Living, badge inventory aligned with revised submission · **Last updated:** 2026-09-21
 **Reference implementation:** [`app/src/index.css`](../../app/src/index.css) and the component set in [`app/src/components/`](../../app/src/components/)
 
 The HTML prototype established the visual language; the code app PoC evolved it into the **liquid-glass system** and is the current reference. The production app matches the PoC.
@@ -53,6 +53,6 @@ Present mode changes the visual register (see [present mode](../workflows/presen
 | Solution card | `app/src/components/SolutionCard.tsx` | Thumbnail/poster, name, one-liner, status badge, capability chips |
 | Facet rail | `app/src/components/FacetRail.tsx` | Additive facets with live counts, removable chips |
 | Poster | `app/src/components/Poster.tsx` | Generated per-specialization placeholder for records without a thumbnail |
-| Badges | `app/src/components/Badges.tsx` | Status and shareability badges |
+| Badges | `app/src/components/Badges.tsx` | Maturity status, specialization and tag chips |
 | Present banner | `app/src/components/PresentBanner.tsx` | Persistent present-mode indicator |
 | Background | `app/src/components/Background.tsx` | Aurora ground |

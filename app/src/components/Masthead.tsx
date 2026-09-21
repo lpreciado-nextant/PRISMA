@@ -18,7 +18,7 @@ export function Masthead({
 }) {
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6">
-      <div className="glass glass-sheen mx-auto flex h-16 w-full max-w-[1340px] items-center gap-3 rounded-[20px] px-3 sm:px-5">
+      <div className="glass glass-sheen mx-auto flex min-h-16 w-full max-w-[1340px] flex-wrap items-center gap-2 rounded-[20px] px-3 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-0">
         <button
           type="button"
           onClick={() => navigate("/")}
@@ -50,10 +50,15 @@ export function Masthead({
           </span>
         </button>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          {!present && <button type="button" onClick={() => navigate("/my-submissions")} title="My submissions" aria-label="My submissions" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}>
+            <Icon name="file" size={15} /><span className="hidden whitespace-nowrap md:inline">My submissions</span>
+          </button>}
           {!present && (
             <button
               type="button"
+              title="Submit a solution"
+              aria-label="Submit a solution"
               onClick={() => navigate("/submit")}
               className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold transition-colors duration-200"
               style={{
@@ -125,6 +130,8 @@ function PresentToggle({ present, onToggle }: { present: boolean; onToggle: () =
     <button
       type="button"
       onClick={onToggle}
+      aria-label="Present mode"
+      title="Present mode"
       aria-pressed={present}
       className="inline-flex h-10 cursor-pointer items-center gap-2.5 rounded-xl border px-3 text-[13.5px] font-semibold transition-all duration-300"
       style={{
@@ -139,7 +146,7 @@ function PresentToggle({ present, onToggle }: { present: boolean; onToggle: () =
         {present ? "Present mode on" : "Present mode"}
       </span>
       <span
-        className="relative h-4 w-7 rounded-full transition-colors duration-300"
+        className="relative hidden h-4 w-7 rounded-full transition-colors duration-300 sm:block"
         style={{
           background: present
             ? "color-mix(in srgb, var(--on-accent) 45%, transparent)"

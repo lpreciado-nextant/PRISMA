@@ -1,9 +1,11 @@
 # Demo assets
 
-**Status:** Draft for review · **Last updated:** 2026-09-17
+**Status:** Agreed unified Media submission; legacy catalogue formats retained · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
+
+New submissions use a single Media step: **images, videos, one-pagers/slides, and self-contained HTML**. Require one to six detail images; thumbnail is optional. Hosted-app, Power Apps, Power BI, desktop/script and access-request controls are deferred. The table below also records behavior for existing legacy catalogue entries.
 
 ## Behaviour by type
 
@@ -18,10 +20,12 @@ Asset handling is type-dependent. **The CSM should never have to guess what will
 
 ## Rules
 
-- **Every solution has at least one asset a CSM can show without any setup.** Where the primary asset can't be embedded, a video walkthrough is the universal fallback. The librarian enforces this at review.
+- **New submissions require at least one detail image.** Images alone are sufficient; a thumbnail alone is not. Review the complete visual story and confidentiality before publication.
 - Uploaded assets live in Dataverse File/Image columns ([ADR-0004](../architecture/decisions/adr-0004-assets-in-dataverse.md)).
 - Self-contained HTML renders in a **sandboxed iframe** with a restrictive policy and no same-origin access to the host app; files are librarian-reviewed before publication ([security model](../architecture/security-model.md)).
 - Hosted URLs are subject to the periodic link-health check ([content health](../operations/content-health.md)).
+
+In the PoC, PNG/JPG/WebP images are decoded locally (5 MB each). Optional HTML, MP4/WebM and PDF/PPT/PPTX attachments are limited to six files, 25 MB each. Uploaded HTML uses a restrictive CSP and sandbox without same-origin access; network resources are blocked. Media lasts in memory until reload, not in tab storage or Dataverse. These local limits do not configure Dataverse column limits.
 
 ## Viewer
 

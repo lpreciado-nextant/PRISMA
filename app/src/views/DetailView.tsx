@@ -59,7 +59,7 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present }: { solution: Solution; present: boolean }) {
+export function DetailView({ solution, present, onEdit }: { solution: Solution; present: boolean; onEdit?: () => void }) {
   const area = AREAS[solution.specializationArea];
   const assets = [...solution.assets].sort((a, b) => a.sortOrder - b.sortOrder);
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
@@ -73,13 +73,15 @@ export function DetailView({ solution, present }: { solution: Solution; present:
     <div className="animate-rise mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
       <button
         type="button"
-        onClick={() => navigate("/")}
+        onClick={() => navigate(onEdit ? "/my-submissions" : "/")}
         className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold"
         style={{ fontFamily: "var(--font-display)", color: "var(--ink-2)" }}
       >
         <Icon name="chevronLeft" size={15} />
-        Back to the library
+        {onEdit ? "My submissions" : "Back to the library"}
       </button>
+      {onEdit && <button className="ml-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px]" style={{ borderColor: "var(--glass-edge)" }} onClick={onEdit}><Icon name="file" />Edit submission</button>}
+      {onEdit && <p className="mt-3 text-[13px]" style={{ color: "var(--proto)" }}>Pending review. Local preview only; not published.</p>}
 
       <section className="glass glass-lite glass-sheen mt-4 overflow-hidden rounded-[26px]">
         <Poster
@@ -93,7 +95,7 @@ export function DetailView({ solution, present }: { solution: Solution; present:
           <div className="flex flex-wrap items-center gap-2.5">
             <AreaTag area={solution.specializationArea} size="md" />
             <StatusPill status={solution.status} />
-            {!present && solution.shareable === "No – internal only" && (
+            {!present && !solution.clientSafeReviewed && (
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.1em] uppercase"
                 style={{
@@ -103,7 +105,7 @@ export function DetailView({ solution, present }: { solution: Solution; present:
                 }}
               >
                 <Icon name="shield" size={11} />
-                Internal only
+                Not cleared for presentation
               </span>
             )}
           </div>
@@ -206,8 +208,9 @@ export function DetailView({ solution, present }: { solution: Solution; present:
               </Row>
               <Row label="Area">{area.name}</Row>
               <Row label="Total effort">{totalHours.toLocaleString()} hours</Row>
+              {solution.status === "Client demo" && <Row label="Effort scope">Demo effort only; production delivery may take longer.</Row>}
               {clientLine && <Row label="Context">{clientLine}</Row>}
-              <Row label="Sample data">{solution.sampleDataLevel}</Row>
+              {!present && <Row label="Client review">{solution.clientSafeReviewed ? "Cleared" : "Required"}</Row>}
               {!present && <Row label="Added">{solution.dateAdded}</Row>}
               <Row label="Industries">{solution.industries.join(" · ")}</Row>
             </dl>
@@ -219,9 +222,11 @@ export function DetailView({ solution, present }: { solution: Solution; present:
                 {contributions.map((contributor) => (
                   <li key={contributor.id} className="break-words">
                     <p className="font-semibold">{contributor.builtBy.name}</p>
-                    <p className="text-[12px]">{contributor.startDate} to {contributor.endDate}</p>
-                    <p>{contributor.allocation}% allocation · {contributor.businessDays} business days</p>
-                    <p className="text-[12px]" style={{ color: "var(--ink-3)" }}>{contributor.calendar?.name}</p>
+                    {contributor.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : <>
+                      <p className="text-[12px]">{contributor.startDate} to {contributor.endDate}</p>
+                      <p>{contributor.allocation}% allocation · {contributor.businessDays} business days</p>
+                      <p className="text-[12px]" style={{ color: "var(--ink-3)" }}>{contributor.calendar?.name}</p>
+                    </>}
                     <p className="font-mono" style={{ color: "var(--accent)" }}>{contributor.hours.toLocaleString()} hours</p>
                   </li>
                 ))}
@@ -308,6 +313,11 @@ function AssetRow({ solution, asset }: { solution: Solution; asset: DemoAsset })
       navigate(`/s/${solution.id}/demo/${asset.id}`);
     } else if (behaviour.mode === "external" && asset.externalUrl) {
       window.open(asset.externalUrl, "_blank", "noopener,noreferrer");
+    } else if (behaviour.mode === "download" && asset.fileData) {
+      const link = document.createElement("a");
+      link.href = asset.fileData;
+      link.download = asset.name;
+      link.click();
     }
   };
 
@@ -329,7 +339,7 @@ function AssetRow({ solution, asset }: { solution: Solution; asset: DemoAsset })
         <Icon name={behaviour.icon === "play" ? "play" : behaviour.icon === "download" ? "download" : behaviour.icon === "mail" ? "mail" : "external"} size={17} />
       </span>
       <span className="min-w-[12rem] flex-1">
-        <span className="block text-[14.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
+        <span className="block break-words text-[14.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>
           {asset.name}
         </span>
         <span className="block text-[12.5px]" style={{ color: "var(--ink-3)" }}>

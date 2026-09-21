@@ -8,21 +8,33 @@ import prismaMark from "../../public/prisma-mark-v2.svg?raw";
 import "../index.css";
 import "./submission.css";
 
-const DRAFT_KEY = "prisma.presentation.submission.v1";
+const DRAFT_KEY = "prisma.presentation.submission.v2";
 const example = SOLUTIONS[0];
 const user = { fullName: BUILDERS[2].name, userPrincipalName: BUILDERS[2].email, live: false };
 
 const chapters = [
   {
+    label: "Before you start", title: "Prepare a client-safe story first.",
+    summary: "Contributors acknowledge privacy requirements before entering content, not after uploading it.",
+    points: [
+      ["Authorized material only", "Descriptions and media must use invented or anonymized data, with confidential figures and identifying details removed."],
+      ["One internal exception", "The dedicated client field supports internal discovery. An authored anonymous description takes its place in presentations."],
+      ["Acknowledgment is not approval", "Submission still requires librarian review. Contributors cannot clear their own work for client presentation."],
+    ],
+    tryIt: "Accept the safety requirements to unlock Continue. Editing requires a fresh acknowledgment.",
+    boundary: "This is a local preview. Production requires Dataverse access controls and server-side validation.",
+    output: "Safety acknowledgment",
+  },
+  {
     label: "Identity & effort", title: "Give the work a name. Give its builders credit.",
     summary: "The first step turns a project into a recognizable solution, with a clear owner and a consistent measure of contribution.",
     points: [
       ["A card, not a project code", "The name, one-line summary, specialization and maturity become the first impression in the library."],
-      ["Credit every contributor", "Search people by name or email. Each person has their own dates and allocation; duplicate contributors are excluded."],
-      ["Effort without guesswork", "Inclusive US business days, excluding federal holidays, multiplied by 8 hours and allocation. The sample totals 218 hours."],
+      ["Credit every contributor", "Search people by name or email. Duplicate contributors are excluded; keep at least one person."],
+      ["Effort fits maturity", "Ideas and prototypes take direct hours. Demos and production use US business days multiplied by 8 hours and allocation. The sample totals 218 hours."],
     ],
-    tryIt: "Change an allocation and watch the total recalculate. Clear the name to see Continue become unavailable.",
-    boundary: "People are a mock list, not a live directory. Calendar coverage is 2026; effort is estimated capacity, not timesheet actuals.",
+    tryIt: "Switch from Working prototype to Client demo to see dates and allocation. Add a client name and an anonymous description.",
+    boundary: "People are a mock list. Calendar coverage is 2026. Direct hours are reported effort; calendar hours are estimated capacity.",
     output: "Solution identity + contributor rows",
   },
   {
@@ -45,56 +57,32 @@ const chapters = [
       ["Technologies", "Identify the implementation stack. An open vocabulary accommodates new tools."],
       ["Industries", "Add the business contexts where this work is relevant. Capabilities and industries are governed vocabularies."],
     ],
-    tryIt: "Toggle a capability, then add a technology. The same tags appear on the review card.",
-    boundary: "Options come from the bundled mock catalogue. Proposing a governed tag does not send a request to a librarian.",
+    tryIt: "Search the tag lists. Add React and then react: the technology should only be selected once.",
+    boundary: "Governed options come from the bundled catalogue. New technologies are local draft values, not shared reference records.",
     output: "Capability, technology + industry relationships",
   },
   {
-    label: "Demo assets", title: "Give the CSM something they can actually show.",
-    summary: "The submission captures the kind of demo and how it should open, keeping the client presentation path predictable.",
+    label: "Media", title: "Give the CSM something they can actually show.",
+    summary: "Images and demo files live in one step, with guidance based on the capabilities selected earlier.",
     points: [
-      ["Choose the format", "HTML, hosted apps, Power Apps, Power BI, video, desktop tools and one-pagers have different delivery needs."],
-      ["Choose the experience", "Hosted apps can embed or pop out. Power Apps and Power BI links open separately. HTML belongs in the sandboxed viewer."],
-      ["Keep the handoff practical", "The intended submission includes a ready-to-show asset, not just a description of something that exists."],
+      ["Images are required", "Add one to six detail images. The card thumbnail remains optional, with a generated poster as the fallback."],
+      ["Four categories", "Images, videos, one-pagers or slides, and self-contained HTML. Permission-dependent app links are deferred."],
+      ["Show the outcome", "Use user flows, understandable diagrams or dashboard screenshots. Remove confidential data and client identifiers."],
     ],
-    tryIt: "Select Hosted web app (URL) to reveal the URL and embedding controls, then switch back to HTML.",
-    boundary: "File attachment is disabled. URLs are draft inputs only; this PoC does not upload assets or require an asset before advancing.",
-    output: "Demo asset type + delivery settings",
-  },
-  {
-    label: "Images", title: "Let the work speak before the demo starts.",
-    summary: "A thumbnail helps people scan the shelf; screenshots make the detail page useful before anyone opens the demo.",
-    points: [
-      ["The shelf image", "One optional thumbnail appears on the solution card. Without it, PRISMA generates a poster."],
-      ["The visual story", "Add up to six detail screenshots and caption each meaningful screen or result."],
-      ["Schema-shaped assets", "The intended model stores the thumbnail on the solution and gallery items as related image rows."],
-    ],
-    tryIt: "Choose a local PNG or JPG. Caption a screenshot, remove it, or inspect the thumbnail on the review card.",
-    boundary: "Image previews work locally. Image payloads stay in memory and are not restored after a reload or written to Dataverse.",
-    output: "Card thumbnail + up to six gallery images",
-  },
-  {
-    label: "Safety & sharing", title: "Decide what can reach a client's screen.",
-    summary: "Sharing permission and sample-data classification are explicit decisions, not details left for the presenter to infer.",
-    points: [
-      ["Permission is deliberate", "Share as-is, share with names removed, or keep internal. Internal-only solutions are excluded from the present-mode catalogue."],
-      ["Redaction is authored", "Sharing with names removed requires a separate client-safe context. PRISMA does not scrub names from the original text at runtime."],
-      ["Data needs its own answer", "Invented, mixed and real client data are classified separately from permission to share."],
-    ],
-    tryIt: "Choose Yes, with names removed and clear the redacted context. Continue stays disabled until you provide one.",
-    boundary: "This records local draft choices only. The PoC's client-side filtering is not a security boundary; production requires server-side access controls.",
-    output: "Sharing policy + sample-data classification",
+    tryIt: "Remove the detail images to see Continue disabled. A thumbnail alone is not sufficient. Add a PNG, JPG or WebP to continue.",
+    boundary: "Media stays in memory and is lost on reload. No file is uploaded to Dataverse. HTML runs in a restrictive sandbox in the app viewer.",
+    output: "Required gallery + optional thumbnail and attachments",
   },
   {
     label: "Review & submit", title: "Preview the shelf. Then hand off for review.",
     summary: "The builder sees the actual library card before submitting, with the key decisions summarized alongside it.",
     points: [
       ["The real card component", "This is the same SolutionCard used in the library, populated by the values entered in this form."],
-      ["One last check", "Review contributors, effort, demo type, images, sharing and sample data before the handoff."],
+      ["One last check", "Review contributors, effort, media, acknowledgment and internal versus client-visible context."],
       ["Submission is not publication", "The intended workflow moves to librarian review. Approval, not the submit button, makes the solution available on the shelf."],
     ],
     tryIt: "Submit for review to reach the handoff explanation. Use the chapter list to revisit any part of the story.",
-    boundary: "Submission only changes the local screen. No record, notification or librarian queue entry is created, and the live catalogue is unchanged.",
+    boundary: "This walkthrough simulates the handoff. The app also provides My submissions for local inspection and editing; neither writes to Dataverse or notifies a librarian.",
     output: "Intended next state: Pending review",
   },
 ];
@@ -104,8 +92,8 @@ function seedDraft() {
     name: example.name, summary: example.summary, area: example.specializationArea,
     status: example.status, whatItDoes: example.whatItDoes, businessValue: example.businessValue,
     capabilities: example.capabilities, technologies: example.technologies, industries: example.industries,
-    assetType: "Self-contained HTML file", assetUrl: "", allowsEmbedding: true,
-    thumbnail: "", images: [], shareable: example.shareable, sampleData: example.sampleDataLevel,
+    assetType: "Self-contained HTML file", assets: [],
+    thumbnail: "", images: example.images, safetyAcknowledged: false,
     clientContext: example.clientContext, redacted: example.clientContextRedacted,
     contributors: example.contributors.map((contributor) => ({ ...contributor, calendarId: DEFAULT_BUSINESS_CALENDAR_ID })),
   }));
@@ -135,7 +123,7 @@ export function SubmissionPresentation() {
       if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
       event.preventDefault();
       setSubmitted(false);
-      setStep((current) => Math.max(0, Math.min(6, current + (event.key === "ArrowRight" ? 1 : -1))));
+      setStep((current) => Math.max(0, Math.min(chapters.length - 1, current + (event.key === "ArrowRight" ? 1 : -1))));
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -184,12 +172,12 @@ export function SubmissionPresentation() {
       <main className="presentation-layout">
         <aside className="presentation-notes" aria-label="Stage explanation">
           <div className="presentation-notes-content" key={submitted ? "submitted" : step}>
-            <p className="eyebrow">{submitted ? "The handoff" : `Chapter ${String(step + 1).padStart(2, "0")} / 07`}</p>
+            <p className="eyebrow">{submitted ? "The handoff" : `Chapter ${String(step + 1).padStart(2, "0")} / 06`}</p>
             <h2>{submitted ? "The builder is done. Curation comes next." : chapter.title}</h2>
             <p className="presentation-summary">{submitted ? "The intended next step belongs to the librarian: verify the story, assets and sharing choices before publication." : chapter.summary}</p>
             <dl className="presentation-points">
               {(submitted ? [
-                ["Review", "The librarian checks completeness, classifications, demo readiness and client-safe context."],
+                ["Review", "The librarian checks completeness, safe media and anonymous presentation context."],
                 ["Approve or return", "Approved work is published. Work needing changes goes back to the contributor."],
                 ["Discover and present", "Once approved, CSMs can find the solution and show only content permitted in present mode."],
               ] : chapter.points).map(([title, detail], index) => (
@@ -202,8 +190,8 @@ export function SubmissionPresentation() {
           </div>
           <div className="presentation-paging">
             <button className="presentation-icon" aria-label="Previous chapter" title="Previous chapter" disabled={step === 0} onClick={() => goTo(step - 1)}><Icon name="chevronLeft" size={20} /></button>
-            <span>{String(step + 1).padStart(2, "0")} / 07</span>
-            <button className="presentation-icon" aria-label="Next chapter" title="Next chapter" disabled={step === 6} onClick={() => goTo(step + 1)}><Icon name="arrowRight" size={20} /></button>
+            <span>{String(step + 1).padStart(2, "0")} / 06</span>
+            <button className="presentation-icon" aria-label="Next chapter" title="Next chapter" disabled={step === chapters.length - 1} onClick={() => goTo(step + 1)}><Icon name="arrowRight" size={20} /></button>
           </div>
         </aside>
 
@@ -217,7 +205,7 @@ export function SubmissionPresentation() {
                 <h2 id="handoff-title">Ready for the librarian</h2>
                 <p>In the production workflow, this is where your solution would become <strong>Pending review</strong>.</p>
                 <ol className="presentation-review-flow">
-                  <li><Icon name="check" /><div><strong>Contributor submits</strong><span>Story, people, effort, assets and sharing</span></div></li>
+                  <li><Icon name="check" /><div><strong>Contributor submits</strong><span>Story, people, effort, media and safety acknowledgment</span></div></li>
                   <li><Icon name="shield" /><div><strong>Librarian reviews</strong><span>Checks quality and client readiness</span></div></li>
                   <li><Icon name="grid" /><div><strong>Approved work reaches the shelf</strong><span>CSMs discover, open and present</span></div></li>
                 </ol>

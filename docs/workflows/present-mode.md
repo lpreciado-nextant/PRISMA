@@ -1,6 +1,6 @@
 # Present mode
 
-**Status:** Draft for review, including contributor metadata · **Last updated:** 2026-09-18
+**Status:** Agreed safety-first contract; PoC mirror implemented · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §3.4](../design/end-to-end-design.md#34-present-mode)
 **Principle:** never embarrass a CSM in front of a client. Present mode **restricts** rather than merely hides.
 
@@ -11,13 +11,13 @@ One switch in the masthead, available from any page, flipped before the CSM shar
 | Behaviour | Detail |
 |---|---|
 | Suppresses internal-only content | Library notes, publication status, review history, per-person dates, allocation, calendar and effort breakdown; builder names and aggregate effort hours may remain |
-| Restricts the catalogue | Only solutions flagged *Shareable with clients*. Internal-only solutions disappear from search and browse entirely — there is no way to accidentally surface one |
-| Applies client-safe redaction | Where flagged *Yes, with names removed*, the dedicated `Client Context (Redacted)` field replaces client names ("a national logistics provider"). Never runtime string-scrubbing — it is not trustworthy |
+| Restricts the catalogue | Only Published records with Safety Acknowledged and Client Safe Reviewed. Pending or uncleared records are filtered before search/render |
+| Always excludes client identity | Internal client/context and project fields are removed from the catalogue projection. Only the separately authored anonymous context is used; no runtime scrubbing of text or media |
 | Changes the visual treatment | Larger type, minimal chrome, no filter rail by default, full-bleed demo viewer |
 
 ## Enforcement
 
-Client-side filtering alone is not sufficient. The present-mode query filters on shareability **at the Dataverse level**, so a client-visible list can never contain an internal-only record even transiently. See [ADR-0005](../architecture/decisions/adr-0005-present-mode-server-side-enforcement.md) and the [security model](../architecture/security-model.md).
+Client-side filtering alone is not sufficient. Enforce publication, acknowledgment and librarian-controlled review **at the Dataverse level**, with an internal-field-free projection. Submission and My submissions routes redirect to the library in present mode. See [ADR-0005](../architecture/decisions/adr-0005-present-mode-server-side-enforcement.md) and the [security model](../architecture/security-model.md).
 
 ## Mode state
 
@@ -31,7 +31,7 @@ The CSM is always the authenticated driver, screen-sharing their session. No cli
 
 ## Rollout gate
 
-Phase 3 ships **only after** a deliberate review of the shareability flags on every published record ([roadmap](../delivery/roadmap.md)).
+Phase 3 ships **only after** deliberate client-safe review of every published record. Never infer clearance from legacy classifications or a contributor checkbox. The mock KAIRO and Field Ops records remain excluded.
 
 ## PoC mapping
 

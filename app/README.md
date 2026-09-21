@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** PoC published to Power Apps, including searchable contributors, multi-person effort, US-only calendar and updated submission hints; standalone submission walkthrough available; hosted UI validation pending.
-**Last updated:** 2026-09-18
+**Status:** Local safety-first submission revision implemented; published Power Apps deployment still reflects the September 18 version. No upload performed for this revision.
+**Last updated:** 2026-09-21
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -18,16 +18,22 @@ The point of this PoC is the **experience**, not the data. Everything renders fr
 | Filter state encoded in the URL so a view is pasteable | `src/lib/router.ts` |
 | Zero-result state that suggests relaxing the narrowest facet | `src/views/LibraryView.tsx` |
 | Solution detail as a CSM briefing document | `src/views/DetailView.tsx` |
-| Multiple builders with individual dates, calendar, allocation and calculated hours | `src/views/SubmitView.tsx`, `src/views/DetailView.tsx`, `src/lib/effort.ts` |
+| Maturity-based effort: direct hours for ideas/prototypes; US calendar calculation for demos/production | `src/views/SubmitView.tsx`, `src/views/DetailView.tsx`, `src/lib/effort.ts` |
 | Searchable Person field by name/email, keyboard selection and duplicate prevention | `src/views/SubmitView.tsx` |
 | Captioned screenshot gallery (`nx_solutionimage`) on the detail page | `src/views/DetailView.tsx` |
-| Guided seven-step submission form with draft saving, thumbnail + gallery upload | `src/views/SubmitView.tsx` |
+| Six-step safety-first form, required detail images, optional thumbnail and local media | `src/views/SubmitView.tsx` |
+| My submissions, inspection and editing; no welcome page | `src/views/MySubmissionsView.tsx`, `src/App.tsx` |
+| Searchable tag pickers with case-insensitive technology deduplication | `src/views/SubmitView.tsx` |
 | Type-dependent asset behaviour (viewer / pop-out / download / request) | `src/views/DetailView.tsx` |
 | Self-contained HTML rendered in a sandbox with no same-origin access | `src/views/ViewerView.tsx` |
 | Present mode — catalogue restriction, redaction, suppressed internal notes | `src/App.tsx` |
 | Liquid-glass design system, light and dark, reduced-motion aware | `src/index.css` |
 
 Present mode **restricts the catalogue** rather than hiding rows: the source list is filtered before render, which is the client-side mirror of the server-side Dataverse filter the real app will issue.
+
+Eligibility requires Published, Safety Acknowledged and librarian-controlled Client Safe Reviewed. Client identity, projects and notes are removed from the present-mode catalogue before search/render; only separately authored anonymous context is shown. Acknowledgment replaces the old sharing/sample-data fields but never grants approval.
+
+Submissions appear in **My submissions** as Pending review, without changing the published catalogue. They and their media remain in memory across navigation until reload. Text drafts use tab storage; media is not restored. No notification, Dataverse write or actual librarian queue entry occurs. New attachments support images, HTML, MP4/WebM video and PDF/PPT/PPTX documents; existing catalogue URL formats remain readable but cannot be newly submitted. See [media rules and local limits](../docs/workflows/demo-assets.md).
 
 ---
 
@@ -64,7 +70,7 @@ npm run lint
 
 ## Submission presentation
 
-Open [the interactive submission walkthrough](../presentation/submission.html) directly in a browser; no server is required. Seven chapters pair the actual PoC submission form with explanations of the decisions, data and limitations at each step. The walkthrough includes an editable BSO Quota example, a blank-start option, light/dark themes, chapter navigation and a simulated review handoff. Chapter controls let a presenter jump directly to any stage; the form's own Continue and Submit controls retain their validation.
+Open [the interactive submission walkthrough](../presentation/submission.html) directly in a browser; no server is required. Six chapters pair the real form with explanations. The editable BSO Quota example includes 218 direct hours and sample gallery images. A blank-start option, themes and simulated handoff remain. Chapter navigation does not bypass the required safety acknowledgment; Continue and Submit retain validation.
 
 The presentation imports `SubmitView`, `SolutionCard`, the people picker, effort calculations, icons and design tokens from the PoC rather than maintaining copies. Its draft uses a separate session-storage key, leaving the PoC draft untouched. Images remain in memory only. No submission, notification or publication reaches Dataverse.
 
@@ -79,11 +85,11 @@ The entry point is `src/presentation/SubmissionPresentation.tsx`; `scripts/build
 
 ## Contributor effort
 
-The current [schema](../docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) replaces a Solution's single builder and effort category with contributor rows. Each has a person, inclusive start/end dates, allocation (0-100%) and an automatically assigned US business calendar. Hours = Monday-Friday business days excluding calendar holidays × 8 × allocation / 100, rounded per person to two decimals and then summed. These are calculated capacity hours, not timesheet actuals or deployment duration.
+The current [schema](../docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) uses contributor rows. Ideas/prototypes take direct hours (finite, nonnegative, at most two decimals). Demos/production use inclusive dates, allocation (0-100%) and the US calendar: business days excluding holidays × 8 × allocation / 100, rounded per person, then summed. Changing maturity retains draft values but only validates/totals the active mode. Calendar hours are capacity, direct hours are reported effort; neither is deployment duration.
 
 The submission form adds/removes contributors, saves inputs in the session draft, validates calendar coverage and previews totals. Its Person field searches the mock people list by name or email, excludes already assigned people and supports arrow keys/Enter or pointer selection. Escape or leaving the field restores the committed selection; unmatched search text is never stored as a person. This is not a live directory integration. Catalogue search includes every builder. Detail shows a person-by-person breakdown internally; present mode keeps builder names and total hours but omits dates/allocation/calendar details.
 
-All contributors use **US business calendar (2026)** automatically, with no calendar dropdown: Monday-Friday excluding the eleven [OPM observed federal holidays](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/#url=2026), including July 3 for Independence Day. Coverage is January 1-December 31, 2026; state-specific and company holidays are not included. Both demo calendars have been removed; mock records and restored session drafts are reassigned to the US calendar and their totals recalculated. All contribution dates/allocations remain sample data. Production needs reviewed calendars and server-enforced validation/access rules ([ADR-0007](../docs/architecture/decisions/adr-0007-contributor-effort.md)). This change does not create Dataverse tables or publish the app.
+Calendar-mode contributors use **US business calendar (2026)** automatically, without a dropdown: Monday-Friday excluding the eleven [OPM observed federal holidays](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/#url=2026). Coverage is January 1-December 31, 2026. Direct-mode contributors need no dates or calendar. Mock idea/prototype totals were preserved as direct hours; production migration needs explicit confirmation, reviewed calendars and server-enforced validation ([ADR-0007](../docs/architecture/decisions/adr-0007-contributor-effort.md)). No Dataverse tables were created and the app was not published.
 
 ## PoC deployment
 
@@ -138,8 +144,8 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 Deliberately out of scope so the demo shows only what the platform can actually do:
 
-- Dataverse reads and writes — the catalogue is mock data, and the submission form collects a full draft (including thumbnail and gallery uploads, kept in memory) without persisting it anywhere
-- The librarian review queue, my-submissions, demo-request writes, and reference-data admin
-- Status and shareability facets on the rail (capability / technology / industry are implemented)
-- Real demo videos and uploaded HTML payloads — generated stand-ins are used, and clearly labelled
+- Dataverse reads/writes and durable submission/media persistence
+- Librarian review UI, demo-request writes, reference-data admin and optional AI writing assistance
+- Status facets on the rail (capability / technology / industry are implemented)
+- Permission-dependent media submission and access-request controls; some existing catalogue demos still use stand-ins
 - Security roles and field-level security, which are platform configuration rather than app code

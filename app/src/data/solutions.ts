@@ -1,4 +1,5 @@
 import type { AreaMeta, BusinessCalendar, Solution, SpecializationArea } from "../types";
+import { calculateEffort, usesDirectHours } from "../lib/effort.ts";
 
 export const BUILDERS = [
   { id: "mparry", name: "Michael Parry", email: "mparry@nextant.com" },
@@ -64,7 +65,7 @@ function shot(label: string, from: string, to: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-export const SOLUTIONS: Solution[] = [
+const catalogue: Solution[] = [
   {
     id: "bso-quota",
     name: "BSO Quota",
@@ -81,8 +82,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Working prototype",
     publicationStatus: "Published",
-    shareable: "Yes, with names removed",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: true,
+    clientSafeReviewed: true,
     clientContext: "Contoso Global Partner Sales",
     clientContextRedacted: "a global technology vendor's partner organisation",
     dateAdded: "2026-02-11",
@@ -132,8 +133,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Working prototype",
     publicationStatus: "Published",
-    shareable: "Yes",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: true,
+    clientSafeReviewed: true,
     clientContext: "Internal build — three invented accounts",
     dateAdded: "2026-03-04",
     searchKeywords:
@@ -167,8 +168,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Client demo",
     publicationStatus: "Published",
-    shareable: "Yes",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: true,
+    clientSafeReviewed: true,
     clientContext: "Seven sample engagements",
     dateAdded: "2026-01-22",
     searchKeywords:
@@ -213,8 +214,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Working prototype",
     publicationStatus: "Published",
-    shareable: "Yes",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: true,
+    clientSafeReviewed: true,
     clientContext: "Sample budget requests",
     dateAdded: "2026-02-28",
     searchKeywords:
@@ -248,8 +249,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Live in production",
     publicationStatus: "Published",
-    shareable: "Yes",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: true,
+    clientSafeReviewed: true,
     clientContext: "Internal build",
     dateAdded: "2026-04-09",
     searchKeywords: "padel sport video analysis azure app service computer vision rally tagging",
@@ -285,8 +286,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Live in production",
     publicationStatus: "Published",
-    shareable: "Yes, with names removed",
-    sampleDataLevel: "Partly – some real figures",
+    safetyAcknowledged: false,
+    clientSafeReviewed: false,
     clientContext: "Northwind Staffing Group",
     clientContextRedacted: "a European professional-services firm",
     dateAdded: "2026-05-16",
@@ -335,8 +336,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Client demo",
     publicationStatus: "Published",
-    shareable: "Yes, with names removed",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: true,
+    clientSafeReviewed: true,
     clientContext: "Fabrikam Logistics",
     clientContextRedacted: "a national logistics provider",
     dateAdded: "2026-06-02",
@@ -382,8 +383,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Working prototype",
     publicationStatus: "Published",
-    shareable: "Yes",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: true,
+    clientSafeReviewed: true,
     clientContext: "Internal build",
     dateAdded: "2026-07-18",
     searchKeywords: "finance close reconciliation general ledger journal exceptions audit fabric sql",
@@ -415,8 +416,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Client demo",
     publicationStatus: "Published",
-    shareable: "Yes, with names removed",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: true,
+    clientSafeReviewed: true,
     clientContext: "Tailwind Traders shared services",
     clientContextRedacted: "a multinational retailer's shared-services centre",
     dateAdded: "2026-08-05",
@@ -460,8 +461,8 @@ export const SOLUTIONS: Solution[] = [
     ],
     status: "Idea / concept",
     publicationStatus: "Published",
-    shareable: "No – internal only",
-    sampleDataLevel: "Yes – all data is invented",
+    safetyAcknowledged: false,
+    clientSafeReviewed: false,
     clientContext: "Concept for an upcoming utilities pursuit",
     dateAdded: "2026-09-01",
     libraryNotes: "Concept only — no working build yet. Do not show to clients.",
@@ -480,3 +481,13 @@ export const SOLUTIONS: Solution[] = [
     ],
   },
 ];
+
+export const SOLUTIONS: Solution[] = catalogue.map((solution) => ({
+  ...solution,
+  contributors: solution.contributors.map((contributor) => usesDirectHours(solution.status) ? {
+    ...contributor,
+    effortMode: "direct",
+    directHours: calculateEffort(contributor, BUSINESS_CALENDARS.find((calendar) => calendar.id === contributor.calendarId)).hours,
+    startDate: "", endDate: "", allocation: 0,
+  } : { ...contributor, effortMode: "calendar" }),
+}));

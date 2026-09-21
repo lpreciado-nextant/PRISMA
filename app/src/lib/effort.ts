@@ -1,6 +1,10 @@
-import type { BusinessCalendar, SolutionContributor } from "../types";
+import type { BusinessCalendar, SolutionContributor, SolutionStatus } from "../types";
 
 const DAY_MS = 86_400_000;
+
+export function usesDirectHours(status: SolutionStatus): boolean {
+  return status === "Idea / concept" || status === "Working prototype";
+}
 
 function dateValue(value: string): number {
   const timestamp = Date.parse(`${value}T00:00:00Z`);
@@ -15,6 +19,16 @@ export function calculateEffort(
   contributor: SolutionContributor,
   calendar: BusinessCalendar | undefined,
 ): { businessDays: number; hours: number } {
+  if (contributor.effortMode === "direct") {
+    const hours = contributor.directHours;
+    if (typeof hours !== "number" || !Number.isFinite(hours) || hours < 0) {
+      throw new Error("Enter hours of zero or more.");
+    }
+    if (Math.abs(hours * 100 - Math.round(hours * 100)) > 0.0000001) {
+      throw new Error("Hours must have at most two decimal places.");
+    }
+    return { businessDays: 0, hours };
+  }
   if (!calendar || calendar.id !== contributor.calendarId) {
     throw new Error("Select a business calendar.");
   }
