@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Draft for review; code-based US calendar policy approved, app alignment pending · **Last updated:** 2026-09-21
+**Status:** Draft for review; controlled submission transitions specified; production integration and code-based US calendar app alignment pending · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -71,7 +71,13 @@ At expected scale (~40 solutions year one) the published catalogue fits in memor
 | Full-screen asset viewer | `#/s/:id/demo/:assetId` |
 | Guided submission | `#/submit` |
 | Present mode | A mode over every route, not a route — keeps its state persistent |
-| My submissions / review queue / reference-data admin | Not yet in the PoC |
+| My submissions / edit | `#/my-submissions` / `#/submit/:id` (browser-local) |
+| Review queue / record / asset | `#/review` / `#/review/:id` / `#/review/:id/demo/:assetId` (simulated librarian access) |
+| Reference-data admin | Not yet in the PoC |
+
+## Submission transitions
+
+The local app uses IndexedDB and pure transition/validation helpers; it does not enforce production roles or multi-user concurrency. Production save-draft, submit and review commands use Dataverse Custom APIs backed by synchronous plug-ins, with caller/state/version checks and conditional completeness validation. Protected publication/review fields are written by scoped handlers, not directly by contributors. File uploads are staged in Draft before transition validation. See [ADR-0008](decisions/adr-0008-controlled-submission-transitions.md), the [schema contract](../data_model/SchemaV2.md#draft-and-transition-contract) and [security model](security-model.md#controlled-transitions). These services are planned, not deployed; the code app remains a client-only SPA.
 
 ## Notifications
 

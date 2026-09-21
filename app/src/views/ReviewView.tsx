@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Icon } from "../components/Icon";
 import { AREA_ORDER, AREAS } from "../data/solutions";
-import type { SubmissionEntry } from "../lib/submissions";
+import { REVIEW_COMMENT_LIMIT, type SubmissionEntry } from "../lib/submissions";
 import { navigate } from "../lib/router";
 import { DetailView } from "./DetailView";
 
@@ -10,7 +10,7 @@ const FILTERS: ReviewFilter[] = ["Pending review", "Changes requested", "Publish
 
 function matches(entry: SubmissionEntry, filter: ReviewFilter): boolean {
   return filter === "Changes requested"
-    ? entry.solution.publicationStatus === "Draft" && Boolean(entry.changesRequested)
+    ? entry.solution.publicationStatus === "Draft" && entry.solution.reviewOutcome === "Changes requested"
     : entry.solution.publicationStatus === filter;
 }
 
@@ -45,9 +45,9 @@ export function ReviewView({ entries, selectedId, onDecision }: {
   if (selectedId) {
     if (!selected || selected.solution.publicationStatus === "Draft") return <div className="mx-auto max-w-[1340px] px-6 py-10">
       <button type="button" onClick={() => navigate("/review")} className="inline-flex cursor-pointer items-center gap-2 text-[14px]"><Icon name="chevronLeft" />Review queue</button>
-      <h1 className="mt-6 text-[26px]">{selected ? selected.changesRequested ? "Changes requested" : "Draft" : "Submission unavailable"}</h1>
+      <h1 className="mt-6 text-[26px]">{selected ? selected.solution.reviewOutcome === "Changes requested" ? "Changes requested" : "Draft" : "Submission unavailable"}</h1>
       <p role="status" className="mt-3">{selected ? "This submission is with its contributor for editing." : "This submission is no longer available for review."}</p>
-      {selected?.solution.libraryNotes && <p className="mt-4 whitespace-pre-wrap break-words border-l-2 pl-4" style={{ borderColor: "var(--proto)" }}>{selected.solution.libraryNotes}</p>}
+      {selected?.solution.reviewComments && <p className="mt-4 whitespace-pre-wrap break-words border-l-2 pl-4" style={{ borderColor: "var(--proto)" }}>{selected.solution.reviewComments}</p>}
     </div>;
 
     return <DetailView solution={selected.solution} present={false} onBack={() => navigate("/review")} backLabel="Review queue" assetBasePath={`/review/${selected.solution.id}`} reviewActions={
@@ -61,9 +61,10 @@ export function ReviewView({ entries, selectedId, onDecision }: {
           <div className="min-w-0"><dt className="font-semibold">Presentation context</dt><dd className="mt-1 break-words" style={{ color: "var(--ink-2)" }}>{selected.solution.clientContextRedacted || "Not provided"}</dd></div>
         </dl>
         {notice && <p role="status" className="mt-3">{notice}</p>}
+        {selected.solution.reviewComments && <div className="mt-4 border-l-2 pl-3" style={{ borderColor: "var(--proto)" }}><h3 className="text-[14px] font-semibold">Latest review comments</h3><p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{selected.solution.reviewComments}</p></div>}
         {selected.solution.publicationStatus === "Pending review" && <fieldset disabled={saving} className="mt-5 grid min-w-0 gap-5 lg:grid-cols-2">
           <label className="block text-[14px] font-semibold">Comments to contributor <span className="font-normal" style={{ color: "var(--ink-2)" }}>(required when returning)</span>
-            <textarea value={comments} onChange={(event) => setComments(event.target.value)} maxLength={4000} rows={3} className="mt-2 block w-full resize-y rounded-lg border bg-transparent px-3 py-2 font-normal" style={{ borderColor: "var(--glass-edge)" }} />
+            <textarea value={comments} onChange={(event) => setComments(event.target.value)} maxLength={REVIEW_COMMENT_LIMIT} rows={3} className="mt-2 block w-full resize-y rounded-lg border bg-transparent px-3 py-2 font-normal" style={{ borderColor: "var(--glass-edge)" }} />
           </label>
           <div className="flex min-w-0 flex-col justify-between gap-5">
             <label className="flex items-start gap-3 text-[14px]">

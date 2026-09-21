@@ -1,6 +1,6 @@
 # Nextant Solution Library — example row per table (SchemaV2)
 
-**Status:** Illustrative companion, aligned with revised submission columns and code-based US holiday policy · **Last updated:** 2026-09-21
+**Status:** Illustrative companion, aligned with draft/review fields and code-based US holiday policy · **Last updated:** 2026-09-21
 **Companion to:** [SchemaV2.md](SchemaV2.md)
 
 One illustrative row per table in the v2 model, all pointing at the same story so the relationships stay traceable: **S1 — Invoice Reconciliation Assistant**, the same example used in SchemaV2's diagrams. GUIDs below are placeholders (`{table}-001` style), not real Dataverse ids. Sample data only — no real client information.
@@ -63,14 +63,18 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | Client Context (Redacted) | A regional manufacturing company |
 | Status | Client demo |
 | Publication Status | Published |
+| Review Outcome | Approved |
+| Review Comments | Client-visible descriptions and media reviewed; cleared for publication. |
 | Safety Acknowledged | Yes |
 | Client Safe Reviewed | Yes, after librarian verification of anonymized text and media |
 | Thumbnail | invoice-reconciliation-thumb.png |
 | Date Added | 2026-06-02 |
-| Library Notes | Pilot feedback logged in ADR-0007 effort tracking. |
+| Library Notes | Internal catalogue curation note; separate from contributor review feedback. |
 | Search Keywords | AP automation, invoice matching, PO reconciliation |
 
 Tags on this row: `Industry` = Manufacturing · `Technology` = LangChain, Power Automate (native N:N, not columns — see [SchemaV2.md](SchemaV2.md#nx_solution)). `Specialization Area` and `Capability` are both single-valued lookup columns on the row above, not tags.
+
+For a new incomplete draft, use `Solution Name = Untitled solution`, null summary/capability, Publication Status Draft, Review Outcome None, null Review Comments and both safety booleans false. Contributors and images may be absent. On return, use Draft + Changes requested with actionable comments and both safety booleans false. On resubmission, retain that latest outcome/comments while setting Pending review; outcome alone is not publication clearance. See the [transition contract](SchemaV2.md#draft-and-transition-contract).
 
 ---
 

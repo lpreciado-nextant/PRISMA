@@ -82,6 +82,8 @@ export interface Solution {
   contributors: SolutionContributor[];
   status: SolutionStatus;
   publicationStatus: PublicationStatus;
+  reviewOutcome?: "None" | "Changes requested" | "Approved";
+  reviewComments?: string;
   safetyAcknowledged: boolean;
   clientSafeReviewed: boolean;
   clientContext?: string;

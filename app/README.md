@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Browser-local drafts, editing and librarian review implemented locally, not deployed. The prior safety-first revision was published on 2026-09-21; authenticated hosted UI verification remains pending.
+**Status:** Browser-local draft/review flow aligned with dedicated review fields and submission validation, not deployed. The prior safety-first revision was published on 2026-09-21; authenticated hosted UI verification remains pending.
 **Last updated:** 2026-09-21
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -36,6 +36,10 @@ Present mode **restricts the catalogue** rather than hiding rows: the source lis
 Eligibility requires Published, Safety Acknowledged and librarian-controlled Client Safe Reviewed. Client identity, projects and notes are removed from the present-mode catalogue before search/render; only separately authored anonymous context is shown. Acknowledgment replaces the old sharing/sample-data fields but never grants approval.
 
 **Save draft & close** stores incomplete submissions and media in browser-local IndexedDB. Saved drafts reopen from **My submissions**, including after reload. Submitting moves them to Pending review. The **Review queue** (`#/review`) supports inspection, approval/publication and return-to-Draft with required comments. Feedback appears in My submissions and the editor. Saving edits to a published record withdraws it until re-approved. Published local records join the mock catalogue and remain subject to present-mode safety filtering.
+
+Dedicated `reviewOutcome` and `reviewComments` (4000 characters) hold the latest librarian decision, separate from Library Notes. Contributor saves preserve them but always clear current approval; present mode strips both. Returning clears acknowledgment so resubmission requires a fresh confirmation. Submit and approve both validate identity, exactly one capability, effort, safety, anonymous context and required images; drafts can remain incomplete. Blank draft names get `Untitled solution` and reopen as an empty input.
+
+Older browser submissions with the `changesRequested` envelope key are migrated on load: copy identifiable legacy feedback without deleting original Library Notes, preserve media/identity and write the normalized shape at the next explicit save. This is not a Dataverse migration. Production nullable columns, owner mapping, controlled transitions and concurrency are specified in [SchemaV2](../docs/data_model/SchemaV2.md#draft-and-transition-contract) and [ADR-0008](../docs/architecture/decisions/adr-0008-controlled-submission-transitions.md), not implemented as services here. The existing 2026 mock calendar and broader legacy catalogue mappings remain separate alignment work.
 
 All saves are confined to this origin/browser profile, are subject to quota and eviction, and disappear if site data is cleared. Save failures leave changes open; no Dataverse writes or notifications occur. Review access is simulated, not authorization. Use non-sensitive test data only. Unsaved text has a temporary tab backup; unsaved media remains in memory. New attachments support images, HTML, MP4/WebM video and PDF/PPT/PPTX documents; existing catalogue URL formats remain readable but cannot be newly submitted. See [media rules and local limits](../docs/workflows/demo-assets.md).
 

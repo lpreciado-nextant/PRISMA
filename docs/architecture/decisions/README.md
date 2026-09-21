@@ -1,6 +1,6 @@
 # Architecture decision records
 
-**Status:** Living, including contributor effort · **Last updated:** 2026-09-18
+**Status:** Living, including contributor effort and controlled submission transitions · **Last updated:** 2026-09-21
 
 Decisions with lasting consequences are recorded here as short ADRs. Open questions live in the [decision log](../../delivery/decision-log.md) until they resolve into an ADR or a doc change.
 
@@ -15,6 +15,7 @@ Decisions with lasting consequences are recorded here as short ADRs. Open questi
 | [0005](adr-0005-present-mode-server-side-enforcement.md) | Present mode enforced server-side | Accepted |
 | [0006](adr-0006-power-automate-notifications-only.md) | Power Automate for notifications only | Accepted |
 | [0007](adr-0007-contributor-effort.md) | Contributor-level calendar-based effort | Accepted |
+| [0008](adr-0008-controlled-submission-transitions.md) | Controlled submission transitions | Accepted; production implementation pending |
 
 ## Template
 

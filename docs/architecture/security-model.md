@@ -1,12 +1,12 @@
 # Security model
 
-**Status:** Agreed safety-first contract, including contributor and project controls; platform enforcement pending · **Last updated:** 2026-09-21
+**Status:** Agreed draft/review field protections and controlled transition contract; platform enforcement pending · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
 
 - **Platform-enforced, not UI-enforced.** Unpublished records are invisible to CSMs at the Dataverse level, not merely filtered in the client.
-- **The publication gate is the safety mechanism.** Only the Librarian role can write publication status — enforced by a field-level security profile.
+- **The publication gate is the safety mechanism.** Only an authorized librarian can request approval. Synchronous Dataverse transition handlers write protected state after validating caller, record version and prerequisites; contributors cannot directly write publication/review fields.
 - **Present mode filters server-side.** Require Published, Safety Acknowledged and Client Safe Reviewed at Dataverse; omit internal client/context, projects and notes from the presentation projection. The PoC mirrors this before search/render, not as a security boundary.
 
 ## Role privileges
@@ -29,9 +29,23 @@
 
 | Column | Rule |
 |---|---|
-| Publication status | Writable by Librarian only |
-| Client Safe Reviewed | Writable by Librarian only; default false, cleared on material edits; acknowledgment cannot grant approval |
-| `Library Notes` | Unreadable by the CSM role; never rendered in present mode |
+| Publication status | No direct contributor write; controlled save/submit/review operations validate the caller; only Librarian may request approval |
+| Client Safe Reviewed | Protected write; defaults false; transition handler clears on edits/return; only authorized librarian approval sets true |
+| Review Outcome | Owner/authorized editor and Librarian read, no CSM read; only review operation changes latest decision; contributor saves preserve stored value |
+| Review Comments | Same permissions as Review Outcome; maximum 4000; nonblank on return; separate from Library Notes |
+| `Library Notes` | Librarian-controlled editorial write; unreadable by CSM; never used as contributor-facing review feedback |
+
+All review fields and Library Notes are omitted before CSM/presentation search or rendering, not merely hidden by CSS. Field permissions do not grant access to a row: owner/team/sharing rights still apply.
+
+## Controlled transitions
+
+[ADR-0008](decisions/adr-0008-controlled-submission-transitions.md) requires synchronous Dataverse Custom APIs backed by plug-ins for save draft, submit and review. These are future platform operations, not server routes in the code app. Each handler resolves the authenticated caller, checks parent and child rights, verifies the expected row version, validates the source state and applies the operation-specific [schema contract](../data_model/SchemaV2.md#draft-and-transition-contract). Never trust owner identifiers, review fields or approval flags sent by a contributor.
+
+Use narrowly scoped service execution for protected-field updates only after caller checks. A contributor may request Draft/Pending review and cause review invalidation without receiving field permission to publish or approve. Librarian status alone is insufficient for bypassing completeness or stale-version checks. Protect direct Web API/import writes and contributor/image/asset mutations as well: material edits must withdraw a published/pending record and clear Client Safe Reviewed before changed content can be exposed. Reject unsupported bypass paths. Upload files while Draft, finish uploads, and then validate the complete persisted graph before review/publication.
+
+State and related metadata transitions are transactional; file payload uploads are staged separately, not claimed to be atomic with a record transaction. Concurrent edits/reviews must fail visibly rather than approving an obsolete version. Power Automate sends notifications only after committed changes and never authorizes or validates a transition.
+
+The PoC mirrors validation and preserves protected fields from its current stored record, but browser storage and the visible librarian preview are not production authorization or cross-tab concurrency enforcement. No Custom APIs, plug-ins or field-security profiles have been deployed.
 
 ## Authentication
 

@@ -45,7 +45,7 @@ export default function App() {
   const saveSubmission = async (solution: Solution, status: "Draft" | "Pending review") => {
     const existing = submissions.find((entry) => entry.solution.id === solution.id);
     if (existing && existing.owner !== owner) throw new Error("You can only edit your own submissions.");
-    await persistEntry({ owner, solution: saveContribution(solution, status), changesRequested: status === "Draft" && existing?.changesRequested });
+    await persistEntry({ owner, solution: saveContribution(solution, status, existing?.solution) });
   };
 
   const [present, setPresent] = useState(() => sessionStorage.getItem(PRESENT_KEY) === "1");
@@ -135,7 +135,7 @@ export default function App() {
           <ReviewView entries={submissions} selectedId={recordId} onDecision={async (id, decision, comments, clientSafe) => {
             const entry = submissions.find((candidate) => candidate.solution.id === id);
             if (!entry) throw new Error("Submission unavailable. Return to the queue.");
-            await persistEntry({ ...entry, solution: reviewContribution(entry.solution, decision, comments, clientSafe), changesRequested: decision === "return" });
+            await persistEntry({ ...entry, solution: reviewContribution(entry.solution, decision, comments, clientSafe) });
           }} />
         ) : ownSolution?.publicationStatus === "Draft" ? null : solution && asset ? (
           <ViewerView solution={solution} asset={asset} present={present} />

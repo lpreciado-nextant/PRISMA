@@ -14,6 +14,7 @@ import { SolutionCard } from "../components/SolutionCard";
 import { navigate } from "../lib/router";
 import type { AppUser } from "../lib/powerContext";
 import { calculateEffort, usesDirectHours } from "../lib/effort";
+import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
 
 const STEPS = [
   "Before you start",
@@ -123,7 +124,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   };
   const [draft, setDraft] = useState<Draft>(() => {
     const saved: Draft = initialSolution ? {
-      ...EMPTY_DRAFT, name: initialSolution.name, summary: initialSolution.summary,
+      ...EMPTY_DRAFT, name: initialSolution.name === UNTITLED_SOLUTION ? "" : initialSolution.name, summary: initialSolution.summary,
       area: initialSolution.specializationArea, status: initialSolution.status,
       whatItDoes: initialSolution.whatItDoes, businessValue: initialSolution.businessValue,
       capabilities: initialSolution.capabilities, technologies: initialSolution.technologies,
@@ -198,7 +199,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const basicsValid = Boolean(draft.name.trim() && draft.summary.trim()) && contributorsValid && (!draft.clientContext.trim() || Boolean(draft.redacted.trim()));
   const safetyValid = draft.safetyAcknowledged;
   const mediaValid = draft.images.length > 0 && !mediaBusy;
-  const stepValid = safetyValid && (step === 1 ? basicsValid : step === 4 ? mediaValid : true);
+  const capabilityValid = draft.capabilities.length === 1;
+  const stepValid = safetyValid && (step === 1 ? basicsValid : step === 3 ? capabilityValid : step === 4 ? mediaValid : true);
   const totalHours = Math.round(contributionResults.reduce((total, result) => total + result.hours, 0) * 100) / 100;
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
     set("contributors", draft.contributors.map((contributor) => contributor.id === id ? { ...contributor, ...patch } : contributor));
@@ -234,11 +236,12 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   );
 
   const persist = async (asDraft: boolean) => {
-    if (saving || mediaBusy || (!asDraft && (!basicsValid || !safetyValid || !mediaValid))) return;
+    if (saving || mediaBusy || (!asDraft && (!basicsValid || !safetyValid || !mediaValid || !capabilityValid))) return;
     setSaving(true);
     setSaveError("");
     try {
       const solution: Solution = { ...preview, id: submissionId, name: draft.name.trim(), summary: draft.summary.trim(), publicationStatus: asDraft ? "Draft" : "Pending review" };
+      if (!asDraft) assertSubmissionReady(solution);
       if (asDraft) await onSaveDraft?.(solution);
       else await onSubmitted?.(solution);
       try { sessionStorage.removeItem(draftKey); } catch { setSavedAt(null); }
@@ -319,9 +322,9 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         </p>
       </div>
 
-      {initialSolution?.libraryNotes && <section aria-label="Librarian feedback" className="mt-5 border-l-2 pl-4" style={{ borderColor: "var(--proto)" }}>
+      {initialSolution?.reviewComments && <section aria-label="Librarian feedback" className="mt-5 border-l-2 pl-4" style={{ borderColor: "var(--proto)" }}>
         <h2 className="text-[15px] font-semibold">Librarian feedback</h2>
-        <p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{initialSolution.libraryNotes}</p>
+        <p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{initialSolution.reviewComments}</p>
       </section>}
       {onSaveDraft && <button type="button" disabled={saving || mediaBusy} onClick={() => void persist(true)} className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40" style={{ borderColor: "var(--glass-edge)" }}><Icon name="file" />{saving ? "Saving..." : "Save draft & close"}</button>}
       {saveError && <p role="alert" className="mt-3 text-[14px]">{saveError}</p>}
@@ -489,7 +492,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
         {step === 3 && safetyValid && (
           <StepShell title="Tag it" lede="Tags are how a CSM finds this in eight months. Capabilities and industries are governed; technologies are open.">
-            <TagPicker label="Capabilities" governed options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(v) => set("capabilities", v)} />
+            <TagPicker label="Capability (required, choose one)" governed options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(value) => set("capabilities", value.slice(-1))} />
+            {!capabilityValid && <p className="text-[13px]" style={{ color: "var(--proto)" }}>Select exactly one capability before submitting.</p>}
             <TagPicker label="Technologies" options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
             <TagPicker label="Industries" governed options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
           </StepShell>
@@ -649,7 +653,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
               <ReviewRow label="Public context">{draft.redacted || "None"}</ReviewRow>
               <ReviewRow label="Next state">Pending review (local)</ReviewRow>
             </dl>
-            {(!basicsValid || !mediaValid) && <p role="alert">Complete Identity & effort and add at least one detail image before submitting.</p>}
+            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Identity & effort, select one capability and add at least one detail image before submitting.</p>}
           </StepShell>
         )}
 
@@ -676,7 +680,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             <button
               type="button"
               onClick={() => void persist(false)}
-              disabled={saving || !basicsValid || !safetyValid || !mediaValid}
+              disabled={saving || !basicsValid || !safetyValid || !mediaValid || !capabilityValid}
               className="cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
               style={{ fontFamily: "var(--font-display)", background: "var(--live)", color: "var(--ground)" }}
             >

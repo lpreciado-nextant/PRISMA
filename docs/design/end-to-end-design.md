@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Agreed design; browser-local drafts, editing and librarian review implemented; model alignment and code-based US calendar coverage for 2020-2035 pending; production integration pending
+**Status:** Agreed design; draft and review-field contracts aligned with the local PoC; broader model alignment and code-based US calendar coverage for 2020-2035 pending; production integration pending
 **Last updated:** 2026-09-21
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
@@ -99,6 +99,12 @@ stateDiagram-v2
 On submit the record moves to *Pending review*. The production workflow will notify the librarian; the PoC does not. Direct navigation connects the library, submission form and **My submissions**, with inspection and editing; no welcome screen. **Save draft & close** accepts incomplete records at any step. Explicit draft saves, submissions, review decisions and media persist in browser-local IndexedDB across reloads. Unsaved text has a tab-local backup; unsaved media remains in memory. Browser data can be cleared or evicted and does not sync across devices; this is not production persistence. Dataverse remains the only planned production persistence/storage service.
 
 The local **Review queue** at `#/review` supports pending, changes-requested and published views, search and specialization filtering. A librarian preview can inspect the record and sandboxed attachments, explicitly confirm client safety to approve and publish, or return it to Draft with required comments. Contributors see the latest comments in My submissions and the editor and can resubmit. Review access is simulated for UI evaluation, not authorization; production requires Dataverse roles and field-level security. Review and contributor surfaces are inaccessible in present mode.
+
+**Draft and review contract:** a blank draft name receives the reserved label `Untitled solution`, which must be replaced before submission. Summary and capability may be absent in Draft; selected contributors may have incomplete effort inputs, and media is optional until submission. Submitting and approving both require a non-placeholder name, summary, exactly one capability, unique complete contributors, safety acknowledgment, anonymous context when a client is named, and one to six detail images. Production column constraints still apply to supplied values; empty person-picker rows remain UI state rather than Dataverse rows. See [schema validation](../data_model/SchemaV2.md#draft-and-transition-contract).
+
+`Review Outcome` (None / Changes requested / Approved) and contributor-readable `Review Comments` (up to 4000 characters) are dedicated fields on Solution, separate from internal editorial Library Notes. They describe the latest decision, not current approval: contributor saves and resubmissions preserve them while clearing Client Safe Reviewed. Returned records are Draft + Changes requested and require fresh acknowledgment. Approval replaces the latest feedback, including clearing it when no comment is supplied. Review fields are excluded from the CSM projection and present mode. This is not review history; no new review table is introduced.
+
+Production save/submit/review operations use synchronous Dataverse Custom APIs and plug-ins with caller authorization, state validation and optimistic concurrency. Contributors may request transitions on records they can edit but cannot write protected review/publication fields directly; only a librarian may request approval. These are planned platform operations, not SPA API routes or deployed services. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md).
 
 **Saving edits to a published record** removes it from the published catalogue and clears client-safe review approval: explicit draft saves return to *Draft*, while submitting returns to *Pending review*. Simply opening the editor does not withdraw a record. Require a fresh safety acknowledgment. Production librarian review will include a diff; librarian-only note corrections may remain published.
 
@@ -284,8 +290,8 @@ The trade: this does not scale past a few thousand records. That's a deliberate,
 | Librarian | Full (org) | Full | Full | Full |
 
 - `nx_solution` is user/team-owned; reference tables are organization-owned.
-- **Publication status can only be written by the Librarian role.** This is enforced by a field-level security profile, not by UI affordance alone.
-- `Library Notes` carries field-level security and is unreadable by the CSM role.
+- **Only an authorized librarian can request publication.** Protected state changes go through synchronous, caller-authorized Dataverse transitions; contributors can request draft/submit without direct write permission on publication/review fields. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md).
+- Review Outcome, Review Comments and Library Notes carry field-level security and are unreadable by the CSM role. Review feedback is readable on contributor-authorized rows and is separate from editorial notes.
 - Unpublished records are invisible to CSMs at the platform level — not merely filtered out in the UI.
 
 ---

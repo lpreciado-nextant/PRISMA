@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative agreed model; code-based US calendar policy approved, app alignment pending · **Last updated:** 2026-09-21
+**Status:** Authoritative agreed model; draft/review contract aligned locally; broader model and code-based US calendar app alignment pending; Dataverse implementation pending · **Last updated:** 2026-09-21
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Industry` and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` and (as of this round) `Capability` are single-valued lookups; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — the underlying table already exists in Dataverse with fixed columns as `cr6b0_project`, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, is a **native N:N** relationship (no attributes needed on the link itself, so no custom junction table).
 
@@ -10,6 +10,7 @@ This is the current, agreed model. It replaces [nextant-solution-library-dataver
 3. Every lookup that pointed to the platform `systemuser` table (`Built By`, `Requested By`, `Project Owner`) now points to a new custom table, **`cr6b0_consultant`**.
 4. `nx_project` is renamed to **`cr6b0_project`** throughout — same pre-existing, fixed-column table, correct name.
 5. `Solution` ↔ `Project` no longer goes through a custom junction table (`nx_solutionproject` is **dropped**); it is now a **native N:N** relationship between `nx_solution` and `cr6b0_project`, since the link carries no attributes of its own.
+6. `Review Outcome` and `Review Comments` are added to `nx_solution`. Drafts permit missing summary/capability and effort inputs; completeness is enforced at submit/publication through controlled transitions. No review-history table is added.
 
 ## Conventions
 
@@ -18,7 +19,7 @@ The [legacy v1 entry point](nextant-solution-library-dataverse-schema.md) was sy
 - **Primary key vs. primary name** — every table gets an auto-generated GUID key (e.g. `nx_solutionid`) plus a required text *primary name* column, used as its display label in lookups.
 - **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` exist on every table without being modeled.
 - **Ownership** — `Solution`, `SolutionContributor`, `DemoAsset`, `SolutionImage`, and `DemoRequest` are **user/team-owned** (row-level security, since different practices submit their own work). `SpecializationArea`, `Capability`, `Industry`, and `Technology` are **organization-owned** (shared reference data). `cr6b0_project` already exists in Dataverse — its ownership model is out of scope here. `cr6b0_consultant` is organization-owned.
-- **Two single-valued tags, two multi-valued tags** — each `Solution` points to exactly one `SpecializationArea` and exactly one `Capability`, each via its own lookup column. `Industry` and `Technology` are **native N:N** relationships: a solution can carry several of each, and Dataverse creates and manages the intersect tables — no hand-built junction tables for these two.
+- **Two single-valued tags, two multi-valued tags** — each `Solution` points to exactly one `SpecializationArea` and, at submit/publication, exactly one `Capability`, each via its own lookup column. Capability may be empty in Draft. `Industry` and `Technology` are **native N:N** relationships: a solution can carry several of each, and Dataverse creates and manages the intersect tables — no hand-built junction tables for these two.
 - **`cr6b0_project` is fixed** — it already exists in Dataverse with its own columns. Nothing new gets added to it, and it gets no new lookup pointing out of it either. Where a Solution needs to link to *several* Projects (and vice versa), a **native N:N** relationship connects `nx_solution` and `cr6b0_project` directly — no hand-built junction table, since the link carries no attributes of its own.
 - **Governance** — `SpecializationArea`, `Capability`, and `Industry` are governed (only the Librarian adds new values). `Technology` is open (anyone adds a value inline; the Librarian periodically merges duplicates).
 - **Builder credit is multi-person** — `nx_solutioncontributor` carries one row per Solution/person, including that person's effort inputs. It replaces the single `Built By` lookup and `Effort / Time to Deploy` choice on `nx_solution`; it is not a native N:N because the relationship has attributes. Credit is independent of `ownerid` and does not grant access.
@@ -30,7 +31,7 @@ The [legacy v1 entry point](nextant-solution-library-dataverse-schema.md) was sy
 ```mermaid
 erDiagram
     nx_specializationarea ||--o{ nx_solution : "tag (1:N)"
-    nx_capability ||--o{ nx_solution : "tag (1:N)"
+    nx_capability |o--o{ nx_solution : "required at submit (1:N)"
     nx_industry }o--o{ nx_solution : "tag (N:N)"
     nx_technology }o--o{ nx_solution : "tag (N:N)"
     nx_solution ||--o{ nx_demoasset : "1:N"
@@ -55,6 +56,8 @@ erDiagram
         text ClientContextRedacted
         choice Status
         choice PublicationStatus
+        choice ReviewOutcome
+        text ReviewComments
         boolean SafetyAcknowledged
         boolean ClientSafeReviewed
         image Thumbnail
@@ -161,7 +164,7 @@ Reintegrated after review — dropped from the first v2 draft, brought back with
 | Capability *(primary name)* | Text (100) | Yes | "AI & agents", "Planning & analytics", etc. |
 | Sort Order | Whole Number | No | Controls chip order |
 
-1:N with `nx_solution` — each solution has exactly one capability, set via a lookup column on `nx_solution`, same shape as `SpecializationArea`. Not connected to `cr6b0_project`.
+1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a lookup column on `nx_solution`, same shape as `SpecializationArea`. Drafts may leave it empty. Not connected to `cr6b0_project`.
 
 ### `nx_industry`
 
@@ -198,27 +201,52 @@ The reusable offering — the unit of value shown to a CSM.
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| Solution Name *(primary name)* | Text (100) | Yes | |
-| One-line Summary | Text (200) | Yes | |
+| Solution Name *(primary name)* | Text (100) | Yes | Blank drafts receive reserved label `Untitled solution`; replace it with an authored name before submission |
+| One-line Summary | Text (200) | At submit/publication | Optional column metadata so incomplete drafts can be saved; nonblank at the transition boundary |
 | What It Does | Text, multi-line (4000) | No | |
 | Business Value | Text, multi-line (4000) | No | |
 | Specialization Area | Lookup → `nx_specializationarea` | Yes | Single-valued |
-| Capability | Lookup → `nx_capability` | Yes | Single-valued, as of this round |
+| Capability | Lookup → `nx_capability` | At submit/publication | Single-valued; optional column metadata for Draft, exactly one governed value at submit/publication |
 | Use Case | Text (200) | No | The client-side framing of the problem — "reduce manual invoice handling", "forecast demand". Bridges how a client describes their pain and how Nextant describes its capability. |
 | Client / Context | Text (200) | No | Freeform for now; revisit as a lookup if reporting by client is needed later. **Internal-only** — never rendered in present mode |
 | Client Context (Redacted) | Text (200) | Conditional | The only context shown in present mode; required at submission when Client / Context is populated. Never infer or scrub names automatically. |
 | Status | Choice — global | Yes | Idea / concept · Working prototype · Client demo · Live in production · Retired |
-| Publication Status | Choice — global | Yes | Draft · Pending review · Published · Retired — **field-level security, Librarian-only write** |
+| Publication Status | Choice — global | Yes | Default Draft. Draft · Pending review · Published · Retired. Protected; controlled transition handler writes after caller authorization; only Librarian may request publication |
+| Review Outcome (`nx_reviewoutcome`) | Choice — local | Yes | Default None. None · Changes requested · Approved. Latest librarian decision; preserved on contributor edits/resubmission, not proof of current approval. Protected write; readable by owner/authorized editors and Librarian, not CSM |
+| Review Comments (`nx_reviewcomments`) | Text, multi-line (4000) | On return | Latest contributor-facing feedback, trimmed; nonblank when returning, optional on approval. Protected write through review transition; readable by owner/authorized editors and Librarian, not CSM |
 | Safety Acknowledged | Yes/No | Yes | Default false. Contributor acknowledges authorized, anonymized client-visible content before entry; must be true at submit and renewed on edit. Replaces sharing/sample-data classifications. |
-| Client Safe Reviewed | Yes/No | Yes | Default false. Librarian-only write with field-level security; clear on material edits. Present eligibility requires this, Safety Acknowledged and Published. Never derive approval from acknowledgment. |
+| Client Safe Reviewed | Yes/No | Yes | Default false. Protected write; only an authorized librarian approval may set true. Transition handler clears on material edits/return. Present eligibility requires this, Safety Acknowledged and Published, never Review Outcome alone |
 | Thumbnail | Image | No | |
 | Date Added | Date Only | No | |
-| Library Notes | Text, multi-line (2000) | No | **Field-level security** — internal-only |
+| Library Notes | Text, multi-line (2000) | No | **Field-level security** — separate internal editorial notes, not contributor feedback; Librarian-controlled write |
 | Search Keywords | Text (500) | No | Editorial boost terms not naturally present in the visible text — distinct from Use Case, which frames the problem in the client's own words |
 
 Links to `nx_specializationarea` and `nx_capability` via the two single-valued lookup columns above. `Industry` and `Technology` are **not columns** — they attach through native N:N relationships (multi-valued tags, several per solution). Its link to `cr6b0_project` (potentially several) is also a native N:N relationship, not a column here.
 
 Builders and effort now live in `nx_solutioncontributor`, not columns on `nx_solution`. Total effort is derived from its contributor rows.
+
+### Draft and transition contract
+
+Use the same Solution and child tables for drafts and submitted records; no draft table, JSON payload column or review-history table is introduced. `ownerid` determines ownership, not builder credit or the PoC's email key. My submissions queries records the caller owns or is authorized to edit under the agreed team-ownership policy; it does not equate `createdby` with the current owner.
+
+At draft creation, supply valid specialization/maturity defaults, the reserved name when blank, Publication Status Draft, Review Outcome None, and both safety booleans false. Summary and Capability use optional column metadata. Drafts may omit contributors/images entirely; contributor rows require a selected person, parent, generated name and effort mode, but active effort inputs can remain null until submission. Empty person-picker rows are UI-only and are not written to Dataverse. Blank numeric/date inputs map to null, never zero, NaN or empty-string dates. Supplied values must still satisfy column types, lengths, ranges, lookup validity and unique-person constraints; invalid editor values stay client-side for correction.
+
+At submit and publication, synchronously validate authored name (not the reserved label), summary, specialization, exactly one capability, at least one unique contributor with complete valid maturity-selected effort, fresh safety acknowledgment, anonymous context when Client / Context is set, and one to six stored detail images. Complete all required file uploads before the transition. App validation improves usability but is not the production enforcement boundary.
+
+| Operation | Authorized caller and source | Result and protected fields |
+|---|---|---|
+| Save draft | Contributor with edit rights on new/Draft/Pending review/Published record; Librarian | Draft; Client Safe Reviewed false; retain latest review outcome/comments; material changes require renewed acknowledgment before submit |
+| Submit | Contributor with edit rights on Draft/Pending review/Published record; Librarian | Pending review after full validation; Client Safe Reviewed false; retain latest review outcome/comments |
+| Return | Librarian, Pending review only | Draft; Review Outcome Changes requested; nonblank Review Comments (maximum 4000); both safety booleans false |
+| Approve | Librarian, Pending review only | Full validation plus independent client-safe confirmation; Published; Client Safe Reviewed true; Review Outcome Approved; replace Review Comments, or clear when blank |
+
+The Changes requested queue is `Publication Status = Draft AND Review Outcome = Changes requested`. After resubmission the latest outcome may still be Changes requested, but the record belongs in Pending review. An edited formerly approved record may retain outcome Approved while being Draft/Pending and not client-safe-reviewed. Approval is determined only by the current publication/safety fields. Read-only opening of an editor changes nothing. Retirement/reactivation is a separate librarian operation, not an implicit save/submit path.
+
+Use the synchronous, authorized, version-checked production operations in [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md). Direct record or child writes must not bypass withdrawal/review invalidation. Notifications remain asynchronous and non-authoritative. None of these Dataverse APIs or security registrations is implemented by the mock PoC.
+
+**PoC mapping and migration:** `reviewOutcome`/`reviewComments` map to the two new columns; the local email owner must later resolve to `ownerid`, not a new email ownership column. Existing browser envelopes with the old `changesRequested` key are normalized on load, copying their legacy feedback from `libraryNotes` and retaining the original notes to avoid data loss. Unmarked Library Notes are not guessed to be feedback. Records already carrying Review Outcome are left unchanged. The normalized shape is stored on its next successful explicit save; no live Dataverse migration occurs. The PoC still preserves incomplete raw editor inputs locally; a future Dataverse adapter must apply the null/child-row rules above. Its legacy capability array permits exactly one selected value for new/edit submissions and must map to the single lookup; static catalogue examples are not silently reclassified.
+
+Review Comments hold only the latest decision. Reviewer identity, timestamps and full history require a separately agreed audit design; `modifiedby`/`modifiedon` are not a substitute because later contributor edits change them.
 
 ---
 
@@ -234,10 +262,10 @@ One row per person credited on a Solution. User/team-owned, with access aligned 
 | Solution | Lookup → `nx_solution` | Yes | Parent reusable offering |
 | Built By | Lookup → `cr6b0_consultant` | Yes | One credited person; multiple people require multiple rows |
 | Effort Mode | Choice: Direct / Calendar | Yes | Direct for Idea / concept and Working prototype; Calendar for Client demo and Live in production. Validate against parent maturity. Retired records retain their last valid mode. |
-| Direct Hours | Decimal Number (2 decimal places, minimum 0) | Conditional | Required in Direct mode; finite and nonnegative. Include preparation/discovery. Zero is valid; empty is not zero. |
-| Start Date | Date Only | Conditional | Required in Calendar mode; inclusive first date |
-| End Date | Date Only | Conditional | Required in Calendar mode; inclusive last date, not before Start Date |
-| Allocation (%) | Decimal Number (2 decimal places, 0-100) | Conditional | Required in Calendar mode; constant allocation; zero permitted |
+| Direct Hours | Decimal Number (2 decimal places, minimum 0) | At submit/publication in Direct mode | Nullable in Draft; finite and nonnegative when supplied. Include preparation/discovery. Zero is valid; empty is not zero |
+| Start Date | Date Only | At submit/publication in Calendar mode | Nullable in Draft; inclusive first date |
+| End Date | Date Only | At submit/publication in Calendar mode | Nullable in Draft; inclusive last date, not before Start Date at validation |
+| Allocation (%) | Decimal Number (2 decimal places, 0-100) | At submit/publication in Calendar mode | Nullable in Draft; constant allocation; zero permitted |
 
 No `Business Calendar` lookup or calendar tables. Calendar mode uses one code-based US federal holiday policy, with no calendar selector.
 
@@ -365,7 +393,7 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 | CSM | Read published only | Read (published parents) | Read | Create; Read own | Read (context on Solution detail) |
 | Librarian | Full | Full | Full | Full | Full |
 
-Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. `Publication Status` and `Library Notes` carry field-level security. `cr6b0_project`'s own security model lives with the existing table, not here.
+Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. Publication Status, Client Safe Reviewed, Review Outcome, Review Comments and Library Notes have the field permissions and controlled-write rules in the [security model](../architecture/security-model.md). Review fields and notes are excluded from the CSM/presentation projection. `cr6b0_project`'s own security model lives with the existing table, not here.
 
 `nx_solutioncontributor`: Contributor create/read/write/delete only where they can manage the parent Solution; CSM read only for published parents; Librarian full access. Per-person dates and allocations are omitted from present-mode rendering; builder names and total effort remain available. Present mode is not a security boundary for the bundled mock data.
 

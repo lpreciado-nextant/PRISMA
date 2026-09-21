@@ -7,5 +7,7 @@ export function presentCatalogue(solutions: Solution[]): Solution[] {
       clientContext: undefined,
       projects: undefined,
       libraryNotes: undefined,
+      reviewOutcome: undefined,
+      reviewComments: undefined,
     }));
 }

@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to v2, including approved code-based US calendar policy; app alignment pending · **Last updated:** 2026-09-21
+> **Status:** Maintained companion to v2, including draft/review contract and approved code-based US calendar policy; production integration and broader app alignment pending · **Last updated:** 2026-09-21
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Table (logical) names below use an `nx_` publisher prefix — swap for whatever your actual solution prefix is.
 
@@ -34,7 +34,7 @@ This spec assumes the code app talks to Dataverse via the Web API / Power Platfo
 | Capability *(primary name)* | Single line of text (100) | Yes | "AI & agents", "Planning & analytics", etc. |
 | Sort Order | Whole Number | No | Controls chip order |
 
-1:N with `nx_solution` — each solution has exactly one capability, set via a single lookup column, same shape as `SpecializationArea`. Not a tag, not connected to anything else.
+1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a single lookup column, same shape as `SpecializationArea`. Drafts may leave it empty. Not a tag, not connected to anything else.
 
 ### `nx_technology`
 
@@ -61,29 +61,35 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| Solution Name *(primary name)* | Single line of text (100) | Yes | |
-| One-line Summary | Single line of text (200) | Yes | |
+| Solution Name *(primary name)* | Single line of text (100) | Yes | Blank draft gets reserved `Untitled solution`; authored replacement required before submit |
+| One-line Summary | Single line of text (200) | At submit/publication | Optional column metadata allows incomplete drafts; nonblank at transition boundary |
 | What It Does | Multiple lines of text (plain, 4000) | No | |
 | Business Value | Multiple lines of text (plain, 4000) | No | |
 | Use Case | Single line of text (200) | No | Freeform — the client-side framing of the problem the solution addresses ("reduce manual invoice handling", "forecast demand"). Was a governed `nx_usecase` reference table; folded into a text column to cut governance overhead |
 | Specialization Area | Lookup → `nx_specializationarea` | Yes | |
-| Capability | Lookup → `nx_capability` | Yes | Single-valued, same shape as Specialization Area |
+| Capability | Lookup → `nx_capability` | At submit/publication | Single-valued; optional column metadata for Draft |
 | Status | Choice — **global**, single-select | Yes | See `nx_solutionstatus` below — describes the solution's own maturity |
-| Publication Status | Choice — **global**, single-select | Yes | See `nx_publicationstatus` below — describes library visibility, independent of Status |
+| Publication Status | Choice — **global**, single-select | Yes | Default Draft; protected controlled-transition write, not contributor-writable directly; only Librarian may request publication |
+| Review Outcome (`nx_reviewoutcome`) | Choice — **local**, single-select | Yes | Default None. None / Changes requested / Approved. Latest decision, retained on contributor saves; not current approval. Owner/authorized editor and Librarian read; protected review-operation write; CSM cannot read |
+| Review Comments (`nx_reviewcomments`) | Multiple lines of text (plain, 4000) | On return | Dedicated latest feedback; required nonblank on return, optional on approval. Same read/write protection as Review Outcome |
 | Safety Acknowledged | Yes/No | Yes | Default false; required before entry and at submit, renewed on edit. Replaces sharing/sample-data classifications. |
-| Client Safe Reviewed | Yes/No | Yes | Default false; Librarian-only write. Clear on material edits. Present eligibility requires this, acknowledgment and Published. |
+| Client Safe Reviewed | Yes/No | Yes | Default false; protected transition-handler write. Only authorized librarian approval sets true; contributor material edits and returns clear it. Present eligibility requires this, acknowledgment and Published |
 | Client / Context | Single line of text (200) | No | Freeform for now; revisit as a lookup if you need to report by client later. **Internal-only** — never rendered in present mode |
 | Client Context (Redacted) | Single line of text (200) | Conditional | Required at submit when Client / Context is populated; the only context used in present mode. No runtime scrubbing. |
 | Thumbnail | Image column | No | Hero image for the card grid. Fall back to a per-specialization generated placeholder when empty |
 | Date Added | Date Only | No | Business date, distinct from the automatic `createdon` audit timestamp |
-| Library Notes | Multiple lines of text (plain, 2000) | No | **Enable field-level security** on this column — internal-only, should not be readable by the app's general audience even if they can see the rest of the row |
+| Library Notes | Multiple lines of text (plain, 2000) | No | Separate internal editorial notes, not reviewer feedback. Librarian-controlled write; CSM cannot read |
 | Search Keywords | Single line of text (500) | No | Editorial boost terms not naturally present in the visible text |
 
 **Choice: `nx_solutionstatus`** (global) — Idea / concept · Working prototype · Client demo · Live in production · Retired
 
 **Choice: `nx_publicationstatus`** (global) — Draft · Pending review · Published · Retired
 
-> **Field-level security required.** Only the Librarian role may write `Publication Status`; this is the gate that keeps unreviewed work off a client's screen, so it can't rest on UI affordance alone.
+> **Field-level security and controlled transitions required.** Contributors cannot directly write publication/review fields. Authorized synchronous Dataverse operations save drafts, submit, return and approve; only a librarian can request approval. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [security model](../architecture/security-model.md).
+
+Drafts use these same tables. Permit absent summary/capability, no images, and no contributors or selected contributors with nullable effort inputs. Generate a draft name and valid specialization/maturity defaults. Persist only selected-person child rows; blank numeric/date values become null. Require complete valid data at submission and approval, not merely in the form. Supplied values still obey column constraints. The authoritative [draft and transition contract](SchemaV2.md#draft-and-transition-contract) defines operation preconditions, protected fields, optimistic concurrency, owner mapping and conservative legacy-browser migration.
+
+`Review Outcome` is the latest decision and remains unchanged on contributor saves/resubmission. Changes requested means Draft + outcome Changes requested; pending re-reviews belong to Pending review even when the last outcome is Changes requested. Return clears both safety booleans; approval replaces Review Comments (clears it when blank). Outcome Approved alone never permits presentation. Library Notes stay separate and unchanged. No review-history table or reviewer/time columns are introduced.
 
 The former `nx_shareability` and `nx_sampledatalevel` choices are retired from new submissions. Do not infer client-safe review approval from legacy values or acknowledgment. Retain historical data until an approved real migration; no Dataverse migration is performed by this PoC.
 
@@ -105,12 +111,12 @@ Required lookups do not automatically inherit Dataverse security. Configure and 
 | Solution | Lookup → `nx_solution` | Yes | Parent offering |
 | Built By | Lookup → `cr6b0_consultant` | Yes | One credited person per row |
 | Effort Mode | Choice: Direct / Calendar | Yes | Direct for ideas/prototypes; Calendar for demos/production; validate against parent maturity |
-| Direct Hours | Decimal Number (2 decimal places, minimum 0) | Conditional | Required in Direct mode; finite, nonnegative, includes preparation/discovery; zero is valid |
-| Start Date | Date Only | Conditional | Required in Calendar mode; inclusive first day |
-| End Date | Date Only | Conditional | Required in Calendar mode; inclusive last day, not before Start Date |
-| Allocation (%) | Decimal Number (2 decimal places, 0-100) | Conditional | Required in Calendar mode; zero permitted |
+| Direct Hours | Decimal Number (2 decimal places, minimum 0) | At submit/publication in Direct mode | Nullable in Draft; finite, nonnegative when supplied; includes preparation/discovery; zero is valid |
+| Start Date | Date Only | At submit/publication in Calendar mode | Nullable in Draft; inclusive first day |
+| End Date | Date Only | At submit/publication in Calendar mode | Nullable in Draft; inclusive last day, not before Start Date at validation |
+| Allocation (%) | Decimal Number (2 decimal places, 0-100) | At submit/publication in Calendar mode | Nullable in Draft; zero permitted |
 
-Alternate key: `(Solution, Built By)` prevents duplicate people. Require at least one complete contributor. Validate only the active mode: direct hours, or dates/allocation. Preserve inactive draft inputs on maturity changes, but never total them. Apply the same rules to production writes, not just the UI.
+Alternate key: `(Solution, Built By)` prevents duplicate people. Require at least one complete contributor at submit/publication; drafts may omit rows or leave effort inputs null. Validate only the active mode: direct hours, or dates/allocation. Preserve inactive draft inputs on maturity changes, but never total them. Apply the same rules to production writes, not just the UI.
 
 **Calculation:** count Monday-Friday dates in the inclusive range, excluding observed US federal holidays calculated in code for 2020-2035. No calendar tables, lookup, or selector are required. Reject invalid dates, reversed ranges, and dates outside coverage; use year-appropriate holiday rules and account for observed dates crossing year boundaries, as specified in the [contributor contract](SchemaV2.md#nx_solutioncontributor--builders-and-effort). Person hours = `round(business days * 8 * allocation / 100, 2)`; Solution hours = sum of those rounded person totals. Use date-only arithmetic unaffected by time zones or daylight-saving changes. Weekend-only or holiday-only periods yield zero. Example: September 7-18, 2026 at 50% covers nine business days after excluding Labor Day, giving `9 * 8 * 0.5 = 36 hours`.
 
