@@ -1,15 +1,16 @@
 # ADR-0005 — Present mode enforced server-side
 
-**Status:** Accepted
+**Status:** Accepted, amended for safety acknowledgment and client-safe review
 **Date:** 2026-09-16
+**Last updated:** 2026-09-21
 
 ## Context
 
-Present mode restricts the catalogue to solutions flagged *Shareable with clients* while a client is watching. A purely client-side filter could transiently expose an internal-only record (render flash, cache staleness, a bug) — and "never embarrass a CSM in front of a client" is a core principle.
+Present mode restricts the catalogue to independently reviewed client-safe work while a client is watching. The submission acknowledgment replaces sharing/sample-data classifications, but cannot grant review approval. A purely client-side filter is not a production security boundary.
 
 ## Decision
 
-Present mode is enforced server-side as well as client-side: the query issued while present mode is active filters on shareability at the Dataverse level.
+Present mode is enforced server-side as well as client-side. Require Published, Safety Acknowledged and Client Safe Reviewed in the Dataverse query. Client Safe Reviewed is librarian-controlled and cleared on material edits. Always exclude internal client/context, project names and library notes from the client-visible projection; the anonymous context is separately authored.
 
 ## Consequences
 

@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative agreed model; legacy schema companion synchronized · **Last updated:** 2026-09-21
+**Status:** Authoritative agreed model; legacy schema companion synchronized; safety-first submission and maturity-based effort · **Last updated:** 2026-09-21
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Industry` and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` and (as of this round) `Capability` are single-valued lookups; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — the underlying table already exists in Dataverse with fixed columns as `cr6b0_project`, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, is a **native N:N** relationship (no attributes needed on the link itself, so no custom junction table).
 
@@ -55,8 +55,8 @@ erDiagram
         text ClientContextRedacted
         choice Status
         choice PublicationStatus
-        choice ShareableWithClients
-        choice SampleDataLevel
+        boolean SafetyAcknowledged
+        boolean ClientSafeReviewed
         image Thumbnail
         date DateAdded
         text LibraryNotes
@@ -73,6 +73,8 @@ erDiagram
         text Name
         lookup Solution FK
         lookup BuiltBy FK
+        choice EffortMode
+        decimal DirectHours
         date StartDate
         date EndDate
         decimal AllocationPercent
@@ -204,11 +206,11 @@ The reusable offering — the unit of value shown to a CSM.
 | Capability | Lookup → `nx_capability` | Yes | Single-valued, as of this round |
 | Use Case | Text (200) | No | The client-side framing of the problem — "reduce manual invoice handling", "forecast demand". Bridges how a client describes their pain and how Nextant describes its capability. |
 | Client / Context | Text (200) | No | Freeform for now; revisit as a lookup if reporting by client is needed later. **Internal-only** — never rendered in present mode |
-| Client Context (Redacted) | Text (200) | No | The client-safe substitute shown in present mode — "a national logistics provider". Required in practice whenever Shareable with Clients is "Yes, with names removed"; enforced at review, not schema-level |
+| Client Context (Redacted) | Text (200) | Conditional | The only context shown in present mode; required at submission when Client / Context is populated. Never infer or scrub names automatically. |
 | Status | Choice — global | Yes | Idea / concept · Working prototype · Client demo · Live in production · Retired |
 | Publication Status | Choice — global | Yes | Draft · Pending review · Published · Retired — **field-level security, Librarian-only write** |
-| Shareable with Clients | Choice — global | Yes | Yes · Yes, with names removed · No – internal only |
-| Sample Data Level | Choice — global | Yes | Yes – all invented · Partly · No – real client data |
+| Safety Acknowledged | Yes/No | Yes | Default false. Contributor acknowledges authorized, anonymized client-visible content before entry; must be true at submit and renewed on edit. Replaces sharing/sample-data classifications. |
+| Client Safe Reviewed | Yes/No | Yes | Default false. Librarian-only write with field-level security; clear on material edits. Present eligibility requires this, Safety Acknowledged and Published. Never derive approval from acknowledgment. |
 | Thumbnail | Image | No | |
 | Date Added | Date Only | No | |
 | Library Notes | Text, multi-line (2000) | No | **Field-level security** — internal-only |
@@ -231,34 +233,39 @@ One row per person credited on a Solution. User/team-owned, with access aligned 
 | Name *(primary name)* | Text (100) | Yes | Auto-generated display label from Solution/person; truncate to 100 characters, never use as identity |
 | Solution | Lookup → `nx_solution` | Yes | Parent reusable offering |
 | Built By | Lookup → `cr6b0_consultant` | Yes | One credited person; multiple people require multiple rows |
-| Start Date | Date Only | Yes | Inclusive first date of the person's contribution |
-| End Date | Date Only | Yes | Inclusive last date; must be on or after Start Date |
-| Allocation (%) | Decimal Number (2 decimal places, 0-100) | Yes | Constant allocation over this date range; 50 means half of each eight-hour business day; 0 is permitted |
+| Effort Mode | Choice: Direct / Calendar | Yes | Direct for Idea / concept and Working prototype; Calendar for Client demo and Live in production. Validate against parent maturity. Retired records retain their last valid mode. |
+| Direct Hours | Decimal Number (2 decimal places, minimum 0) | Conditional | Required in Direct mode; finite and nonnegative. Include preparation/discovery. Zero is valid; empty is not zero. |
+| Start Date | Date Only | Conditional | Required in Calendar mode; inclusive first date |
+| End Date | Date Only | Conditional | Required in Calendar mode; inclusive last date, not before Start Date |
+| Allocation (%) | Decimal Number (2 decimal places, 0-100) | Conditional | Required in Calendar mode; constant allocation; zero permitted |
 
-Alternate key: `(Solution, Built By)` enforces one effort record per person per Solution. At least one complete contributor is required before submission/publication; a 1:N relationship cannot itself enforce a minimum child count. Incomplete form drafts may be saved locally, but submission rejects missing people, duplicate people, and invalid dates/allocations. Enforce the same rules on all production writes, not only in the UI.
+No `Business Calendar` lookup — that table was removed from the model (see "Changed in this round" above); Calendar mode's `Business Days` is a plain Monday–Friday count over Start Date/End Date, no holiday exclusion.
+
+Alternate key: `(Solution, Built By)` enforces one effort record per person per Solution. Require at least one complete contributor at submit/publication; a 1:N relationship cannot itself enforce a minimum child count. Validate only the active mode: direct hours in Direct mode, or dates/allocation in Calendar mode. Maturity changes preserve draft inputs but change the active mode for every contributor; never use stale inactive values in totals. Conditional validation must be enforced on all production writes, not just the UI.
 
 **Derived values, not editable columns:**
 
 - `Business Days`: count Monday-Friday dates between Start Date and End Date, **inclusive**. No holiday exclusion — the business-calendar/holiday concept was dropped from this model, so every weekday in range counts. Date-only arithmetic must not shift with time zone or daylight-saving changes.
-- `Effort Hours`: `round(Business Days * 8 * AllocationPercent / 100, 2)` for each contributor. Apply rounding only after the multiplication.
+- `Effort Hours`: for Calendar-mode contributors, `round(Business Days * 8 * AllocationPercent / 100, 2)`. Apply rounding only after the multiplication.
+- In Direct mode, `Effort Hours` equals validated `Direct Hours`; business days do not apply.
 - `Total Effort Hours`: sum the rounded contributor hours, displayed to at most two decimals. Different people working simultaneously contribute separately; this is not elapsed duration. Do not combine their allocations before applying their individual date ranges.
 
 Example: 2026-09-07 through 2026-09-18 contains ten weekdays. At allocation 50%, the contribution is `10 * 8 * 0.5 = 40 hours`. A second person at 100% over the same ten business days adds 80 hours, for 120 total hours. A same-day weekday counts as one; a weekend-only range yields zero.
 
-These are capacity-based calculated hours, not actual time entries or an estimate of deployment lead time. Allocation changes within a person's period, cross-solution over-allocation checks and timesheets are outside this model. The app calculates from loaded contributor data; no Dataverse calculated-column capability or stored total is assumed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
+Calendar-mode hours represent capacity; Direct-mode hours represent reported effort. Neither is a timesheet system or an estimate of deployment lead time. Demo effort is not a production estimate. Allocation changes within a person's period and cross-solution over-allocation/capacity checks remain out of scope. The app calculates from loaded contributor data; no Dataverse calculated-column capability or stored total is assumed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
 
 **Migration:** create a contributor row for each former `nx_solution.Built By` value. Dates and allocation require explicit confirmation; do not infer them from the old Days/Weeks/Months choice. Keep legacy values during a real migration until backfill is verified, then retire the old lookup/choice and any unused global choice. The PoC's dates and allocations are illustrative, not historical work records. The legacy schema companion now reflects these rules too.
 
 ### `nx_demoasset` — the demo
 
-The curated, presentable asset a CSM opens and shows. Unchanged from v1. Required lookup to `nx_solution`; inherits the parent's visibility rules.
+The curated asset a CSM opens. New submissions offer HTML, video and one-pager/slides, alongside images in `nx_solutionimage`. Legacy URL and desktop types remain readable but are deferred for new submissions. Files stay in Dataverse; no SharePoint storage.
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
 | Name *(primary name)* | Text (100) | Yes | |
 | Solution | Lookup → `nx_solution` | Yes | |
 | Asset Type | Choice — global | Yes | Self-contained HTML · Hosted web app (URL) · Power Apps · Power BI · Desktop app or script · Video walkthrough · One-pager / slide |
-| File | File | No | For self-contained HTML |
+| File | File | Conditional | Required for newly submitted HTML, video and one-pager/slides. PoC fileData/htmlContent are in-memory stand-ins for this payload, not extra Dataverse columns. |
 | External URL | URL (500) | No | For hosted/embedded links |
 | Embed Hint | Text, multi-line (500) | No | The "sign-in may stall in this frame" style note shown in the viewer |
 | Allows Embedding | Yes/No | No | |
@@ -266,7 +273,7 @@ The curated, presentable asset a CSM opens and shows. Unchanged from v1. Require
 
 ### `nx_solutionimage` — the gallery
 
-Detail-page screenshots beyond the card thumbnail. Unchanged from v1. The `Thumbnail` image column on `nx_solution` stays the single card-grid hero image; this table carries as many captioned screenshots as the story needs. Required lookup to `nx_solution`; inherits the parent's visibility rules.
+Detail images beyond the optional thumbnail. New submissions require one to six gallery rows before submission/publication; the thumbnail does not satisfy that minimum. Existing catalogue examples may predate this rule. Enforce the child-count constraint at the application/platform write boundary. Required lookup to `nx_solution`; access aligned to the parent.
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
@@ -310,7 +317,7 @@ Nextant already has systems of record for delivered work — the BPM Project Inv
 1. Is there (or could there easily be) a presentable asset — not just internal automation glue?
 2. Could the same approach be repeated for a different client?
 3. Would an external prospect recognize the problem it solves?
-4. Can it be described without breaking confidentiality? (Answered via the `nx_solution`'s own `Shareable with Clients`.)
+4. Can it be described without breaking confidentiality? (Contributor safety acknowledgment and librarian-controlled client-safe review on `nx_solution`.)
 
 A row that fails this — internal tooling maintenance, one-off support tied to a single stakeholder relationship, culture/ops apps with no sales relevance — never gets linked, or stays in its source system entirely. Nothing here needs to catch up to it; the source system keeps existing independently, and PRISMA doesn't replace it.
 

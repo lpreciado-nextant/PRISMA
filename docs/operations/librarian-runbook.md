@@ -1,29 +1,29 @@
 # Librarian runbook
 
-**Status:** Draft — contributor/calendar review included; refine with librarian team · **Last updated:** 2026-09-18
+**Status:** Planned review workflow, aligned with safety-first submission; UI deferred · **Last updated:** 2026-09-21
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
 
 ## Reviewing a submission
 
-Queue at `/review`; new submissions arrive via Teams/Outlook notification.
+Planned queue at `/review`, with Teams/Outlook notifications in production. Neither exists in the current PoC; contributor submissions remain local and pending.
 
 **Checklist before approving:**
 
 - [ ] Name, one-liner, and body text read well and would not embarrass anyone on a client screen
-- [ ] At least one asset a CSM can show **without any setup** — if the primary asset can't be embedded, a video walkthrough exists
+- [ ] New submission contains one to six detail images; images alone are sufficient; thumbnail alone is not
 - [ ] Uploaded HTML files reviewed for active content (sandboxing is defence in depth, not a substitute)
-- [ ] Hosted URLs load; `Allows Embedding` flag matches reality
-- [ ] Shareability and sample-data flags are credible for the content
-- [ ] If shareability is *Yes, with names removed*: `Client Context (Redacted)` is filled with a generic descriptor and no client name leaks anywhere in body text
+- [ ] Legacy hosted URLs load; new submissions use images, HTML, video or one-pagers/slides only
+- [ ] Safety acknowledgment is present; independently verify authorized, anonymized descriptions and media
+- [ ] Client identity stays internal; anonymous context is supplied when a client is named; no identifying details leak through body text or attachments
 - [ ] Tags are sensible; no duplicate technologies introduced
 - [ ] Thumbnail present or the generated poster is acceptable
-- [ ] At least one unique credited person; inclusive dates and 0-100% allocation (up to two decimals) are complete and credible
-- [ ] Assigned US calendar version covers every contribution; derived hours match the [schema calculation](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort), not timesheet actuals or deployment lead time
+- [ ] At least one unique person with credible direct hours for ideas/prototypes or dates/allocation for demos/production
+- [ ] Calendar-mode contributions have covered US dates and valid 0-100% allocation; direct hours are finite and nonnegative, at most two decimals. Check the [schema contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort)
 - [ ] Project links, if present, meet [intake criteria](../data_model/SchemaV2.md#intake-triage-not-every-legacy-record-gets-linked-to-a-solution); client engagement names and per-person effort details do not appear in present mode
 
-**Outcomes:** approve (→ *Published*) or request changes (→ *Draft*, with a note to the contributor).
+**Outcomes:** approve client-safe content (set Client Safe Reviewed and Published), or request changes (Draft with a note). Acknowledgment never grants clearance. Material edits clear Client Safe Reviewed and require fresh acknowledgment.
 
 **Re-reviews:** a contributor edit to a published record returns it to *Pending review* with a diff of what changed. Trivial edits (typo in library notes) don't re-enter the queue; an auto-approve path for minor edits mitigates bottleneck risk (R4).
 
@@ -48,4 +48,4 @@ Retire when stale, superseded, or client-sensitive. Retired records leave search
 | Periodic | Link-health and staleness review ([content health](content-health.md)) |
 | Periodic | Technology duplicate merge |
 | Annual | Re-confirmation prompt cycle to contributors |
-| Before Phase 3 | Deliberate review of shareability flags on **every** published record |
+| Before Phase 3 | Deliberate client-safe review of **every** published record |

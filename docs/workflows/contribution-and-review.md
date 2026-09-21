@@ -1,6 +1,6 @@
 # Contribution & review workflow
 
-**Status:** Draft for review, aligned with current contributor and calendar contracts · **Last updated:** 2026-09-18
+**Status:** Agreed six-step submission implemented in the local PoC · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §3.1](../design/end-to-end-design.md#31-contribution--publication) · Roles: [Contributor, Librarian](../design/end-to-end-design.md#2-users-and-roles)
 
 ## Lifecycle
@@ -25,19 +25,18 @@ Guided multi-step form with draft saving at every step. **Friction budget: under
 
 | Step | Collects | Notes |
 |---|---|---|
-| 1. What is it? | Name, one-line summary, specialization area, status, one or more builders | Per person: start/end dates and allocation %; US calendar assigned automatically without a selector; live business-day and hour totals |
-| 2. What does it do and why does it matter? | What It Does, Business Value, client problem it solves | The step CSMs depend on most and builders resent most — gets inline examples and an optional AI-assist to expand terse bullets into prose |
-| 3. Tag it | Capabilities, technologies, industries | Type-ahead against existing values. New technologies can be created inline; capabilities and industries cannot ([governance](../data_model/reference-data-governance.md)) |
-| 4. Attach the demo | One or more assets | Form adapts to asset type ([demo assets](demo-assets.md)) |
-| 5. Images | One card thumbnail (optional — generated poster covers records without one) + captioned detail screenshots (`nx_solutionimage`) | |
-| 6. Safety & sharing | Shareable with clients, sample data level, client/context | Asked plainly — getting these wrong is the highest-consequence error in the system. If "Yes, with names removed": fill `Client Context (Redacted)` |
-| 7. Review & submit | Preview of exactly how the card and detail page will look | |
+| 1. Before you start | Required safety acknowledgment | Replaces sharing/sample-data classifications; authorized, anonymized client-visible content; not review approval |
+| 2. What is it? | Identity, maturity, contributors, internal client and anonymous context | Direct hours for ideas/prototypes; dates/allocation for demos/production. Anonymous context required if a client is supplied |
+| 3. What & why | Actions/results and business value | Separate fields with examples; optional AI assistance deferred |
+| 4. Tag it | Searchable capabilities, technologies, industries | New technologies allowed with case-insensitive deduplication; other lists governed |
+| 5. Media | One to six required detail images; optional thumbnail, HTML, video and one-pager/slides | Images alone suffice. Capability-specific guidance; permission-dependent formats deferred |
+| 6. Review & submit | Client-visible card and summary | Revalidate safety, identity/effort, anonymous context and required images |
 
-On submit the record moves to *Pending review* and the librarian queue is notified (Power Automate → Teams/Outlook). Contributors can see the state of their own submissions at any time (`/my-submissions`).
+On submit the record moves to *Pending review*. Production will notify the librarian (Power Automate); the PoC does not. Contributors inspect and edit their records at `#/my-submissions`, with editing at `#/submit/:id`. The library remains the first screen; no welcome page. Librarian UI design is deferred without removing the approval requirement.
 
-Builder credit is a set of `nx_solutioncontributor` rows, not the submitter or record owner. Each person appears once. At least one complete row is required before submission; invalid/reversed dates, missing calendars, out-of-coverage dates and allocations outside 0-100% block progress. Allocation has at most two decimal places. Dates are inclusive; holidays come from the automatically assigned US calendar. Calculation and migration rules live in [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
+Builder credit is independent of ownership. Require one or more unique people. Direct mode requires finite nonnegative hours with at most two decimals. Calendar mode retains valid inclusive dates, 0-100% allocation with two decimals, and a covered US calendar. Switching maturity preserves draft values and validates/totals only the active mode. Full contract: [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
-The mock form saves contributor inputs in the session draft, supports adding/removing people and shows aggregate hours on review. It does not create Dataverse records or send notifications. Old drafts acquire an initial contributor and need effort inputs before continuing.
+The PoC saves text drafts in tab storage, with separate keys for edits and the walkthrough. Media is memory-only. Submitted records and attachments survive navigation within the running app, but not reload. No Dataverse records, notifications or real review queue entries are created. The revised draft key avoids treating legacy sharing answers as acknowledgment.
 
 The Person field searches available people by name or email, case-insensitively. Results exclude people already assigned to another contributor row. Select a result with a pointer or arrow keys followed by Enter; unmatched text is never stored as a person. Escape or leaving the field cancels the search and restores the committed selection. Selected people persist with the draft. This searches the mock people list, not a live directory.
 
@@ -45,15 +44,15 @@ The Person field searches available people by name or email, case-insensitively.
 
 | Change | Effect |
 |---|---|
-| Material — summary, business value, assets, sharing flags, contributor or effort inputs | Returns to *Pending review*; librarian sees a diff of what changed |
+| Material — summary, business value, media, client context, contributor or effort inputs | Fresh acknowledgment; returns to Pending review and clears Client Safe Reviewed; production librarian sees a diff |
 | Trivial — typo in library notes | Stays *Published* |
 
 ## Review (librarian side)
 
 Detailed steps in the [librarian runbook](../operations/librarian-runbook.md). At review the librarian enforces:
 
-- Every solution has at least one asset a CSM can show **without any setup** (video walkthrough as universal fallback).
-- Shareability and sample-data flags are credible for the content.
+- New submissions have at least one detail image. Images alone are sufficient, with optional other supported media.
+- Safety acknowledgment is present and all client-visible content is authorized and anonymized; client identity remains internal.
 - Uploaded HTML files are reviewed before publication (sandboxing is defence in depth, not a substitute).
 - Entry quality — no half-finished entries or internal snark reach a client screen.
-- At least one unique builder, valid inclusive dates and allocation, and a reviewed calendar version covering every contribution; calculated hours reflect those inputs, not the retired deployment-time category.
+- At least one unique builder with valid effort for the maturity-selected mode. Only the librarian sets Client Safe Reviewed; acknowledgment never grants clearance.

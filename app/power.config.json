@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "appId": "69a956d5-2180-4ad6-9136-136c48cc197f",
+  "appDisplayName": "PRISMA PoC",
+  "region": "prod",
+  "appType": "CodeApp",
+  "environmentId": "ce09ad9b-57d1-e5df-9400-8ce973c86213",
+  "description": " ",
+  "buildPath": "dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {},
+  "databaseReferences": {}
+}

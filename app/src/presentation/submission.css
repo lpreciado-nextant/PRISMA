@@ -1,0 +1,112 @@
+.presentation-header, .presentation-heading, .presentation-chapters, .presentation-layout, .presentation-footer { max-width: 1640px; margin-inline: auto; }
+.presentation-header { display: flex; align-items: center; gap: 24px; padding: 22px 40px; border-bottom: 1px solid var(--glass-edge); }
+.presentation-brand { display: flex; align-items: center; gap: 12px; color: var(--ink); text-decoration: none; font: 700 25px/1 var(--font-display); }
+.presentation-brand img { flex-shrink: 0; }
+.presentation-brand-note { display: block; margin-top: 8px; font: 9px/1.3 var(--font-mono); color: var(--ink-2); }
+.presentation-series { padding-left: 24px; border-left: 1px solid var(--glass-edge); font: 11px var(--font-mono); color: var(--ink-2); }
+.presentation-tools { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.presentation-command, .presentation-icon { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; border: 1px solid var(--glass-edge); border-radius: 8px; background: var(--glass-bg-2); color: var(--ink); cursor: pointer; font: 600 13px var(--font-display); }
+.presentation-command { padding: 9px 13px; }
+.presentation-command svg { flex-shrink: 0; }
+.presentation-icon { width: 40px; flex-shrink: 0; }
+.presentation-command:hover, .presentation-icon:hover:not(:disabled) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--glass-bg-2)); }
+.presentation-icon:disabled { opacity: .3; cursor: default; }
+.presentation-heading { padding: 30px 40px 24px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+.presentation-heading h1 { font-size: 36px; line-height: 1.2; letter-spacing: 0; margin-top: 7px; }
+.presentation-source { color: var(--ink-2); font-size: 13px; padding-bottom: 3px; }
+.presentation-source > span:first-child { display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--live); }
+.presentation-source-detail { display: block; font-size: 12px; margin-top: 4px; }
+.presentation-chapters { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 0 40px; }
+.presentation-chapters button { display: flex; flex-direction: column; text-align: left; gap: 8px; padding: 14px 12px 15px; border-top: 1px solid var(--glass-edge); border-bottom: 2px solid var(--glass-edge); cursor: pointer; color: var(--ink-2); font: 600 12px/1.4 var(--font-display); }
+.presentation-chapters button:hover { background: var(--glass-bg-2); color: var(--ink); }
+.presentation-chapters [aria-current="step"] { border-bottom-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.presentation-chapter-number { font: 12px var(--font-mono); }
+.presentation-layout { display: grid; grid-template-columns: minmax(300px, .8fr) minmax(0, 1.7fr); align-items: start; gap: 38px; padding: 30px 40px 48px; }
+.presentation-notes { position: sticky; top: 24px; padding-top: 10px; min-width: 0; }
+.presentation-notes-content { animation: presentation-reveal .3s ease both; }
+.presentation-notes h2 { margin-top: 13px; font-size: 27px; line-height: 1.25; letter-spacing: 0; }
+.presentation-summary { color: var(--ink-2); font-size: 15px; line-height: 1.65; margin-top: 16px; }
+.presentation-points { display: grid; gap: 22px; margin-top: 26px; }
+.presentation-points > div { display: flex; gap: 14px; }
+.presentation-point-number { color: var(--accent); font: 11px var(--font-mono); border-top: 1px solid var(--accent); padding-top: 5px; min-width: 20px; }
+.presentation-points dt { font: 600 14px/1.5 var(--font-display); }
+.presentation-points dd { font-size: 14px; line-height: 1.6; color: var(--ink-2); margin-top: 4px; }
+.presentation-try { margin-top: 26px; display: flex; gap: 12px; padding: 16px 0; border-top: 1px solid var(--glass-edge); border-bottom: 1px solid var(--glass-edge); color: var(--sa-data); }
+.presentation-try > svg { flex-shrink: 0; margin-top: 3px; }
+.presentation-try h3 { font-size: 13px; letter-spacing: 0; }
+.presentation-try p { font-size: 13px; line-height: 1.6; margin-top: 4px; color: var(--ink-2); }
+.presentation-boundary { margin-top: 20px; border-left: 2px solid var(--proto); padding-left: 14px; }
+.presentation-boundary .eyebrow { color: var(--proto); font-size: 10px; }
+.presentation-boundary > p:last-child { margin-top: 7px; font-size: 12.5px; line-height: 1.65; color: var(--ink-2); }
+.presentation-output { display: flex; align-items: center; gap: 10px; margin-top: 22px; font-size: 12px; color: var(--accent); }
+.presentation-output svg { flex-shrink: 0; }
+.presentation-paging { margin-top: 25px; display: flex; align-items: center; gap: 16px; }
+.presentation-paging > span { font: 11px var(--font-mono); color: var(--ink-2); }
+.presentation-demo { min-width: 0; border-left: 1px solid var(--glass-edge); padding-left: 30px; }
+.presentation-demo-label { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0 18px; color: var(--ink-2); font: 10px var(--font-mono); }
+.presentation-demo-label > span:first-child { display: inline-flex; align-items: center; gap: 8px; }
+.presentation-demo-label > span:last-child { color: var(--sa-data); }
+.submission-stage > div { padding: 0; max-width: none; }
+.submission-stage > div > button:first-child { display: none; }
+.submission-stage h1 { font-size: 26px !important; letter-spacing: 0 !important; }
+.submission-stage h2, .submission-stage h3 { letter-spacing: 0; }
+.submission-stage > div > .animate-rise { margin-top: 0; }
+.submission-stage .glass { margin-top: 20px; }
+.submission-stage { min-height: 650px; }
+.presentation-handoff { padding: 48px 12px; max-width: 610px; margin: 0 auto; }
+.presentation-handoff-icon { width: 64px; height: 64px; display: grid; place-items: center; background: color-mix(in srgb, var(--live) 13%, transparent); color: var(--live); border-radius: 50%; margin-bottom: 28px; }
+.presentation-handoff h2 { font-size: 30px; margin-top: 10px; }
+.presentation-handoff > p:not(.eyebrow) { margin-top: 16px; color: var(--ink-2); }
+.presentation-review-flow { margin-top: 35px; display: grid; gap: 0; }
+.presentation-review-flow li { display: flex; gap: 16px; align-items: start; border-top: 1px solid var(--glass-edge); padding: 20px 0; }
+.presentation-review-flow svg { color: var(--sa-data); margin-top: 5px; flex-shrink: 0; }
+.presentation-review-flow strong, .presentation-review-flow span { display: block; }
+.presentation-review-flow strong { font: 600 15px var(--font-display); }
+.presentation-review-flow span { color: var(--ink-2); font-size: 14px; margin-top: 5px; }
+.presentation-simulation { font-size: 13px; border-left: 2px solid var(--proto); padding-left: 12px; }
+.presentation-handoff > button { margin-top: 28px; }
+.presentation-footer { padding: 20px 40px; border-top: 1px solid var(--glass-edge); display: flex; justify-content: space-between; gap: 20px; font: 10px/1.6 var(--font-mono); color: var(--ink-2); }
+.presentation-dialog { margin: auto; max-width: 440px; width: calc(100% - 32px); border: 1px solid var(--glass-edge); border-radius: 8px; padding: 26px; color: var(--ink); background: var(--ground); }
+.presentation-dialog::backdrop { background: rgb(0 0 0 / .55); backdrop-filter: blur(5px); }
+.presentation-dialog h2 { font-size: 22px; letter-spacing: 0; }
+.presentation-dialog p { margin-top: 12px; font-size: 14px; color: var(--ink-2); }
+.presentation-dialog > div { display: flex; justify-content: end; gap: 10px; margin-top: 24px; }
+.presentation-primary { background: var(--accent); color: var(--on-accent); }
+.presentation-skip { position: absolute; top: -100px; left: 20px; padding: 12px 18px; background: var(--ground); color: var(--ink); z-index: 10; }
+.presentation-skip:focus { top: 12px; }
+@keyframes presentation-reveal { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@media (min-width: 1450px) { .presentation-layout { grid-template-columns: minmax(0, 430px) minmax(0, 1fr); gap: 56px; } }
+@media (max-width: 1100px) {
+  .presentation-header, .presentation-heading, .presentation-footer { padding-inline: 24px; }
+  .presentation-series { display: none; }
+  .presentation-chapters { padding-inline: 24px; }
+  .presentation-layout { padding-inline: 24px; gap: 24px; grid-template-columns: minmax(260px, .8fr) minmax(0, 1.5fr); }
+  .presentation-demo { padding-left: 22px; }
+  .presentation-notes h2 { font-size: 24px; }
+}
+@media (max-width: 800px) {
+  .presentation-header { flex-wrap: wrap; gap: 18px; padding: 18px 20px; }
+  .presentation-brand { font-size: 23px; }
+  .presentation-tools { margin-left: auto; }
+  .presentation-heading { padding: 24px 20px 20px; align-items: start; flex-direction: column; gap: 15px; }
+  .presentation-heading h1 { font-size: 30px; }
+  .presentation-chapters { padding-inline: 20px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .presentation-chapters button { padding-inline: 8px; min-height: 78px; }
+  .presentation-layout { display: flex; flex-direction: column; padding: 24px 20px; gap: 25px; }
+  .presentation-notes { position: static; width: 100%; }
+  .presentation-notes h2 { max-width: 32ch; }
+  .presentation-points { gap: 16px; }
+  .presentation-demo { border-left: 0; border-top: 1px solid var(--glass-edge); padding: 20px 0 0; width: 100%; }
+  .submission-stage { min-height: 0; }
+  .presentation-footer { padding: 20px; flex-direction: column; gap: 8px; }
+}
+@media (max-width: 480px) {
+  .presentation-tools { margin-left: 0; width: 100%; }
+  .presentation-tools > .presentation-icon { margin-left: auto; }
+  .presentation-command { font-size: 12px; padding-inline: 11px; }
+  .presentation-chapters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .submission-stage .glass { padding: 20px 16px; }
+  .submission-stage h1 { font-size: 24px !important; }
+  .presentation-dialog > div { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { .presentation-notes-content { animation: none; } }

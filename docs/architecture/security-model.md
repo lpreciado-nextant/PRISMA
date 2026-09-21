@@ -1,13 +1,13 @@
 # Security model
 
-**Status:** Draft for review, including contributor and project controls · **Last updated:** 2026-09-21
+**Status:** Agreed safety-first contract, including contributor and project controls; platform enforcement pending · **Last updated:** 2026-09-21
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
 
 - **Platform-enforced, not UI-enforced.** Unpublished records are invisible to CSMs at the Dataverse level, not merely filtered in the client.
 - **The publication gate is the safety mechanism.** Only the Librarian role can write publication status — enforced by a field-level security profile.
-- **Present mode filters server-side.** The query issued in present mode filters on shareability at Dataverse, so a client-visible list can never contain an internal-only record even transiently.
+- **Present mode filters server-side.** Require Published, Safety Acknowledged and Client Safe Reviewed at Dataverse; omit internal client/context, projects and notes from the presentation projection. The PoC mirrors this before search/render, not as a security boundary.
 
 ## Role privileges
 
@@ -30,6 +30,7 @@
 | Column | Rule |
 |---|---|
 | Publication status | Writable by Librarian only |
+| Client Safe Reviewed | Writable by Librarian only; default false, cleared on material edits; acknowledgment cannot grant approval |
 | `Library Notes` | Unreadable by the CSM role; never rendered in present mode |
 
 ## Authentication
@@ -40,9 +41,11 @@ Microsoft Entra ID SSO. Internal Nextant users only — clients never log in. In
 
 | Control | Where |
 |---|---|
-| Mandatory shareability + sample-data questions | Submission step 6 |
+| Required upfront acknowledgment of authorized, anonymized content | Submission step 1; renewed on edit |
 | Librarian review gate before publication | [Contribution workflow](../workflows/contribution-and-review.md) |
 | Dedicated redacted client-context field (`Client Context (Redacted)`) — no runtime string-scrubbing | Schema + [present mode](../workflows/present-mode.md) |
 | User-supplied HTML rendered in a sandboxed iframe, restrictive policy, no same-origin access to the host app | Asset viewer |
 | Librarian review of uploaded HTML files | [Librarian runbook](../operations/librarian-runbook.md) |
 | Per-person dates, allocation, and effort breakdown omitted in present mode; names and total effort may remain | Detail view; not a security boundary for bundled mock data |
+
+Client identity is always internal, regardless of maturity. Anonymous context is authored separately and required when the internal client field is populated. This does not scrub names from descriptions or attachments; their confidentiality must be checked before approval.

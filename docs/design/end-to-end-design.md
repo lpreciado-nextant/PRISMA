@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Draft for review · searchable contributors and effort implemented in the mock [`app/`](../../app/README.md)
+**Status:** Agreed submission revision, searchable contributors and effort implemented in the local mock [`app/`](../../app/README.md); production integration pending
 **Last updated:** 2026-09-21
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
@@ -88,17 +88,16 @@ stateDiagram-v2
 
 **Guided multi-step submission form**, with draft saving at every step. The steps mirror how a builder actually thinks about their work, not how the database is shaped:
 
-1. **What is it?** — Name, one-line summary, specialization area, capability (single-valued, same picker style as specialization area), status (idea / prototype / client demo / production / retired), and one or more builders, searchable by name or email. Each builder has inclusive start/end dates and an allocation percentage; calculated effort (a plain Monday-Friday day count, no holiday exclusion) is previewed per person and in total. Duplicate people are excluded; the PoC searches mock people rather than a live directory.
-2. **What does it do and why does it matter?** — What It Does, Business Value, client problem it solves. This is the step CSMs depend on most and builders resent most, so it gets inline examples and an optional AI-assist to expand terse bullets into prose.
-3. **Tag it** — Technologies, industries. Type-ahead against existing values; new technologies can be created inline (that vocabulary is intentionally open), new industries cannot (those are governed).
-4. **Attach the demo** — One or more assets. The form adapts to asset type (see §3.3).
-5. **Images** — One card thumbnail (optional; a generated per-specialization poster covers records without one) plus any number of captioned detail-page screenshots, stored in `nx_solutionimage` (see §6.1a).
-6. **Safety & sharing** — Shareable with clients, sample data level, client/context. These questions are asked plainly because getting them wrong is the highest-consequence error in the system.
-7. **Review & submit** — A preview of exactly how the card and detail page will look, then submit.
+1. **Before you start** — Required safety acknowledgment replaces the former sharing and sample-data classifications. Submit only authorized, client-safe descriptions and media using invented or anonymized data. Client identity is allowed only in the dedicated internal field. Acknowledgment is not approval.
+2. **What is it?** — Name, summary, specialization area, capability (single-valued, same picker style as specialization area), maturity, optional internal client and separately authored anonymous presentation context. Require the anonymous context when a client is supplied. Credit at least one unique contributor, searchable by name/email. Ideas and working prototypes use direct hours per person; client demos and production use inclusive start/end dates and an allocation percentage, with calculated effort (a plain Monday-Friday day count, no holiday exclusion) previewed per person and in total. Duplicate people are excluded; the PoC searches mock people rather than a live directory.
+3. **What & why** — Separate actions/results from business value. Optional AI writing assistance is deferred; contributors may paste existing approved wording unchanged.
+4. **Tag it** — Search capabilities, technologies and industries. Capabilities/industries remain governed; new technologies are allowed with case-insensitive duplicate prevention.
+5. **Media** — Require one to six detail images, with optional captions. Thumbnail remains optional with generated-poster fallback. Optional videos, one-pagers/slides and self-contained HTML share this step. Capability-specific hints explain useful outcomes and confidentiality requirements.
+6. **Review & submit** — Client-visible card preview plus a summary clearly separating internal client identity and anonymous context. Validate acknowledgment, contributor effort, client context and required images again at submit.
 
-On submit the record moves to *Pending review* and the librarian queue is notified. Contributors can see the state of their own submissions at any time.
+On submit the record moves to *Pending review*. The production workflow will notify the librarian; the PoC does not. Direct navigation connects the library, submission form and **My submissions**, with inspection and editing; no welcome screen. PoC submissions/media survive navigation in memory but not reload. Text drafts save in tab storage. Librarian UI design is deferred, not the review requirement. Dataverse remains the only planned persistence/storage service.
 
-**Editing a published record** returns it to *Pending review* for material changes (summary, business value, assets, sharing flags, contributor or effort inputs) but not for trivial ones (typo in library notes). The librarian sees a diff of what changed.
+**Editing a published record** returns it to *Pending review* and clears client-safe review approval for material changes (summary, business value, media, client context, contributor or effort inputs). Require a fresh safety acknowledgment. Production librarian review will include a diff; librarian-only note corrections may remain published.
 
 ### 3.2 Discovery → presentation (the CSM path)
 
@@ -120,15 +119,15 @@ flowchart LR
 
 **Search** is fast, forgiving, and matches across name, summary, what-it-does, business value, tags, and the editorial `Search Keywords` field. Results update as the CSM types. Zero-result states suggest relaxing the most restrictive active facet rather than showing an empty page.
 
-**Facets** filter by specialization area, capability, technology, industry, solution status, and shareability. Facets are additive, show live counts, and are individually removable as chips. The active filter state is reflected in the URL so a CSM can bookmark or paste a filtered view into a Teams thread.
+**Facets** filter by specialization area, capability, technology, industry and solution status (status is planned). Facets are additive, show live counts, and are individually removable as chips. The active filter state is reflected in the URL so a CSM can bookmark or paste a filtered view into a Teams thread.
 
 **Browse** is the alternative for CSMs who don't yet know what they're looking for: three specialization-area tabs, each with a short framing note and a visual card grid. Cards carry a thumbnail, name, one-liner, specialization colour coding, status badge, and a capability badge — enough to triage without clicking.
 
-**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths), total calculated effort hours, the client/context it came from, tags, and the asset list. Per-person dates, allocation, and effort breakdown are internal-only and omitted in present mode, alongside library notes. Builder names and total effort may remain visible for a shareable solution. Effort is capacity-based, not elapsed deployment time or a timesheet.
+**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths), total calculated effort hours, the client/context it came from, tags, and the asset list. Per-person dates, allocation, and effort breakdown are internal-only and omitted in present mode, alongside library notes and internal client identity. Present mode uses only the authored anonymous context, builder names and aggregate hours. Direct hours are reported effort; calendar-mode hours are capacity-based, not elapsed deployment time or a timesheet — and client-demo hours carry a warning that production delivery may take longer.
 
 ### 3.3 Demo assets
 
-Asset handling is type-dependent. The CSM should never have to guess what will happen when they click.
+New submissions support images, videos, one-pagers/slides and self-contained HTML only. Hosted-app, Power Apps, Power BI and desktop/script options and access-request controls are deferred. Existing catalogue records retain their legacy delivery behavior below; this is not a promise that these formats can be newly submitted.
 
 | Asset type | In-app behaviour | Fallback |
 |---|---|---|
@@ -139,7 +138,7 @@ Asset handling is type-dependent. The CSM should never have to guess what will h
 | Desktop app or script | Not runnable in-app — show the video and a "request live demo" call to action | Contact the builder |
 | Client-ready one-pager / slide | Download | — |
 
-Every solution should have at least one asset a CSM can show *without any setup*. Where the primary asset can't be embedded, a video walkthrough acts as the universal fallback. The librarian enforces this at review.
+New submissions require at least one detail image; images alone are sufficient. A thumbnail alone is not. The librarian reviews all client-visible media before publication. Capability-specific upload guidance should be validated with practice leads, especially data/BI and business teams.
 
 **Request a live demo** creates a lightweight handoff: the CSM picks a solution, adds context (client, date, what they need to show), and the builder is notified. This is the escape hatch for solutions that can't be self-served, and it doubles as a signal of which solutions matter to the business (G3).
 
@@ -150,8 +149,8 @@ One switch in the masthead, available from any page, flipped before the CSM shar
 Present mode:
 
 - **Suppresses internal-only content** — library notes, publication status, review history, builder-facing metadata.
-- **Restricts the catalogue** to solutions flagged *Shareable with clients*. Internal-only solutions disappear from search and browse entirely while present mode is active, so there is no way to accidentally surface one.
-- **Applies client-safe redaction** — where a solution is flagged *Yes, with names removed*, client names in the Client/Context field and body text are replaced with a generic descriptor ("a national logistics provider"). This requires a dedicated redacted variant of the client context field rather than runtime string-scrubbing, which is not trustworthy.
+- **Restricts the catalogue** before search/render to Published records with Safety Acknowledged and librarian-controlled Client Safe Reviewed both true. Unreviewed and pending records are never included.
+- **Always excludes client identity** and project names. Present mode uses only the dedicated anonymous context field, never the internal client field. Body text and media must already be anonymized; no runtime string-scrubbing or automatic media redaction is implied.
 - **Changes the visual treatment** — larger type, minimal chrome, no filter rail by default, full-bleed demo viewer.
 
 Present mode state is obvious and persistent (a clear banner, dismissible without leaving the mode — the masthead toggle stays lit) so a CSM is never unsure which mode they're in. Exiting requires a deliberate action.
@@ -201,14 +200,14 @@ It joins `nx_solution` via native N:N.
 
 ### 6.1a New child table: `nx_solutionimage`
 
-Detail-page screenshots beyond the card thumbnail — the submission form collects them in a dedicated Images step. The `Thumbnail` column on `nx_solution` remains the single card-grid hero image; this table carries the captioned gallery rendered on the solution detail page. 1:N to `nx_solution`, visibility inherited from the parent. Full spec in the [schema doc (v2)](../data_model/SchemaV2.md).
+Detail-page images collected in the unified Media step. Require one to six on new submissions; `Thumbnail` remains optional and separate. 1:N to `nx_solution`, with access aligned to the parent. Full spec in the [schema doc (v2)](../data_model/SchemaV2.md).
 
 ### 6.2 Additions to `nx_solution`
 
 | Column | Type | Rationale |
 |---|---|---|
 | Thumbnail | Image column | The card grid is the primary browse surface and needs a visual. A per-specialization generated placeholder covers records without one. |
-| Client Context (Redacted) | Single line of text (200) | Supplies the client-safe substitute string used in present mode. Filled in by the contributor or librarian when shareability is *Yes, with names removed*. |
+| Client Context (Redacted) | Single line of text (200) | The only context used in present mode; required at submission when the optional internal client field is populated. |
 | Use Case | Single line of text (200) | Freeform client-side framing of the problem the solution addresses ("reduce manual invoice handling"). Originally a governed `nx_usecase` reference table joined via N:N; simplified to a text column to cut governance overhead. |
 
 ### 6.3 New table: `nx_demorequest`
@@ -219,7 +218,9 @@ Supports the live-demo handoff (§3.3): solution, requester, client/opportunity 
 
 Replace the single `Built By` lookup and solution-wide `Effort / Time to Deploy` choice with `nx_solutioncontributor`: one row per Solution/person, with a `cr6b0_consultant` lookup, Date Only start/end dates, and allocation (0-100%). Contributor credit does not change record ownership or grant edit access.
 
-`Business Days` is a plain Monday-Friday count within the inclusive date range — no holiday exclusion; there is no business-calendar concept in this model. Per-person hours = business days × 8 × allocation / 100, rounded to two decimals; solution hours sum those rounded person totals. Reject invalid dates and reversed ranges.
+Effort Mode follows maturity: Direct for ideas/prototypes, Calendar for client demos/production. Direct Hours is a nonnegative two-decimal input; dates/allocation are not required in Direct mode. Switching maturity preserves draft inputs but validates and totals only the active mode.
+
+In Calendar mode, `Business Days` is a plain Monday-Friday count within the inclusive date range — no holiday exclusion; there is no business-calendar concept in this model. Per-person hours = business days × 8 × allocation / 100, rounded to two decimals; solution hours sum those rounded person totals. Reject invalid dates and reversed ranges.
 
 The schema owns the full contract and migration notes; see [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md), which documents the removal of the earlier business-calendar mechanism.
 
@@ -263,7 +264,7 @@ flowchart TB
 - **Assets live in Dataverse File and Image columns.** No external blob storage, no separate hosting to provision. This is what makes self-contained HTML demos viable — the payload travels with the record.
 - **Native N:N relationships** for solution↔technology, solution↔industry, and solution↔`cr6b0_project`. No hand-built junction tables for these — capability is a single-valued 1:N lookup, same shape as specialization area, not a tag; `nx_solutioncontributor` is a child table carrying per-person effort attributes because that relationship has attributes of its own.
 - **Power Automate for notifications only** — review-queue alerts and demo-request handoffs to Teams/Outlook. No business logic lives in flows.
-- **Present mode is enforced server-side as well as client-side.** The query issued in present mode filters on shareability at the Dataverse level, so a client-visible list can never contain an internal-only record even transiently.
+- **Present mode is enforced server-side as well as client-side.** The production query requires Published, Safety Acknowledged and Client Safe Reviewed, and omits internal client/project fields. The PoC mirrors this before render; bundled data is not protected by it.
 
 ### 7.3 Search approach
 
@@ -308,7 +309,7 @@ The 40-solution target is the only firm number today. The remaining targets shou
 
 **Phase 2 — Discovery.** Card grid, specialization tabs, search, facets, solution detail, asset viewer. The CSM read path, end to end. Ported from the prototype's visual language.
 
-**Phase 3 — Present mode.** Client-safe restriction, redaction, presentation chrome. Gated behind a deliberate review of the shareability flags on every published record.
+**Phase 3 — Present mode.** Client-safe restriction and presentation chrome, gated by deliberate client-safe review of every published record.
 
 **Phase 4 — Contribution.** Guided submission form, draft saving, review queue, notifications. Opens the library to the whole firm.
 
@@ -323,7 +324,7 @@ Phases 2 and 3 are the ones that justify the project to a CSM; phase 4 is the on
 | Risk | Impact | Mitigation |
 |---|---|---|
 | **Contribution never happens** — builders don't submit, the library stays thin, CSMs stop visiting | Fatal to G2 and G4 | Seed 40 records via librarian bulk entry in phase 1 before opening submissions. Keep the form under 10 minutes. Make credit visible. Practice leads own a quota. |
-| **Client data leaks into a client presentation** | Severe, reputational | Mandatory shareability and sample-data questions at submission; librarian review gate; server-side filtering in present mode; explicit redacted-context field |
+| **Client data leaks into a client presentation** | Severe, reputational | Upfront safety acknowledgment; librarian-controlled client-safe review; server-side filtering; client identity always internal; separately authored anonymous context |
 | **Demos break silently** — hosted URLs rot, embeds start failing | Erodes CSM trust, which is unrecoverable | Periodic link-health check; `Allows Embedding` flag; video walkthrough as universal fallback; librarian-driven staleness review |
 | **Librarian becomes a bottleneck** | Contributions queue up and stall | More than one librarian; SLA on review; auto-approve path for minor edits |
 | **Stale content presented as current** | Undermines G3 | `Date Added` surfaced on cards; retirement workflow; annual re-confirmation prompt to the contributor |

@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to v2 · **Last updated:** 2026-09-21
+> **Status:** Maintained companion to v2, including agreed submission revision · **Last updated:** 2026-09-21
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Table (logical) names below use an `nx_` publisher prefix — swap for whatever your actual solution prefix is.
 
@@ -70,10 +70,10 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 | Capability | Lookup → `nx_capability` | Yes | Single-valued, same shape as Specialization Area |
 | Status | Choice — **global**, single-select | Yes | See `nx_solutionstatus` below — describes the solution's own maturity |
 | Publication Status | Choice — **global**, single-select | Yes | See `nx_publicationstatus` below — describes library visibility, independent of Status |
-| Shareable with Clients | Choice — **global**, single-select | Yes | See `nx_shareability` below |
-| Sample Data Level | Choice — **global**, single-select | Yes | See `nx_sampledatalevel` below |
+| Safety Acknowledged | Yes/No | Yes | Default false; required before entry and at submit, renewed on edit. Replaces sharing/sample-data classifications. |
+| Client Safe Reviewed | Yes/No | Yes | Default false; Librarian-only write. Clear on material edits. Present eligibility requires this, acknowledgment and Published. |
 | Client / Context | Single line of text (200) | No | Freeform for now; revisit as a lookup if you need to report by client later. **Internal-only** — never rendered in present mode |
-| Client Context (Redacted) | Single line of text (200) | No | The client-safe substitute shown in present mode — "a national logistics provider". Required in practice whenever Shareable with Clients is "Yes, with names removed"; enforce that pairing at review rather than at the schema level, since Dataverse can't express conditional-required across columns without a rule |
+| Client Context (Redacted) | Single line of text (200) | Conditional | Required at submit when Client / Context is populated; the only context used in present mode. No runtime scrubbing. |
 | Thumbnail | Image column | No | Hero image for the card grid. Fall back to a per-specialization generated placeholder when empty |
 | Date Added | Date Only | No | Business date, distinct from the automatic `createdon` audit timestamp |
 | Library Notes | Multiple lines of text (plain, 2000) | No | **Enable field-level security** on this column — internal-only, should not be readable by the app's general audience even if they can see the rest of the row |
@@ -85,9 +85,7 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 
 > **Field-level security required.** Only the Librarian role may write `Publication Status`; this is the gate that keeps unreviewed work off a client's screen, so it can't rest on UI affordance alone.
 
-**Choice: `nx_shareability`** (global) — Yes · Yes, with names removed · No – internal only
-
-**Choice: `nx_sampledatalevel`** (global) — Yes – all data is invented · Partly – some real figures · No – contains real client data
+The former `nx_shareability` and `nx_sampledatalevel` choices are retired from new submissions. Do not infer client-safe review approval from legacy values or acknowledgment. Retain historical data until an approved real migration; no Dataverse migration is performed by this PoC.
 
 The former solution-level `Built By` lookup and `Effort / Time to Deploy` choice are replaced by `nx_solutioncontributor` rows. Total hours are derived, not an editable field on `nx_solution`. Retire `nx_effortlevel` only after verified migration and confirming no remaining dependencies.
 
@@ -106,15 +104,17 @@ Required lookups do not automatically inherit Dataverse security. Configure and 
 | Name *(primary name)* | Text (100) | Yes | Solution/person display label, truncated to 100; not an identity key |
 | Solution | Lookup → `nx_solution` | Yes | Parent offering |
 | Built By | Lookup → `cr6b0_consultant` | Yes | One credited person per row |
-| Start Date | Date Only | Yes | Inclusive first day |
-| End Date | Date Only | Yes | Inclusive last day; on or after Start Date |
-| Allocation (%) | Decimal Number (2 decimal places, 0-100) | Yes | Constant allocation across this person's period; zero permitted |
+| Effort Mode | Choice: Direct / Calendar | Yes | Direct for ideas/prototypes; Calendar for demos/production; validate against parent maturity |
+| Direct Hours | Decimal Number (2 decimal places, minimum 0) | Conditional | Required in Direct mode; finite, nonnegative, includes preparation/discovery; zero is valid |
+| Start Date | Date Only | Conditional | Required in Calendar mode; inclusive first day |
+| End Date | Date Only | Conditional | Required in Calendar mode; inclusive last day, not before Start Date |
+| Allocation (%) | Decimal Number (2 decimal places, 0-100) | Conditional | Required in Calendar mode; zero permitted |
 
-Alternate key: `(Solution, Built By)` prevents duplicate people on a Solution. At least one complete contributor is required before submission/publication. Reject missing people, invalid/reversed dates and invalid allocations. Apply the same rules to production writes, not just the UI.
+Alternate key: `(Solution, Built By)` prevents duplicate people. Require at least one complete contributor. Validate only the active mode: direct hours, or dates/allocation. Preserve inactive draft inputs on maturity changes, but never total them. Apply the same rules to production writes, not just the UI.
 
 **Calculation:** count Monday-Friday dates in the inclusive range — no holiday exclusion; the business-calendar/holiday concept was dropped from this model, so every weekday in range counts. Person hours = `round(business days * 8 * allocation / 100, 2)`; Solution hours = sum of those rounded person totals. Use date-only arithmetic unaffected by time zones or daylight-saving changes. Weekend-only periods yield zero. Example: September 7-18, 2026 at 50% covers ten weekdays, giving `10 * 8 * 0.5 = 40 hours`.
 
-Hours represent allocated capacity, not timesheet actuals or deployment duration. One constant allocation/date range per person is supported; variable periods and cross-solution capacity checks are outside scope. Full calculation and migration rules: [contributor contract](SchemaV2.md#nx_solutioncontributor--builders-and-effort).
+In Direct mode, use validated Direct Hours without a calendar. Calendar hours represent capacity; direct hours represent reported effort. Neither is deployment duration or a timesheet. Full calculation and migration rules: [contributor contract](SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
 The Person field searches names/emails, excludes already assigned people, and supports keyboard/pointer selection. Only a selected known person is stored; search text is not a person record. The current PoC searches mock people, not a live directory. See [contribution workflow](../workflows/contribution-and-review.md).
 
@@ -127,7 +127,7 @@ The Person field searches names/emails, excludes already assigned people, and su
 | Name *(primary name)* | Single line of text (100) | Yes | e.g. auto-set to "{Solution name} demo" |
 | Solution | Lookup → `nx_solution` | Yes | 1:N — a solution can have more than one asset (e.g. a live URL plus a fallback video) |
 | Asset Type | Choice — **global**, single-select | Yes | Self-contained HTML file · Hosted web app (URL) · Power Apps · Power BI · Desktop app or script · Video walkthrough only |
-| File | File column | No | Use when Asset Type is "Self-contained HTML file" — Dataverse's native File column stores the payload directly on the row, no external storage needed |
+| File | File column | Conditional | Required for new HTML, video and one-pager/slides. Dataverse stores the payload; PoC fileData/htmlContent are in-memory stand-ins, not separate schema columns. |
 | External URL | Single line of text, **URL format** (500) | No | Use when Asset Type is a hosted/embedded link |
 | Embed Hint | Multiple lines of text (plain, 500) | No | The "sign-in may stall in this frame" style note shown in the viewer |
 | Allows Embedding | Yes/No | No | Default Yes; set No for assets that refuse to render in an iframe (X-Frame-Options), so the app knows to go straight to pop-out |
@@ -135,9 +135,11 @@ The Person field searches names/emails, excludes already assigned people, and su
 
 > Asset Type gains **Client-ready one-pager / slide** alongside the original six, so downloadable collateral is modeled as just another asset rather than a separate column on `nx_solution`.
 
+New submissions offer only HTML, video and one-pager/slides, plus gallery images. Other types remain for legacy catalogue reads and are deferred for new submissions. Storage remains Dataverse-only.
+
 ### `nx_solutionimage`
 
-Detail-page screenshots beyond the card thumbnail. The `Thumbnail` Image column on `nx_solution` stays the single card-grid hero image (optional, with a generated placeholder fallback); this table carries the **gallery** — as many captioned screenshots as the story needs. Modeled as a child table rather than more Image columns on the solution because Dataverse Image columns are single-valued and the count per solution varies.
+Detail images beyond the optional thumbnail. New submissions require one to six gallery rows; the thumbnail does not meet this minimum. Enforce the child count at submission/publication, not through the relationship alone. Legacy examples can predate this rule.
 
 | Column | Type | Required | Notes |
 |---|---|---|---|

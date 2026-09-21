@@ -1,6 +1,6 @@
 # Content health
 
-**Status:** Draft · **Last updated:** 2026-09-17
+**Status:** Draft, client-safe review controls aligned · **Last updated:** 2026-09-21
 **Addresses risks:** R3 (demos break silently) and R5 (stale content presented as current) in the [risk register](../delivery/risks.md)
 
 CSM trust, once eroded by a broken embed or a stale demo, is unrecoverable. Content health is proactive, not complaint-driven.
@@ -23,7 +23,7 @@ CSM trust, once eroded by a broken embed or a stale demo, is unrecoverable. Cont
 |---|---|
 | Superseded by a newer solution | Retire; link forward in library notes |
 | Demo no longer runnable and no fallback exists | Retire until refreshed |
-| Client sensitivity discovered post-publication | Retire immediately; review shareability flags |
+| Client sensitivity discovered post-publication | Retire immediately, clear Client Safe Reviewed, and require fresh review of all client-visible text/media |
 | Contributor confirms stale / no response to re-confirmation | Retire |
 
 ## Cadences
