@@ -1,8 +1,8 @@
 # ADR-0007 - Contributor-level calendar-based effort
 
-**Status:** Accepted, amended for US-only calendar policy
+**Status:** Accepted, amended for US-only calendar policy (business-calendar mechanism later removed — see Update below)
 **Date:** 2026-09-18
-**Last updated:** 2026-09-18
+**Last updated:** 2026-09-21
 
 ## Context
 
@@ -23,3 +23,14 @@ Calculate person hours as business days times eight times allocation divided by 
 - One constant allocation/date range per person is supported. Variable allocation periods, nonstandard workweeks and cross-solution capacity planning require a later design change.
 - Child ownership/sharing and validation need platform enforcement before real Dataverse integration. The PoC remains mock-only; effort inputs are illustrative, while its sole calendar uses the OPM 2026 observed federal holidays. Legacy demo calendars are removed and mock records/restored drafts are reassigned to the US calendar, recalculating their totals.
 - Real migration requires confirmation of dates, allocation and calendar; none can be recovered reliably from Days/Weeks/Months.
+
+## Update — 2026-09-21
+
+The business-calendar mechanism this ADR describes above (`nx_businesscalendar`, `nx_businesscalendarholiday`, the automatically assigned US calendar, and holiday exclusion from the effort calculation) has been **removed from the model**. This section documents the change without rewriting the decision history above.
+
+- `nx_solutioncontributor` no longer carries a `Business Calendar` lookup; the assigned-US-calendar and OPM-holiday-schedule mechanism described in Context/Decision/Consequences above no longer exists.
+- `Business Days` is now a plain Monday-Friday count between Start Date and End Date, inclusive — no holiday exclusion of any kind. The formula (`Business Days * 8 * Allocation / 100`, rounded to two decimals per contributor, then summed) is unchanged; only the `Business Days` input changed.
+- The `Built By` lookup now points to the custom `cr6b0_consultant` table rather than the platform `systemuser` table (see [SchemaV2.md](../../data_model/SchemaV2.md)).
+- The Consequences bullets above about "Calendar versions make calculations reproducible," Librarian review of holiday coverage, and reassignment to the US calendar no longer apply — there is no calendar to review or reassign.
+
+See [schema v2](../../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) for the current, authoritative derivation.

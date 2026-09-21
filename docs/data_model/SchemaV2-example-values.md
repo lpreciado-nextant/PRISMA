@@ -1,6 +1,6 @@
 # Nextant Solution Library — example row per table (SchemaV2)
 
-**Companion to:** [SchemaV2.md](SchemaV2.md) · **Last updated:** 2026-09-20
+**Companion to:** [SchemaV2.md](SchemaV2.md) · **Last updated:** 2026-09-21
 
 One illustrative row per table in the v2 model, all pointing at the same story so the relationships stay traceable: **S1 — Invoice Reconciliation Assistant**, the same example used in SchemaV2's diagrams. GUIDs below are placeholders (`{table}-001` style), not real Dataverse ids. Sample data only — no real client information.
 
@@ -34,17 +34,13 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | tech-001 | LangChain |
 | tech-002 | Power Automate |
 
-### `nx_businesscalendar`
+### `cr6b0_consultant`
 
-| nx_businesscalendarid | Name | Coverage Start | Coverage End |
-|---|---|---|---|
-| cal-001 | US business calendar (2026) | 2026-01-01 | 2026-12-31 |
-
-### `nx_businesscalendarholiday`
-
-| nx_businesscalendarholidayid | Name | Business Calendar | Holiday Date |
-|---|---|---|---|
-| hol-001 | Independence Day (observed) | cal-001 — US business calendar (2026) | 2026-07-03 |
+| cr6b0_consultantid | Name |
+|---|---|
+| con-001 | Juliana Castelblanco |
+| con-002 | Luis Preciado |
+| con-003 | Carlos Mejía |
 
 ---
 
@@ -60,6 +56,7 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | What It Does | Ingests incoming invoices, extracts line items, and reconciles them against open purchase orders, routing exceptions to an approver queue. |
 | Business Value | Cuts manual reconciliation time and reduces duplicate/incorrect payments. |
 | Specialization Area | sa-001 — AI & Automation |
+| Capability | cap-001 — AI & agents |
 | Use Case | Reduce manual invoice handling |
 | Client / Context | Acería del Norte — AP team, 2026 pilot |
 | Client Context (Redacted) | A regional manufacturing company |
@@ -72,7 +69,7 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | Library Notes | Pilot feedback logged in ADR-0007 effort tracking. |
 | Search Keywords | AP automation, invoice matching, PO reconciliation |
 
-Tags on this row: `Capability` = AI & agents, Process automation · `Industry` = Manufacturing · `Technology` = LangChain, Power Automate (native N:N, not columns — see [SchemaV2.md](SchemaV2.md#nx_solution)).
+Tags on this row: `Industry` = Manufacturing · `Technology` = LangChain, Power Automate (native N:N, not columns — see [SchemaV2.md](SchemaV2.md#nx_solution)). `Specialization Area` and `Capability` are both single-valued lookup columns on the row above, not tags.
 
 ---
 
@@ -80,12 +77,12 @@ Tags on this row: `Capability` = AI & agents, Process automation · `Industry` =
 
 ### `nx_solutioncontributor`
 
-| nx_solutioncontributorid | Name | Solution | Built By | Start Date | End Date | Allocation (%) | Business Calendar |
-|---|---|---|---|---|---|---|---|
-| sc-001 | Invoice Reconciliation Assistant — Juliana Castelblanco | sol-001 | Juliana Castelblanco | 2026-09-07 | 2026-09-18 | 50 | cal-001 |
-| sc-002 | Invoice Reconciliation Assistant — Luis Preciado | sol-001 | Luis Preciado | 2026-09-08 | 2026-09-18 | 100 | cal-001 |
+| nx_solutioncontributorid | Name | Solution | Built By | Start Date | End Date | Allocation (%) |
+|---|---|---|---|---|---|---|
+| sc-001 | Invoice Reconciliation Assistant — Juliana Castelblanco | sol-001 | con-001 — Juliana Castelblanco | 2026-09-07 | 2026-09-18 | 50 |
+| sc-002 | Invoice Reconciliation Assistant — Luis Preciado | sol-001 | con-002 — Luis Preciado | 2026-09-08 | 2026-09-18 | 100 |
 
-Derived (not stored): sc-001 → 9 business days × 8h × 50% = **36 effort hours**; sc-002 → 8 business days × 8h × 100% = **64 effort hours**; `Total Effort Hours` for sol-001 = **100**.
+Derived (not stored): sc-001 → 10 business days × 8h × 50% = **40 effort hours**; sc-002 → 9 business days × 8h × 100% = **72 effort hours**; `Total Effort Hours` for sol-001 = **112**.
 
 ### `nx_demoasset`
 
@@ -103,16 +100,14 @@ Derived (not stored): sc-001 → 9 business days × 8h × 50% = **36 effort hour
 
 | nx_demorequestid | Name | Solution | Requested By | Client / Opportunity Context | Needed By | Request Status |
 |---|---|---|---|---|---|---|
-| dr-001 | Invoice Reconciliation Assistant — Carlos Mejía | sol-001 | Carlos Mejía | Prospect evaluating AP automation for Q4 renewal. | 2026-09-25 | Scheduled |
+| dr-001 | Invoice Reconciliation Assistant — Carlos Mejía | sol-001 | con-003 — Carlos Mejía | Prospect evaluating AP automation for Q4 renewal. | 2026-09-25 | Scheduled |
 
-### `nx_project` (pre-existing, fixed columns)
+### `cr6b0_project` (pre-existing, fixed columns)
 
-| nx_projectid | Project Name | Project Owner |
+| cr6b0_projectid | Project Name | Project Owner |
 |---|---|---|
-| proj-001 | Acería del Norte | Juliana Castelblanco |
+| proj-001 | Acería del Norte | con-001 — Juliana Castelblanco |
 
-### `nx_solutionproject`
+### `Solution` ↔ `cr6b0_project` (native N:N, no junction table)
 
-| nx_solutionprojectid | Name | Solution | Project |
-|---|---|---|---|
-| sp-001 | Invoice Reconciliation Assistant — Acería del Norte | sol-001 | proj-001 |
+sol-001 (Invoice Reconciliation Assistant) links to proj-001 (Acería del Norte) through the native N:N relationship — a platform-managed intersect row, not a table modeled here.
