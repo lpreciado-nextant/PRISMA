@@ -18,6 +18,12 @@ export function useMediaAction(onPreview: (item: MediaItem) => void) {
     if (!item || running.current) return;
     setFailed(false);
     setMessage("");
+    if (item.linkedAsset) {
+      const link = item.linkedAsset;
+      if (link.assetType === "Desktop app or script" || (link.assetType === "Hosted web app (URL)" && link.allowsEmbedding)) onPreview(item);
+      else window.open(link.externalUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     if (item.kind === "image" || item.mime === "text/html" || item.mime.startsWith("video/")) { onPreview(item); return; }
     const controller = lifetime.current;
     if (!controller || controller.signal.aborted) return;

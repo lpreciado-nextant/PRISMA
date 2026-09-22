@@ -30,6 +30,78 @@ namespace Prisma.Plugins
         [DataMember(Name = "complete")] public bool Complete { get; set; }
         [DataMember(Name = "caption")] public string Caption { get; set; }
         [DataMember(Name = "sortOrder")] public int SortOrder { get; set; }
+        [DataMember(Name = "linkedAsset", EmitDefaultValue = false)] public LinkedAssetInput LinkedAsset { get; set; }
+    }
+
+    [DataContract]
+    public sealed class LinkedAssetInput
+    {
+        [DataMember(Name = "id", EmitDefaultValue = false)] public string Id { get; set; }
+        [DataMember(Name = "name", IsRequired = true)] public string Name { get; set; }
+        [DataMember(Name = "assetType", IsRequired = true)] public string AssetType { get; set; }
+        [DataMember(Name = "externalUrl", IsRequired = true)] public string ExternalUrl { get; set; }
+        [DataMember(Name = "allowsEmbedding", IsRequired = true)] public bool AllowsEmbedding { get; set; }
+        [DataMember(Name = "embedHint", IsRequired = true)] public string EmbedHint { get; set; }
+    }
+
+    public static class LinkedAssetPolicy
+    {
+        public const string Mime = "application/vnd.prisma.link";
+        public static int Choice(string type)
+        {
+            switch (type)
+            {
+                case "Hosted web app (URL)": return 125060007;
+                case "Power Apps": return 125060008;
+                case "Power BI": return 125060003;
+                case "Desktop app or script": return 125060004;
+                default: throw MediaPolicy.Invalid("Unsupported linked asset type.");
+            }
+        }
+        public static string Type(int choice)
+        {
+            switch (choice)
+            {
+                case 125060007: return "Hosted web app (URL)";
+                case 125060008: return "Power Apps";
+                case 125060003: return "Power BI";
+                case 125060004: return "Desktop app or script";
+                default: throw MediaPolicy.Invalid("Unsupported linked asset type.");
+            }
+        }
+        public static LinkedAssetInput Validate(LinkedAssetInput value)
+        {
+            if (value == null || value.Name == null || value.EmbedHint == null || value.ExternalUrl == null) throw MediaPolicy.Invalid("Missing linked asset fields.");
+            Choice(value.AssetType);
+            if (value.Id != null) ContributorPolicy.Identifier(value.Id);
+            value.Name = value.Name.Trim(); value.EmbedHint = value.EmbedHint.Trim(); value.ExternalUrl = value.ExternalUrl.Trim();
+            if (value.Name.Length == 0 || value.Name.Length > 100 || value.Name.Any(char.IsControl) || value.EmbedHint.Length > 200) throw MediaPolicy.Invalid("Asset name or note exceeds its limit.");
+            if (value.AssetType == "Desktop app or script")
+            {
+                if (value.ExternalUrl.Length != 0 || value.AllowsEmbedding || value.EmbedHint.Length == 0) throw MediaPolicy.Invalid("Desktop assets require demonstration guidance, not a URL or embedding.");
+            }
+            else
+            {
+                Uri uri;
+                if (value.ExternalUrl.Length > 2000 || value.ExternalUrl.Any(character => char.IsControl(character) || char.IsWhiteSpace(character) || character == '\\')
+                    || !Uri.TryCreate(value.ExternalUrl, UriKind.Absolute, out uri) || uri.Scheme != Uri.UriSchemeHttps || uri.UserInfo.Length != 0 || uri.Host.Length == 0)
+                    throw MediaPolicy.Invalid("Use an HTTPS URL without credentials or spaces.");
+                if (value.AssetType != "Hosted web app (URL)" && value.AllowsEmbedding) throw MediaPolicy.Invalid("Power Apps and Power BI must open in a new tab.");
+            }
+            return value;
+        }
+        public static LinkedAssetInput Parse(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json) || json.Length > 4000) throw MediaPolicy.Invalid("Invalid linked asset payload.");
+            try
+            {
+                var bytes = Encoding.UTF8.GetBytes(json);
+                using (var reader = JsonReaderWriterFactory.CreateJsonReader(bytes, new XmlDictionaryReaderQuotas { MaxDepth = 8, MaxStringContentLength = 4000 }))
+                    DraftGraph.CheckFields(XElement.Load(reader), "id", "name", "assetType", "externalUrl", "allowsEmbedding", "embedHint");
+                using (var stream = new MemoryStream(bytes)) return Validate((LinkedAssetInput)new DataContractJsonSerializer(typeof(LinkedAssetInput)).ReadObject(stream));
+            }
+            catch (Exception error) when (error is SerializationException || error is XmlException || error is ArgumentException) { throw MediaPolicy.Invalid("Invalid linked asset payload."); }
+        }
     }
 
     [DataContract]
@@ -177,14 +249,9 @@ namespace Prisma.Plugins
             var column = ((RetrieveAttributeResponse)server.Execute(new RetrieveAttributeRequest { EntityLogicalName = MediaPolicy.Table(kind), LogicalName = MediaPolicy.Column(kind) })).AttributeMetadata;
             var limit = column is FileAttributeMetadata file ? file.MaxSizeInKB : ((ImageAttributeMetadata)column).MaxSizeInKB;
             if (!limit.HasValue || size > (long)limit.Value * 1024) throw MediaPolicy.Invalid("File exceeds the Dataverse column limit.");
-            var teams = new QueryExpression("team") { ColumnSet = new ColumnSet(false) };
-            teams.Criteria.AddCondition("name", ConditionOperator.Equal, "PRISMA Media Custodian");
-            var team = server.RetrieveMultiple(teams).Entities.Single();
-            var members = new QueryExpression("teammembership") { ColumnSet = new ColumnSet(false), TopCount = 1 };
-            members.Criteria.AddCondition("teamid", ConditionOperator.Equal, team.Id);
-            if (server.RetrieveMultiple(members).Entities.Count != 0) throw MediaPolicy.Invalid("Media custodian must have no members.");
+            var team = Custodian(server);
             var target = new Entity(MediaPolicy.Table(kind)) {
-                ["ownerid"] = team.ToEntityReference(), ["nx_solution"] = parent.ToEntityReference(),
+                ["ownerid"] = team, ["nx_solution"] = parent.ToEntityReference(),
                 [kind != "attachment" ? "nx_solutionimagename" : "nx_demoassetid1"] = name,
                 ["nx_sortorder"] = sessions.Count == 0 ? 1 : sessions.Count + 1
             };
@@ -197,6 +264,46 @@ namespace Prisma.Plugins
                 ["nx_kind"] = kind, ["nx_filename"] = name, ["nx_mime"] = mime, ["nx_token"] = upload.FileContinuationToken,
                 ["nx_bytes"] = size, ["nx_received"] = 0, ["nx_nextblock"] = 0, ["nx_expires"] = DateTime.UtcNow.AddHours(2), ["nx_complete"] = false
             });
+        }
+
+        private static EntityReference Custodian(IOrganizationService server)
+        {
+            var teams = new QueryExpression("team") { ColumnSet = new ColumnSet(false) };
+            teams.Criteria.AddCondition("name", ConditionOperator.Equal, "PRISMA Media Custodian");
+            var team = server.RetrieveMultiple(teams).Entities.Single();
+            var members = new QueryExpression("teammembership") { ColumnSet = new ColumnSet(false), TopCount = 1 };
+            members.Criteria.AddCondition("teamid", ConditionOperator.Equal, team.Id);
+            if (server.RetrieveMultiple(members).Entities.Count != 0) throw MediaPolicy.Invalid("Media custodian must have no members.");
+            return team.ToEntityReference();
+        }
+
+        public static void SaveLinkedAsset(IOrganizationService server, Entity parent, Guid caller, LinkedAssetInput value)
+        {
+            LinkedAssetPolicy.Validate(value);
+            var sessions = Sessions(server, parent.Id);
+            var existing = value.Id == null ? null : sessions.SingleOrDefault(row => row.GetAttributeValue<string>("nx_targetid") == value.Id);
+            if (value.Id != null && (existing == null || existing.GetAttributeValue<string>("nx_mime") != LinkedAssetPolicy.Mime || !existing.GetAttributeValue<bool>("nx_complete"))) throw MediaPolicy.Invalid("Linked asset does not belong to this draft.");
+            if (existing == null && sessions.Count(row => row.GetAttributeValue<string>("nx_kind") == "attachment") >= 6) throw MediaPolicy.Invalid("At most six attachments or linked assets are allowed.");
+            if (sessions.Any(row => !row.GetAttributeValue<bool>("nx_complete"))) throw MediaPolicy.Invalid("Remove or finish the unfinished upload first.");
+            var target = new Entity("nx_demoasset") {
+                ["nx_demoassetid1"] = value.Name, ["nx_assettype"] = new OptionSetValue(LinkedAssetPolicy.Choice(value.AssetType)),
+                ["nx_externalurl"] = value.ExternalUrl.Length == 0 ? null : value.ExternalUrl, ["nx_allowsembedding"] = value.AllowsEmbedding, ["nx_embedhint"] = value.EmbedHint
+            };
+            if (existing != null)
+            {
+                target.Id = Guid.Parse(value.Id); server.Update(target);
+                server.Update(new Entity("nx_uploadsession", existing.Id) { ["nx_filename"] = value.Name });
+                return;
+            }
+            target["ownerid"] = Custodian(server); target["nx_solution"] = parent.ToEntityReference(); target["nx_sortorder"] = Math.Min(12, sessions.Count + 1);
+            target.Id = server.Create(target);
+            server.Create(new Entity("nx_uploadsession") {
+                ["nx_name"] = "PRISMA upload " + target.Id.ToString("N"), ["nx_parentid"] = parent.Id.ToString("D"),
+                ["nx_callerid"] = caller.ToString("D"), ["nx_targetid"] = target.Id.ToString("D"),
+                ["nx_kind"] = "attachment", ["nx_filename"] = value.Name, ["nx_mime"] = LinkedAssetPolicy.Mime,
+                ["nx_bytes"] = 0, ["nx_received"] = 0, ["nx_nextblock"] = 0, ["nx_expires"] = DateTime.UtcNow, ["nx_complete"] = true
+            });
+            server.Execute(new GrantAccessRequest { Target = target.ToEntityReference(), PrincipalAccess = new PrincipalAccess { Principal = new EntityReference("systemuser", caller), AccessMask = AccessRights.ReadAccess } });
         }
 
         private static void Upload(IOrganizationService server, Entity session, IPluginExecutionContext context)
@@ -240,13 +347,15 @@ namespace Prisma.Plugins
         public static MediaSnapshot Snapshot(IOrganizationService service, Entity row)
         {
             var kind = row.GetAttributeValue<string>("nx_kind");
-            var target = service.Retrieve(MediaPolicy.Table(kind), Guid.Parse(row.GetAttributeValue<string>("nx_targetid")), kind == "attachment" ? new ColumnSet("nx_sortorder") : new ColumnSet("nx_sortorder", "nx_caption"));
+            var linked = row.GetAttributeValue<string>("nx_mime") == LinkedAssetPolicy.Mime;
+            var target = service.Retrieve(MediaPolicy.Table(kind), Guid.Parse(row.GetAttributeValue<string>("nx_targetid")), kind == "attachment" ? new ColumnSet("nx_sortorder", "nx_assettype", "nx_externalurl", "nx_allowsembedding", "nx_embedhint") : new ColumnSet("nx_sortorder", "nx_caption"));
             return new MediaSnapshot {
                 SessionId = row.Id.ToString(), Id = row.GetAttributeValue<string>("nx_targetid"), Kind = row.GetAttributeValue<string>("nx_kind"),
                 Name = row.GetAttributeValue<string>("nx_filename"), Mime = row.GetAttributeValue<string>("nx_mime"),
                 Size = row.GetAttributeValue<int>("nx_bytes"), Received = row.GetAttributeValue<int>("nx_received"),
                 NextBlock = row.GetAttributeValue<int>("nx_nextblock"), Complete = row.GetAttributeValue<bool>("nx_complete"),
-                Caption = target.GetAttributeValue<string>("nx_caption") ?? "", SortOrder = Math.Min(12, target.GetAttributeValue<int>("nx_sortorder"))
+                Caption = target.GetAttributeValue<string>("nx_caption") ?? "", SortOrder = Math.Min(12, target.GetAttributeValue<int>("nx_sortorder")),
+                LinkedAsset = linked ? LinkedAssetPolicy.Validate(new LinkedAssetInput { Name = row.GetAttributeValue<string>("nx_filename"), AssetType = LinkedAssetPolicy.Type(target.GetAttributeValue<OptionSetValue>("nx_assettype").Value), ExternalUrl = target.GetAttributeValue<string>("nx_externalurl") ?? "", AllowsEmbedding = target.GetAttributeValue<bool>("nx_allowsembedding"), EmbedHint = target.GetAttributeValue<string>("nx_embedhint") ?? "" }) : null
             };
         }
     }
@@ -257,6 +366,7 @@ namespace Prisma.Plugins
         {
             var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
             if (MediaPolicy.Writes.Any(message => DraftPolicy.IsOperationContext(context, message)) || (context.MessageName == "Delete" && DraftPolicy.IsDeleteContext(context))
+                || ((context.MessageName == "Create" || context.MessageName == "Update") && (context.PrimaryEntityName == "nx_demoasset" || context.PrimaryEntityName == "nx_uploadsession") && DraftPolicy.IsTransitionContext(context, "asset"))
                 || (context.MessageName == "Update" && context.PrimaryEntityName != "nx_uploadsession" && DraftPolicy.IsTransitionContext(context, "media"))) return;
             throw MediaPolicy.Invalid("Use the PRISMA mediated media API. Direct media/session changes are disabled.");
         }

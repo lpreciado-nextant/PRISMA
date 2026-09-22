@@ -371,7 +371,7 @@ function AssetRow({ solution, asset, basePath, onOpen }: { solution: Solution; a
           color: "var(--on-accent)",
         }}
       >
-        {behaviour.label}
+        {onOpen && asset.assetType === "Desktop app or script" ? "Demo arrangements" : behaviour.label}
       </button>
     </li>
   );

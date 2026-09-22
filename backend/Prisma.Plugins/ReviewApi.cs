@@ -32,7 +32,7 @@ namespace Prisma.Plugins
             var change = new Entity("nx_solution", parent.Id) { RowVersion = expected, ["nx_clientsafereviewed"] = false };
             if (action == "submit" && owns && status == DraftPolicy.DraftStatus)
                 change["nx_publicationstatus"] = new OptionSetValue(Pending);
-            else if ((action == "media" || action == "technology") && owns && status == DraftPolicy.DraftStatus)
+            else if ((action == "media" || action == "technology" || action == "asset") && owns && status == DraftPolicy.DraftStatus)
                 change["nx_safetyacknowledged"] = false;
             else if (action == "delete" && owns && (status == DraftPolicy.DraftStatus || status == Pending || status == Published || status == Retired))
             {
@@ -179,6 +179,12 @@ namespace Prisma.Plugins
                 var change = ReviewPolicy.Change(parent, context.InitiatingUserId, librarian, context.InputParameters["ExpectedRowVersion"] as string, action,
                     context.InputParameters.Contains("Comments") ? context.InputParameters["Comments"] as string : "", context.InputParameters.Contains("Cleared") && (bool)context.InputParameters["Cleared"]);
                 server.Execute(new UpdateRequest { Target = change, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
+                if (action == "asset")
+                {
+                    MediaApi.SaveLinkedAsset(server, parent, context.InitiatingUserId, LinkedAssetPolicy.Parse(context.InputParameters["Comments"] as string));
+                    context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult { Id = identifier.ToString(), RowVersion = caller.Retrieve("nx_solution", identifier, new ColumnSet(false)).RowVersion, BlockSize = MediaPolicy.BlockSize, Media = MediaApi.Snapshots(server, identifier) });
+                    return;
+                }
                 if (action == "technology")
                 {
                     var name = ReviewPolicy.TechnologyName(context.InputParameters.Contains("Comments") ? context.InputParameters["Comments"] as string : null);

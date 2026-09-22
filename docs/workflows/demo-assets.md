@@ -1,11 +1,11 @@
 # Demo assets
 
-**Status:** PoC media retained; connected gallery/attachment persistence and previews verified, least-privilege acceptance pending · **Last updated:** 2026-09-22
+**Status:** Connected uploads and linked-asset create/edit/preview verified with privileged owner; external-launch and least-privilege acceptance pending · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
 
-New submissions use a single Media step: **images, videos, one-pagers/slides, and self-contained HTML**. Require one to six detail images; thumbnail is optional. Hosted-app, Power Apps, Power BI, desktop/script and access-request controls are deferred. The table below also records behavior for existing legacy catalogue entries.
+Connected submissions use a single Media step for **images, videos, one-pagers/slides, self-contained HTML, hosted URLs, Power Apps, Power BI, and desktop demo arrangements**. Require one to six detail images; thumbnail is optional. Files and linked assets share a maximum of six attachments. The local PoC keeps its file-only submission controls and legacy seeded catalogue. Actual access/demo-request delivery is not implemented.
 
 ## Behaviour by type
 
@@ -15,7 +15,7 @@ New submissions use a single Media step: **images, videos, one-pagers/slides, an
 | Hosted web app (URL) | Embed in the viewer if `Allows Embedding`; otherwise open in a new tab immediately | Pop-out, with the `Embed Hint` shown |
 | Power Apps / Power BI | Deep-link out in a new tab (embedding is unreliable and auth-stalls inside frames) | Video walkthrough if one exists |
 | Video walkthrough | Play inline in the viewer | Download |
-| Desktop app or script | Not runnable in-app — show the video and a "request live demo" call to action | Contact the builder |
+| Desktop app or script | Not runnable in-app; show saved demo arrangements and state that no request was sent | Contact the builder; optional video |
 | Client-ready one-pager / slide | Download | — |
 
 ## Rules
@@ -31,9 +31,15 @@ In the PoC, PNG/JPG/WebP images are decoded locally (5 MB each). Optional attach
 
 The unpublished connected app uses generated mediated upload APIs, not direct SDK upload helpers. Files are read in 512 KiB slices; protocol state and continuation tokens stay in private `nx_uploadsession`. Every mutation checks caller-owned Draft state and the current version. Unfinished uploads expire after two hours; reopen and explicitly remove them before restarting. A failed/ambiguous response disables retries until reopen. See [ADR-0009](../architecture/decisions/adr-0009-mediated-media-and-publication-access.md).
 
-One to six gallery images are required at submission; up to six attachments are optional. Image limit is 5 MB (and 40 megapixels for client decoding); WebP is converted to PNG within that limit. Document/HTML limit is 25 MB, video 500 MB, additionally capped by the actual Dataverse column limit. Large-video acceptance is unverified. Optional standalone thumbnail/caption/reorder controls are not implemented in the connected editor. Native parent Solution images are not trusted publication inputs.
+One to six gallery images are required at submission; up to six files/linked assets are optional. Image limit is 5 MB (and 40 megapixels for client decoding); WebP is converted to PNG within that limit. Document/HTML limit is 25 MB, video 500 MB, additionally capped by the actual Dataverse column limit. Large-video acceptance is unverified. A dedicated thumbnail is supported; pending screenshot captions save through the main Save draft/Continue flow. No reorder UI exists. Native parent Solution images are not trusted publication inputs.
+
+Choose a linked format to add an asset name, URL and optional access note; hosted web apps can opt into embedding. Power Apps/BI cannot. Desktop/script entries instead require demo arrangements, with no URL or executable. Add/Save asset uses the version-checked `asset` transition on a caller-owned Draft. Unsaved asset text blocks leaving the step until saved or canceled. Edit and removal use the same protected lifecycle as files; the backend rejects unsafe URLs, unknown fields, wrong owners/states and stale versions. URLs must be HTTPS without credentials, and both URLs and notes must be free of secrets and client identifiers. Existing application authorization still applies; a PRISMA link does not grant access to its destination.
+
+Hosted previews use an opaque sandbox (`allow-scripts allow-forms allow-popups`, no same-origin) and a pop-out fallback. Embedding is subject to the destination's CSP, framing policy and authentication requirements. Power Apps/BI open externally with `noopener,noreferrer`. Desktop arrangements are informational, not request delivery.
 
 HTML and PNG upload/download/removal passed live; browser HTML sandbox blocks host-document access and network capabilities, and full-size image download preserves 640x360 rather than the native thumbnail. Native SDK reads enforce caller access. Object URLs are revoked on unmount. Published detail/gallery/viewer is implemented but awaits successful librarian publication and non-admin acceptance. Original PoC behavior and limits above are unchanged.
+
+Linked-asset live checks on 2026-09-22 covered all four types, hosted edit, reopen, sandbox preview, desktop guidance, server unsafe/stale rejection, removal and cleanup. External-link attributes were checked; the integrated browser did not expose a popup event, so actual signed-in Power Apps/BI launch is still an acceptance item. Linked publication/revocation and non-admin reads remain unverified.
 
 ## Viewer routes
 

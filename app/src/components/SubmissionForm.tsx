@@ -9,11 +9,12 @@ export function MediaGuidance({ capabilities }: { capabilities: string[] }) {
     {!isAgent && !isData && !isWorkflow && <p>Show the experience and its business outcome. Use screenshots or explanatory diagrams that a client can understand without technical context.</p>}
   </div>;
 }
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
 import type { AssetType } from "../types";
+import { LINK_ASSET_TYPES, validateLinkedAsset, type LinkedAssetInput, type LinkAssetType } from "../lib/linkedAssets";
 
 export const SUBMISSION_STEPS = ["Before you start", "What is it?", "What & why", "Tag it", "Media", "Review & submit"] as const;
 
@@ -96,14 +97,20 @@ export function ImageUploadZone({ line, sub, multiple, disabled, onFiles, childr
   </label>;
 }
 
-export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, format, onFormat, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, disabled = false, attachmentDisabled = false, local = false, children }: {
+export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, format, onFormat, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, disabled = false, attachmentDisabled = false, local = false, children }: {
   capabilities: string[]; thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
   images: { id: string; preview: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
   format: AssetType; onFormat: (format: AssetType) => void; onAttachment: (file: File) => void;
-  attachments: { id: string; name: string; status?: ReactNode }[]; onRemoveAttachment: (id: string) => void;
+  attachments: { id: string; name: string; status?: ReactNode; linkedAsset?: LinkedAssetInput }[]; onRemoveAttachment: (id: string) => void;
+  onLinkedAsset?: (input: LinkedAssetInput, id?: string) => Promise<void>; onLinkedPending?: (pending: boolean) => void;
   onPreviewThumbnail?: () => void; onPreviewImage?: (id: string) => void; onPreviewAttachment?: (id: string) => void;
   disabled?: boolean; attachmentDisabled?: boolean; local?: boolean; children?: ReactNode;
 }) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [linkedDirty, setLinkedDirty] = useState(false);
+  useEffect(() => { onLinkedPending?.(linkedDirty); return () => onLinkedPending?.(false); }, [linkedDirty, onLinkedPending]);
+  const linked = LINK_ASSET_TYPES.includes(format as LinkAssetType);
+  const edited = attachments.find(item => item.id === editing);
   return <StepShell title="Media">
     <div className="border-l-2 border-(--accent) pl-4 text-[14px] text-(--ink-2)"><MediaGuidance capabilities={capabilities} /><p className="mt-2">Remove confidential data and client identifiers from every attachment before uploading.</p></div>
     <div><p className="mb-1.5 text-[13.5px] font-semibold">Card thumbnail</p><p className="mb-2 text-[12px] text-(--ink-3)">The card grid's hero image — without one, the card gets a generated poster</p>
@@ -115,13 +122,37 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
         <p id={`caption-hint-${image.id}`} className="px-3 pb-3 text-[12px] text-(--ink-3)">Describe the screen or result shown.</p>
       </div>)}</div>}{images.length < 6 && imageUpload}</div>
     </div>
-    <Field label="Additional media format"><SelectPicker label="Additional media format" value={format} options={["Self-contained HTML file", "Video walkthrough only", "Client-ready one-pager / slide"]} onChange={onFormat} /></Field>
-    <Field label="Attach additional media" hint={`Optional. MP4/WebM videos up to 500 MB each; HTML and PDF/PPT/PPTX documents up to 25 MB each. Up to 6 additional files.${local ? " Local preview only." : ""}`}>
+    <fieldset disabled={disabled || linkedDirty || !!editing} className="min-w-0 disabled:opacity-60"><Field label="Additional media format"><SelectPicker label="Additional media format" value={format} options={["Self-contained HTML file", "Video walkthrough only", "Client-ready one-pager / slide", ...(onLinkedAsset ? LINK_ASSET_TYPES : [])]} onChange={value => { if (!editing && !linkedDirty) onFormat(value); }} /></Field></fieldset>
+    {onLinkedAsset && (linked || edited?.linkedAsset) ? <LinkedAssetEditor key={editing ?? format} type={edited?.linkedAsset?.assetType ?? format as LinkAssetType} initial={edited?.linkedAsset} disabled={disabled || attachmentDisabled || (!editing && attachments.length >= 6)} onPending={setLinkedDirty}
+      onSave={async value => { await onLinkedAsset(value, editing ?? undefined); setEditing(null); }} onCancel={() => { setEditing(null); onFormat("Self-contained HTML file"); }} /> : <Field label="Attach additional media" hint={`Optional. MP4/WebM videos up to 500 MB each; HTML and PDF/PPT/PPTX documents up to 25 MB each. Up to 6 additional files.${local ? " Local preview only." : ""}`}>
       <input type="file" className="max-w-full" disabled={disabled || attachmentDisabled || attachments.length >= 6} accept={format === "Self-contained HTML file" ? ".html,.htm" : format === "Video walkthrough only" ? ".mp4,.webm" : ".pdf,.ppt,.pptx"} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onAttachment(file); }} />
-    </Field>
-    <ul className="space-y-4">{attachments.map(item => <li key={item.id} className="flex min-w-0 items-center gap-3 border-b border-(--glass-edge) pb-3"><Icon name="file" className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.status}</div>{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview attachment" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled} title="Remove attachment" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></li>)}</ul>
+    </Field>}
+    <ul className="space-y-4">{attachments.map(item => <li key={item.id} className="flex min-w-0 flex-wrap items-center gap-3 border-b border-(--glass-edge) pb-3"><Icon name="file" className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{item.linkedAsset.assetType}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!editing || linkedDirty} title="Edit asset" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (linkedDirty) return; setEditing(item.id); onFormat(item.linkedAsset!.assetType); }}><Icon name="file" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview attachment" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editing === item.id} title="Remove attachment" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></li>)}</ul>
     {children}
   </StepShell>;
+}
+
+export function LinkedAssetEditor({ type, initial, disabled, onSave, onCancel, onPending }: { type: LinkAssetType; initial?: LinkedAssetInput; disabled?: boolean; onSave: (input: LinkedAssetInput) => Promise<void>; onCancel: () => void; onPending?: (pending: boolean) => void }) {
+  const empty: LinkedAssetInput = { name: "", assetType: type, externalUrl: "", allowsEmbedding: false, embedHint: "" };
+  const [value, setValue] = useState(initial ?? empty);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const dirty = JSON.stringify(value) !== JSON.stringify(initial ?? empty);
+  useEffect(() => { onPending?.(dirty || busy); return () => onPending?.(false); }, [dirty, busy, onPending]);
+  return <fieldset disabled={disabled || busy} className="min-w-0 space-y-4 border-y border-(--glass-edge) py-5">
+    <legend className="text-[14px] font-semibold">{initial ? "Edit asset" : "Add asset"}</legend>
+    <Field label="Asset name" required><input className={submissionInputClass} maxLength={100} value={value.name} onChange={event => setValue({ ...value, name: event.target.value })} /></Field>
+    {type !== "Desktop app or script" && <Field label="Application URL" required><input type="url" className={submissionInputClass} placeholder="https://" maxLength={2000} value={value.externalUrl} onChange={event => setValue({ ...value, externalUrl: event.target.value })} /></Field>}
+    {type === "Hosted web app (URL)" && <label className="flex items-start gap-3 text-[14px]"><input type="checkbox" className="mt-1" checked={value.allowsEmbedding} onChange={event => setValue({ ...value, allowsEmbedding: event.target.checked })} />Allow sandboxed embedding</label>}
+    <Field label={type === "Desktop app or script" ? "Demo arrangements" : "Access notes"} required={type === "Desktop app or script"}><textarea className={submissionInputClass} rows={3} maxLength={200} value={value.embedHint} onChange={event => setValue({ ...value, embedHint: event.target.value })} /></Field>
+    {error && <p role="alert" className="text-[14px]">{error}</p>}
+    <div className="flex flex-wrap gap-3"><button type="button" className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-(--accent) px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:opacity-40" onClick={async () => {
+      setError(""); let validated: LinkedAssetInput;
+      try { validated = validateLinkedAsset(value); } catch (caught) { setError(caught instanceof Error ? caught.message : "Check asset fields."); return; }
+      setBusy(true);
+      try { await onSave(validated); setValue(initial ?? empty); } catch (caught) { setError(caught instanceof Error ? caught.message : "Asset save failed."); } finally { setBusy(false); }
+    }}><Icon name="check" />{busy ? "Saving..." : initial ? "Save asset" : "Add asset"}</button><button type="button" className="cursor-pointer rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px]" onClick={onCancel}>Cancel</button></div>
+  </fieldset>;
 }
 
 export function IdentityFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus }: {

@@ -1,5 +1,7 @@
+import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
+
 export type MediaKind = "image" | "attachment" | "thumbnail";
-export type MediaItem = { id: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number };
+export type MediaItem = { id: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput };
 export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[] };
 export type MediaApi = {
   read: (id: string) => Promise<unknown>;
@@ -26,6 +28,14 @@ export function parseMedia(response: unknown): MediaState {
       || (item.kind !== "image" && item.kind !== "attachment" && item.kind !== "thumbnail") || typeof item.name !== "string" || typeof item.mime !== "string"
       || !integer(item.size) || !integer(item.received) || item.received > item.size || !integer(item.nextBlock) || typeof item.complete !== "boolean") throw new Error("Invalid media record.");
     if ((item.caption !== undefined && (typeof item.caption !== "string" || item.caption.length > 200)) || (item.sortOrder !== undefined && (!integer(item.sortOrder) || item.sortOrder > 12))) throw new Error("Invalid media metadata.");
+    if (item.mime === "application/vnd.prisma.link" || item.linkedAsset !== undefined) {
+      const linked = object(item.linkedAsset);
+      if (item.mime !== "application/vnd.prisma.link" || item.kind !== "attachment" || !item.complete || item.size !== 0 || item.received !== 0 || item.nextBlock !== 0
+        || typeof linked.name !== "string" || typeof linked.assetType !== "string" || typeof linked.externalUrl !== "string" || typeof linked.embedHint !== "string" || typeof linked.allowsEmbedding !== "boolean") throw new Error("Invalid linked asset record.");
+      const validated = validateLinkedAsset(linked as LinkedAssetInput);
+      if (validated.name !== item.name) throw new Error("Mismatched linked asset name.");
+      return { ...item, linkedAsset: validated } as MediaItem;
+    }
     return item as MediaItem;
   });
   if (new Set(media.map(item => item.id)).size !== media.length) throw new Error("Duplicate media record.");
@@ -45,6 +55,24 @@ export async function mediaRequest(operation: Promise<unknown>, signal: AbortSig
     deadline.throwIfAborted();
     return parseMedia(result);
   } finally { deadline.removeEventListener("abort", abort); }
+}
+
+export function hasCaptionChanges(media: MediaItem[], captions: Record<string, string>): boolean {
+  return media.some(item => item.kind === "image" && item.complete && captions[item.id] !== undefined && captions[item.id] !== (item.caption ?? ""));
+}
+
+export async function saveMediaCaptions(api: Pick<MediaApi, "metadata">, saved: { id: string; rowVersion: string }, media: MediaItem[], captions: Record<string, string>, signal: AbortSignal): Promise<MediaState | null> {
+  signal.throwIfAborted();
+  for (const [id, caption] of Object.entries(captions)) {
+    if (caption.length > 200 || !media.some(item => item.id === id && item.kind === "image" && item.complete)) throw new Error("Caption does not match a saved screenshot.");
+  }
+  if (!hasCaptionChanges(media, captions)) return null;
+  const metadata = media.filter(item => item.complete).map((item, index) => ({ id: item.id, caption: item.kind === "image" ? captions[item.id] ?? item.caption ?? "" : item.caption ?? "", sortOrder: item.sortOrder ?? index }));
+  const next = await mediaRequest(api.metadata(saved.id, saved.rowVersion, JSON.stringify(metadata)), signal);
+  if (next.id !== saved.id || next.rowVersion === saved.rowVersion || next.media.length !== media.length
+    || media.some(previous => !next.media.some(item => item.id === previous.id && item.complete === previous.complete))
+    || metadata.some(expected => !next.media.some(item => item.id === expected.id && item.complete && (item.caption ?? "") === expected.caption && item.sortOrder === expected.sortOrder))) throw new Error("Caption save was not confirmed. Reopen the draft before retrying.");
+  return next;
 }
 
 export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersion: string }, file: File, kind: MediaKind, signal: AbortSignal, progress: (state: MediaState) => void): Promise<MediaState> {

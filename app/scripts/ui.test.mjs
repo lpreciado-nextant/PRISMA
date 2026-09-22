@@ -38,6 +38,9 @@ test("both adapters consume the shared form and review surfaces", async () => {
   for (const source of [poc, graph]) assert.match(source, /<ContributorRow\b/);
   for (const source of [poc, media]) assert.match(source, /<SubmissionMedia\b/);
   for (const source of [pocReview, connectedReview]) assert.match(source, /<ReviewPanel\b/);
+  assert.match(connected, /captions=\{captions\} onCaptions=\{setCaptions\}/);
+  assert.match(connected, /await saveMediaCaptions\(/);
+  assert.doesNotMatch(media, /Save captions|Discard caption edits/);
 });
 
 test("wizard footer preserves labels and locks every action during uncertain saves", () => {
@@ -78,6 +81,23 @@ test("media uses stacked baseline controls and inline screenshot captions", () =
   assert.match(html, /accept=".html,.htm"/);
   assert.ok(html.indexOf("Card thumbnail") < html.indexOf("Detail screenshots"));
   assert.ok(html.indexOf("Detail screenshots") < html.indexOf("Additional media format"));
+});
+
+test("linked asset editor separates URLs, embedding and desktop arrangements", () => {
+  const props = { onSave: async () => {}, onCancel: noop };
+  const hosted = render(form.LinkedAssetEditor, { ...props, type: "Hosted web app (URL)" });
+  assert.match(hosted, /Application URL/);
+  assert.match(hosted, /Allow sandboxed embedding/);
+  assert.match(hosted, /maxLength="2000"/);
+  for (const type of ["Power Apps", "Power BI"]) {
+    const html = render(form.LinkedAssetEditor, { ...props, type });
+    assert.match(html, /Application URL/);
+    assert.doesNotMatch(html, /Allow sandboxed embedding/);
+  }
+  const desktop = render(form.LinkedAssetEditor, { ...props, type: "Desktop app or script" });
+  assert.match(desktop, /Demo arrangements/);
+  assert.doesNotMatch(desktop, /Application URL/);
+  assert.doesNotMatch(desktop, /Allow sandboxed embedding/);
 });
 
 test("review actions require comments on return and independent clearance on approval", () => {

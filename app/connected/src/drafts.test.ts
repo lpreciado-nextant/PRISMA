@@ -2,9 +2,47 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
-import { parseMedia, uploadMedia, type MediaApi } from "./media.ts";
-import { createTechnology, deleteSubmission, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, submissionSolution, type WorkflowApi } from "./workflow.ts";
+import { hasCaptionChanges, parseMedia, saveMediaCaptions, uploadMedia, type MediaApi } from "./media.ts";
+import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
+import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
+
+test("linked assets require safe URLs and honest desktop guidance", () => {
+  const input: LinkedAssetInput = { name: " Demo ", assetType: "Hosted web app (URL)", externalUrl: "https://example.com/demo", allowsEmbedding: true, embedHint: "" };
+  assert.equal(validateLinkedAsset(input).name, "Demo");
+  for (const externalUrl of ["javascript:alert(1)", "http://example.com", "data:text/html,test", "https://user:password@example.com", "https://example.com/\nsecret", "https://example.com\\path"]) assert.throws(() => validateLinkedAsset({ ...input, externalUrl }));
+  for (const assetType of ["Power Apps", "Power BI"] as const) {
+    assert.throws(() => validateLinkedAsset({ ...input, assetType }));
+    assert.equal(validateLinkedAsset({ ...input, assetType, allowsEmbedding: false }).externalUrl, input.externalUrl);
+  }
+  assert.throws(() => validateLinkedAsset({ ...input, assetType: "Desktop app or script", externalUrl: "", allowsEmbedding: false }));
+  const desktop = validateLinkedAsset({ ...input, assetType: "Desktop app or script", externalUrl: "", allowsEmbedding: false, embedHint: "Contact the builder to arrange a demonstration." });
+  assert.equal(desktop.externalUrl, "");
+  assert.throws(() => validateLinkedAsset({ ...input, name: "x".repeat(101) }));
+});
+
+test("linked asset create and edit confirm type and exact versions without file uploads", async () => {
+  const input: LinkedAssetInput = { name: "Demo", assetType: "Power Apps", externalUrl: "https://apps.powerapps.com/play/demo", allowsEmbedding: false, embedHint: "Sign in with your work account." };
+  const item = { id: draft.areaId, sessionId: draft.areaId, kind: "attachment" as const, name: input.name, mime: "application/vnd.prisma.link", size: 0, received: 0, nextBlock: 0, complete: true, linkedAsset: input };
+  const state = { id: draft.id, rowVersion: "90071992547409932", sessionId: null, blockSize: 524288, media: [item] };
+  const api = { transition: async (id: string, version: string, action: string, json: string, cleared: boolean) => {
+    assert.equal(id, draft.id); assert.equal(version, draft.rowVersion); assert.equal(action, "asset"); assert.equal(cleared, false);
+    assert.deepEqual(JSON.parse(json), input);
+    return result(state);
+  } };
+  const created = await saveLinkedAsset(api, draft, [], input, signal());
+  assert.equal(mediaAsset(created.media[0], 0).assetType, "Power Apps");
+  const edited = { ...input, name: "Updated" };
+  const updated = await saveLinkedAsset({ transition: async (_id, _version, _action, json) => {
+    assert.equal(JSON.parse(json).id, item.id);
+    return result({ ...state, media: [{ ...item, name: edited.name, linkedAsset: edited }] });
+  } }, draft, [item], edited, signal(), item.id);
+  assert.equal(updated.media[0].name, "Updated");
+  await assert.rejects(saveLinkedAsset({ transition: async () => result({ ...state, rowVersion: draft.rowVersion }) }, draft, [], input, signal()), /confirmed/);
+  assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, linkedAsset: { ...input, externalUrl: "javascript:alert(1)" } }] })));
+  assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, mime: "text/html" }] })), /linked asset/);
+  assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, linkedAsset: undefined }] })));
+});
 
 test("tab recovery is identity scoped, strips extras and requires renewed acknowledgment", () => {
   const text = recoveryPayload("Owner@example.com", draft.id, draft.rowVersion, { ...draft, safetyAcknowledged: true }, emptyGraph(), 2);
@@ -49,6 +87,70 @@ test("media responses retain exact versions and reject unsafe shapes", () => {
   assert.deepEqual(parseMedia(result(state)), state);
   assert.throws(() => parseMedia(result({ ...state, rowVersion: 123 })), /version/);
   assert.throws(() => parseMedia(result({ ...state, blockSize: 10 })), /limits/);
+});
+
+test("caption saves use the exact version, preserve metadata and confirm persisted captions", async () => {
+  const image = { id: draft.areaId, sessionId: draft.areaId, kind: "image" as const, name: "image.png", mime: "image/png", size: 3, received: 3, nextBlock: 1, complete: true, caption: "Original", sortOrder: 2 };
+  let calls = 0;
+  const api = { metadata: async (id: string, version: string, json: string) => {
+    calls++;
+    assert.equal(id, draft.id);
+    assert.equal(version, draft.rowVersion);
+    assert.deepEqual(JSON.parse(json), [{ id: image.id, caption: "Updated", sortOrder: 2 }]);
+    return result({ id, rowVersion: "90071992547409932", sessionId: null, blockSize: 524288, media: [{ ...image, caption: "Updated" }] });
+  } };
+  assert.equal(hasCaptionChanges([image], { [image.id]: "Original" }), false);
+  assert.equal(await saveMediaCaptions(api, draft, [image], {}, signal()), null);
+  assert.equal(calls, 0);
+  const saved = await saveMediaCaptions(api, draft, [image], { [image.id]: "Updated" }, signal());
+  assert.equal(saved?.rowVersion, "90071992547409932");
+  assert.equal(saved?.media[0].caption, "Updated");
+  const unfinished = { ...image, id: draft.id, sessionId: draft.id, kind: "attachment" as const, name: "pending.html", mime: "text/html", complete: false, received: 0, nextBlock: 0, caption: "", sortOrder: 3 };
+  const withUnfinished = await saveMediaCaptions({ metadata: async (id, _version, json) => {
+    assert.deepEqual(JSON.parse(json), [{ id: image.id, caption: "", sortOrder: 2 }]);
+    return result({ id, rowVersion: "90071992547409932", sessionId: null, blockSize: 524288, media: [{ ...image, caption: "" }, unfinished] });
+  } }, draft, [image, unfinished], { [image.id]: "" }, signal());
+  assert.equal(withUnfinished?.media[0].caption, "");
+  assert.equal(withUnfinished?.media[1].complete, false);
+  const response = { id: draft.id, rowVersion: draft.rowVersion, sessionId: null, blockSize: 524288, media: [image] };
+  for (const invalid of [response, { ...response, rowVersion: "2" }, { ...response, id: draft.areaId, rowVersion: "2" }, { ...response, rowVersion: "2", media: [] }]) {
+    await assert.rejects(saveMediaCaptions({ metadata: async () => result(invalid) }, draft, [image], { [image.id]: "Updated" }, signal()), /confirmed/);
+  }
+  await assert.rejects(saveMediaCaptions(api, draft, [image], { missing: "Updated" }, signal()), /screenshot/);
+  await assert.rejects(saveMediaCaptions(api, draft, [image], { [image.id]: "x".repeat(201) }, signal()), /screenshot/);
+  const controller = new AbortController();
+  await assert.rejects(saveMediaCaptions({ metadata: async () => { controller.abort(); return result(response); } }, draft, [image], { [image.id]: "Updated" }, controller.signal), /abort/i);
+});
+
+test("caption checkpoint chains into core and graph saves without restoring safety clearance", async () => {
+  const image = { id: draft.areaId, sessionId: draft.areaId, kind: "image" as const, name: "image.png", mime: "image/png", size: 3, received: 3, nextBlock: 1, complete: true, caption: "Before", sortOrder: 1 };
+  let version = BigInt(draft.rowVersion);
+  const calls: string[] = [];
+  const captions = await saveMediaCaptions({ metadata: async (id, expected, json) => {
+    assert.equal(expected, String(version));
+    calls.push("captions");
+    return result({ id, rowVersion: String(++version), sessionId: null, blockSize: 524288, media: [{ ...image, ...JSON.parse(json)[0] }] });
+  } }, draft, [image], { [image.id]: "After" }, signal());
+  assert.ok(captions);
+  const checkpoint = { ...draft, rowVersion: captions.rowVersion, safetyAcknowledged: false };
+  const fields = { ...checkpoint, summary: "Changed summary" };
+  const desired = { ...emptyGraph(), technologyIds: [draft.areaId] };
+  const confirmed: string[] = [];
+  const saved = await persistDraftGraph({ ...api, save: async (json, id, expected) => {
+    assert.equal(expected, String(version));
+    assert.equal(JSON.parse(json).safetyAcknowledged, false);
+    calls.push("core");
+    return result({ ...fields, ...JSON.parse(json), id, rowVersion: String(++version) });
+  } }, { read: async () => ({}), save: async (id, expected, json) => {
+    assert.equal(expected, String(version));
+    calls.push("graph");
+    return result({ id, rowVersion: String(++version), graph: JSON.parse(json), hours: [] });
+  } }, fields, checkpoint, desired, emptyGraph(), signal(), core => confirmed.push(core.rowVersion));
+  assert.deepEqual(calls, ["captions", "core", "graph"]);
+  assert.equal(saved.core.rowVersion, String(version));
+  assert.equal(saved.core.safetyAcknowledged, false);
+  assert.equal(confirmed.length, 2);
+  assert.equal(captions.media[0].caption, "After");
 });
 
 test("media upload advances exact versions and stops after cancellation", async () => {

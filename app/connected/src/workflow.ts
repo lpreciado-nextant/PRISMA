@@ -1,7 +1,8 @@
 import { MATURITY_OPTIONS, snapshot, type SavedDraft } from "./drafts.ts";
 import type { Solution } from "../../src/types.ts";
 import { parseGraph, type GraphSnapshot, type Contributor } from "./draftGraph.ts";
-import { parseMedia, type MediaItem } from "./media.ts";
+import { mediaRequest, parseMedia, type MediaItem } from "./media.ts";
+import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
 import { readAll, type ReadRows } from "./catalogue.ts";
 
 export const PUBLICATIONS: Record<number, string> = { 125060000: "Published", 125060001: "Retired", 125060002: "Pending review", 125060003: "Draft" };
@@ -9,6 +10,7 @@ export type Submission = { core: SavedDraft; publication: number; outcome: numbe
 export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean };
 export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; hours: number | null; email?: string; effort?: Contributor }[]; totalHours: number; projects: string[]; media: MediaItem[]; libraryNotes?: string };
 export function mediaAsset(item: MediaItem, index: number): Solution["assets"][number] {
+  if (item.linkedAsset) return { id: item.id, ...item.linkedAsset, sortOrder: item.sortOrder ?? index };
   return { id: item.id, name: item.name, assetType: item.mime === "text/html" ? "Self-contained HTML file" : item.mime.startsWith("video/") ? "Video walkthrough only" : "Client-ready one-pager / slide", allowsEmbedding: item.mime === "text/html" || item.mime.startsWith("video/"), sortOrder: index };
 }
 export function submissionSolution(record: Submission, names: Record<string, string>): Solution {
@@ -29,6 +31,17 @@ export type WorkflowApi = {
   transition: (id: string, version: string, action: string, comments: string, cleared: boolean) => Promise<unknown>;
   published: (id: string, present: boolean) => Promise<unknown>;
 };
+export async function saveLinkedAsset(api: Pick<WorkflowApi, "transition">, saved: Pick<SavedDraft, "id" | "rowVersion">, media: MediaItem[], input: LinkedAssetInput, signal: AbortSignal, assetId?: string) {
+  signal.throwIfAborted();
+  const value = validateLinkedAsset(input);
+  if (assetId && !media.some(item => item.id === assetId && item.linkedAsset)) throw new Error("Linked asset is not in this draft.");
+  const next = await mediaRequest(api.transition(saved.id, saved.rowVersion, "asset", JSON.stringify({ ...value, ...(assetId ? { id: assetId } : {}) }), false), signal);
+  const changed = next.media.filter(item => assetId ? item.id === assetId : !media.some(previous => previous.id === item.id));
+  if (next.id !== saved.id || next.rowVersion === saved.rowVersion || next.media.length !== media.length + (assetId ? 0 : 1)
+    || changed.length !== 1 || JSON.stringify(changed[0].linkedAsset) !== JSON.stringify(value)
+    || media.some(previous => !next.media.some(item => item.id === previous.id))) throw new Error("Linked asset save was not confirmed. Reopen the draft before retrying.");
+  return next;
+}
 export async function loadSubmissionCardDetails(api: Pick<WorkflowApi, "read">, read: ReadRows, id: string, signal: AbortSignal) {
   signal.throwIfAborted();
   const detail = parseSubmission(await api.read(id));

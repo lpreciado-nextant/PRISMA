@@ -10,6 +10,26 @@ namespace Prisma.Plugins.Tests
         private static string Input(string extra = "") { return "{\"name\":\"Named draft\",\"areaId\":\"" + Area + "\"" + extra + "}"; }
 
         [Fact]
+        public void LinkedAssetsValidateUrlsTypesAndOwnedDraftTransitions()
+        {
+            var json = "{\"name\":\"Demo\",\"assetType\":\"Hosted web app (URL)\",\"externalUrl\":\"https://example.com/demo\",\"allowsEmbedding\":true,\"embedHint\":\"\"}";
+            Assert.Equal(125060007, LinkedAssetPolicy.Choice(LinkedAssetPolicy.Parse(json).AssetType));
+            foreach (var url in new[] { "http://example.com", "javascript:alert(1)", "https://user:pass@example.com", "https://example.com/a b" })
+                Assert.Throws<InvalidPluginExecutionException>(() => LinkedAssetPolicy.Parse(json.Replace("https://example.com/demo", url)));
+            Assert.Throws<InvalidPluginExecutionException>(() => LinkedAssetPolicy.Parse(json.Replace("Hosted web app (URL)", "Power BI")));
+            Assert.Throws<InvalidPluginExecutionException>(() => LinkedAssetPolicy.Parse(json.Replace("\"name\":\"Demo\"", "\"ownerid\":\"fake\",\"name\":\"Demo\"")));
+            Assert.Throws<InvalidPluginExecutionException>(() => LinkedAssetPolicy.Validate(new LinkedAssetInput { Name = "Desktop", AssetType = "Desktop app or script", ExternalUrl = "", EmbedHint = "" }));
+            Assert.Equal(125060004, LinkedAssetPolicy.Choice(LinkedAssetPolicy.Validate(new LinkedAssetInput { Name = "Desktop", AssetType = "Desktop app or script", ExternalUrl = "", EmbedHint = "Contact the builder." }).AssetType));
+            var owner = Guid.NewGuid();
+            var parent = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "123", ["ownerid"] = new EntityReference("systemuser", owner), ["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus) };
+            Assert.False(ReviewPolicy.Change(parent, owner, false, "123", "asset", json, false).GetAttributeValue<bool>("nx_safetyacknowledged"));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, Guid.NewGuid(), true, "123", "asset", json, false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "122", "asset", json, false));
+            parent["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published);
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "123", "asset", json, false));
+        }
+
+        [Fact]
         public void MediaMetadataRejectsProtectedFieldsAndThumbnailsRemainImages()
         {
             var json = "[{\"id\":\"" + Area + "\",\"caption\":\"Dashboard\",\"sortOrder\":0}]";

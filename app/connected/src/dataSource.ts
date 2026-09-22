@@ -45,6 +45,7 @@ export const mediaApi: MediaApi = {
 };
 
 export async function downloadMedia(item: MediaItem): Promise<Blob> {
+  if (item.linkedAsset) throw new Error("Linked assets do not contain a downloadable file.");
   if (!item.complete) throw new Error("Media is not finalized.");
   const client = getClient(dataSourcesInfo);
   const result = item.kind !== "attachment"
