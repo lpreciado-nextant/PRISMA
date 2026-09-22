@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
-import { hasCaptionChanges, mediaRequest, parseMedia, saveMediaCaptions, uploadMedia, type MediaApi } from "./media.ts";
+import { hasCaptionChanges, mediaRequest, parseMedia, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
@@ -19,6 +19,21 @@ test("linked assets require safe URLs and honest desktop guidance", () => {
   const desktop = validateLinkedAsset({ ...input, assetType: "Desktop app or script", externalUrl: "", allowsEmbedding: false, embedHint: "Contact the builder to arrange a demonstration." });
   assert.equal(desktop.externalUrl, "");
   assert.throws(() => validateLinkedAsset({ ...input, name: "x".repeat(101) }));
+});
+
+test("media reorder preserves captions and confirms exact versions and complete permutations", async () => {
+  const first = { id: draft.id, sessionId: draft.id, kind: "image" as const, name: "first.png", mime: "image/png", size: 1, received: 1, nextBlock: 1, complete: true, caption: "First", sortOrder: 0 };
+  const second = { ...first, id: draft.areaId, sessionId: draft.areaId, caption: "Second", sortOrder: 1 };
+  const api = { metadata: async (id: string, version: string, json: string) => {
+    assert.equal(version, draft.rowVersion);
+    assert.deepEqual(JSON.parse(json), [{ id: second.id, caption: "Second", sortOrder: 0 }, { id: first.id, caption: "First", sortOrder: 1 }]);
+    return result({ id, rowVersion: "90071992547409932", sessionId: null, blockSize: 524288, media: [{ ...first, sortOrder: 1 }, { ...second, sortOrder: 0 }] });
+  } };
+  const saved = await saveMediaOrder(api, draft, [first, second], [second.id, first.id], signal());
+  assert.deepEqual(saved.media.map(item => item.caption), ["Second", "First"]);
+  for (const ids of [[first.id], [first.id, first.id], [first.id, "unknown"]]) await assert.rejects(saveMediaOrder(api, draft, [first, second], ids, signal()), /exactly once/);
+  await assert.rejects(saveMediaOrder(api, draft, [{ ...first, complete: false }, second], [second.id, first.id], signal()), /exactly once/);
+  await assert.rejects(saveMediaOrder({ metadata: async () => result({ id: draft.id, rowVersion: draft.rowVersion, sessionId: null, blockSize: 524288, media: [first, second] }) }, draft, [first, second], [second.id, first.id], signal()), /confirmed/);
 });
 
 test("consultant picker requires active employee status on every page, not VActive", async () => {

@@ -22,9 +22,10 @@ export function DraftGraphEditor({ graph, references, maturity, section, onChang
     </ContributorEditor> : <div className="space-y-6">{([
         { key: "technologyIds", reference: "technologies", label: "Technologies" },
         { key: "industryIds", reference: "industries", label: "Industries" },
-        { key: "projectIds", reference: "projects", label: "Projects" },
+        { key: "projectIds", reference: "projects", label: "Project (choose one)" },
       ] as const).map(section => <div key={section.key}>
-        {references[section.reference] === null ? <p className="text-[14px] text-(--ink-2)">{section.label} unavailable. Existing selections retained.</p> : <TagPicker label={section.label} governed={section.reference !== "technologies"} allowNew={section.reference === "technologies" && !!onCreateTechnology} onCreate={onCreateTechnology} options={(references[section.reference] ?? []).map(option => option.id)} selected={graph[section.key]} getLabel={id => references[section.reference]?.find(option => option.id === id)?.name ?? "Unavailable selection"} onChange={selected => onChange({ ...graph, [section.key]: selected })} />}
+        {section.key === "projectIds" && graph.projectIds.length > 1 && <p role="alert" className="mb-2 text-[13px] text-(--proto)">This draft has multiple projects. Choose one project before saving.</p>}
+        {references[section.reference] === null ? <p className="text-[14px] text-(--ink-2)">{section.label} unavailable. Existing selections retained.</p> : <TagPicker label={section.label} governed={section.reference !== "technologies"} allowNew={section.reference === "technologies" && !!onCreateTechnology} onCreate={onCreateTechnology} options={(references[section.reference] ?? []).map(option => option.id)} selected={graph[section.key]} getLabel={id => references[section.reference]?.find(option => option.id === id)?.name ?? "Unavailable selection"} onChange={selected => onChange({ ...graph, [section.key]: section.key === "projectIds" ? selected.slice(-1) : selected })} />}
       </div>)}</div>}
   </div>;
 }

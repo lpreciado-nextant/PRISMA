@@ -97,13 +97,14 @@ export function ImageUploadZone({ line, sub, multiple, disabled, onFiles, childr
   </label>;
 }
 
-export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, format, onFormat, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, disabled = false, attachmentDisabled = false, local = false, children }: {
+export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, format, onFormat, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, disabled = false, attachmentDisabled = false, local = false, children }: {
   capabilities: string[]; thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
   images: { id: string; preview: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
   format: AssetType; onFormat: (format: AssetType) => void; onAttachment: (file: File) => void;
   attachments: { id: string; name: string; status?: ReactNode; linkedAsset?: LinkedAssetInput }[]; onRemoveAttachment: (id: string) => void;
   onLinkedAsset?: (input: LinkedAssetInput, id?: string) => Promise<void>; onLinkedPending?: (pending: boolean) => void;
   onPreviewThumbnail?: () => void; onPreviewImage?: (id: string) => void; onPreviewAttachment?: (id: string) => void;
+  onReorderImages?: (ids: string[]) => void; onReorderAttachments?: (ids: string[]) => void;
   disabled?: boolean; attachmentDisabled?: boolean; local?: boolean; children?: ReactNode;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
@@ -117,19 +118,52 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
       {thumbnail ? <div className="flex flex-wrap items-center gap-4"><div className="h-24 w-40 shrink-0 overflow-hidden rounded-[12px] border border-(--glass-edge)">{onPreviewThumbnail ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={onPreviewThumbnail} aria-label="Preview thumbnail">{thumbnail}</button> : thumbnail}</div><button type="button" disabled={disabled} onClick={onRemoveThumbnail} className="cursor-pointer rounded-lg border border-(--glass-edge) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink-2) disabled:opacity-40">Remove</button></div> : thumbnailUpload}
     </div>
     <div><p className="mb-1.5 text-[13.5px] font-semibold">Detail screenshots · {images.length}/6 <span className="text-(--proto)">*</span></p><p className="mb-2 text-[12px] text-(--ink-3)">At least one image showing the experience or outcome. A thumbnail alone does not meet this requirement.</p>
-      <div className="flex flex-col gap-3">{!!images.length && <div className="grid gap-3 sm:grid-cols-2">{images.map(image => <div key={image.id} className="min-w-0 overflow-hidden rounded-[14px] border border-(--glass-edge)">
+      <div className="flex flex-col gap-3">{!!images.length && <div className="grid gap-3 sm:grid-cols-2">{images.map(image => <MediaReorderItem key={image.id} id={image.id} ids={images.map(item => item.id)} label={`Screenshot ${images.indexOf(image) + 1}`} group="images" disabled={disabled || attachmentDisabled || linkedDirty} onReorder={onReorderImages} className="min-w-0 overflow-hidden rounded-[14px] border border-(--glass-edge)">
         <div className="aspect-[16/10] w-full overflow-hidden">{onPreviewImage ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={() => onPreviewImage(image.id)} aria-label={`Preview screenshot ${images.indexOf(image) + 1}`}>{image.preview}</button> : image.preview}</div><div className="flex items-center gap-2 p-2"><input disabled={disabled} className={`${submissionInputClass} h-8 min-w-0 flex-1 rounded-lg px-2.5 py-0 text-[12.5px]`} value={image.caption} onChange={event => onCaption(image.id, event.target.value)} placeholder="e.g. Unmatched invoices awaiting review" maxLength={200} aria-label="Screenshot caption" aria-describedby={`caption-hint-${image.id}`} /><button type="button" disabled={disabled} onClick={() => onRemoveImage(image.id)} aria-label="Remove this screenshot" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg text-(--ink-3) disabled:opacity-40"><Icon name="close" size={14} /></button></div>
         <p id={`caption-hint-${image.id}`} className="px-3 pb-3 text-[12px] text-(--ink-3)">Describe the screen or result shown.</p>
-      </div>)}</div>}{images.length < 6 && imageUpload}</div>
+      </MediaReorderItem>)}</div>}{images.length < 6 && imageUpload}</div>
     </div>
     <fieldset disabled={disabled || linkedDirty || !!editing} className="min-w-0 disabled:opacity-60"><Field label="Additional media format"><SelectPicker label="Additional media format" value={format} options={["Self-contained HTML file", "Video walkthrough only", "Client-ready one-pager / slide", ...(onLinkedAsset ? LINK_ASSET_TYPES : [])]} onChange={value => { if (!editing && !linkedDirty) onFormat(value); }} /></Field></fieldset>
     {onLinkedAsset && (linked || edited?.linkedAsset) ? <LinkedAssetEditor key={editing ?? format} type={edited?.linkedAsset?.assetType ?? format as LinkAssetType} initial={edited?.linkedAsset} disabled={disabled || attachmentDisabled || (!editing && attachments.length >= 6)} onPending={setLinkedDirty}
       onSave={async value => { await onLinkedAsset(value, editing ?? undefined); setEditing(null); }} onCancel={() => { setEditing(null); onFormat("Self-contained HTML file"); }} /> : <Field label="Attach additional media" hint={`Optional. MP4/WebM videos up to 500 MB each; HTML and PDF/PPT/PPTX documents up to 25 MB each. Up to 6 additional files.${local ? " Local preview only." : ""}`}>
       <input type="file" className="max-w-full rounded-lg text-[14px] text-(--ink-2) file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-lg file:border file:border-(--glass-edge) file:bg-(--accent) file:px-4 file:py-2.5 file:text-[14px] file:font-semibold file:text-(--on-accent) hover:file:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40 disabled:file:cursor-not-allowed" disabled={disabled || attachmentDisabled || attachments.length >= 6} accept={format === "Self-contained HTML file" ? ".html,.htm" : format === "Video walkthrough only" ? ".mp4,.webm" : ".pdf,.ppt,.pptx"} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onAttachment(file); }} />
     </Field>}
-    <ul className="space-y-4">{attachments.map(item => <li key={item.id} className="flex min-w-0 flex-wrap items-center gap-3 border-b border-(--glass-edge) pb-3"><Icon name="file" className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{item.linkedAsset.assetType}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!editing || linkedDirty} title="Edit asset" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (linkedDirty) return; setEditing(item.id); onFormat(item.linkedAsset!.assetType); }}><Icon name="file" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview attachment" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editing === item.id} title="Remove attachment" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></li>)}</ul>
+    <ul className="space-y-4">{attachments.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={attachments.map(entry => entry.id)} label={item.name} group="attachments" disabled={disabled || attachmentDisabled || linkedDirty || !!editing} onReorder={onReorderAttachments} className="min-w-0 border-b border-(--glass-edge) pb-3"><div className="flex min-w-0 flex-wrap items-center gap-3"><Icon name="file" className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{item.linkedAsset.assetType}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!editing || linkedDirty} title="Edit asset" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (linkedDirty) return; setEditing(item.id); onFormat(item.linkedAsset!.assetType); }}><Icon name="file" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview attachment" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editing === item.id} title="Remove attachment" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></div></MediaReorderItem>)}</ul>
     {children}
   </StepShell>;
+}
+
+function MediaReorderItem({ as: Element = "div", id, ids, label, group, disabled, onReorder, className, children }: {
+  as?: "div" | "li"; id: string; ids: string[]; label: string; group: string; disabled: boolean; onReorder?: (ids: string[]) => void; className: string; children: ReactNode;
+}) {
+  const [over, setOver] = useState(false);
+  const index = ids.indexOf(id);
+  const mime = `application/x-prisma-${group}`;
+  const move = (source: string, target: number) => {
+    if (disabled || !onReorder || !ids.includes(source) || target < 0 || target >= ids.length) return;
+    const next = ids.filter(value => value !== source);
+    next.splice(target, 0, source);
+    if (next.some((value, position) => value !== ids[position])) onReorder(next);
+  };
+  const control = "grid size-8 shrink-0 cursor-pointer place-items-center rounded-lg border border-(--glass-edge) text-(--ink-2) hover:bg-(--glass-edge) disabled:cursor-not-allowed disabled:opacity-30";
+  return <Element className={`${className} ${over ? "ring-2 ring-(--accent)" : ""}`} onDragOver={event => { if (!disabled && onReorder && event.dataTransfer.types.includes(mime)) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setOver(true); } }} onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOver(false); }} onDrop={event => { setOver(false); if (!event.dataTransfer.types.includes(mime)) return; event.preventDefault(); move(event.dataTransfer.getData(mime), index); }}>
+    {onReorder && ids.length > 1 && <div className="flex items-center gap-2 px-2 py-2">
+      <button type="button" className={`${control} cursor-grab active:cursor-grabbing`} disabled={disabled} draggable={!disabled} title={`Drag to reorder ${label}`} aria-label={`Reorder ${label}`} onDragStart={event => { if (disabled) { event.preventDefault(); return; } event.dataTransfer.setData(mime, id); event.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setOver(false)} onKeyDown={event => { if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); move(id, index + (event.key === "ArrowUp" ? -1 : 1)); } }}><Icon name="grid" size={14} /></button>
+      <span className="mr-auto font-mono text-[11px] text-(--ink-3)">{index + 1} / {ids.length}</span>
+      <button type="button" className={control} disabled={disabled || index === 0} title="Move earlier" aria-label={`Move ${label} earlier`} onClick={() => move(id, index - 1)}><Icon name="chevronDown" size={14} className="rotate-180" /></button>
+      <button type="button" className={control} disabled={disabled || index === ids.length - 1} title="Move later" aria-label={`Move ${label} later`} onClick={() => move(id, index + 1)}><Icon name="chevronDown" size={14} /></button>
+    </div>}{children}
+  </Element>;
+}
+
+export function UploadProgress({ name, received, size, active }: { name: string; received: number; size: number; active: boolean }) {
+  const percent = size > 0 ? Math.min(100, Math.max(0, Math.round(received / size * 100))) : 0;
+  const bytes = (value: number) => value < 1024 * 1024 ? `${Math.round(value / 1024)} KB` : `${(value / 1024 / 1024).toFixed(1)} MB`;
+  return <div className="mt-2 w-full min-w-0 space-y-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[12px]"><span className="text-(--ink-2)">{active ? percent === 100 ? "Finalizing..." : "Uploading..." : "Upload incomplete"}</span><span className="font-mono text-(--accent)">{percent}%</span></div>
+    <div role="progressbar" aria-label={`Upload ${name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={`${percent}%${active && percent === 100 ? ", finalizing" : !active ? ", incomplete" : ""}`} className="h-2 overflow-hidden rounded-full border border-(--glass-edge) bg-(--glass-edge)"><div className="h-full rounded-full bg-(--accent) transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${percent}%` }} /></div>
+    <p className="font-mono text-[10.5px] text-(--ink-3)">{bytes(received)} / {bytes(size)}</p>
+  </div>;
 }
 
 export function LinkedAssetEditor({ type, initial, disabled, onSave, onCancel, onPending }: { type: LinkAssetType; initial?: LinkedAssetInput; disabled?: boolean; onSave: (input: LinkedAssetInput) => Promise<void>; onCancel: () => void; onPending?: (pending: boolean) => void }) {

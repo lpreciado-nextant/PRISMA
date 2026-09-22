@@ -22,6 +22,9 @@ export default defineConfig({
   server: {
     host: "localhost",
     port: 5174,
+    watch: {
+      ignored: [fileURLToPath(new URL("../public/sample-500mb.mp4", import.meta.url)).replaceAll("\\", "/")],
+    },
     fs: { allow: [fileURLToPath(new URL("..", import.meta.url))] },
   },
   build: { outDir: "dist", emptyOutDir: true },

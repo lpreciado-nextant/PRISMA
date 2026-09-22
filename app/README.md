@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** URL persistence and active-employee consultant choices verified; external launch, delivery/playback and non-admin acceptance remain open; no publication sign-off.
+**Status:** Connected 50/500 MiB MP4 upload, integrity and playback verified. Preview latency, browser delivery and non-admin acceptance remain open; no publication sign-off.
 **Last updated:** 2026-09-22
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -156,6 +156,8 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+The attachment File column now supports 512,000 KB (500 MiB), matching the application's video allowance. The former 32 MiB limit rejected both samples before staging. Both now upload, finalize, reopen and return exact SHA-256 hashes. Both MP4s played at 1920x1080 with pause/resume and seeking verified. The 500 MiB preview took 144 seconds to download the full file before playback; seeking near the end reached the ended event at 300 seconds. This is not progressive streaming or uninterrupted full-duration acceptance. The larger upload previously took about 13 minutes. Disposable drafts/files were removed, preserving existing user submissions. Reopen an editor locked by an earlier unconfirmed upload before retrying. See [large-video evidence and limits](../docs/workflows/demo-assets.md#large-video-verification).
 
 The connected contributor picker uses `statecode eq 0 and cr6b0_employeestatus eq true`, following the user-selected **Employee Status = Active** definition. `cr6b0_vactive` is not the selected rule. Returned records must also have those exact active values before becoming picker options or signed-in defaults. Live verification on 2026-09-22 returned 173 choices instead of 417 generic-active rows. Existing contributors outside that list remain identified as inactive/unavailable until explicitly replaced; historical credit is not erased. This is a picker restriction, not a new backend employment-status authorization rule. No consultant records or backend permissions were changed.
 

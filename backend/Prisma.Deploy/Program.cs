@@ -11,13 +11,70 @@ const string organizationUrl = "https://nextantpulse.crm.dynamics.com";
 const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
-if (!new[] { "inspect", "inspect-asset-columns", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Use inspect, inspect-asset-columns, repair-asset-url, apply, assign-acceptance, smoke, smoke-graph, smoke-media, smoke-review or smoke-delete.");
+if (!new[] { "inspect", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Use inspect, inspect-asset-columns, verify-video-files, set-video-limit, repair-asset-url, apply, assign-acceptance, smoke, smoke-graph, smoke-media, smoke-review or smoke-delete.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "verify-video-files")
+{
+    if (args.Length < 3 || !Guid.TryParse(args[1], out var parentId)) throw new ArgumentException("Use verify-video-files <test-draft-id> <local-file> [local-file...]. Read-only.");
+    using var detail = JsonDocument.Parse((string)client.Execute(new OrganizationRequest("nx_GetSubmission") { ["SolutionId"] = parentId })["ResultJson"]);
+    if (detail.RootElement.GetProperty("record").GetProperty("core").GetProperty("name").GetString() != "[PRISMA TEST] Large video acceptance") throw new InvalidOperationException("Refusing an unrelated draft.");
+    foreach (var path in args.Skip(2))
+    {
+        var file = new FileInfo(path);
+        var item = detail.RootElement.GetProperty("media").EnumerateArray().Single(value => value.GetProperty("name").GetString() == file.Name);
+        if (!item.GetProperty("complete").GetBoolean() || item.GetProperty("kind").GetString() != "attachment" || item.GetProperty("mime").GetString() != "video/mp4" || item.GetProperty("size").GetInt64() != file.Length)
+            throw new InvalidOperationException("Video is not finalized or its recorded size differs.");
+        using var input = file.OpenRead();
+        var expected = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(input));
+        var target = new EntityReference("nx_demoasset", Guid.Parse(item.GetProperty("id").GetString()!));
+        var download = (InitializeFileBlocksDownloadResponse)client.Execute(new InitializeFileBlocksDownloadRequest { Target = target, FileAttributeName = "nx_filemedia" });
+        if (download.FileSizeInBytes != file.Length || !download.IsChunkingSupported) throw new InvalidOperationException("Unexpected stored size or no streaming download support.");
+        using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        long offset = 0;
+        while (offset < file.Length)
+        {
+            var length = Math.Min(4L * 1024 * 1024, file.Length - offset);
+            var block = (DownloadBlockResponse)client.Execute(new DownloadBlockRequest { FileContinuationToken = download.FileContinuationToken, Offset = offset, BlockLength = length });
+            if (block.Data.LongLength != length) throw new InvalidOperationException("Download block length mismatch.");
+            hash.AppendData(block.Data); offset += length;
+        }
+        var actual = Convert.ToHexString(hash.GetHashAndReset());
+        if (expected != actual) throw new InvalidOperationException($"Checksum mismatch for {file.Name}.");
+        Console.WriteLine($"PASS {file.Name}: {offset} bytes; SHA256 {actual}; streamed readback {timer.Elapsed.TotalSeconds:F1}s. No writes performed.");
+    }
+    return;
+}
+if (command == "set-video-limit")
+{
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "--execute")) throw new ArgumentException("Use set-video-limit [--execute]; preview is read-only.");
+    const int targetKB = 500 * 1024;
+    FileAttributeMetadata ReadFileLimit(bool editable) => ((RetrieveAttributeResponse)client.Execute(new RetrieveAttributeRequest { EntityLogicalName = "nx_demoasset", LogicalName = "nx_filemedia", RetrieveAsIfPublished = editable })).AttributeMetadata as FileAttributeMetadata
+        ?? throw new InvalidOperationException("Attachment column is not a File attribute.");
+    var published = ReadFileLimit(false);
+    var editable = ReadFileLimit(true);
+    if (published.MetadataId != editable.MetadataId || editable.IsManaged != false || editable.IsCustomizable?.Value != true
+        || (published.MaxSizeInKB != 32768 && published.MaxSizeInKB != targetKB) || (editable.MaxSizeInKB != 32768 && editable.MaxSizeInKB != targetKB))
+        throw new InvalidOperationException("Unexpected attachment metadata. Reassess before changing the limit.");
+    Console.WriteLine($"nx_demoasset.nx_filemedia {editable.MetadataId}: published={published.MaxSizeInKB} KB; editable={editable.MaxSizeInKB} KB; approved target={targetKB} KB (500 MiB).");
+    Console.WriteLine("Only this file-column limit is updated. Table publication can activate other pending nx_demoasset customizations. No file bytes, rows, roles or code apps are changed.");
+    if (args.Length == 1) { Console.WriteLine("Preview only. --execute requires explicit approval."); return; }
+    if (editable.MaxSizeInKB != targetKB)
+    {
+        editable.MaxSizeInKB = targetKB;
+        client.Execute(new UpdateAttributeRequest { EntityName = "nx_demoasset", Attribute = editable, MergeLabels = false, SolutionUniqueName = solutionName });
+    }
+    if (published.MaxSizeInKB != targetKB)
+        client.Execute(new PublishXmlRequest { ParameterXml = "<importexportxml><entities><entity>nx_demoasset</entity></entities><nodes/><securityroles/><settings/><workflows/></importexportxml>" });
+    if (ReadFileLimit(false).MaxSizeInKB != targetKB || ReadFileLimit(true).MaxSizeInKB != targetKB) throw new InvalidOperationException("File-size limit verification failed after update/publication.");
+    Console.WriteLine("Verified published and editable attachment limit: 512000 KB (524288000 bytes). Full-size upload/playback acceptance is separate.");
+    return;
+}
 if (command == "repair-asset-url")
 {
     if (args.Length > 2 || (args.Length == 2 && args[1] != "--execute" && args[1] != "--execute-resize")) throw new ArgumentException("Use repair-asset-url [--execute|--execute-resize]; preview is read-only. Resize requires separate approval.");
@@ -68,12 +125,12 @@ if (command == "repair-asset-url")
 }
 if (command == "inspect-asset-columns")
 {
-    foreach (var name in new[] { "nx_demoassetid1", "nx_externalurl", "nx_embedhint" })
+    foreach (var name in new[] { "nx_demoassetid1", "nx_externalurl", "nx_embedhint", "nx_filemedia" })
     {
         foreach (var editable in new[] { false, true })
         {
             var attribute = ((RetrieveAttributeResponse)client.Execute(new RetrieveAttributeRequest { EntityLogicalName = "nx_demoasset", LogicalName = name, RetrieveAsIfPublished = editable })).AttributeMetadata;
-            Console.WriteLine($"nx_demoasset.{name}: editable={editable}; type={attribute.AttributeType}; maxLength={(attribute as StringAttributeMetadata)?.MaxLength ?? (attribute as MemoAttributeMetadata)?.MaxLength}; managed={attribute.IsManaged}");
+            Console.WriteLine($"nx_demoasset.{name}: editable={editable}; type={attribute.AttributeType}; maxLength={(attribute as StringAttributeMetadata)?.MaxLength ?? (attribute as MemoAttributeMetadata)?.MaxLength}; maxSizeKB={(attribute as FileAttributeMetadata)?.MaxSizeInKB}; managed={attribute.IsManaged}");
         }
     }
     return;

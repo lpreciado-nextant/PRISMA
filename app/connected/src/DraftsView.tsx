@@ -239,8 +239,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const thumbnail = media.find(item => item.kind === "thumbnail" && item.complete);
   const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !!draft.areaId && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person));
   const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !contributorEffort(person, draft.maturity).error);
-  const complete = canSave && !!draft.summary.trim() && !!draft.capabilityId && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
-  const canContinue = step === 0 ? accepted : step === 1 ? canSave && !!draft.summary.trim() && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) : step === 3 ? canSave && !!draft.capabilityId : step === 4 ? complete : canSave;
+  const complete = canSave && graph.projectIds.length <= 1 && !!draft.summary.trim() && !!draft.capabilityId && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
+  const canContinue = step === 0 ? accepted : step === 1 ? canSave && !!draft.summary.trim() && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) : step === 3 ? canSave && graph.projectIds.length <= 1 && !!draft.capabilityId : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;
@@ -280,7 +280,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
         images={`${thumbnail ? "Thumbnail" : "Generated poster"} · ${media.filter(item => item.kind === "image" && item.complete).length} screenshots`} safety={draft.safetyAcknowledged ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.clientContextRedacted} nextState="Pending review">
         <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>{!complete && <p role="alert">Complete identity, contributor effort, capability and at least one detail image before submitting.</p>}
       </SubmissionReview>}
-      <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave} canContinue={canContinue} canSubmit={complete && !captionsDirty && draft.safetyAcknowledged && !!hours.length && hours.every(value => value !== null)}
+      <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave && graph.projectIds.length <= 1} canContinue={canContinue} canSubmit={complete && !captionsDirty && draft.safetyAcknowledged && !!hours.length && hours.every(value => value !== null)}
         onBack={() => goBack(step - 1)} onSave={() => void persist("close")} onContinue={() => void persist("continue")} onSubmit={() => void persist("submit")} />
     </div>
   </>;

@@ -332,6 +332,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
         {step === 4 && safetyValid && (
           <SubmissionMedia capabilities={draft.capabilities} local disabled={mediaBusy}
+            onReorderImages={ids => set("images", ids.map(id => draft.images.find(image => image.id === id)!))}
+            onReorderAttachments={ids => set("assets", ids.map((id, sortOrder) => ({ ...draft.assets.find(asset => asset.id === id)!, sortOrder })))}
             thumbnail={draft.thumbnail ? <img src={draft.thumbnail} alt="Thumbnail preview" className="h-full w-full object-cover" /> : undefined} onRemoveThumbnail={() => set("thumbnail", "")}
             thumbnailUpload={<UploadZone onBusyChange={imageBusyChanged} onFiles={sources => sources[0] && set("thumbnail", sources[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:10 reads best" />}
             images={draft.images.map(image => ({ id: image.id, caption: image.caption, preview: <img src={image.src} alt="" className="h-full w-full object-cover" /> }))}

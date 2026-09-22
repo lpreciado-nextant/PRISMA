@@ -107,6 +107,29 @@ test("linked asset editor separates URLs, embedding and desktop arrangements", (
   assert.doesNotMatch(desktop, /Allow sandboxed embedding/);
 });
 
+test("media reordering exposes drag handles and bounded keyboard actions", () => {
+  const props = { capabilities: [], onRemoveThumbnail: noop, thumbnailUpload: null, images: [{ id: "first", caption: "", preview: "First" }, { id: "second", caption: "", preview: "Second" }], imageUpload: null, onCaption: noop, onRemoveImage: noop, format: "Self-contained HTML file", onFormat: noop, onAttachment: noop, attachments: [], onRemoveAttachment: noop, onReorderImages: noop };
+  const html = render(form.SubmissionMedia, props);
+  assert.match(html, /draggable="true"/);
+  assert.match(html, /aria-label="Reorder Screenshot 1"/);
+  assert.match(html, /aria-label="Move Screenshot 1 later"/);
+  assert.match(html, /aria-label="Move Screenshot 2 earlier"/);
+  const locked = render(form.SubmissionMedia, { ...props, attachmentDisabled: true });
+  assert.doesNotMatch(locked, /draggable="true"/);
+});
+
+test("upload progress uses themed bounded progress and distinguishes finalization", () => {
+  const html = render(form.UploadProgress, { name: "demo.html", received: 720, size: 1000, active: true });
+  assert.match(html, /role="progressbar"/);
+  assert.match(html, /aria-valuenow="72"/);
+  assert.match(html, /bg-\(--accent\)/);
+  assert.match(html, /Uploading/);
+  assert.doesNotMatch(html, /Unfinished upload/);
+  assert.match(render(form.UploadProgress, { name: "demo.html", received: 1000, size: 1000, active: true }), /Finalizing/);
+  assert.match(render(form.UploadProgress, { name: "demo.html", received: 0, size: 0, active: false }), /aria-valuenow="0"/);
+  assert.match(render(form.UploadProgress, { name: "demo.html", received: 720, size: 1000, active: false }), /Upload incomplete/);
+});
+
 test("review actions require comments on return and independent clearance on approval", () => {
   const props = { status: "Pending review", comments: "", onComments: noop, cleared: false, onCleared: noop, busy: false, onReturn: noop, onApprove: noop };
   const html = render(review.ReviewPanel, props);

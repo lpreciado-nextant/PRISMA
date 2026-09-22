@@ -1,6 +1,6 @@
 # ADR-0009 - Mediated media and publication access
 
-**Status:** Accepted; protected files/links passed review/publication/withdrawal with explicit shares revoked; effective non-admin verification pending
+**Status:** Accepted; protected lifecycle and media-order persistence verified; effective non-admin verification pending
 **Date:** 2026-09-22
 **Last updated:** 2026-09-22
 
@@ -28,7 +28,7 @@ Dataverse reports no custom processing-step support for InitializeFileBlocksUplo
 
 HTML and PNG upload/commit/download/removal and rejection checks passed live with the privileged owner. Browser media reload, full-size image download and sandbox isolation passed. WebP is converted to PNG because native image columns do not support WebP.
 
-Privileged live checks also passed thumbnail upload, duplicate-thumbnail rejection, caption save, stale/direct metadata rejection and deletion of finalized/unfinished media with their parent. Browser checks verified thumbnail/card rendering, caption persistence and removal; detail and final-preview thumbnail slots compile. Client reorder controls are not implemented. Document SDK reads and download dispatch succeeded, but browser file delivery remains unverified.
+Privileged live checks also passed thumbnail upload, duplicate-thumbnail rejection, caption save, stale/direct metadata rejection and deletion of finalized/unfinished media with their parent. Browser checks verified thumbnail/card rendering, caption persistence and removal. Shared drag/keyboard reorder controls now use the existing metadata action; live readback preserves screenshot/attachment order and captions and rejects stale reorder versions. No new API or backend deployment was required. Document SDK reads and download dispatch succeeded, but browser file delivery remains unverified.
 
 The readers team has the PRISMA CSM role; members also need the intended field-security profile and app access. Mauricio was added with explicit user approval on 2026-09-22; Media Custodian remains empty. See the [pilot assignments](../security-model.md#approved-pilot-assignments). Both team records are environment-specific data, not portable solution components. Rerun scoped provisioning in another approved environment. Assignments and additive permissions require review. Privileged return/approval and explicit share grant/revocation passed; CSM effective reads/denials, separate-reviewer sessions, cross-owner denial, retirement and hosted acceptance remain gates. The connected app is not published.
 

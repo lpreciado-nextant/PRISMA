@@ -61,6 +61,15 @@ export function hasCaptionChanges(media: MediaItem[], captions: Record<string, s
   return media.some(item => item.kind === "image" && item.complete && captions[item.id] !== undefined && captions[item.id] !== (item.caption ?? ""));
 }
 
+export async function saveMediaOrder(api: Pick<MediaApi, "metadata">, saved: { id: string; rowVersion: string }, media: MediaItem[], orderedIds: string[], signal: AbortSignal): Promise<MediaState> {
+  signal.throwIfAborted();
+  if (media.some(item => !item.complete) || orderedIds.length !== media.length || new Set(orderedIds).size !== media.length || orderedIds.some(id => !media.some(item => item.id === id))) throw new Error("Reordering requires all saved media exactly once.");
+  const metadata = orderedIds.map((id, sortOrder) => ({ id, caption: media.find(item => item.id === id)!.caption ?? "", sortOrder }));
+  const next = await mediaRequest(api.metadata(saved.id, saved.rowVersion, JSON.stringify(metadata)), signal);
+  if (next.id !== saved.id || next.rowVersion === saved.rowVersion || next.media.length !== media.length || metadata.some(expected => !next.media.some(item => item.id === expected.id && item.complete && item.sortOrder === expected.sortOrder && (item.caption ?? "") === expected.caption))) throw new Error("Media order was not confirmed. Reopen before retrying.");
+  return { ...next, media: [...next.media].sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0)) };
+}
+
 export async function saveMediaCaptions(api: Pick<MediaApi, "metadata">, saved: { id: string; rowVersion: string }, media: MediaItem[], captions: Record<string, string>, signal: AbortSignal): Promise<MediaState | null> {
   signal.throwIfAborted();
   for (const [id, caption] of Object.entries(captions)) {

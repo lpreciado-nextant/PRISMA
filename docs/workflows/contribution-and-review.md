@@ -1,6 +1,6 @@
 # Contribution & review workflow
 
-**Status:** Single-account acceptance recorded; URL persistence repaired, browser launch/delivery/playback and non-admin gates remain · **Last updated:** 2026-09-22
+**Status:** Single-project editor and media reordering implemented; browser launch/delivery/playback and non-admin gates remain · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §3.1](../design/end-to-end-design.md#31-contribution--publication) · Roles: [Contributor, Librarian](../design/end-to-end-design.md#2-users-and-roles)
 
 ## Lifecycle
@@ -9,7 +9,7 @@
 
 Connected editing now follows the same six-step guided layout. Identity includes searchable contributors, Tag it uses reference chips, Media shows saved thumbnails and upload targets, and Review & submit shows the PoC card plus server-calculated total effort. Continue saves changes; Save draft & close works once the draft has an authored name and area. Core/graph operations are sequential, not one atomic transaction: a failed later operation keeps confirmed checkpoints and requires reopen before retry. Uploads remain server-mediated and may finish independently of a row transaction. Final safety confirmation is deliberately separate from the opening safety guidance. My submissions and detail/viewer reuse PoC components; reviewer queue uses matching status/search/area controls with server authorization.
 
-Connected controls include a dedicated protected thumbnail, captions integrated with Save draft/Continue, inline technology creation/reuse, linked assets and confirmed owner deletion. Unsaved core text and contributor/tag/project selections have user-approved tab recovery; changed server versions are never overwritten on restore and safety acknowledgment must be renewed. In-app navigation uses a themed discard confirmation. Notifications, reference-data administration, reorder controls and librarian content editing remain future product work. The functional lifecycle below passed; cross-account and non-admin publication/revocation tests remain release gates.
+Connected controls include a dedicated protected thumbnail, captions integrated with Save draft/Continue, drag/keyboard media ordering, themed upload progress, single-project selection, inline technology creation/reuse, linked assets and confirmed owner deletion. Unsaved core text and contributor/tag/project selections have user-approved tab recovery; changed server versions are never overwritten on restore and safety acknowledgment must be renewed. In-app navigation uses a themed discard confirmation. Notifications, reference-data administration and librarian content editing remain future product work. The functional lifecycle below passed; cross-account and non-admin publication/revocation tests remain release gates.
 
 ## Verified lifecycle
 

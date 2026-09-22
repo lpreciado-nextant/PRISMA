@@ -3,10 +3,10 @@ import { Icon } from "../../src/components/Icon";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
 import { ProtectedImage } from "./ProtectedImage";
-import { ImageUploadZone, SubmissionMedia } from "../../src/components/SubmissionForm";
+import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/components/SubmissionForm";
 import type { AssetType } from "../../src/types";
 import { mediaApi, downloadMedia, workflowApi } from "./dataSource";
-import { mediaRequest, saveMediaCaptions, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
+import { mediaRequest, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
 import type { SavedDraft } from "./drafts";
 import { mediaAsset, saveLinkedAsset } from "./workflow";
 import type { LinkedAssetInput } from "../../src/lib/linkedAssets";
@@ -115,19 +115,38 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     } finally { operation.current = null; if (!controller.signal.aborted) setBusy(false); }
   };
   const thumbnail = state?.media.find(item => item.kind === "thumbnail" && item.complete);
+  const reorder = async (kind: "image" | "attachment", ids: string[]) => {
+    if (disabled || operation.current || !state || state.media.some(item => !item.complete)) return;
+    const members = state.media.filter(item => item.kind === kind);
+    if (members.length !== ids.length || new Set(ids).size !== ids.length || ids.some(id => !members.some(item => item.id === id))) return;
+    const controller = new AbortController(); operation.current = controller; setBusy(true); setError("");
+    try {
+      let checkpoint = state;
+      const confirmed = await saveMediaCaptions(mediaApi, checkpoint, checkpoint.media, captions, controller.signal);
+      if (confirmed) { checkpoint = confirmed; setState(checkpoint); onVersion(checkpoint.rowVersion); }
+      onCaptions({});
+      let position = 0;
+      const order = checkpoint.media.map(item => item.kind === kind ? ids[position++] : item.id);
+      const next = await saveMediaOrder(mediaApi, checkpoint, checkpoint.media, order, controller.signal);
+      setState(next); onVersion(next.rowVersion);
+    } catch {
+      if (!controller.signal.aborted) { setUncertain(true); setError("Media order was not confirmed. Reopen the draft before retrying."); }
+    } finally { operation.current = null; if (!controller.signal.aborted) setBusy(false); }
+  };
   const uploadDisabled = disabled || !!state?.media.some(item => !item.complete);
   const remove = (id: string) => setRemoveTarget(state?.media.find(item => item.id === id) ?? null);
   const open = (id: string) => setPreview(state?.media.find(item => item.id === id && item.complete) ?? null);
   return <section className={embedded ? "min-w-0" : "mt-12 border-t border-(--glass-edge) pt-8"}>
     <SubmissionMedia capabilities={capabilities} disabled={disabled} attachmentDisabled={uploadDisabled} format={format} onFormat={setFormat} onAttachment={file => void mutate([file], "attachment")}
       onLinkedAsset={saveLink} onLinkedPending={setLinkedPending}
+      onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
       thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
       thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => void mutate(files.slice(0, 1), "thumbnail")} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:10 reads best" />}
       images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}
       imageUpload={<ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once" />}
-      attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, linkedAsset: item.linkedAsset, status: !item.complete && <p className="text-[13px] text-(--ink-2)">{Math.round(item.received / item.size * 100)}% · Unfinished upload{busy && <progress className="mt-2 w-full" value={item.received} max={item.size} aria-label={`Upload ${item.name}`} />}</p> }))} onRemoveAttachment={remove}>
+      attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, linkedAsset: item.linkedAsset, status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
     {error && <p role="alert" className="mb-4 text-[14px]">{error}</p>}
     {!state && !error && <p role="status">Loading media...</p>}
     {error && !uncertain && <button className={button} onClick={() => { setError(""); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button>}
