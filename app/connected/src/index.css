@@ -10,3 +10,178 @@
 @import "@fontsource/ibm-plex-mono/latin-500.css";
 @source "../../src";
 @source "./";
+
+.welcome-screen {
+	--welcome-x: 50%;
+	--welcome-y: 25%;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: calc(100svh - var(--sticky-top) - 2rem);
+	padding: 40px 24px;
+	text-align: center;
+	letter-spacing: 0;
+}
+
+.welcome-emblem {
+	position: relative;
+	display: grid;
+	place-items: center;
+	flex-shrink: 0;
+	width: 176px;
+	height: 176px;
+	margin-bottom: 32px;
+	animation: welcome-float 6s ease-in-out infinite;
+}
+
+.welcome-facet {
+	position: absolute;
+	inset: 24px;
+	border-radius: 24px;
+	pointer-events: none;
+}
+
+.welcome-facet-back {
+	transform: rotate(-20deg);
+	border-color: color-mix(in srgb, var(--sa-data) 40%, var(--glass-edge));
+	background: color-mix(in srgb, var(--sa-data) 9%, var(--glass-bg));
+}
+
+.welcome-facet-front {
+	transform: rotate(15deg);
+	background: radial-gradient(ellipse at var(--welcome-x) var(--welcome-y), var(--glass-sheen), transparent 75%), var(--glass-bg-2);
+}
+
+.welcome-mark {
+	position: relative;
+	width: 104px;
+	height: 104px;
+	filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--accent-deep) 25%, transparent));
+}
+
+.welcome-copy { max-width: 640px; }
+.welcome-overline {
+	margin: 0 0 12px;
+	color: var(--ink-2);
+	font-size: 14px;
+}
+
+.welcome-copy h1 {
+	font-size: 36px;
+	line-height: 1.25;
+	letter-spacing: 0;
+	overflow-wrap: anywhere;
+}
+
+.welcome-copy .prisma-wordmark { display: inline-block; letter-spacing: 0; }
+.welcome-status {
+	min-height: 28px;
+	margin: 16px 0 28px;
+	font-size: 17px;
+	color: var(--ink-2);
+}
+
+.welcome-connection {
+	width: min(100%, 380px);
+	border-radius: 16px;
+	overflow: hidden;
+}
+
+.welcome-steps {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+	margin: 0;
+	padding: 18px 20px;
+	list-style: none;
+}
+
+.welcome-step {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	font-size: 14px;
+	color: var(--ink-2);
+}
+
+.welcome-step-icon {
+	display: grid;
+	place-items: center;
+	flex: 0 0 32px;
+	height: 32px;
+	border: 1px solid var(--glass-edge);
+	border-radius: 50%;
+}
+
+.welcome-step-icon.is-active { color: var(--accent); border-color: var(--accent); }
+.welcome-step-icon.is-complete { color: var(--live); border-color: var(--live); }
+.welcome-track { height: 2px; background: var(--glass-edge); overflow: hidden; }
+.welcome-track span {
+	display: block;
+	width: 40%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, var(--accent), var(--sa-data), transparent);
+	animation: welcome-travel 2.8s ease-in-out infinite;
+}
+
+.welcome-action {
+	min-height: 48px;
+	margin-top: 24px;
+}
+
+.welcome-begin {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 16px;
+	min-width: 156px;
+	min-height: 48px;
+	padding: 10px 24px;
+	border-radius: 8px;
+	border-color: var(--accent);
+	background: color-mix(in srgb, var(--accent) 16%, var(--glass-bg-2));
+	font-family: var(--font-display);
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--ink);
+	cursor: pointer;
+}
+
+.welcome-begin:hover { background: color-mix(in srgb, var(--accent) 28%, var(--glass-bg-2)); }
+.welcome-begin:disabled { cursor: default; }
+.welcome-screen[data-ready="true"] .welcome-track span { animation: none; width: 100%; background: var(--live); }
+
+.welcome-flash {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	pointer-events: none;
+	background: linear-gradient(115deg, #e4f7f2, #ffffff 48%, #e7f2ff);
+	opacity: 0;
+	animation: welcome-flash 820ms ease-in-out both;
+}
+
+@keyframes welcome-flash {
+	0% { opacity: 0; }
+	27%, 35% { opacity: 1; }
+	100% { opacity: 0; }
+}
+
+@keyframes welcome-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes welcome-travel { from { transform: translateX(-100%); } to { transform: translateX(350%); } }
+
+@media (max-width: 480px) {
+	.welcome-screen { padding: 32px 20px; }
+	.welcome-copy h1 { font-size: 28px; }
+	.welcome-emblem { margin-bottom: 24px; }
+	.welcome-steps { gap: 8px; padding: 16px 12px; }
+	.welcome-step { gap: 8px; font-size: 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.welcome-emblem, .welcome-track span { animation: none; }
+	.welcome-track span { width: 100%; }
+	.welcome-flash { display: none; animation: none; }
+}

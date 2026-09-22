@@ -2,12 +2,25 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fileDigest, transferVideo, readVideoRange, type TransferApi } from "./mediaTransfer.ts";
 import type { MediaApi, MediaState } from "./media.ts";
-import { bufferedAhead } from "./videoStream.ts";
+import { bufferedAhead, FullVideoRequiredError, validateStreamingLayout } from "./videoStream.ts";
 import { captionsVtt, decodeCaption } from "./mp4Captions.ts";
 const id = "11111111-1111-1111-1111-111111111111";
 const asset = "22222222-2222-2222-2222-222222222222";
 const wrap = (value: unknown) => ({ success: true, data: { ResultJson: JSON.stringify(value) } });
 const signal = () => new AbortController().signal;
+test("MP4 layout limitations require full playback without implying an access failure", () => {
+  assert.doesNotThrow(() => validateStreamingLayout({ tracks: [{ type: "video" }, { type: "audio" }], isFragmented: false }));
+  for (const type of ["subtitles", "metadata"]) {
+    assert.throws(() => validateStreamingLayout({ tracks: [{ type: "video" }, { type }], isFragmented: false }), error => {
+      assert.ok(error instanceof FullVideoRequiredError);
+      assert.match(error.message, /additional tracks.*load in full/);
+      assert.doesNotMatch(error.message, /access|unavailable/i);
+      return true;
+    });
+  }
+  assert.throws(() => validateStreamingLayout({ tracks: [{ type: "video" }], isFragmented: true }), FullVideoRequiredError);
+  assert.equal(new Error("Access denied") instanceof FullVideoRequiredError, false);
+});
 test("MP4 caption decoding preserves timing and escapes WebVTT markup", () => {
   const text = new TextEncoder().encode("<b>Literal</b>");
   const data = new Uint8Array(text.length + 2); new DataView(data.buffer).setUint16(0, text.length); data.set(text, 2);

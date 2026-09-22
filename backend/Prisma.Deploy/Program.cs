@@ -11,13 +11,14 @@ const string organizationUrl = "https://nextantpulse.crm.dynamics.com";
 const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
-if (!new[] { "inspect", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+if (!new[] { "inspect", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "seed-reference-data") { SeedReferenceData(client, args.Skip(1).ToArray()); return; }
 if (command == "smoke-transfer")
 {
     if (args.Length != 2) throw new ArgumentException("Use smoke-transfer <non-sensitive-mp4> after approval. Creates and deletes one test draft.");
@@ -218,6 +219,93 @@ if (command == "smoke-graph") { SmokeGraph(client); return; }
 if (command == "smoke-media") { SmokeMedia(client); return; }
 if (command == "smoke-review") { SmokeReview(client); return; }
 if (command == "smoke-delete") { SmokeDelete(client); return; }
+
+static void SeedReferenceData(IOrganizationService service, string[] options)
+{
+    if (options.Length > 1 || (options.Length == 1 && options[0] != "--execute"))
+        throw new ArgumentException("Use seed-reference-data [--execute]; preview is read-only.");
+    var definitions = new[] {
+        (Table: "nx_capability", Name: "nx_capabilityname", Sorted: true, Names: new[] {
+            "AI & agents", "Planning & analytics", "Workflow & approvals", "Data platform",
+            "Knowledge & search", "Digital applications & experiences" }),
+        (Table: "nx_industry", Name: "nx_industryname", Sorted: true, Names: new[] {
+            "Financial services", "IT", "Manufacturing", "Public sector", "Cross-industry",
+            "Professional services", "Healthcare", "Life sciences", "Retail & consumer goods",
+            "Energy & utilities", "Telecommunications", "Transportation & logistics", "Education",
+            "Media & entertainment", "Real estate & construction", "Travel & hospitality", "Nonprofit" }),
+        (Table: "nx_technology", Name: "nx_technologyname", Sorted: false, Names: new[] {
+            "Copilot Studio", "ADO", "Microsoft Foundry", "Power BI", "Power Automate", "Fabric", "AWS", "Power Apps",
+            "Dataverse", "Power Apps code app", "SharePoint", "Microsoft Teams", "Dynamics 365", "Azure OpenAI",
+            "Azure AI Search", "Azure Functions", "Azure App Service", "Azure Logic Apps", "Azure Data Factory",
+            "Azure SQL", "Azure Storage", "Microsoft Graph", "SQL Server", "PostgreSQL", "Snowflake", "Databricks",
+            "Python", ".NET", "React", "TypeScript", "Node.js", "LangChain", "Semantic Kernel", "Docker" })
+    };
+    List<Entity> ReadRows(string table, string name, bool sorted)
+    {
+        var query = new QueryExpression(table) {
+            ColumnSet = sorted ? new ColumnSet(name, "statecode", "statuscode", "ownerid", "nx_sortordernumber")
+                : new ColumnSet(name, "statecode", "statuscode", "ownerid"),
+            PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 }
+        };
+        query.AddOrder(table + "id", OrderType.Ascending);
+        var result = new List<Entity>();
+        EntityCollection page;
+        do {
+            page = service.RetrieveMultiple(query);
+            result.AddRange(page.Entities);
+            query.PageInfo.PageNumber++;
+            query.PageInfo.PagingCookie = page.PagingCookie;
+        } while (page.MoreRecords);
+        return result;
+    }
+    string Snapshot(Entity row, string name) => JsonSerializer.Serialize(new {
+        row.Id, Name = row.GetAttributeValue<string>(name),
+        State = row.GetAttributeValue<OptionSetValue>("statecode")?.Value,
+        Status = row.GetAttributeValue<OptionSetValue>("statuscode")?.Value,
+        Owner = row.GetAttributeValue<EntityReference>("ownerid")?.Id,
+        Sort = row.GetAttributeValue<int?>("nx_sortordernumber")
+    });
+    var before = new Dictionary<string, List<Entity>>();
+    var requests = new OrganizationRequestCollection();
+    foreach (var definition in definitions)
+    {
+        var rows = ReadRows(definition.Table, definition.Name, definition.Sorted);
+        before.Add(definition.Table, rows);
+        for (var index = 0; index < definition.Names.Length; index++)
+        {
+            var name = definition.Names[index];
+            var matches = rows.Where(row => string.Equals(row.GetAttributeValue<string>(definition.Name)?.Trim(), name, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (matches.Length > 1 || (matches.Length == 1 && matches[0].GetAttributeValue<OptionSetValue>("statecode")?.Value != 0))
+                throw new InvalidOperationException($"Resolve duplicate or inactive reference before seeding: {definition.Table} / {name}.");
+            if (matches.Length == 1) continue;
+            var entity = new Entity(definition.Table, Guid.NewGuid()) { [definition.Name] = name };
+            if (definition.Sorted) entity["nx_sortordernumber"] = (index + 1) * 10;
+            requests.Add(new CreateRequest { Target = entity });
+            Console.WriteLine($"ADD {definition.Table}: {name}");
+        }
+        Console.WriteLine($"{definition.Table}: {rows.Count} existing; {definition.Names.Length} approved names.");
+    }
+    Console.WriteLine($"Plan: {requests.Count} creates; no updates, deletes, associations, schema, roles or app publication.");
+    if (options.Length == 0) { Console.WriteLine("Read-only preview. --execute requires approval of the listed taxonomy."); return; }
+    if (requests.Count > 0) service.Execute(new ExecuteTransactionRequest { Requests = requests, ReturnResponses = false });
+    foreach (var definition in definitions)
+    {
+        var rows = ReadRows(definition.Table, definition.Name, definition.Sorted);
+        foreach (var original in before[definition.Table])
+        {
+            var current = rows.SingleOrDefault(row => row.Id == original.Id);
+            if (current == null || Snapshot(original, definition.Name) != Snapshot(current, definition.Name))
+                throw new InvalidOperationException($"Existing reference changed during seeding: {definition.Table} / {original.Id}. Inspect before retrying.");
+        }
+        foreach (var name in definition.Names)
+        {
+            var matches = rows.Where(row => string.Equals(row.GetAttributeValue<string>(definition.Name)?.Trim(), name, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (matches.Length != 1 || matches[0].GetAttributeValue<OptionSetValue>("statecode")?.Value != 0)
+                throw new InvalidOperationException($"Reference verification failed: {definition.Table} / {name}. Inspect before retrying.");
+        }
+        Console.WriteLine($"VERIFIED {definition.Table}: {rows.Count} rows; all approved names active and unique; existing rows unchanged.");
+    }
+}
 
 static void AssignAcceptance(IOrganizationService service, string[] options)
 {

@@ -1,6 +1,6 @@
 # Demo assets
 
-**Status:** Hosted fonts/images and approved CSP media/worker capabilities verified; full hosted lifecycle, continuous playback and non-admin gates remain. · **Last updated:** 2026-09-22
+**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain. · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
@@ -47,6 +47,8 @@ The approved follow-up upload bundles the existing fonts and displays protected 
 The temporary DOM probe, File/output references, workers and object URLs were cleaned up. No user submissions or stored media were changed. Full hosted upload/resume/publication/revocation, OS downloads, HTML/linked embeds, continuous playback and non-admin access remain separate acceptance gates. The earlier Local Play/Edge results below remain scoped to those environments. No large-video data-URL fallback was added.
 
 Selecting an eligible MP4/WebM shows a separately labeled local-file preview while uploading. Only the latest selected video is held in editor memory, using an object URL without a full data-URL copy or persistent cache. Closing/replacing/unmounting the preview revokes its URL; upload failure clears it and uncertain/blocked state hides it. Local playback is not proof of upload success. Saved regular-MP4 Preview now attempts protected progressive reads; unsupported files offer full-download fallback. Reopening does not retain the local preview.
+
+**Subsequent deployed workflow verification (2026-09-22):** the [interactive submission-to-publication test](contribution-and-review.md#deployed-interactive-workflow) used actual hosted form uploads and Dataverse reads. Synthetic thumbnail/gallery images decoded at 960 x 600 after publication; the caption persisted through upload/save/reopen. Saved HTML ran its button interaction in both reviewer and published present-mode viewers, with parent DOM access denied by the opaque sandbox. A 56,310-byte captioned MP4 used the expected full-file fallback for its subtitle track, decoded at 640 x 360 / 2 seconds, loaded two cues and showed the expected first cue at 0.5 seconds. In the visible tab it played through to ended at 2 seconds without a media error, muted. The labeled record remains published for inspection. This supersedes the earlier hidden-tab short-playback limitation for this fixture, not long-duration, audible, codec-matrix, non-admin or large-file acceptance. OS downloads and linked embeds remain unverified in this pass.
 
 One to six gallery images are required at submission; up to six files/linked assets are optional. Image limit is 5 MB (and 40 megapixels for client decoding); WebP is converted to PNG within that limit. Document/HTML limit is 25 MB, video 500 MB, additionally capped by the actual Dataverse column limit. Large-video upload, integrity and MP4 playback were verified as recorded below; full-download startup latency remains a concern. A dedicated thumbnail is supported; pending screenshot captions save through the main Save draft/Continue flow. Native parent Solution images are not trusted publication inputs.
 
@@ -104,6 +106,36 @@ Verification: four policy tests cover exact threshold/cap, bypass, smaller-only 
 
 The initial Local Play shell failure was overcome in the later same-account acceptance pass: worker loading and short threshold-sized compression inside authenticated Local Play now pass, as does the real upload/resume wizard. A separate full-length 500 MiB browser encode also passed, taking 24m13s as recorded above. Packaged hosted-app CSP, WebM conversion, caption styling and lower-memory devices remain separate acceptance work. The bundled FFmpeg core declares **GPL-2.0-or-later**; complete applicable license/source distribution review before publishing these assets. No code app or backend was deployed for this compression feature. Native benchmark results below are not browser-encoding performance claims.
 
+### Local video inventory
+
+Original videos are grouped under `test-data/videos/`, outside app public assets and deployment bundles. Filenames and bytes are preserved; all four moves were verified with SHA-256 checksums on 2026-09-22.
+
+| File | Purpose | Size (MiB) | Git policy |
+|---|---|---|---|
+| [ProductPublishingAgent_Demo 1.mp4](../../test-data/videos/demos/ProductPublishingAgent_Demo%201.mp4) | Product demo; content/playback not assessed in this inventory | 69.46 | Local only, ignored |
+| [HighLevel recording](../../test-data/videos/recordings/HighLevel%20White-Label%20SaaS%20Demo%20Video%20Show%20Every%20Core%20Feature%20in.mp4) | Real-recording compression benchmark source | 77.58 | Versioned source relocated from repo root |
+| [sample-50mb.mp4](../../test-data/videos/synthetic/sample-50mb.mp4) | Synthetic 50 MiB upload/encoding fixture | 50 | Local only, ignored |
+| [sample-500mb.mp4](../../test-data/videos/synthetic/sample-500mb.mp4) | Synthetic 500 MiB limit/streaming fixture | 500 | Local only, ignored |
+
+Keep originals separate from generated copies. For future local outputs, use a fresh run directory under ignored `test-data/generated/` or the isolated temporary directories below. Existing temporary artifacts have not been inventoried or deleted. The browser verification script still expects its short codec/caption fixtures in the OS temporary directory; do not move those without updating the script. These local-only videos are not supplied by a fresh clone.
+
+The mock catalogue remains in [solutions.ts](../../app/src/data/solutions.ts); reusable PDF/PPTX fixture generation remains in [generate-acceptance-fixtures.mjs](../../app/scripts/generate-acceptance-fixtures.mjs). Neither is disposable benchmark output.
+
+### Local document and HTML inventory
+
+Loose files in `test-data/` are grouped by format and purpose. Filenames and bytes are preserved; these four moves were also verified with SHA-256 checksums on 2026-09-22. No files were uploaded, executed, compressed or deleted during organization.
+
+| File | Purpose | Size | Git policy |
+|---|---|---|---|
+| [acceptance.pdf](../../test-data/documents/acceptance/acceptance.pdf) | Small acceptance document fixture | 974 bytes | Eligible for version control; not staged |
+| [Workshop PDF](../../test-data/documents/workshops/App%20in%20a%20Day%20Consolidated%20Workshop%20Deck%20-%20August%202026.pdf) | Representative workshop document | 15.37 MiB | Local only, ignored |
+| [Workshop PowerPoint](../../test-data/documents/workshops/App%20in%20a%20Day%20Consolidated%20Workshop%20Deck.pptx) | Oversized document; exceeds the 25 MB upload limit | 140.79 MiB | Local only, ignored |
+| [HTML demo](../../test-data/html/demos/nextant-solution-library%201.html) | Local HTML demo fixture; execution not assessed in this inventory | 2.07 MiB | Eligible for version control; not staged |
+
+Use the workshop PowerPoint only as an oversized-input candidate, not as an expected successful document upload. Its actual rejection has not been tested in this organization pass. Review workshop/demo contents for confidentiality and distribution rights before upload or commit. The frozen [original HTML example](../../examples/nextant-solution-library%201.html) remains untouched.
+
+Place new reusable document fixtures under `documents/acceptance/`, local workshop originals under `documents/workshops/`, HTML demos under `html/demos/`, and video originals in the groups above. Put generated derivatives in a fresh ignored `test-data/generated/<run>/` directory, never alongside originals or under app public assets. Existing unit-test fixtures remain beside their tests.
+
 ### Compression and progressive-playback feasibility
 
 On 2026-09-22 a local-only benchmark used [`benchmark-video.mjs`](../../app/scripts/benchmark-video.mjs), isolated temporary `ffmpeg-static`/`ffprobe-static` tools, and separate output directories. Sources were not overwritten or uploaded. Settings: H.264/libx264, CRF 23, preset fast, two encoding threads, unchanged 1920x1080 resolution/frame rate, copied audio, and MP4 fast-start metadata. Full decoded-frame SSIM was measured against each source; duration and frame counts were checked.
@@ -118,7 +150,7 @@ On 2026-09-22 a local-only benchmark used [`benchmark-video.mjs`](../../app/scri
 Repeat from the repository root after installing `ffmpeg-static` and `ffprobe-static` into an isolated tools directory and authorizing that directory's FFmpeg installer:
 
 ```powershell
-node app/scripts/benchmark-video.mjs "$env:TEMP/prisma-video-tools" ./sample-50mb.mp4 "$env:TEMP/prisma-video-benchmark-new"
+node app/scripts/benchmark-video.mjs "$env:TEMP/prisma-video-tools" ./test-data/videos/synthetic/sample-50mb.mp4 "$env:TEMP/prisma-video-benchmark-new"
 ```
 
 The measured copies/reports are in `$env:TEMP/prisma-video-benchmark-50-20260922` and `$env:TEMP/prisma-video-benchmark-500-20260922`. Keep benchmark media outside public assets and deployment bundles.

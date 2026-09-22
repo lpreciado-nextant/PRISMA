@@ -7,6 +7,7 @@ import { Icon } from "../../src/components/Icon";
 export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; solutionId: string; mode: PlaybackMode }) {
   const video = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState("");
+  const [fullVideoReason, setFullVideoReason] = useState("");
   const [full, setFull] = useState(false);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -47,11 +48,12 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
       const result = await readVideoRange(transferApi, solutionId, item.id, mode, offset, item.size, AbortSignal.any([signal, AbortSignal.timeout(60_000)]), version);
       version = result.version; return result.bytes;
     };
-    const fail = () => {
+    const fail = (fullVideoReason = "") => {
       controller.abort(); element.pause(); element.removeAttribute("src"); element.load();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       clearCaptions();
-      setLoading(false); setError("Playback unavailable. The format may be unsupported or your access may have changed.");
+      setLoading(false); setFullVideoReason(fullVideoReason);
+      setError(fullVideoReason ? "" : "Playback unavailable. The format may be unsupported or your access may have changed.");
     };
     const heartbeat = setInterval(() => {
       if (!version || checking || controller.signal.aborted) return;
@@ -80,9 +82,15 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
         controller.signal.throwIfAborted();
         objectUrl = URL.createObjectURL(blob); element.src = objectUrl;
       } else {
-        const { streamVideo } = await import("./videoStream");
+        const { streamVideo, FullVideoRequiredError } = await import("./videoStream");
         controller.signal.throwIfAborted();
-        await streamVideo(element, item.size, read, controller.signal);
+        try {
+          await streamVideo(element, item.size, read, controller.signal);
+        } catch (error) {
+          if (controller.signal.aborted) return;
+          if (error instanceof FullVideoRequiredError) fail(error.message);
+          else throw error;
+        }
       }
     })().catch(() => { if (!controller.signal.aborted) fail(); });
     return () => {
@@ -95,7 +103,7 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
   }, [item, solutionId, mode, full]);
   return <div className="flex h-full min-h-64 flex-col gap-3 p-3">
     {loading && !error && <p role="status" className="text-[14px]">{full ? "Downloading video..." : "Buffering video..."}</p>}
-    {error && <div role="alert" className="text-[14px]"><p>{error}</p>{!full && <button type="button" className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3" onClick={() => { setError(""); setLoading(true); setFull(true); }}><Icon name="download" />Load full video</button>}</div>}
+    {(error || fullVideoReason) && <div role={error ? "alert" : "status"} className="text-[14px]"><p>{error || fullVideoReason}</p>{!full && <button type="button" className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3" onClick={() => { setError(""); setFullVideoReason(""); setLoading(true); setFull(true); }}><Icon name="download" />Load full video</button>}</div>}
     <video ref={video} controls preload="metadata" aria-label={item.name} className="min-h-0 w-full flex-1 object-contain" />
     {captionError && <p role="status" className="text-[13px]">{captionError}</p>}
     <button type="button" disabled={downloading} onClick={() => void download()} title="Download video" aria-label={`Download ${item.name}`} className="inline-flex min-h-10 cursor-pointer items-center gap-2 self-end rounded-lg border border-(--glass-edge) px-3 text-[14px] disabled:opacity-40"><Icon name="download" />{downloading ? "Downloading..." : "Download"}</button>

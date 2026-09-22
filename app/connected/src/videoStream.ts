@@ -1,5 +1,12 @@
 import { createFile, type MP4BoxBuffer } from "mp4box";
 
+export class FullVideoRequiredError extends Error {}
+
+export function validateStreamingLayout(info: { tracks: readonly { type?: string }[]; isFragmented: boolean }): void {
+  if (info.tracks.some(track => track.type !== "video" && track.type !== "audio")) throw new FullVideoRequiredError("This video contains subtitles or other additional tracks and needs to load in full before playback.");
+  if (info.isFragmented) throw new FullVideoRequiredError("This MP4 needs to load in full before playback.");
+}
+
 export type VideoRead = (offset: number, signal: AbortSignal) => Promise<Uint8Array<ArrayBuffer>>;
 export function bufferedAhead(ranges: { start: (index: number) => number; end: (index: number) => number; length: number }, time: number): number {
   const current = Array.from({ length: ranges.length }, (_, index) => [ranges.start(index), ranges.end(index)])
@@ -7,7 +14,7 @@ export function bufferedAhead(ranges: { start: (index: number) => number; end: (
   return current ? current[1] - time : 0;
 }
 export async function streamVideo(video: HTMLVideoElement, size: number, read: VideoRead, signal: AbortSignal): Promise<void> {
-  if (!globalThis.MediaSource) throw new Error("Progressive playback is unsupported.");
+  if (!globalThis.MediaSource) throw new FullVideoRequiredError("This browser needs to load the full video before playback.");
   const source = new MediaSource();
   const url = URL.createObjectURL(source);
   const parser = createFile();
@@ -52,12 +59,11 @@ export async function streamVideo(video: HTMLVideoElement, size: number, read: V
   parser.onError = () => { failure = new Error("Unsupported or invalid MP4."); };
   parser.onReady = info => {
     try {
-      if (info.tracks.some(track => track.type !== "video" && track.type !== "audio")) throw new Error("This MP4 has additional tracks; use full-file playback to preserve them.");
-      if (info.isFragmented) throw new Error("Fragmented MP4 requires full-file playback.");
+      validateStreamingLayout(info);
       if (info.videoTracks.length !== 1 || !info.timescale || !Number.isFinite(info.duration / info.timescale)) throw new Error("Unsupported MP4 tracks.");
       for (const track of info.tracks) {
         const mime = `${track.type === "audio" ? "audio" : "video"}/mp4; codecs="${track.codec}"`;
-        if (!MediaSource.isTypeSupported(mime)) throw new Error("A video or audio codec is unsupported.");
+        if (!MediaSource.isTypeSupported(mime)) throw new FullVideoRequiredError("This video cannot be streamed in this browser. Full-file playback may be available.");
         const buffer = source.addSourceBuffer(mime); buffers.set(track.id, buffer);
         parser.setSegmentOptions(track.id, null, { nbSamples: 30, rapAlignement: true });
       }

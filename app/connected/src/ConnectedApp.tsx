@@ -17,6 +17,7 @@ import { SubmissionsView, SubmissionView } from "./SubmissionsView";
 import { PublishedView } from "./PublishedView";
 import { ConnectedSolutionCard } from "./ConnectedSolutionCard";
 import { clearRecoveries } from "./draftRecovery";
+import { WelcomeScreen } from "./WelcomeScreen";
 
 const PRESENT_KEY = "prisma.connected.present";
 async function readCredits(id: string, present: boolean, signal: AbortSignal) {
@@ -31,6 +32,16 @@ export default function ConnectedApp() {
     try { return sessionStorage.getItem(PRESENT_KEY) === "1"; } catch { return false; }
   });
   const [attempt, setAttempt] = useState(0);
+  const [entry, setEntry] = useState<"welcome" | "illuminating" | "revealing" | "entered">("welcome");
+  useEffect(() => {
+    if (entry !== "illuminating" && entry !== "revealing") return;
+    const timer = window.setTimeout(() => setEntry(entry === "illuminating" ? "revealing" : "entered"), entry === "illuminating" ? 220 : 600);
+    return () => window.clearTimeout(timer);
+  }, [entry]);
+  const begin = () => {
+    if (entry !== "welcome") return;
+    setEntry(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "entered" : "illuminating");
+  };
   const [theme, toggleTheme] = useTheme();
   const togglePresent = () => {
     const next = !present;
@@ -38,18 +49,29 @@ export default function ConnectedApp() {
     setPresent(next);
     try { sessionStorage.setItem(PRESENT_KEY, next ? "1" : "0"); } catch { return; }
   };
-  return <CatalogueSession key={`${present}:${attempt}`} present={present} onTogglePresent={togglePresent}
-    theme={theme} onToggleTheme={toggleTheme} onRetry={() => setAttempt(current => current + 1)} />;
+  return <>
+    <div inert={entry === "illuminating" || entry === "revealing"}>
+      <CatalogueSession key={`${present}:${attempt}`} present={present} onTogglePresent={togglePresent}
+        theme={theme} onToggleTheme={toggleTheme} onRetry={() => setAttempt(current => current + 1)}
+        entered={entry === "revealing" || entry === "entered"} entering={entry === "illuminating"} onBegin={begin} transitionComplete={entry === "entered"} />
+    </div>
+    {(entry === "illuminating" || entry === "revealing") && <div className="welcome-flash" aria-hidden="true" />}
+  </>;
 }
 
-function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRetry }: {
+function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRetry, entered, entering, onBegin, transitionComplete }: {
   present: boolean; onTogglePresent: () => void; theme: "light" | "dark";
   onToggleTheme: () => void; onRetry: () => void;
+  entered: boolean; entering: boolean; onBegin: () => void; transitionComplete: boolean;
 }) {
   const [user, setUser] = useState<AppUser>({ fullName: "Not signed in", userPrincipalName: "", live: false });
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [bannerVisible, setBannerVisible] = useState(true);
   const [librarian, setLibrarian] = useState(false);
+  const main = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (transitionComplete) main.current?.focus({ preventScroll: true });
+  }, [transitionComplete]);
   const route = useRoute();
   const previousPath = useRef(route.path);
   useEffect(() => {
@@ -119,10 +141,10 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
 
   return <div className="min-h-full" style={{ "--sticky-top": showBanner ? "9.75rem" : "6rem" } as CSSProperties}>
     <Background />
-    <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={state.kind !== "ready" || !user.live} reviewAvailable={librarian} />
+    <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} />
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
-    <main key={route.path}>
-      {state.kind === "loading" ? <Message title="Loading catalogue" message="Connecting to Dataverse..." />
+    <main key={route.path} ref={main} tabIndex={-1}>
+      {state.kind === "loading" || (state.kind === "ready" && !entered) ? <WelcomeScreen authenticated={user.live} present={present} ready={state.kind === "ready"} entering={entering} onBegin={onBegin} />
         : state.kind === "host-required" ? <Message title="Power Apps sign-in required" message="Open this app through Power Apps Local Play in your signed-in browser." onRetry={onRetry} />
         : state.kind === "error" ? <Message title="Catalogue unavailable" message="Check your Dataverse access and connection, then retry." onRetry={onRetry} alert />
         : !present && route.path === "/submit" ? <DraftsView draftId={route.query.get("draft") ?? undefined} owner={user.userPrincipalName} />
