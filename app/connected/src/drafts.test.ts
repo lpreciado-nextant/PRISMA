@@ -2,10 +2,25 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
-import { hasCaptionChanges, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaApi } from "./media.ts";
+import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
+
+test("protected image URLs preserve bytes and reject unsupported, oversized or cancelled images", async () => {
+  const bytes = Uint8Array.from({ length: 70000 }, (_, index) => index % 256);
+  for (const type of ["image/png", "image/jpeg"]) {
+    const url = await imageDataUrl(new Blob([bytes], { type }));
+    assert.equal(url, `data:${type};base64,${Buffer.from(bytes).toString("base64")}`);
+  }
+  for (const type of ["image/svg+xml", "text/html", "video/mp4", ""]) await assert.rejects(imageDataUrl(new Blob([bytes], { type })), /Unsupported/);
+  await assert.rejects(imageDataUrl(new Blob([new Uint8Array(20 * 1024 * 1024 + 1)], { type: "image/png" })), /Unsupported/);
+  await assert.rejects(imageDataUrl(new Blob([bytes], { type: "image/png" }), AbortSignal.abort()), { name: "AbortError" });
+  const controller = new AbortController();
+  const pending = imageDataUrl(new Blob([bytes], { type: "image/png" }), controller.signal);
+  controller.abort();
+  await assert.rejects(pending, { name: "AbortError" });
+});
 
 test("linked assets require safe URLs and honest desktop guidance", () => {
   const input: LinkedAssetInput = { name: " Demo ", assetType: "Hosted web app (URL)", externalUrl: "https://example.com/demo", allowsEmbedding: true, embedHint: "" };

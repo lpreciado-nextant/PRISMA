@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to v2, including live ownership and approved private upload sessions; connected backend deployed, acceptance and UI parity pending · **Last updated:** 2026-09-22
+> **Status:** Maintained companion to v2, including live ownership and private SHA-bound upload sessions; connected backend deployed, acceptance and UI parity pending · **Last updated:** 2026-09-22
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Proposed new table names below use an `nx_` publisher prefix; confirm the actual publisher prefix before creating components. The fixed `cr6b0_project` and `cr6b0_consultant` names remain as specified in v2.
 
@@ -207,7 +207,7 @@ No direct Project lookup is added to `nx_solution`, and no Solution lookup is ad
 | `nx_demorequest` | `cr6b0_consultant` | N:1 (lookup) |
 | `cr6b0_project` | `cr6b0_consultant` | N:1 (existing Project Owner) |
 
-**12 tables in the model:** the 11 original business tables (`nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, four reference tables, existing Consultant and Project) plus private `nx_uploadsession`. The latter stores canonical parent/caller/target identifiers, file metadata, private continuation token, byte/block counters, expiry and completion; it stores no file bytes or solution JSON. Exact column types and limits are maintained once in [SchemaV2 private upload protocol](SchemaV2.md#private-upload-protocol-extension). Native N:N intersect tables are excluded. This approved extension is specified by [ADR-0009](../architecture/decisions/adr-0009-mediated-media-and-publication-access.md); it adds no review history or business relationship.
+**12 tables in the model:** the 11 original business tables (`nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, four reference tables, existing Consultant and Project) plus private `nx_uploadsession`. The latter stores canonical parent/caller/target identifiers, file metadata, private continuation token, optional `nx_sha256` exact-file resume digest, byte/block counters, expiry and completion; it stores no file bytes or solution JSON. Exact column types and limits are maintained once in [SchemaV2 private upload protocol](SchemaV2.md#private-upload-protocol-extension). Native N:N intersect tables are excluded. This approved extension is specified by [ADR-0009](../architecture/decisions/adr-0009-mediated-media-and-publication-access.md); it adds no review history or business relationship.
 
 ## Security model
 

@@ -69,6 +69,56 @@ export const dataSourcesInfo = {
       }
     }
   },
+  "nx_beginresumableupload": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_BeginResumableUpload": {
+        "path": "/api/data/v9.2/nx_BeginResumableUpload",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "SolutionId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "ExpectedRowVersion",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "FileName",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Size",
+            "in": "body",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "Sha256",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "nx_capabilities": {
     "tableId": "",
     "version": "",
@@ -307,12 +357,126 @@ export const dataSourcesInfo = {
       }
     }
   },
+  "nx_getuploadcheckpoint": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_GetUploadCheckpoint": {
+        "path": "/api/data/v9.2/nx_GetUploadCheckpoint",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "SolutionId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "ExpectedRowVersion",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "SessionId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "FileName",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Size",
+            "in": "body",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "Sha256",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "nx_industries": {
     "tableId": "",
     "version": "",
     "primaryKey": "nx_industryid",
     "dataSourceType": "Dataverse",
     "apis": {}
+  },
+  "nx_readvideorange": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_ReadVideoRange": {
+        "path": "/api/data/v9.2/nx_ReadVideoRange",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "SolutionId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "AssetId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "Mode",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "Offset",
+            "in": "body",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "Count",
+            "in": "body",
+            "required": true,
+            "type": "number"
+          },
+          {
+            "name": "Version",
+            "in": "body",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
   },
   "nx_removedraftmedia": {
     "tableId": "",

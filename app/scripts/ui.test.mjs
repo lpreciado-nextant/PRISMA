@@ -45,6 +45,8 @@ test("both adapters consume the shared form and review surfaces", async () => {
   assert.match(connected, /captions=\{captions\} onCaptions=\{setCaptions\}/);
   assert.match(connected, /await saveMediaCaptions\(/);
   assert.match(media, /onPreparationBusy=\{setPreparing\}/);
+  assert.match(media, /uncertain && !busy && onReopen/);
+  assert.match(connected, /onReopen=\{\(\) => setConfirmation\("reopen"\)\}/);
   assert.match(poc, /onPreparationBusy=\{setPreparingVideo\}/);
   assert.doesNotMatch(media, /Save captions|Discard caption edits/);
 });

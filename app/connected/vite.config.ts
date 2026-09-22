@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
@@ -11,6 +12,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), powerApps(), {
     name: "reject-poc-data",
     generateBundle() {
+      for (const family of ["schibsted-grotesk", "source-sans-3", "ibm-plex-mono"]) {
+        this.emitFile({ type: "asset", fileName: `assets/${family}-LICENSE.txt`, source: readFileSync(new URL(`../node_modules/@fontsource/${family}/LICENSE`, import.meta.url), "utf8") });
+      }
       for (const moduleId of this.getModuleIds()) {
         const path = moduleId.replaceAll("\\", "/");
         if (["/src/data/solutions.ts", "/src/lib/submissions.ts", "/src/lib/demoDoc.ts", "/src/App.tsx"].some(forbidden => path.endsWith(forbidden))) {

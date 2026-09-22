@@ -80,7 +80,7 @@ namespace Prisma.Plugins
         public static bool IsSaveContext(IPluginExecutionContext context)
         {
             return IsOperationContext(context, SaveMessage) || IsOperationContext(context, DraftGraph.SaveMessage)
-                || MediaPolicy.Writes.Any(message => IsOperationContext(context, message)) || IsOperationContext(context, ReviewPolicy.Transition);
+                || MediaPolicy.Writes.Any(message => IsOperationContext(context, message)) || IsOperationContext(context, "nx_BeginResumableUpload") || IsOperationContext(context, ReviewPolicy.Transition);
         }
 
         public static bool IsDeleteContext(IPluginExecutionContext context)

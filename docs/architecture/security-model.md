@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Controlled lifecycle, pilot assignments and explicit share grant/revocation verified; effective non-admin acceptance pending · **Last updated:** 2026-09-22
+**Status:** Controlled lifecycle and approved code-app CSP configuration verified; effective non-admin acceptance pending · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -10,6 +10,8 @@
 - **Present mode filters server-side.** Require Published, Safety Acknowledged and Client Safe Reviewed at Dataverse; omit internal client/context, projects and notes from the presentation projection. The PoC mirrors this before search/render, not as a security boundary.
 
 ## Role privileges
+
+See [code-app hosting policy](#code-app-hosting-policy) for browser execution restrictions, which do not grant Dataverse permissions.
 
 | Role | `nx_solution` | `nx_demoasset` / `nx_solutionimage` | Reference tables | `nx_demorequest` |
 |---|---|---|---|---|
@@ -79,6 +81,25 @@ The user explicitly approved these additive assignments on 2026-09-22 in Nextant
 | `mcubillos@nextant.com` | CSM/reader | PRISMA CSM | PRISMA CSM | PRISMA Published Readers |
 
 No roles/profiles were removed or redefined; legacy PRISMA Librarian profile memberships and System Administrator privileges remain. Media Custodian membership, Consultant/Project security, schema and code-app deployment were not changed. Luis's assigned Librarian role now authorizes review. A subsequent [disposable lifecycle test](../workflows/contribution-and-review.md#verified-lifecycle) passed return/resubmit/approval and withdrawal, with all five Published Readers parent/child share masks changing from Read to zero. This is positive functional and explicit-share verification, not effective non-admin access or separate-reviewer acceptance. All three original drafts remain. Other users must sign in through their own authorized sessions; credentials must never be supplied in chat.
+
+## Code-app hosting policy
+
+On 2026-09-22 the user explicitly approved four additive CSP sources for **all code apps in Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`), including the separate PoC. This does not affect Nextant Pulse Prod. The change used the supported Power Platform admin center: **Manage > Environments > Nextant Pulse > Settings > Product > Privacy + Security > App (code)**. [Microsoft's documentation](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/content-security-policy) confirms the environment-wide scope and default-source merging.
+
+Before the change, enforcement was On, reporting Off, and every directive used defaults. Only these custom sources were added:
+
+| Directive | Added source | Purpose |
+|---|---|---|
+| `media-src` | `blob:` | Local/protected video and MediaSource playback, caption tracks |
+| `worker-src` | `'self'` | Packaged same-origin compression worker |
+| `connect-src` | `'self'` | Packaged WASM asset retrieval |
+| `script-src` | `'wasm-unsafe-eval'` | WASM encoder and resumable-upload hashing |
+
+Enforcement remains On and reporting remains Off. All other directives retain defaults; no external domains, wildcards, Blob workers or general JavaScript `'unsafe-eval'` were added. Same-origin fetch/worker and WASM execution are additional browser capabilities for every code app in this environment, not app-specific exceptions. They do not change native authorization, mediated file access, HTML sandboxing or publication checks.
+
+The admin UI persisted the sources after reload. PRISMA's response header independently confirmed `media-src 'self' data: blob:`, `worker-src 'self'`, `connect-src 'self'` and `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'`; all other observed directives were unchanged. Azure CLI's management request had failed with `InsufficientDelegatedPermissions` before the successful admin UI change; no extra delegated permissions were granted.
+
+Rollback, with approval: in that same code-app tab, turn **Use default** back On for these four directives only, preserve enforcement/reporting and other settings, save, then reload PRISMA and verify the response header. This restores the prior restrictions and blocks current video/worker paths again. No app republish was needed for either policy application or verification. Hosted checks and their limits are recorded in [published host compatibility](../workflows/demo-assets.md#published-host-compatibility).
 
 ## Authentication
 

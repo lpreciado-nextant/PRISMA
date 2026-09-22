@@ -27,6 +27,16 @@ import { Nx_GetSubmissionService } from "./generated/services/Nx_GetSubmissionSe
 import { Nx_TransitionSubmissionService } from "./generated/services/Nx_TransitionSubmissionService";
 import { Nx_GetPublishedDetailService } from "./generated/services/Nx_GetPublishedDetailService";
 import type { WorkflowApi } from "./workflow";
+import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginResumableUploadService";
+import { Nx_GetUploadCheckpointService } from "./generated/services/Nx_GetUploadCheckpointService";
+import { Nx_ReadVideoRangeService } from "./generated/services/Nx_ReadVideoRangeService";
+import type { TransferApi } from "./mediaTransfer";
+
+export const transferApi: TransferApi = {
+  begin: (...args) => Nx_BeginResumableUploadService.nx_BeginResumableUpload(...args),
+  checkpoint: (...args) => Nx_GetUploadCheckpointService.nx_GetUploadCheckpoint(...args),
+  range: (...args) => Nx_ReadVideoRangeService.nx_ReadVideoRange(...args),
+};
 
 export const workflowApi: WorkflowApi = {
   list: (review, page, cookie) => Nx_GetSubmissionsService.nx_GetSubmissions(review, page, cookie),

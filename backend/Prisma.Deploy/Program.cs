@@ -11,13 +11,90 @@ const string organizationUrl = "https://nextantpulse.crm.dynamics.com";
 const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
-if (!new[] { "inspect", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Use inspect, inspect-asset-columns, verify-video-files, set-video-limit, repair-asset-url, apply, assign-acceptance, smoke, smoke-graph, smoke-media, smoke-review or smoke-delete.");
+if (!new[] { "inspect", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "smoke-transfer")
+{
+    if (args.Length != 2) throw new ArgumentException("Use smoke-transfer <non-sensitive-mp4> after approval. Creates and deletes one test draft.");
+    var file = new FileInfo(args[1]);
+    if (file.Extension.ToLowerInvariant() != ".mp4" || file.Length <= 4194304 || file.Length > 60 * 1024 * 1024) throw new ArgumentException("Use a 4-60 MiB MP4 fixture.");
+    JsonElement Call(string api, params (string Name, object Value)[] values) {
+        var request = new OrganizationRequest(api); foreach (var value in values) request[value.Name] = value.Value;
+        using var json = JsonDocument.Parse((string)client.Execute(request)["ResultJson"]); return json.RootElement.Clone();
+    }
+    var areas = new QueryExpression("nx_specializationarea") { ColumnSet = new ColumnSet(false), TopCount = 1 };
+    areas.Criteria.AddCondition("nx_specializationareaname", ConditionOperator.Equal, "ai");
+    var area = client.RetrieveMultiple(areas).Entities.Single().Id;
+    var draft = Call("nx_SaveCoreDraft", ("DraftJson", JsonSerializer.Serialize(new { name = "[PRISMA TEST] Transfer acceptance", areaId = area, summary = "Disposable transfer protocol verification." })));
+    var id = Guid.Parse(draft.GetProperty("id").GetString()!);
+    try {
+        string Version() => client.Retrieve("nx_solution", id, new ColumnSet(false)).RowVersion;
+        using var source = file.OpenRead();
+        var digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(source)).ToLowerInvariant(); source.Position = 0;
+        var begin = Call("nx_BeginResumableUpload", ("SolutionId", id), ("ExpectedRowVersion", Version()), ("FileName", file.Name), ("Size", (int)file.Length), ("Sha256", digest));
+        var session = Guid.Parse(begin.GetProperty("sessionId").GetString()!);
+        var target = Guid.Parse(begin.GetProperty("media")[0].GetProperty("id").GetString()!);
+        var bytes = new byte[4194304]; source.ReadExactly(bytes);
+        Call("nx_UploadMediaBlock", ("SolutionId", id), ("ExpectedRowVersion", Version()), ("SessionId", session), ("BlockIndex", 0), ("Content", Convert.ToBase64String(bytes)));
+        AssertRejected(() => Call("nx_GetUploadCheckpoint", ("SolutionId", id), ("ExpectedRowVersion", Version()), ("SessionId", session), ("FileName", file.Name), ("Size", (int)file.Length), ("Sha256", new string('0', 64))), "wrong-file resume");
+        var checkpoint = Call("nx_GetUploadCheckpoint", ("SolutionId", id), ("ExpectedRowVersion", Version()), ("SessionId", session), ("FileName", file.Name), ("Size", (int)file.Length), ("Sha256", digest));
+        if (checkpoint.GetProperty("media")[0].GetProperty("received").GetInt32() != 4194304) throw new InvalidOperationException("Checkpoint mismatch.");
+        Console.WriteLine("PASS interrupted upload checkpoint and wrong-file rejection.");
+        var index = 1;
+        while (source.Position < source.Length) {
+            var block = new byte[Math.Min(4194304L, source.Length - source.Position)]; source.ReadExactly(block);
+            Call("nx_UploadMediaBlock", ("SolutionId", id), ("ExpectedRowVersion", Version()), ("SessionId", session), ("BlockIndex", index++), ("Content", Convert.ToBase64String(block)));
+        }
+        Call("nx_FinishMediaUpload", ("SolutionId", id), ("ExpectedRowVersion", Version()), ("SessionId", session));
+        string? version = null;
+        using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        for (var offset = 0; offset < file.Length; offset += 1048576) {
+            var range = Call("nx_ReadVideoRange", ("SolutionId", id), ("AssetId", target), ("Mode", "submission"), ("Offset", offset), ("Count", 1048576), ("Version", version ?? ""));
+            version ??= range.GetProperty("version").GetString();
+            if (range.GetProperty("version").GetString() != version || range.GetProperty("offset").GetInt32() != offset) throw new InvalidOperationException("Range identity mismatch.");
+            hash.AppendData(Convert.FromBase64String(range.GetProperty("content").GetString()!));
+        }
+        if (Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant() != digest) throw new InvalidOperationException("Resume/range checksum mismatch.");
+        AssertRejected(() => Call("nx_ReadVideoRange", ("SolutionId", id), ("AssetId", target), ("Mode", "present"), ("Offset", 0), ("Count", 1)), "draft present read");
+        AssertRejected(() => Call("nx_ReadVideoRange", ("SolutionId", id), ("AssetId", target), ("Mode", "submission"), ("Offset", 0), ("Count", 1), ("Version", "stale")), "stale video version");
+        Console.WriteLine($"PASS finalized resume and protected 1 MiB ranges: {file.Length} bytes; SHA256 {digest}. Non-admin access remains a separate gate.");
+    } finally {
+        Call("nx_TransitionSubmission", ("SolutionId", id), ("ExpectedRowVersion", client.Retrieve("nx_solution", id, new ColumnSet(false)).RowVersion), ("Action", "delete"), ("Comments", ""), ("Cleared", false));
+        Console.WriteLine($"Deleted disposable transfer draft {id}.");
+    }
+    return;
+}
+if (command == "media-transfer")
+{
+    if (args.Length != 1 && (args.Length != 3 || args[1] != "--execute")) throw new ArgumentException("Use media-transfer [--execute <tested-plugin.dll>]. Execution requires explicit approval.");
+    var existing = Find(client, "pluginassembly", "name", "Prisma.Plugins") ?? throw new InvalidOperationException("Existing assembly missing.");
+    if (existing.Id != Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba")) throw new InvalidOperationException("Unexpected assembly target.");
+    var metadata = ((RetrieveEntityResponse)client.Execute(new RetrieveEntityRequest { LogicalName = "nx_uploadsession", EntityFilters = EntityFilters.Attributes, RetrieveAsIfPublished = true })).EntityMetadata;
+    var digestColumn = metadata.Attributes.SingleOrDefault(attribute => attribute.LogicalName == "nx_sha256");
+    if (digestColumn != null && (!(digestColumn is StringAttributeMetadata text) || text.MaxLength != 64)) throw new InvalidOperationException("Unexpected digest metadata.");
+    Console.WriteLine("Plan: nx_uploadsession.nx_sha256 String(64); publish only nx_uploadsession; update existing assembly; register nx_BeginResumableUpload, nx_GetUploadCheckpoint, nx_ReadVideoRange. No roles, user assignments or code app publication. Table publication may include pending customizations.");
+    if (args.Length == 1) { Console.WriteLine("Read-only preview. No changes made."); return; }
+    var path = Path.GetFullPath(args[2]);
+    if (AssemblyName.GetAssemblyName(path).Name != "Prisma.Plugins") throw new InvalidOperationException("Unexpected assembly file.");
+    if (digestColumn == null) client.Execute(new CreateAttributeRequest { EntityName = "nx_uploadsession", SolutionUniqueName = solutionName,
+        Attribute = new StringAttributeMetadata { SchemaName = "nx_Sha256", DisplayName = new Label("File SHA-256", 1033), MaxLength = 64 } });
+    client.Execute(new PublishXmlRequest { ParameterXml = "<importexportxml><entities><entity>nx_uploadsession</entity></entities></importexportxml>" });
+    client.Update(new Entity("pluginassembly", existing.Id) { ["content"] = Convert.ToBase64String(File.ReadAllBytes(path)) });
+    var transferType = PluginType(client, existing.Id, "Prisma.Plugins.MediaTransferApi");
+    RegisterApi(client, transferType, "nx_BeginResumableUpload", "prvWritenx_Solution", new[] {
+        ("SolutionId", 12, false), ("ExpectedRowVersion", 10, false), ("FileName", 10, false), ("Size", 7, false), ("Sha256", 10, false) });
+    RegisterApi(client, transferType, "nx_GetUploadCheckpoint", "prvReadnx_Solution", new[] {
+        ("SolutionId", 12, false), ("ExpectedRowVersion", 10, false), ("SessionId", 12, false), ("FileName", 10, false), ("Size", 7, false), ("Sha256", 10, false) });
+    RegisterApi(client, transferType, "nx_ReadVideoRange", "prvReadnx_Solution", new[] {
+        ("SolutionId", 12, false), ("AssetId", 12, false), ("Mode", 10, false), ("Offset", 7, false), ("Count", 7, false), ("Version", 10, true) });
+    Console.WriteLine("Media transfer registration complete; live authorization/integrity acceptance remains required.");
+    return;
+}
 if (command == "verify-video-files")
 {
     if (args.Length < 3 || !Guid.TryParse(args[1], out var parentId)) throw new ArgumentException("Use verify-video-files <test-draft-id> <local-file> [local-file...]. Read-only.");

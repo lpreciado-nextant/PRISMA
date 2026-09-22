@@ -1,5 +1,15 @@
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
 
+export async function imageDataUrl(blob: Blob, signal?: AbortSignal): Promise<string> {
+  signal?.throwIfAborted();
+  if (!["image/png", "image/jpeg"].includes(blob.type) || blob.size > 20 * 1024 * 1024) throw new Error("Unsupported image preview.");
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  signal?.throwIfAborted();
+  const parts: string[] = [];
+  for (let offset = 0; offset < bytes.length; offset += 32768) parts.push(String.fromCharCode(...bytes.subarray(offset, offset + 32768)));
+  return `data:${blob.type};base64,${btoa(parts.join(""))}`;
+}
+
 export type MediaKind = "image" | "attachment" | "thumbnail";
 export type MediaItem = { id: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput };
 export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[]; uploadProtocol?: 2; maxBlockSize?: 4194304 };
@@ -103,7 +113,7 @@ export type UploadTiming = { bytes: number; blockSize: number; blocks: number; b
 let lastUploadTiming: UploadTiming | null = null;
 export function getLastUploadTiming(): UploadTiming | null { return lastUploadTiming ? { ...lastUploadTiming } : null; }
 
-export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersion: string; uploadProtocol?: 2; maxBlockSize?: 4194304 }, file: File, kind: MediaKind, signal: AbortSignal, progress: (state: MediaState) => void): Promise<MediaState> {
+export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersion: string; uploadProtocol?: 2; maxBlockSize?: 4194304 }, file: File, kind: MediaKind, signal: AbortSignal, progress: (state: MediaState) => void, resume?: MediaState): Promise<MediaState> {
   const started = performance.now();
   const timing: UploadTiming = { bytes: file.size, blockSize: 0, blocks: 0, beginMs: 0, encodingMs: 0, requestsMs: 0, finishMs: 0, totalMs: 0, complete: false };
   lastUploadTiming = null;
@@ -114,19 +124,25 @@ export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersi
   try {
     signal.throwIfAborted();
     const negotiatedKind = initial.uploadProtocol === 2 ? initial.maxBlockSize === 4194304 ? `${kind}:v3` as const : `${kind}:v2` as const : kind;
-    let state = await timed("beginMs", () => mediaRequest(api.begin(initial.id, initial.rowVersion, negotiatedKind, file.name, file.size), signal));
+    let state = resume ?? await timed("beginMs", () => mediaRequest(api.begin(initial.id, initial.rowVersion, negotiatedKind, file.name, file.size), signal));
     const session = state.sessionId;
     const check = (previousVersion: string) => {
       if (state.id !== initial.id || state.sessionId !== session || state.rowVersion === previousVersion) throw new Error("Unconfirmed upload response.");
     };
     if (!session) throw new Error("Missing upload session.");
     const blockSize = state.blockSize;
-    const expectedBlockSize = negotiatedKind.endsWith(":v3") ? 4194304 : negotiatedKind.endsWith(":v2") ? 2097152 : 524288;
+    const expectedBlockSize = resume ? resume.blockSize : negotiatedKind.endsWith(":v3") ? 4194304 : negotiatedKind.endsWith(":v2") ? 2097152 : 524288;
     if (blockSize !== expectedBlockSize) throw new Error("Upload block size was not negotiated.");
     timing.blockSize = blockSize;
-    check(initial.rowVersion);
+    const active = state.media.find(item => item.sessionId === session);
+    if (!active || active.complete || active.kind !== kind || active.name !== file.name || active.size !== file.size
+      || ![524288, 2097152, 4194304].includes(blockSize) || active.nextBlock !== Math.ceil(active.received / blockSize)
+      || active.received !== Math.min(active.nextBlock * blockSize, file.size)) throw new Error("Invalid upload checkpoint.");
+    if (resume) {
+      if (state.id !== initial.id || state.rowVersion !== initial.rowVersion) throw new Error("Stale upload checkpoint.");
+    } else check(initial.rowVersion);
     progress(state);
-    for (let offset = 0, index = 0; offset < file.size; offset += blockSize, index++) {
+    for (let offset = active.received, index = active.nextBlock; offset < file.size; offset += blockSize, index++) {
       const encodingStart = performance.now();
       const bytes = new Uint8Array(await file.slice(offset, offset + blockSize).arrayBuffer());
       signal.throwIfAborted();

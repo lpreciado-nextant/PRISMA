@@ -10,6 +10,51 @@ namespace Prisma.Plugins.Tests
         private static string Input(string extra = "") { return "{\"name\":\"Named draft\",\"areaId\":\"" + Area + "\"" + extra + "}"; }
 
         [Fact]
+        public void ResumeRequiresExactFileOwnerExpiryAndConfirmedCheckpoint()
+        {
+            var parent = Guid.NewGuid(); var owner = Guid.NewGuid(); var now = DateTime.UtcNow;
+            var digest = new string('a', 64);
+            var session = new Entity("nx_uploadsession") { ["nx_parentid"] = parent.ToString("D"), ["nx_callerid"] = owner.ToString("D"),
+                ["nx_name"] = MediaPolicy.LargeSessionPrefix, ["nx_sha256"] = digest, ["nx_filename"] = "video.mp4", ["nx_bytes"] = 5000000,
+                ["nx_received"] = 4194304, ["nx_nextblock"] = 1, ["nx_expires"] = now.AddMinutes(1) };
+            MediaTransferPolicy.Resume(session, parent, owner, digest, "video.mp4", 5000000, now);
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Resume(session, parent, Guid.NewGuid(), digest, "video.mp4", 5000000, now));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Resume(session, parent, owner, new string('b', 64), "video.mp4", 5000000, now));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Resume(session, parent, owner, digest, "other.mp4", 5000000, now));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Resume(session, parent, owner, digest, "video.mp4", 5000000, now.AddMinutes(2)));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Resume(session, parent, owner, digest, "video.mp4", 5000000, now.AddMinutes(1)));
+            session["nx_complete"] = true;
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Resume(session, parent, owner, digest, "video.mp4", 5000000, now));
+            session["nx_complete"] = false;
+            session.Attributes.Remove("nx_sha256");
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Resume(session, parent, owner, digest, "video.mp4", 5000000, now));
+            session["nx_sha256"] = digest;
+            session["nx_received"] = 5000000; session["nx_nextblock"] = 2;
+            MediaTransferPolicy.Resume(session, parent, owner, digest, "video.mp4", 5000000, now);
+            session["nx_nextblock"] = 3;
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Resume(session, parent, owner, digest, "video.mp4", 5000000, now));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.Digest(digest + "\n"));
+        }
+
+        [Fact]
+        public void VideoReadsEnforceModeAndBoundedRanges()
+        {
+            var owner = Guid.NewGuid();
+            var parent = new Entity("nx_solution") { ["ownerid"] = new EntityReference("systemuser", owner), ["statecode"] = new OptionSetValue(0),
+                ["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published), ["nx_clientsafereviewed"] = true, ["nx_safetyacknowledged"] = true };
+            MediaTransferPolicy.ReadAccess(parent, Guid.NewGuid(), false, "present");
+            parent["nx_clientsafereviewed"] = false;
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.ReadAccess(parent, owner, true, "present"));
+            parent["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus);
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.ReadAccess(parent, owner, true, "published"));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.ReadAccess(parent, Guid.NewGuid(), false, "submission"));
+            MediaTransferPolicy.ReadAccess(parent, owner, false, "submission");
+            Assert.Equal(10, MediaTransferPolicy.ReadLength(90, 100, 100));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.ReadLength(0, MediaTransferPolicy.ReadBlockSize + 1, 5000000));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.ReadLength(100, 1, 100));
+        }
+
+        [Fact]
         public void LargeUploadsKeepExistingSessionSizesAndEnforceFourMiBBoundaries()
         {
             Assert.Equal(524288, MediaPolicy.RequestedBlockSize("attachment"));

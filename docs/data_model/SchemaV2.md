@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative model with approved private upload-session extension; connected backend deployed; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); visual schema and the two pre-existing tables (`cr6b0_project`, `cr6b0_consultant`) reconciled with Dataverse; acceptance and remaining UI parity pending · **Last updated:** 2026-09-22
+**Status:** Authoritative model with approved private upload-session and SHA-256 resume extension; connected backend deployed; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending · **Last updated:** 2026-09-22
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Industry` and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` and (as of this round) `Capability` are single-valued lookups; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — the underlying table already exists in Dataverse with fixed columns as `cr6b0_project`, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, is a **native N:N** relationship (no attributes needed on the link itself, so no custom junction table).
 
@@ -24,6 +24,7 @@ Approved and deployed on 2026-09-22 under [ADR-0009](../architecture/decisions/a
 | `nx_kind` | Text 20 | Validated `image` or `attachment` |
 | `nx_filename`, `nx_mime` | Text 200 / 120 | Validated file metadata |
 | `nx_token` | Multiline text 10000 | Private continuation token, cleared on finalization; never returned |
+| `nx_sha256` | Text 64, optional | Lowercase digest of exact upload bytes for new resumable sessions; legacy sessions remain null and cannot resume |
 | `nx_bytes`, `nx_received`, `nx_nextblock` | Whole number, 0-524288000 | Declared bytes, received bytes, sequential next block |
 | `nx_expires` | Time-zone-independent date/time | UTC two-hour unfinished-upload deadline |
 | `nx_complete` | Boolean, default false | Finalized file validated and shared read-only |

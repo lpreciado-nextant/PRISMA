@@ -273,9 +273,9 @@ namespace Prisma.Plugins
             });
         }
 
-        private static Guid Begin(IOrganizationService server, Entity parent, IPluginExecutionContext context)
+        internal static Guid Begin(IOrganizationService server, Entity parent, IPluginExecutionContext context, string suppliedKind = null)
         {
-            var kind = context.InputParameters["Kind"] as string;
+            var kind = suppliedKind ?? context.InputParameters["Kind"] as string;
             var blockSize = MediaPolicy.RequestedBlockSize(kind);
             if (blockSize != MediaPolicy.BlockSize) kind = kind.Substring(0, kind.Length - 3);
             var name = context.InputParameters["FileName"] as string;
@@ -422,6 +422,7 @@ namespace Prisma.Plugins
         public void Execute(IServiceProvider serviceProvider)
         {
             var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+            if (DraftPolicy.IsOperationContext(context, "nx_BeginResumableUpload") && (context.MessageName == "Create" || context.MessageName == "Update")) return;
             if (MediaPolicy.Writes.Any(message => DraftPolicy.IsOperationContext(context, message)) || (context.MessageName == "Delete" && DraftPolicy.IsDeleteContext(context))
                 || ((context.MessageName == "Create" || context.MessageName == "Update") && (context.PrimaryEntityName == "nx_demoasset" || context.PrimaryEntityName == "nx_uploadsession") && DraftPolicy.IsTransitionContext(context, "asset"))
                 || (context.MessageName == "Update" && context.PrimaryEntityName != "nx_uploadsession" && DraftPolicy.IsTransitionContext(context, "media"))) return;
