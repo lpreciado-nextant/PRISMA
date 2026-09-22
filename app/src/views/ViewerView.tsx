@@ -1,9 +1,9 @@
-import { useCallback, useEffect } from "react";
 import type { DemoAsset, Solution } from "../types";
-import { AREAS } from "../data/solutions";
+import { AREAS } from "../data/catalogueMetadata";
 import { Icon } from "../components/Icon";
 import { demoSrcDoc } from "../lib/demoDoc";
 import { navigate } from "../lib/router";
+import { ViewerFrame } from "../components/ViewerFrame";
 
 export function ViewerView({
   solution,
@@ -16,65 +16,7 @@ export function ViewerView({
   present: boolean;
   backPath?: string;
 }) {
-  const close = useCallback(() => navigate(backPath ?? `/s/${solution.id}`), [solution.id, backPath]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [close]);
-
-  return (
-    <div className="animate-scale-in mx-auto flex h-[calc(100vh-5rem)] w-full max-w-[1340px] flex-col px-4 pt-4 pb-6 sm:px-6">
-      <div className="glass glass-sheen mb-3 flex items-center gap-3 rounded-[16px] px-4 py-2.5">
-        <button
-          type="button"
-          onClick={close}
-          className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold"
-          style={{ fontFamily: "var(--font-display)", color: "var(--ink-2)" }}
-        >
-          <Icon name="chevronLeft" size={15} />
-          {solution.name}
-        </button>
-        <span className="hidden font-mono text-[10.5px] tracking-[0.12em] uppercase sm:block" style={{ color: "var(--ink-3)" }}>
-          {asset.assetType}
-        </span>
-        {asset.externalUrl && (
-          <a
-            href={asset.externalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold"
-            style={{ fontFamily: "var(--font-display)", borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}
-          >
-            Pop out
-            <Icon name="external" size={13} />
-          </a>
-        )}
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Close the viewer"
-          className={`grid h-8 w-8 cursor-pointer place-items-center rounded-lg ${asset.externalUrl ? "" : "ml-auto"}`}
-          style={{ color: "var(--ink-3)" }}
-        >
-          <Icon name="close" size={16} />
-        </button>
-      </div>
-
-      {asset.embedHint && !present && (
-        <p className="mb-3 px-1 text-[13px]" style={{ color: "var(--ink-3)" }}>
-          {asset.embedHint}
-        </p>
-      )}
-
-      <div className="glass glass-lite relative flex-1 overflow-hidden rounded-[20px]">
-        <Stage solution={solution} asset={asset} />
-      </div>
-    </div>
-  );
+  return <ViewerFrame name={solution.name} kind={asset.assetType} externalUrl={asset.externalUrl} hint={present ? undefined : asset.embedHint} onClose={() => navigate(backPath ?? `/s/${solution.id}`)}><Stage solution={solution} asset={asset} /></ViewerFrame>;
 }
 
 function Stage({ solution, asset }: { solution: Solution; asset: DemoAsset }) {

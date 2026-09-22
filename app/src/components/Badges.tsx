@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { SolutionStatus, SpecializationArea } from "../types";
-import { AREAS } from "../data/solutions";
+import { AREAS } from "../data/catalogueMetadata";
 
 const STATUS_COLOR: Record<SolutionStatus, string> = {
   "Idea / concept": "var(--idea)",

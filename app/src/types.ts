@@ -80,6 +80,7 @@ export interface Solution {
   useCase?: string;
   specializationArea: SpecializationArea;
   contributors: SolutionContributor[];
+  contributorNames?: string[];
   status: SolutionStatus;
   publicationStatus: PublicationStatus;
   reviewOutcome?: "None" | "Changes requested" | "Approved";

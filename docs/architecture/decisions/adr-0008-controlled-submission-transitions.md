@@ -1,8 +1,8 @@
 # ADR-0008 - Controlled submission transitions
 
-**Status:** Accepted, amended to require authored draft names; production implementation pending
+**Status:** Accepted; controlled deletion and tab recovery implemented; least-privilege and successful librarian acceptance pending
 **Date:** 2026-09-21
-**Last updated:** 2026-09-21
+**Last updated:** 2026-09-22
 
 ## Context
 
@@ -16,9 +16,11 @@ Contributors must save incomplete drafts, submit and revise their work, while on
 - Keep publication, clearance and review fields protected from direct contributor writes. Scoped handler execution can clear approval or request pending state on behalf of an authorized contributor, but only an authorized librarian can request approval. Preserve server-stored review fields on contributor edits rather than trusting supplied values.
 - Apply equivalent guards to direct record/import and child/media mutations; reject bypass writes. Stage file uploads in Draft and validate completed assets before publication. State/metadata changes are transactional; file upload bytes are not part of that transaction. Reject stale edits and approvals through optimistic concurrency.
 - Notifications remain post-commit and non-authoritative under [ADR-0006](adr-0006-power-automate-notifications-only.md). Row permissions and field-security profiles remain required alongside transition validation.
+- Match the PoC's confirmed owner deletion in Draft, Pending, Published and Retired states through `nx_TransitionSubmission` action `delete`. Require caller ownership and the displayed exact version; revoke published shares and delete related contributors, media and upload sessions transactionally before deleting the Solution. Never delete shared reference records. Direct deletion stays blocked. An unconfirmed response requires refresh before retry.
+- With explicit user approval, retain unsaved core text and contributor/tag/project selections in tab-scoped `sessionStorage`, keyed by signed-in identity and draft ID. Exclude credentials and media bytes; this is recovery, never a successful save or a second source of truth. Validate the bounded payload, reset safety acknowledgment and require the exact saved server version before restoration. Retain uncertain-write status across reload; require reopen/inspection rather than replay. Clear on successful save/submit, explicit discard, present entry and detected identity/authentication loss. External host sign-out cannot be detected until authentication fails or the app reloads. Unsaved media captions are not included.
 
 ## Consequences
 
 Incomplete drafts do not force fake effort or summary values. Contributors can submit without being able to publish. Latest feedback is readable on authorized contributor records and absent from CSM/presentation projections. Schema changes add two columns, not a new table; full review history, reviewer identity and timestamps remain separate future work.
 
-Production implementation must register and test the APIs, plug-ins, field profiles, child-write guards, file lifecycle and concurrency behavior. The browser-local PoC only demonstrates the flow; its email owner keys and review controls are not platform security. The authoritative field and transition matrix lives in [SchemaV2](../../data_model/SchemaV2.md#draft-and-transition-contract); authorization details live in the [security model](../security-model.md).
+The APIs, plug-ins, field profiles and child/link guards are registered. File lifecycle enforcement uses the private-session extension in [ADR-0009](adr-0009-mediated-media-and-publication-access.md), adding one protocol table but no review-history table. Owner save/submit/withdraw and stale/bypass rejection passed; successful librarian and non-admin acceptance remain open. Connected editing requires owner withdrawal to Draft and does not yet expose librarian content editing. The PoC remains a simulation. The target matrix lives in [SchemaV2](../../data_model/SchemaV2.md#draft-and-transition-contract); deployed permissions are in the [security model](../security-model.md).

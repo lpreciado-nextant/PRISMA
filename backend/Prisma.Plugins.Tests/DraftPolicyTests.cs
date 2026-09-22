@@ -1,0 +1,237 @@
+using System;
+using Microsoft.Xrm.Sdk;
+using Xunit;
+
+namespace Prisma.Plugins.Tests
+{
+    public class DraftPolicyTests
+    {
+        private const string Area = "22222222-2222-2222-2222-222222222222";
+        private static string Input(string extra = "") { return "{\"name\":\"Named draft\",\"areaId\":\"" + Area + "\"" + extra + "}"; }
+
+        [Fact]
+        public void MediaMetadataRejectsProtectedFieldsAndThumbnailsRemainImages()
+        {
+            var json = "[{\"id\":\"" + Area + "\",\"caption\":\"Dashboard\",\"sortOrder\":0}]";
+            Assert.Single(MediaPolicy.ParseMetadata(json));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.ParseMetadata(json.Replace("\"sortOrder\":0", "\"sortOrder\":0,\"ownerid\":\"fake\"")));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.ParseMetadata(json.Replace("Dashboard", new string('x', 201))));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.ParseMetadata(json.Replace("\"sortOrder\":0", "\"sortOrder\":-1")));
+            Assert.Equal("image/png", MediaPolicy.Mime("thumbnail", "card.png", 10));
+            Assert.Equal("nx_solutionimage", MediaPolicy.Table("thumbnail"));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Mime("thumbnail", "card.html", 10));
+        }
+
+        [Fact]
+        public void PresentationCreditsOmitInternalOptionalFields()
+        {
+            var json = DraftPolicy.Serialize(new PublishedDetail { Contributors = new[] { new PublishedCredit { Name = "Consultant", Hours = null } } });
+            Assert.DoesNotContain("email", json);
+            Assert.DoesNotContain("effort", json);
+            Assert.DoesNotContain("libraryNotes", json);
+        }
+
+        [Fact]
+        public void TechnologyCreationRequiresOwnedDraftAndValidatedName()
+        {
+            Assert.Equal("React", ReviewPolicy.TechnologyName("  React  "));
+            foreach (var name in new[] { "", "   ", "React\nJS", new string('x', 101) }) Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.TechnologyName(name));
+            var owner = Guid.NewGuid();
+            var parent = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "123", ["ownerid"] = new EntityReference("systemuser", owner), ["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus) };
+            var change = ReviewPolicy.Change(parent, owner, false, "123", "technology", "React", false);
+            Assert.False(change.GetAttributeValue<bool>("nx_safetyacknowledged"));
+            Assert.False(change.GetAttributeValue<bool>("nx_clientsafereviewed"));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, Guid.NewGuid(), true, "123", "technology", "React", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, false, "122", "technology", "React", false));
+            parent["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published);
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "123", "technology", "React", false));
+        }
+
+        [Theory]
+        [InlineData(DraftPolicy.DraftStatus)]
+        [InlineData(ReviewPolicy.Pending)]
+        [InlineData(ReviewPolicy.Published)]
+        [InlineData(ReviewPolicy.Retired)]
+        public void DeleteRequiresOwnerAndExactVersionInEverySupportedState(int status)
+        {
+            var owner = Guid.NewGuid();
+            var parent = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "123", ["ownerid"] = new EntityReference("systemuser", owner), ["nx_publicationstatus"] = new OptionSetValue(status) };
+            var change = ReviewPolicy.Change(parent, owner, false, "123", "delete", "", false);
+            Assert.Equal(DraftPolicy.DraftStatus, change.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value);
+            Assert.False(change.GetAttributeValue<bool>("nx_clientsafereviewed"));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, Guid.NewGuid(), true, "123", "delete", "", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "122", "delete", "", false));
+        }
+
+        [Fact]
+        public void ReviewTransitionsRequireOwnerOrExplicitLibrarianAndExactVersion()
+        {
+            var owner = Guid.NewGuid();
+            var parent = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "123", ["ownerid"] = new EntityReference("systemuser", owner), ["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus) };
+            var metadata = ReviewPolicy.Change(parent, owner, false, "123", "media", "[]", false);
+            Assert.False(metadata.GetAttributeValue<bool>("nx_safetyacknowledged"));
+            Assert.False(metadata.GetAttributeValue<bool>("nx_clientsafereviewed"));
+            Assert.False(metadata.Contains("nx_reviewcomments"));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, Guid.NewGuid(), true, "123", "media", "[]", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "122", "media", "[]", false));
+            Assert.Equal(ReviewPolicy.Pending, ReviewPolicy.Change(parent, owner, false, "123", "submit", "", false).GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value);
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, Guid.NewGuid(), false, "123", "submit", "", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "122", "submit", "", false));
+            parent["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Pending);
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "123", "media", "[]", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, false, "123", "approve", "", true));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "123", "approve", "", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "123", "return", "", false));
+            Assert.False(ReviewPolicy.Change(parent, owner, true, "123", "return", "Revise the screenshot", false).GetAttributeValue<bool>("nx_safetyacknowledged"));
+            Assert.True(ReviewPolicy.Change(parent, owner, true, "123", "approve", "", true).GetAttributeValue<bool>("nx_clientsafereviewed"));
+            parent["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published);
+            Assert.False(ReviewPolicy.Change(parent, owner, false, "123", "withdraw", "", false).GetAttributeValue<bool>("nx_clientsafereviewed"));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, false, "123", "retire", "", false));
+        }
+
+        [Theory]
+        [InlineData("image", "x.svg", 10)]
+        [InlineData("image", "x.html", 10)]
+        [InlineData("attachment", "x.png", 10)]
+        [InlineData("image", "../x.png", 10)]
+        [InlineData("image", "x.png", 0)]
+        [InlineData("image", "x.png", 5242881)]
+        [InlineData("attachment", "x.pdf", 26214401)]
+        public void MediaRejectsUnsupportedNamesTypesAndSizes(string kind, string name, int bytes)
+        {
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Mime(kind, name, bytes));
+        }
+
+        [Fact]
+        public void UploadBlocksAreBoundedSequentialAndExactLength()
+        {
+            var serialized = DraftPolicy.Serialize(new MediaResult { Id = Area, Media = new[] { new MediaSnapshot { Id = Area, Complete = true } } });
+            Assert.Contains("\"media\":[{", serialized);
+            Assert.DoesNotContain("token", serialized);
+            Assert.Equal("image/png", MediaPolicy.Mime("image", "image.PNG", 10));
+            Assert.Equal("text/html", MediaPolicy.Mime("attachment", "demo.html", 10));
+            Assert.Equal(new byte[] { 1, 2, 3 }, MediaPolicy.Block("AQID", 0, 0, 3, 0));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block("AQID", 1, 0, 3, 0));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block("AQID", 0, 0, 4, 0));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block("!", 0, 0, 1, 0));
+            Assert.Equal(MediaPolicy.BlockId(Guid.Empty, 0).Length, MediaPolicy.BlockId(Guid.Empty, 1000).Length);
+        }
+
+        [Fact]
+        public void GraphParserRejectsProtectedFieldsAndAcceptsIncompleteContributors()
+        {
+            var json = "{\"contributors\":[{\"personId\":\"" + Area + "\",\"directHours\":null}],\"technologyIds\":[],\"industryIds\":[],\"projectIds\":[]}";
+            var graph = DraftGraph.Parse(json, 125060004);
+            Assert.Single(graph.Contributors);
+            Assert.Null(graph.Contributors[0].DirectHours);
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"directHours\":null", "\"ownerid\":\"fake\""), 125060004));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"projectIds\":[]", "\"projectIds\":[],\"approval\":true"), 125060004));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"technologyIds\":[]", "\"technologyIds\":[\"fake\"]"), 125060004));
+        }
+
+        [Fact]
+        public void ContributorsPermitIncompleteDraftsButValidateSuppliedInputs()
+        {
+            var person = new ContributorInput { PersonId = Area };
+            ContributorPolicy.Validate(new[] { person }, 125060004, false);
+            Assert.Null(ContributorPolicy.Hours(person, 125060004));
+            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person }, 125060004, true));
+            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person, person }, 125060004, false));
+            person.DirectHours = 0;
+            ContributorPolicy.Validate(new[] { person }, 125060004, true);
+            person.Allocation = 100.001m;
+            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person }, 125060004, false));
+        }
+
+        [Theory]
+        [InlineData("2026-07-02", "2026-07-06", 16)]
+        [InlineData("2021-12-31", "2022-01-03", 8)]
+        [InlineData("2020-06-19", "2020-06-19", 8)]
+        [InlineData("2021-06-18", "2021-06-18", 0)]
+        [InlineData("2024-02-29", "2024-02-29", 8)]
+        public void CalendarEffortExcludesObservedFederalHolidays(string start, string end, int expected)
+        {
+            var person = new ContributorInput { PersonId = Area, StartDate = start, EndDate = end, Allocation = 100 };
+            ContributorPolicy.Validate(new[] { person }, 125060002, true);
+            Assert.Equal((decimal)expected, ContributorPolicy.Hours(person, 125060002));
+        }
+
+        [Theory]
+        [InlineData("2019-12-31")]
+        [InlineData("2036-01-01")]
+        [InlineData("2026-02-30")]
+        public void EffortDatesRespectCoverageAndCalendar(string date)
+        {
+            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Date(date));
+        }
+
+        [Fact]
+        public void NamedIncompleteDraftUsesRealDefaultsWithoutProtectedFields()
+        {
+            var record = DraftPolicy.Parse(Input());
+            Assert.Equal("Named draft", record["nx_solutionname"]);
+            Assert.Null(record["nx_capability"]);
+            Assert.Null(record["nx_onelinesummary"]);
+            Assert.Equal(125060004, record.GetAttributeValue<OptionSetValue>("nx_status").Value);
+            Assert.False(record.Contains("nx_publicationstatus"));
+            Assert.False(record.Contains("nx_reviewcomments"));
+            Assert.False(record.Contains("ownerid"));
+        }
+
+        [Theory]
+        [InlineData(",\"publicationStatus\":125060000")]
+        [InlineData(",\"ownerid\":\"other\"")]
+        [InlineData(",\"reviewComments\":\"approved\"")]
+        [InlineData(",\"maturity\":99")]
+        [InlineData(",\"safetyAcknowledged\":\"true\"")]
+        [InlineData(",\"capabilityId\":\"fake\"")]
+        public void RejectsUnsupportedProtectedOrMalformedFields(string extra)
+        {
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(extra)));
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("Untitled solution")]
+        public void RequiresAuthoredNames(string name)
+        {
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input().Replace("Named draft", name)));
+        }
+
+        [Fact]
+        public void EnforcesLengthsAndJsonShape()
+        {
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input().Replace("Named draft", new string('x', 101))));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"summary\":\"" + new string('x', 4001) + "\"")));
+            foreach (var field in new[] { "summary", "useCase", "clientContext", "clientContextRedacted" })
+                Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"" + field + "\":\"" + new string('x', 201) + "\"")));
+            Assert.NotNull(DraftPolicy.Parse(Input(",\"whatItDoes\":\"" + new string('x', 4000) + "\"")));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse("[]"));
+        }
+
+        [Fact]
+        public void OptionalIntegerParametersUseDataverseZeroDefault()
+        {
+            Assert.Equal(1, DraftPolicy.NormalizePage(0));
+            Assert.Equal(1, DraftPolicy.NormalizePage(1));
+            Assert.Equal(2, DraftPolicy.NormalizePage(2));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.NormalizePage(-1));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.NormalizePage(10001));
+        }
+
+        [Fact]
+        public void OnlyOwnerDraftWithCurrentVersionIsEditable()
+        {
+            var owner = Guid.NewGuid();
+            var record = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "100" };
+            record["ownerid"] = new EntityReference("systemuser", owner);
+            record["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus);
+            DraftPolicy.AssertEditable(record, owner, "100");
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.AssertEditable(record, Guid.NewGuid(), "100"));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.AssertEditable(record, owner, "99"));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.AssertEditable(record, owner, ""));
+            record["nx_publicationstatus"] = new OptionSetValue(125060000);
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.AssertEditable(record, owner, "100"));
+        }
+    }
+}

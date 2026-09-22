@@ -1,4 +1,5 @@
 import type { Solution } from "../types";
+import type { ReactNode } from "react";
 import { AreaTag, Chip, StatusPill } from "./Badges";
 import { Icon } from "./Icon";
 import { Poster } from "./Poster";
@@ -11,15 +12,22 @@ export function SolutionCard({
   index,
   onOpen,
   showPublicationStatus = false,
+  catalogueOnly = false,
+  poster,
+  contributorNames,
 }: {
   solution: Solution;
   present: boolean;
   index: number;
   onOpen?: () => void;
   showPublicationStatus?: boolean;
+  catalogueOnly?: boolean;
+  poster?: ReactNode;
+  contributorNames?: string[];
 }) {
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
-  const builderNames = solution.contributors.map((contributor) => contributor.builtBy.name).join(", ");
+  const names = contributorNames ?? solution.contributorNames ?? solution.contributors.map(contributor => contributor.builtBy.name);
+  const builderNames = names.join(", ");
   const publicationStatus = showPublicationStatus && !present
     ? solution.publicationStatus === "Draft" && solution.reviewOutcome === "Changes requested" ? "Changes requested" : solution.publicationStatus
     : undefined;
@@ -41,13 +49,13 @@ export function SolutionCard({
       aria-label={`${solution.name} — ${solution.summary}${publicationStatus ? ` — ${publicationStatus}` : ""}`}
     >
       <div className="relative">
-        <Poster
+        {poster ?? <Poster
           id={solution.id}
           name={solution.name}
           area={solution.specializationArea}
           src={solution.thumbnail}
           className="h-36"
-        />
+        />}
         <div className="absolute top-3 left-3">
           <StatusPill status={solution.status} />
         </div>
@@ -90,10 +98,10 @@ export function SolutionCard({
               color: "var(--accent)",
             }}
           >
-            {solution.contributors.length > 1 ? solution.contributors.length : initials(builderNames)}
+            {names.length > 1 ? names.length : initials(builderNames)}
           </span>
           <span className="truncate text-[13px]" title={builderNames} style={{ color: "var(--ink-3)" }}>
-            {clientLine ?? (builderNames || "Contributors pending")}
+            {clientLine ?? (builderNames || (catalogueOnly ? "Published solution" : "Contributors pending"))}
           </span>
         </div>
         <span

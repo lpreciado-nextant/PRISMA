@@ -9,12 +9,18 @@ export function Masthead({
   onToggleTheme,
   present,
   onTogglePresent,
+  readOnly = false,
+  draftOnly = false,
+  reviewAvailable = !draftOnly,
 }: {
   user: AppUser;
   theme: Theme;
   onToggleTheme: () => void;
   present: boolean;
   onTogglePresent: () => void;
+  readOnly?: boolean;
+  draftOnly?: boolean;
+  reviewAvailable?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6">
@@ -51,15 +57,15 @@ export function Masthead({
         </button>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-          {!present && <button type="button" onClick={() => navigate("/review")} title="Review queue (librarian preview)" aria-label="Review queue (librarian preview)" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="shield" size={15} /><span className="hidden whitespace-nowrap @[1240px]:inline">Review queue</span></button>}
-          {!present && <button type="button" onClick={() => navigate("/my-submissions")} title="My submissions" aria-label="My submissions" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}>
-            <Icon name="file" size={15} /><span className="hidden whitespace-nowrap @[1080px]:inline">My submissions</span>
+          {!present && !readOnly && reviewAvailable && <button type="button" onClick={() => navigate("/review")} title="Review queue" aria-label="Review queue" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="shield" size={15} /><span className="hidden whitespace-nowrap @[1240px]:inline">Review queue</span></button>}
+          {!present && !readOnly && <button type="button" onClick={() => navigate("/my-submissions")} title={draftOnly ? "My drafts" : "My submissions"} aria-label={draftOnly ? "My drafts" : "My submissions"} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}>
+            <Icon name="file" size={15} /><span className="hidden whitespace-nowrap @[1080px]:inline">{draftOnly ? "My drafts" : "My submissions"}</span>
           </button>}
-          {!present && (
+          {!present && !readOnly && (
             <button
               type="button"
-              title="Submit a solution"
-              aria-label="Submit a solution"
+              title={draftOnly ? "New draft" : "Submit a solution"}
+              aria-label={draftOnly ? "New draft" : "Submit a solution"}
               onClick={() => navigate("/submit")}
               className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold transition-colors duration-200"
               style={{
@@ -70,7 +76,7 @@ export function Masthead({
               }}
             >
               <Icon name="plus" size={15} />
-              <span className="hidden whitespace-nowrap @[1080px]:inline">Submit a solution</span>
+              <span className="hidden whitespace-nowrap @[1080px]:inline">{draftOnly ? "New draft" : "Submit a solution"}</span>
             </button>
           )}
 

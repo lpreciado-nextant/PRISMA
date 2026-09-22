@@ -1,0 +1,59 @@
+{
+  "name": "nx_GetSubmissions",
+  "title": "nx_GetSubmissions",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "nx_GetSubmissions",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "nx_GetSubmissions",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/nx_GetSubmissions": {
+          "post": {
+            "operationId": "nx_GetSubmissions",
+            "parameters": [
+              {
+                "name": "ReviewQueue",
+                "in": "body",
+                "required": true,
+                "type": "boolean",
+                "x-ms-dataverse-type": "BooleanType",
+                "x-ms-csdl-type": "Edm.Boolean"
+              },
+              {
+                "name": "PageNumber",
+                "in": "body",
+                "required": false,
+                "type": "number",
+                "x-ms-dataverse-type": "IntegerType",
+                "x-ms-csdl-type": "Edm.Int32"
+              },
+              {
+                "name": "PagingCookie",
+                "in": "body",
+                "required": false,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.nx_GetSubmissionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

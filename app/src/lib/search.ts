@@ -27,6 +27,7 @@ function haystack(s: Solution): string {
     s.clientContextRedacted ?? "",
     s.searchKeywords,
     ...s.contributors.map((contributor) => contributor.builtBy.name),
+    ...(s.contributorNames ?? []),
     ...s.capabilities,
     ...s.technologies,
     ...s.industries,

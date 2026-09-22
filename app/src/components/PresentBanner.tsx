@@ -1,6 +1,6 @@
 import { Icon } from "./Icon";
 
-export function PresentBanner({ onDismiss, hidden }: { onDismiss: () => void; hidden: number }) {
+export function PresentBanner({ onDismiss, hidden }: { onDismiss: () => void; hidden?: number }) {
   return (
     <div
       className="animate-scale-in glass sticky top-24 z-30 mx-auto mt-4 flex w-[calc(100%-2rem)] max-w-[1340px] items-center gap-3 rounded-[16px] px-4 py-2.5 sm:w-[calc(100%-3rem)]"
@@ -19,8 +19,7 @@ export function PresentBanner({ onDismiss, hidden }: { onDismiss: () => void; hi
       <p className="text-[13.5px] leading-snug" style={{ color: "var(--ink)" }}>
         <b style={{ fontFamily: "var(--font-display)" }}>Present mode is on.</b>{" "}
         <span style={{ color: "var(--ink-2)" }}>
-          Client names are redacted, internal notes are hidden, and {hidden}{" "}
-          {hidden === 1 ? "solution is" : "solutions are"} filtered out of the catalogue.
+          {hidden === undefined ? "Only published, acknowledged and independently cleared solutions are available." : <>Client names are redacted, internal notes are hidden, and {hidden}{" "}{hidden === 1 ? "solution is" : "solutions are"} filtered out of the catalogue.</>}
         </span>
       </p>
       <button

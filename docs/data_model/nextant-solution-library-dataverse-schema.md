@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to v2, including authored draft names, PRISMA_Dev context, draft/review contract and approved code-based US calendar policy; production integration and broader app alignment pending · **Last updated:** 2026-09-21
+> **Status:** Maintained companion to v2, including live ownership and approved private upload sessions; connected backend deployed, acceptance and UI parity pending · **Last updated:** 2026-09-22
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Proposed new table names below use an `nx_` publisher prefix; confirm the actual publisher prefix before creating components. The fixed `cr6b0_project` and `cr6b0_consultant` names remain as specified in v2.
 
@@ -13,13 +13,13 @@ The Power Platform solution **`PRISMA_Dev`** already exists in **Nextant Pulse**
 - **Primary key vs primary name column** — every Dataverse table auto-generates a GUID primary key (e.g. `nx_solutionid`). That's separate from the *primary name column*, the required text field used as the row's display label wherever it shows up in a lookup or subgrid. Neither needs to be defined manually beyond picking what the name column represents.
 - **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` are platform-managed as applicable to table ownership. `ownerid` is distinct from builder credit: each `nx_solutioncontributor` row points to one credited `cr6b0_consultant`. Credit does not grant edit access.
 - **Global vs local choices** — every Choice column below is called out as **global** or **local**. Global choices are defined once and reused; use them for anything that mirrors the values on your old `Lists` tab, since that's exactly the "add a value and it becomes selectable everywhere" behavior you want.
-- **Ownership model** — `Solution`, `SolutionContributor`, `DemoAsset`, `SolutionImage`, and `DemoRequest` are **user/team-owned**. `SpecializationArea`, `Capability`, `Technology`, and `Industry` are **organization-owned**, and so is `cr6b0_consultant`. `cr6b0_project` already exists; its ownership and columns are unchanged.
+- **Ownership model** — all 11 original business tables retain live user/team ownership, including the shared reference tables, Consultant and Project. Global reference Read is configured instead of recreating tables. Only the private upload-session extension is organization-owned. Media is owned by the empty Media Custodian team and shared read-only through controlled APIs.
 - **Native N:N over custom junction tables** — the tagging relationships that stay multi-valued (technology, industry) don't need any extra attributes of their own (no "date tagged", no "confidence score"), so build them as **native many-to-many relationships** rather than modeling junction tables by hand. Dataverse creates and manages the intersect table for you; you just add a subgrid to the form and query the relationship's navigation property from the code app. `Capability`, like `SpecializationArea`, is single-valued instead — a plain 1:N lookup column on `nx_solution`, not a tag. The `Solution`↔`Project` link is native N:N too, for the same reason (no attributes of its own) — see below.
 - **Vocabulary governance** — `Capability`, `Industry`, and `SpecializationArea` are **governed**: contributors pick from existing values only, and the library team adds new ones. `Technology` is **open**: contributors can create values inline, and the library team periodically merges duplicates.
 
 ---
 
-## Reference tables (organization-owned)
+## Reference tables (shared, user/team-owned)
 
 ### `nx_specializationarea`
 
@@ -207,7 +207,7 @@ No direct Project lookup is added to `nx_solution`, and no Solution lookup is ad
 | `nx_demorequest` | `cr6b0_consultant` | N:1 (lookup) |
 | `cr6b0_project` | `cr6b0_consultant` | N:1 (existing Project Owner) |
 
-**11 tables in the model:** `nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, `cr6b0_consultant`, and the pre-existing `cr6b0_project`. This is 9 new custom tables plus `cr6b0_consultant` plus one existing table. The native N:N intersect tables (`Technology`, `Industry`, and `Solution`↔`Project`) are platform-managed and excluded from this count.
+**12 tables in the model:** the 11 original business tables (`nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, four reference tables, existing Consultant and Project) plus private `nx_uploadsession`. The latter stores canonical parent/caller/target identifiers, file metadata, private continuation token, byte/block counters, expiry and completion; it stores no file bytes or solution JSON. Exact column types and limits are maintained once in [SchemaV2 private upload protocol](SchemaV2.md#private-upload-protocol-extension). Native N:N intersect tables are excluded. This approved extension is specified by [ADR-0009](../architecture/decisions/adr-0009-mediated-media-and-publication-access.md); it adds no review history or business relationship.
 
 ## Security model
 

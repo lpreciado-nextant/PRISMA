@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** PRISMA PoC remains the published browser-local UI test app; separate unpublished PRISMA target initialized with 11 generated Dataverse services. Connected UI and controlled writes pending; full read/write required before publication. PoC authenticated hosted UI verification remains pending.
-**Last updated:** 2026-09-21
+**Status:** Published PRISMA PoC preserved; PoC-baseline form, media and review presentation shared with connected PRISMA. Full parity, librarian, least-privilege and hosted acceptance still block publication.
+**Last updated:** 2026-09-22
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -54,7 +54,7 @@ Everything here stays inside what the [code apps documentation](https://learn.mi
 - **Single-page app.** Code apps support SPAs; this is one.
 - **Official Vite plugin.** `@microsoft/power-apps-vite/plugin` is registered in `vite.config.ts` alongside React and Tailwind. Tailwind is a build-time plugin only — it emits plain CSS.
 - **Hash routing, not path routing.** A published app is served from `/play/e/{environmentId}/a/{appId}`, so the app never owns the path segment. All navigation goes through `window.location.hash`.
-- **No `initialize()`.** The client library is v1.0+, where initialization was removed. The only SDK call is `getContext()` for the signed-in user, wrapped so the app still renders outside the host.
+- **No `initialize()`.** The client library is v1.0+. The PoC wraps `getContext()` so it renders outside the host; the connected target requires host identity and uses generated SDK data services.
 - **No server-side code.** No API routes, no SSR, no build-time secrets.
 - **Relative asset references.** `./nextant-mark.svg` rather than `/nextant-mark.svg`, so assets resolve under the published base path.
 - **Nothing sensitive in the bundle.** Compiled assets are served from a public endpoint; all real data will come from Dataverse after authentication.
@@ -74,6 +74,7 @@ cd app
 npm install
 npm run dev          # design preview at http://localhost:5173
 npm test             # Node 22.6+; business-calendar calculations, mock data and builder search
+npm run test:ui      # shared form/media/review rendering and adapter-wiring checks
 npm run build        # TypeScript + production bundle
 npm run lint
 ```
@@ -156,7 +157,35 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
-The separate [connected/power.config.json](connected/power.config.json) targets **PRISMA** in the same Nextant Pulse environment, with `appId: null`, local URL `http://localhost:5174`, and its own future `dist` output. It has not been published and does not yet have a runnable UI entry point. Port 5174 is configuration only; no connected-app dev server is running. Existing PoC commands, app ID, source entry point and persistence remain unchanged.
+The separate [connected/power.config.json](connected/power.config.json) targets **PRISMA** in the same Nextant Pulse environment, with `appId: null`, local URL `http://localhost:5174`, and its own `connected/dist` output. The [connected entry point](connected/src/ConnectedApp.tsx) is runnable locally but has not been published. Existing PoC commands, app ID, source entry point and persistence remain unchanged.
+
+From `app/`:
+
+```powershell
+npm run dev:connected
+npm run test:connected
+npm run build:connected
+```
+
+Open the **Local Play** URL printed by Vite in your signed-in Power Apps browser. For the default port: [open connected PRISMA in Local Play](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/a/local?_localAppUrl=http://localhost:5174/&_localConnectionUrl=http://localhost:5174/__vite_powerapps_plugin__/power.config.json). Allow local-network access if prompted. If 5174 is occupied, Vite selects a free port; use its printed URL. Opening localhost directly shows the sign-in-required state, not mock data.
+
+The current read slice queries published Solution records plus specialization, capability and related technology/industry tags. It uses the generated SDK services, explicit column projections, numeric choice mappings, GUID lookups, paged reads and native N:N OData filters. The live specialization names `ai`, `data`, and `ibo` were verified through PAC. Missing permissions, malformed mappings and failed requests are errors, not an empty catalogue. An actual empty result has a separate empty-catalogue state.
+
+Search, facets and cards reuse the PoC views; connected detail/viewer uses caller-authorized contributor, project and finalized-media reads. The masthead and My submissions expose review navigation only when the server reports the explicit Librarian role. Returning to the library refreshes catalogue state. Routes never reach PoC write views. The build rejects mock catalogue, IndexedDB adapter, PoC entry-point and demo-document imports. Shared metadata lives in [src/data/catalogueMetadata.ts](src/data/catalogueMetadata.ts).
+
+Connected submission and the PoC now use shared safety, identity, story, contributor-row, media, review-summary, footer and success components from [SubmissionForm](src/components/SubmissionForm.tsx), extracted from the PoC baseline. Both targets also share [TagPicker](src/components/TagPicker.tsx) and the queue plus review-action panel in [ReviewQueue](src/components/ReviewQueue.tsx). One wizard state coordinates core/graph saves; media keeps its protected upload adapter behind the shared stacked layout, caption tiles and file controls. Live effort previews use the backend's 2020-2035 observed US federal holiday policy, with server-calculated totals authoritative at final review. My submissions reuses the PoC card grid and hydrates saved technology chips; owner/reviewer/published detail reuses [DetailView](src/views/DetailView.tsx) and its gallery styling, and both viewers share [ViewerFrame](src/components/ViewerFrame.tsx) and asset-type labels. Document actions download directly through the protected SDK. Connected confirmations use [ConfirmDialog](src/components/ConfirmDialog.tsx), not native confirm boxes. No mock persistence is imported. Complete inheritance, including the remaining gaps, is a requirement: see the [UI/UX parity acceptance inventory](../docs/design/end-to-end-design.md#31-contribution--publication).
+
+Parity checks: `npm run test:ui` renders shared controls and verifies adapter wiring using the existing Vite/React toolchain with an isolated temporary cache. Seven checks cover required field examples, contributor structure, media controls, locked wizard actions and independent review clearance. The current frontend suites contain 16 PoC, 30 connected and 7 UI checks. Actual first/identity steps were compared in Local Play and localhost; shared media/review interactions were checked with isolated browser fixtures. Both form contents fit mobile widths. The actual local image-upload check stalled because `Image.decode()` did not resolve in the hidden integrated-browser tab, even for an independently loaded diagnostic image; that upload is not counted as a pass. Its temporary draft backup was removed. No Dataverse records or backend deployments were changed in this pass. Live media mutation and successful librarian acceptance after the refactor remain unverified. Continue checkpoints, explicit caption saves, safety reconfirmation and withdrawal remain truthful connected workflows rather than local success simulations.
+
+**Connected persistence:** `#/submit` creates a draft; `#/my-submissions` lists every caller-owned state; `#/submission/:id` inspects/submits/withdraws; `#/submit?draft=<id>` edits owned Drafts. Core limits are name 100, summary/use case/client contexts 200, long descriptions 4000. Graph saves persist contributors/effort and native tags/projects. Media uses private server-held sessions and sequential chunks, with read-only finalized access. String versions prevent stale writes; uncertain responses require reopen rather than blind retries. No local-success fallback is used.
+
+`#/review` and `#/review/:id` use explicit PRISMA Librarian authorization for return/approval/retirement. Approval requires independent safety confirmation; publication grants read-only Solution/contributor/media shares to PRISMA Published Readers. Owner withdrawal returns to Draft and revokes published shares. Owner deletion in any state uses the displayed version and controlled child/media cleanup. Draft-only caption saves and inline technology creation/reuse use the same transition API. Protected thumbnails appear in cards, final preview and detail; contributor names enter search and authorized contact/provenance appears in internal detail. See [scope and parity](../docs/design/end-to-end-design.md#31-contribution--publication) for unverified gates, PoC asset stand-ins and future product controls.
+
+User-approved recovery retains unsaved core text and contributor/tag/project selections in identity-scoped tab storage, not media bytes, captions or credentials. A backup cannot overwrite a changed server version; safety confirmation resets and uncertain writes require reopen. Successful save/submit, discard, present entry and detected identity/authentication loss clear recovery. External host sign-out is detected only on authentication failure or reload. This is not a local-save success fallback.
+
+The [backend](../docs/architecture/technical-architecture.md#deployed-core-draft-backend) is deployed in PRISMA_Dev. No users were assigned roles/profiles or team memberships. The approved empty Media Custodian and Published Readers teams have narrow roles. Current checks used the privileged owner, not least-privilege identities. This is not a production authorization sign-off. Consultant/Project data/security and the published PoC are unchanged.
+
+Present mode clears the prior catalogue immediately, starts a new server query requiring Published + Safety Acknowledged + Client Safe Reviewed, and omits internal client identity and search keywords from its projection. Notes and review fields are never selected. Unmounted requests cannot restore stale internal data. The UI authorizes no access: table/field/row protections remain platform work before release.
 
 PAC generated live models/services for all 11 inventoried tables under [connected/src/generated/index.ts](connected/src/generated/index.ts), plus required metadata under `connected/.power/schemas/`. Keep both generated directories with this target; services import their schema configuration. Generation reads metadata, not business records, and does not create or modify Dataverse rows. Generated CRUD methods do not implement the authorization/transition guarantees in [ADR-0008](../docs/architecture/decisions/adr-0008-controlled-submission-transitions.md); do not wire direct status/review writes into the UI.
 
@@ -168,13 +197,11 @@ pac code add-data-source --apiId dataverse --table nx_solution --environment htt
 
 Substitute another live logical table name only when adding an unregistered source. Do not run it in `app/`, which targets the mock PoC. The organization URL is not the `/api/data/v9.2` Web API endpoint. PAC 2.10.1 succeeded with the explicit URL; the earlier `pa` attempt rejected an advertised environment flag and then prompted for an organization URL without one.
 
-Generated services type-check against the installed SDK, all 11 table registrations are verified, and `npm run lint` passes. Type-check from `app/`:
+Validation on 2026-09-22: 16 PoC, 28 connected and 38 backend tests pass; both app builds and lint pass. Local Play verified six steps, core/contributor save/reopen, card grid, full 640x360 image, submit, shared detail/viewer, sandbox host-access denial and withdrawal. Additional checks cover tag search, effort preview, multi-image upload/removal, thumbnail/caption persistence, authorized contributor contact, tab recovery after reload, present-mode clearing, inline technology creation and themed deletion Cancel/confirm/refresh. Temporary technology/deletion/media fixtures were removed. Three original non-sensitive drafts remain; browser fixture `595ea718-1cb6-f111-aaac-6045bd049fba` retains its summary, original two media files and 13.25 hours. Backend smoke verifies direct/stale rejection and protected cleanup. Populated published discovery/performance, document file delivery, successful librarian review, revocation and non-admin acceptance remain unverified. Desktop and mobile app content fits; the outer Local Play host can overflow. Workflow checks used keyboard activation because integrated pointer clicks were unreliable. Neither app was published.
 
-```powershell
-npx tsc --noEmit --strict --skipLibCheck --target ES2022 --lib ES2022,DOM,DOM.Iterable --module ESNext --moduleResolution bundler --verbatimModuleSyntax connected/src/generated/index.ts
-```
+Generate Custom API clients from `app/connected/` with the installed CLI: `..\node_modules\.bin\pa.cmd app add dataverse-api --api-name nx_SaveCoreDraft` (or `nx_GetMyCoreDrafts`). Both generated services and `.power` schemas are required; do not hand-edit them. The installed CLI rejects its advertised environment flag; confirm the connected configuration and active environment before generation.
 
-**Release gate:** full read/write contribution, file/image persistence, authorized review, concurrency and present-mode enforcement must pass before publishing PRISMA. Metadata generation is not a runtime data-access or permission test. The [integration plan and live-schema gaps](../docs/architecture/technical-architecture.md#connected-app-integration-plan) describe the remaining work. Do not publish a placeholder, copy the PoC app ID, or replace the PoC's mock data source.
+**Release gate:** full read/write, authorized review, permissions, revocation, concurrency and presentation must pass before publication. The user authorized a separate PRISMA upload only after these gates; deferred permission tests are not waived. Resolve the missing contributor-B identity, manually configure non-admin roles/profiles/readers membership, and complete successful librarian and hosted tests. Do not publish a placeholder, copy the PoC app ID or replace its mock data source.
 
 ---
 

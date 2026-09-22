@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative agreed model; authored draft names required; existing PRISMA_Dev solution recorded; draft/review contract aligned locally; broader model and code-based US calendar app alignment pending; Dataverse implementation pending · **Last updated:** 2026-09-21
+**Status:** Authoritative model with approved private upload-session extension; connected backend deployed; ownership aligned to live metadata; acceptance and remaining UI parity pending · **Last updated:** 2026-09-22
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Industry` and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` and (as of this round) `Capability` are single-valued lookups; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — the underlying table already exists in Dataverse with fixed columns as `cr6b0_project`, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, is a **native N:N** relationship (no attributes needed on the link itself, so no custom junction table).
 
@@ -12,6 +12,24 @@ This is the current, agreed model. It replaces [nextant-solution-library-dataver
 5. `Solution` ↔ `Project` no longer goes through a custom junction table (`nx_solutionproject` is **dropped**); it is now a **native N:N** relationship between `nx_solution` and `cr6b0_project`, since the link carries no attributes of its own.
 6. `Review Outcome` and `Review Comments` are added to `nx_solution`. Drafts permit missing summary/capability and effort inputs; completeness is enforced at submit/publication through controlled transitions. No review-history table is added.
 
+## Private upload protocol extension
+
+Approved and deployed on 2026-09-22 under [ADR-0009](../architecture/decisions/adr-0009-mediated-media-and-publication-access.md). `nx_uploadsession` is organization-owned and accessible only to trusted server/admin operations; it is not a code-app data source. Its identifiers are canonical GUID strings for a bounded private protocol, not new business relationships. Bytes stay in the existing File/Image columns; no draft JSON or review-history table is added.
+
+| Logical column | Type / limit | Purpose |
+|---|---|---|
+| `nx_uploadsessionid` | Platform GUID | Session identity |
+| `nx_name` | Text 100 | Generated protocol label |
+| `nx_parentid`, `nx_callerid`, `nx_targetid` | Text 36 each | Server-bound Solution, initiating systemuser and media GUIDs |
+| `nx_kind` | Text 20 | Validated `image` or `attachment` |
+| `nx_filename`, `nx_mime` | Text 200 / 120 | Validated file metadata |
+| `nx_token` | Multiline text 10000 | Private continuation token, cleared on finalization; never returned |
+| `nx_bytes`, `nx_received`, `nx_nextblock` | Whole number, 0-524288000 | Declared bytes, received bytes, sequential next block |
+| `nx_expires` | Time-zone-independent date/time | UTC two-hour unfinished-upload deadline |
+| `nx_complete` | Boolean, default false | Finalized file validated and shared read-only |
+
+Gallery/attachment rows are owned by the empty Media Custodian team. Finalized rows are shared read-only with the owner; approval shares them and their Solution/contributors with Published Readers. Removal is mediated while Draft. Existing reference tables, Consultant and Project remain UserOwned and unchanged; organization ownership below was an earlier design assumption, not a migration instruction. Full deployed roles are in the [security model](../architecture/security-model.md).
+
 ## Conventions
 
 **Power Platform context:** `PRISMA_Dev` already exists in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`). See [environment and solution details](../architecture/technical-architecture.md#environment-and-solution). This records the solution's existence, not completion or inclusion of the tables below. Confirm its publisher prefix before creating new components; the solution name alone does not establish that prefix.
@@ -20,7 +38,7 @@ The [legacy v1 entry point](nextant-solution-library-dataverse-schema.md) was sy
 
 - **Primary key vs. primary name** — every table gets an auto-generated GUID key (e.g. `nx_solutionid`) plus a required text *primary name* column, used as its display label in lookups.
 - **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` exist on every table without being modeled.
-- **Ownership** — `Solution`, `SolutionContributor`, `DemoAsset`, `SolutionImage`, and `DemoRequest` are **user/team-owned** (row-level security, since different practices submit their own work). `SpecializationArea`, `Capability`, `Industry`, and `Technology` are **organization-owned** (shared reference data). `cr6b0_project` already exists in Dataverse — its ownership model is out of scope here. `cr6b0_consultant` is organization-owned.
+- **Ownership** — all 11 original business tables are live **user/team-owned**, including references, Consultant and Project. Preserve these existing tables and use Global reference Read privileges. Only the private `nx_uploadsession` extension is organization-owned. Media has the dedicated non-member team owner; credit does not imply ownership.
 - **Two single-valued tags, two multi-valued tags** — each `Solution` points to exactly one `SpecializationArea` and, at submit/publication, exactly one `Capability`, each via its own lookup column. Capability may be empty in Draft. `Industry` and `Technology` are **native N:N** relationships: a solution can carry several of each, and Dataverse creates and manages the intersect tables — no hand-built junction tables for these two.
 - **`cr6b0_project` is fixed** — it already exists in Dataverse with its own columns. Nothing new gets added to it, and it gets no new lookup pointing out of it either. Where a Solution needs to link to *several* Projects (and vice versa), a **native N:N** relationship connects `nx_solution` and `cr6b0_project` directly — no hand-built junction table, since the link carries no attributes of its own.
 - **Governance** — `SpecializationArea`, `Capability`, and `Industry` are governed (only the Librarian adds new values). `Technology` is open (anyone adds a value inline; the Librarian periodically merges duplicates).
@@ -145,7 +163,7 @@ erDiagram
 
 ## Reference tables
 
-Shared, organization-owned vocabularies. `SpecializationArea` and `Capability` connect via a single lookup column on `nx_solution`; `Industry` and `Technology` connect as native many-to-many tags.
+Shared vocabularies retain live user/team ownership with Global Read privileges. `SpecializationArea` and `Capability` connect via single lookups; `Industry` and `Technology` remain native N:N tags.
 
 ### `nx_specializationarea`
 
@@ -371,7 +389,7 @@ A row that fails this — internal tooling maintenance, one-off support tied to 
 | `cr6b0_consultant` | `nx_demorequest` | 1:N (Requested By) |
 | `cr6b0_consultant` | `cr6b0_project` | 1:N (Project Owner) |
 
-**11 tables in this model:** `nx_solution`, `nx_solutioncontributor`, `nx_specializationarea`, `nx_capability`, `nx_industry`, `nx_technology`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, `cr6b0_consultant`, and `cr6b0_project` (the last one pre-existing, fixed columns — connected to `nx_solution` only through the native N:N relationship, plus its own existing `Project Owner` lookup to `cr6b0_consultant`). The native N:N intersect tables (`Industry`, `Technology`, and now `Solution`↔`Project`) are platform-managed and don't count toward the build.
+**12 tables:** the 11 original business tables (`nx_solution`, `nx_solutioncontributor`, four governed/tag reference tables, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, existing `cr6b0_consultant` and `cr6b0_project`) plus private `nx_uploadsession`. Platform-managed N:N intersect tables are excluded. Consultant/Project columns and security are unchanged. Connected owner edits currently require explicit withdrawal to Draft; librarian content editing, separate thumbnail/caption editing and solution deletion remain gaps against the target contract.
 
 **Dropped before the original v1 spec:** `nx_usecase` as a governed table — the concept already lived as a plain `Use Case` field on `nx_solution` in v1 and remains so here.
 

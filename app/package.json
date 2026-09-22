@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:connected": "vite --config connected/vite.config.ts",
+    "build:connected": "tsc --project connected/tsconfig.json && vite build --config connected/vite.config.ts",
+    "test:connected": "node --experimental-strip-types --test connected/src/*.test.ts",
+    "test:ui": "node --test scripts/ui.test.mjs",
     "build": "tsc -b && vite build",
     "build:presentation": "tsc -b && node scripts/build-submission.mjs",
     "lint": "eslint .",
