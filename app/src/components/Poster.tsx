@@ -1,5 +1,5 @@
 import type { SpecializationArea } from "../types";
-import { AREAS } from "../data/solutions";
+import { AREAS } from "../data/catalogueMetadata";
 
 /**
  * Stands in for the Dataverse Thumbnail image column: renders the uploaded

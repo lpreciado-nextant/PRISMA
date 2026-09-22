@@ -1,0 +1,77 @@
+{
+  "name": "nx_UploadMediaBlock",
+  "title": "nx_UploadMediaBlock",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "nx_UploadMediaBlock",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "nx_UploadMediaBlock",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/nx_UploadMediaBlock": {
+          "post": {
+            "operationId": "nx_UploadMediaBlock",
+            "parameters": [
+              {
+                "name": "SolutionId",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              },
+              {
+                "name": "ExpectedRowVersion",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "SessionId",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              },
+              {
+                "name": "BlockIndex",
+                "in": "body",
+                "required": true,
+                "type": "number",
+                "x-ms-dataverse-type": "IntegerType",
+                "x-ms-csdl-type": "Edm.Int32"
+              },
+              {
+                "name": "Content",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.nx_UploadMediaBlockResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { Solution } from "../types";
-import { AREA_ORDER, AREAS } from "../data/solutions";
+import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
 import { activeChips, areaCounts, filterSolutions, type Filters } from "../lib/search";
 import { Chip } from "../components/Badges";
 import { FacetRail } from "../components/FacetRail";
@@ -15,11 +15,15 @@ export function LibraryView({
   filters,
   onFilters,
   present,
+  catalogueOnly = false,
+  renderCard,
 }: {
   catalogue: Solution[];
   filters: Filters;
   onFilters: (next: Filters) => void;
   present: boolean;
+  catalogueOnly?: boolean;
+  renderCard?: (solution: Solution, index: number) => ReactNode;
 }) {
   const results = useMemo(() => filterSolutions(catalogue, filters), [catalogue, filters]);
   const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
@@ -110,8 +114,13 @@ export function LibraryView({
           {results.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {results.map((s, i) => (
-                <SolutionCard key={s.id} solution={s} present={present} index={i} />
+                renderCard ? <div key={s.id} className="grid min-w-0">{renderCard(s, i)}</div> : <SolutionCard key={s.id} solution={s} present={present} index={i} catalogueOnly={catalogueOnly} />
               ))}
+            </div>
+          ) : catalogueOnly && catalogue.length === 0 ? (
+            <div className="px-6 py-16 text-center" role="status">
+              <h2 className="text-[22px] font-semibold">{present ? "No solutions cleared for presentation" : "No published solutions"}</h2>
+              <p className="mt-2 text-[15px]" style={{ color: "var(--ink-2)" }}>The catalogue is empty.</p>
             </div>
           ) : (
             <EmptyState filters={filters} onFilters={onFilters} />

@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library
 
-**Status:** Mock-data PoC published; local contributor/search and effort updates not yet deployed; code-based US calendar policy approved, app alignment pending.
-**Last updated:** 2026-09-21
+**Status:** Mock PoC preserved; separate connected graph/media/review backend deployed; owner workflow verified; non-admin and librarian acceptance block connected publication.
+**Last updated:** 2026-09-22
 
 An internal marketplace for the PoCs, prototypes, demos, and production solutions Nextant builds across its three Specialization Areas — **AI & Automation**, **Data Solutions**, and **Intelligent Business Operations**.
 
@@ -13,7 +13,9 @@ Builders publish what they made, a librarian curates it, and Customer Success Ma
 
 The deployed app uses mock data, with no Dataverse persistence. Build and upload succeeded; hosted UI validation is pending. See [deployment details and update commands](app/README.md#poc-deployment).
 
-The local app additionally supports multiple builders, searchable person selection, individual dates/allocation and effort calculations using its 2026 in-memory US federal holiday calendar. These updates have not been published to the hosted app. The agreed code-based calendar policy for 2020-2035, without calendar tables or contributor calendar IDs, remains pending app alignment.
+The Power Platform solution **`PRISMA_Dev`** exists in **Nextant Pulse** (environment ID: `ce09ad9b-57d1-e5df-9400-8ce973c86213`, not Nextant Pulse Prod). This is distinct from the published code app named **PRISMA PoC**; see [environment and solution context](docs/architecture/technical-architecture.md#environment-and-solution).
+
+The separate connected target implements caller-owned drafts, contributors/tags/projects, protected gallery/attachment uploads, submission/review and published detail/viewer routes, using the server-side 2020-2035 US calendar. Owner persistence and submit/withdraw are verified; successful librarian and least-privilege tests remain open. No connected app was published and no users were assigned. See [connected setup and release gates](app/README.md#connected-prisma-target). The mock PoC remains separate.
 
 The sections below describe the target product, not the current PoC's implemented capabilities.
 
@@ -117,11 +119,11 @@ Key decisions:
 
 ## Data model
 
-Reference tables (organization-owned): `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, and `cr6b0_consultant` (the custom table replacing every lookup that used to point at the platform `systemuser` table).
+Shared reference/directory tables retain live user/team ownership: `nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, and existing `cr6b0_consultant`. Global reference Read privileges replace the earlier organization-ownership assumption; Consultant security is unchanged.
 Core/child tables (user/team-owned): `nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`.
 Existing table: `cr6b0_project`, with fixed columns and its existing Project Owner lookup to `cr6b0_consultant`; connected to Solutions only through a native N:N relationship (no junction table).
 
-**11 tables total:** 9 new custom tables plus `cr6b0_consultant` plus the existing Project table; native N:N intersect tables (technology, industry, and Solution↔Project) are excluded from that count.
+**12 tables total:** the 11 existing business tables plus private organization-owned `nx_uploadsession` for server-held upload state. Native N:N intersect tables are excluded. The approved empty media-custodian and publication-readers teams and exact schema are documented in [ADR-0009](docs/architecture/decisions/adr-0009-mediated-media-and-publication-access.md).
 
 `nx_solutioncontributor` replaces the single builder lookup and solution-wide effort category. In Calendar mode, one row per Solution/person stores dates and allocation. Person hours = business days × 8 × allocation / 100, rounded to two decimals; total effort sums those rounded hours. `Business Days` counts Monday-Friday between Start Date and End Date, inclusive, excluding observed US federal holidays calculated in code for 2020-2035. There are no calendar tables or contributor calendar lookups; dates outside supported coverage are rejected. These are capacity-based hours, not actual timesheets or deployment lead time. Ideas and working prototypes use directly reported hours instead. See the [schema contract](docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 

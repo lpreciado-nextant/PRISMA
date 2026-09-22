@@ -11,13 +11,31 @@ export interface Route {
   query: URLSearchParams;
 }
 
+let acceptedHash = typeof window === "undefined" ? "#/" : window.location.hash || "#/";
+let navigationGuard: ((hash: string) => boolean) | undefined;
+let requestedHash: string | undefined;
+
+export function guardNavigation(guard: (hash: string) => boolean) {
+  navigationGuard = guard;
+  return () => { if (navigationGuard === guard) navigationGuard = undefined; };
+}
+
 function subscribe(onChange: () => void) {
-  window.addEventListener("hashchange", onChange);
-  return () => window.removeEventListener("hashchange", onChange);
+  const changed = () => {
+    const next = window.location.hash || "#/";
+    if (next !== acceptedHash) {
+      if (next !== requestedHash && navigationGuard && !navigationGuard(next)) { window.history.replaceState(null, "", acceptedHash); return; }
+      acceptedHash = next;
+    }
+    requestedHash = undefined;
+    onChange();
+  };
+  window.addEventListener("hashchange", changed);
+  return () => window.removeEventListener("hashchange", changed);
 }
 
 function getSnapshot() {
-  return window.location.hash || "#/";
+  return acceptedHash;
 }
 
 export function parseHash(hash: string): Route {
@@ -41,12 +59,17 @@ export function buildHash(path: string, query?: Record<string, string | undefine
 }
 
 export function navigate(path: string, query?: Record<string, string | undefined>) {
-  window.location.hash = buildHash(path, query);
+  const next = buildHash(path, query);
+  if (next === acceptedHash || (navigationGuard && !navigationGuard(next))) return;
+  requestedHash = next;
+  window.location.hash = next;
 }
 
 export function replaceQuery(path: string, query: Record<string, string | undefined>) {
   const next = buildHash(path, query);
   if (next === window.location.hash) return;
+  if (navigationGuard && !navigationGuard(next)) return;
+  requestedHash = next;
   window.history.replaceState(null, "", next);
   window.dispatchEvent(new HashChangeEvent("hashchange"));
 }

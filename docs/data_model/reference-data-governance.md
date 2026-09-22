@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Draft for review; code-based US calendar policy approved · **Last updated:** 2026-09-21
+**Status:** Agreed governance; controlled inline technology creation in implementation · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -14,7 +14,7 @@
 
 > Use case is not a vocabulary: it lives as a freeform single-line-of-text column on `nx_solution` ([schema spec (v2)](SchemaV2.md)).
 
-Contributor create privilege exists on `nx_technology` only ([security model](../architecture/security-model.md)).
+The connected app creates technologies through `nx_TransitionSubmission` action `technology`, not direct client CRUD. Require an owned Draft and exact parent version; trim names, reject empty/control characters and names over 100 characters, and reuse an active case-insensitive match. New rows are caller-owned. The existing graph operation attaches the returned ID. Clear safety acknowledgment and clearance without changing review feedback. Failed or ambiguous writes require reopen. Case-insensitive lookup avoids ordinary duplicate entry; simultaneous creation on different drafts can still race and remains subject to librarian duplicate merges. No new privileges or Consultant/Project writes are required.
 
 ## Why governed vocabularies
 

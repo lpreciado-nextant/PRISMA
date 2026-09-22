@@ -1,0 +1,76 @@
+{
+  "name": "nx_TransitionSubmission",
+  "title": "nx_TransitionSubmission",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "nx_TransitionSubmission",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "nx_TransitionSubmission",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/nx_TransitionSubmission": {
+          "post": {
+            "operationId": "nx_TransitionSubmission",
+            "parameters": [
+              {
+                "name": "SolutionId",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              },
+              {
+                "name": "ExpectedRowVersion",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "Action",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "Comments",
+                "in": "body",
+                "required": false,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "Cleared",
+                "in": "body",
+                "required": false,
+                "type": "boolean",
+                "x-ms-dataverse-type": "BooleanType",
+                "x-ms-csdl-type": "Edm.Boolean"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.nx_TransitionSubmissionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

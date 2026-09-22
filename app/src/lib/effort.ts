@@ -2,6 +2,38 @@ import type { BusinessCalendar, SolutionContributor, SolutionStatus } from "../t
 
 const DAY_MS = 86_400_000;
 
+export function usBusinessCalendar(startYear: number, endYear: number): BusinessCalendar {
+  if (!Number.isInteger(startYear) || !Number.isInteger(endYear) || startYear < 2020 || endYear > 2035 || endYear < startYear) throw new Error("Effort dates must be within 2020-2035.");
+  const holidays: string[] = [];
+  const observed = (year: number, month: number, day: number) => {
+    const date = new Date(Date.UTC(year, month - 1, day));
+    const weekday = date.getUTCDay();
+    date.setUTCDate(date.getUTCDate() + (weekday === 6 ? -1 : weekday === 0 ? 1 : 0));
+    holidays.push(date.toISOString().slice(0, 10));
+  };
+  const nth = (year: number, month: number, weekday: number, ordinal: number) => {
+    const date = new Date(Date.UTC(year, month - 1, 1));
+    date.setUTCDate(1 + (weekday - date.getUTCDay() + 7) % 7 + (ordinal - 1) * 7);
+    holidays.push(date.toISOString().slice(0, 10));
+  };
+  for (let year = startYear - 1; year <= endYear + 1; year++) {
+    observed(year, 1, 1);
+    nth(year, 1, 1, 3);
+    nth(year, 2, 1, 3);
+    const memorial = new Date(Date.UTC(year, 4, 31));
+    memorial.setUTCDate(31 - (memorial.getUTCDay() + 6) % 7);
+    holidays.push(memorial.toISOString().slice(0, 10));
+    if (year >= 2021) observed(year, 6, 19);
+    observed(year, 7, 4);
+    nth(year, 9, 1, 1);
+    nth(year, 10, 1, 2);
+    observed(year, 11, 11);
+    nth(year, 11, 4, 4);
+    observed(year, 12, 25);
+  }
+  return { id: "us-federal", name: "US business calendar", startDate: `${startYear}-01-01`, endDate: `${endYear}-12-31`, holidays };
+}
+
 export function usesDirectHours(status: SolutionStatus): boolean {
   return status === "Idea / concept" || status === "Working prototype";
 }

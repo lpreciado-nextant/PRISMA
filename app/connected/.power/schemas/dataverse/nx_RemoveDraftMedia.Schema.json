@@ -1,0 +1,61 @@
+{
+  "name": "nx_RemoveDraftMedia",
+  "title": "nx_RemoveDraftMedia",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "nx_RemoveDraftMedia",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "nx_RemoveDraftMedia",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/nx_RemoveDraftMedia": {
+          "post": {
+            "operationId": "nx_RemoveDraftMedia",
+            "parameters": [
+              {
+                "name": "SolutionId",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              },
+              {
+                "name": "ExpectedRowVersion",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "SessionId",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.nx_RemoveDraftMediaResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

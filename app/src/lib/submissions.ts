@@ -39,10 +39,13 @@ export function migrateSubmission(entry: SubmissionEntry & { changesRequested?: 
 }
 
 export function saveContribution(solution: Solution, status: "Draft" | "Pending review", previous?: Solution): Solution {
+  if (!solution.name.trim() || solution.name.trim() === UNTITLED_SOLUTION || solution.name.length > 100) {
+    throw new Error("Enter a solution name of 100 characters or fewer before saving.");
+  }
   if (status === "Pending review") assertSubmissionReady(solution);
   return {
     ...solution, publicationStatus: status, clientSafeReviewed: false,
-    name: solution.name.trim() || UNTITLED_SOLUTION,
+    name: solution.name.trim(),
     reviewOutcome: previous?.reviewOutcome ?? "None",
     reviewComments: previous?.reviewComments,
     libraryNotes: previous?.libraryNotes,
@@ -86,6 +89,32 @@ export async function loadSubmissions(): Promise<SubmissionEntry[]> {
       transaction.oncomplete = () => resolve((request.result as SubmissionEntry[]).map(migrateSubmission));
       transaction.onabort = () => reject(new Error("Saved submissions could not be loaded. Reload to try again."));
       transaction.onerror = () => reject(new Error("Saved submissions could not be loaded. Reload to try again."));
+    });
+  } finally {
+    database.close();
+  }
+}
+
+export async function deleteSubmission(id: string, owner: string): Promise<void> {
+  const database = await openDatabase();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction("submissions", "readwrite");
+      const store = transaction.objectStore("submissions");
+      const request = store.get(id);
+      let failure = "Could not delete from browser storage. Try again.";
+      request.onsuccess = () => {
+        const entry = request.result as SubmissionEntry | undefined;
+        if (!entry || entry.owner !== owner) {
+          failure = entry ? "You can only delete your own submissions." : "Submission unavailable. Reload and try again.";
+          transaction.abort();
+          return;
+        }
+        store.delete(id);
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onabort = () => reject(new Error(failure));
+      transaction.onerror = () => reject(new Error(failure));
     });
   } finally {
     database.close();

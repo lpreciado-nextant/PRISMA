@@ -1,5 +1,5 @@
 import type { AssetType, DemoAsset, Solution } from "../types";
-import { AREAS, BUSINESS_CALENDARS } from "../data/solutions";
+import { AREAS, BUSINESS_CALENDARS } from "../data/catalogueMetadata";
 import { AreaTag, Chip, StatusPill } from "../components/Badges";
 import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
@@ -59,9 +59,16 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath }: {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster }: {
   solution: Solution; present: boolean; onEdit?: () => void; onBack?: () => void;
   backLabel?: string; reviewActions?: React.ReactNode; assetBasePath?: string;
+  catalogueOnly?: boolean;
+  connected?: boolean;
+  effort?: { contributors: { name: string; hours: number | null; email?: string; effortMode?: "direct" | "calendar"; startDate?: string | null; endDate?: string | null; allocation?: number | null; businessDays?: number | null }[]; totalHours: number | null };
+  gallery?: React.ReactNode;
+  poster?: React.ReactNode;
+  imageCount?: number;
+  onAssetOpen?: (asset: DemoAsset) => void;
 }) {
   const area = AREAS[solution.specializationArea];
   const assets = [...solution.assets].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -84,17 +91,18 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
         {backLabel ?? (onEdit ? "My submissions" : "Back to the library")}
       </button>
       {onEdit && <button className="ml-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px]" style={{ borderColor: "var(--glass-edge)" }} onClick={onEdit}><Icon name="file" />Edit submission</button>}
-      {onEdit && <p className="mt-3 text-[13px]" style={{ color: "var(--proto)" }}>{solution.publicationStatus}. Local preview only.</p>}
+      {onEdit && <p className="mt-3 text-[13px]" style={{ color: "var(--proto)" }}>{solution.publicationStatus}{!connected && ". Local preview only."}</p>}
       {reviewActions}
+      {catalogueOnly && <p className="mt-4 text-[14px]" role="status" style={{ color: "var(--ink-2)" }}>Contributor details, media and delivery history are not loaded.</p>}
 
       <section className="glass glass-lite glass-sheen mt-4 overflow-hidden rounded-[26px]">
-        <Poster
+        {poster ?? <Poster
           id={solution.id}
           name={solution.name}
           area={solution.specializationArea}
           src={solution.thumbnail}
           className="h-40 sm:h-52"
-        />
+        />}
         <div className="p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-2.5">
             <AreaTag area={solution.specializationArea} size="md" />
@@ -138,35 +146,32 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
             <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.businessValue}</p>
           </Panel>
 
-          {solution.images && solution.images.length > 0 && (
-            <Panel title={`Screenshots · ${solution.images.length}`}>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {solution.images.map((img) => (
-                  <figure key={img.id} className="m-0 overflow-hidden rounded-[14px] border" style={{ borderColor: "var(--glass-edge)" }}>
+          {connected && solution.useCase && <Panel title="Use case"><p className="whitespace-pre-wrap break-words text-[15.5px]">{solution.useCase}</p></Panel>}
+
+          {(gallery || (solution.images && solution.images.length > 0)) && (
+            <Panel title={`Screenshots · ${imageCount ?? solution.images?.length ?? 0}`}>
+              {gallery ?? <div className="grid gap-3 sm:grid-cols-2">
+                {solution.images?.map((img) => (
+                  <GalleryFigure key={img.id} caption={img.caption}>
                     <img
                       src={img.src}
                       alt={img.caption ?? `${solution.name} screenshot`}
                       loading="lazy"
                       className="aspect-[16/10] w-full object-cover"
                     />
-                    {img.caption && (
-                      <figcaption className="px-3 py-2 text-[12.5px]" style={{ color: "var(--ink-3)" }}>
-                        {img.caption}
-                      </figcaption>
-                    )}
-                  </figure>
+                  </GalleryFigure>
                 ))}
-              </div>
+              </div>}
             </Panel>
           )}
 
-          <Panel title="Demo assets">
+          {!catalogueOnly && <Panel title="Demo assets">
             <ul className="flex flex-col gap-3">
               {assets.map((asset) => (
-                <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} />
+                <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} onOpen={onAssetOpen} />
               ))}
             </ul>
-          </Panel>
+          </Panel>}
 
           {!present && solution.libraryNotes && (
             <div
@@ -201,29 +206,29 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
 
           <Panel title="At a glance">
             <dl className="flex flex-col gap-3 text-[14px]">
-              <Row label="Built by">
+              {!catalogueOnly && <Row label="Built by">
                 <ul className="space-y-1 break-words">
-                  {contributions.map(({ id, builtBy }) => (
+                  {effort ? effort.contributors.map((person, index) => <li key={index}>{!present && person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>) : contributions.map(({ id, builtBy }) => (
                     <li key={id}>
                       {present ? builtBy.name : <a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a>}
                     </li>
                   ))}
                 </ul>
-              </Row>
+              </Row>}
               <Row label="Area">{area.name}</Row>
-              <Row label="Total effort">{totalHours.toLocaleString()} hours</Row>
-              {solution.status === "Client demo" && <Row label="Effort scope">Demo effort only; production delivery may take longer.</Row>}
+              {!catalogueOnly && <Row label="Total effort">{effort ? effort.totalHours === null ? "Incomplete" : `${effort.totalHours.toLocaleString()} hours` : `${totalHours.toLocaleString()} hours`}</Row>}
+              {!catalogueOnly && solution.status === "Client demo" && <Row label="Effort scope">Demo effort only; production delivery may take longer.</Row>}
               {clientLine && <Row label="Context">{clientLine}</Row>}
               {!present && <Row label="Client review">{solution.clientSafeReviewed ? "Cleared" : "Required"}</Row>}
-              {!present && <Row label="Added">{solution.dateAdded}</Row>}
+              {!present && solution.dateAdded && <Row label="Added">{solution.dateAdded}</Row>}
               <Row label="Industries">{solution.industries.join(" · ")}</Row>
             </dl>
           </Panel>
 
-          {!present && (
+          {!present && !catalogueOnly && (
             <Panel title="Contributor effort">
               <ul className="space-y-4 text-[14px]">
-                {contributions.map((contributor) => (
+                {effort ? effort.contributors.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.name}</p>{person.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : person.effortMode === "calendar" && <><p className="text-[12px]">{person.startDate || "Start date missing"} to {person.endDate || "End date missing"}</p><p>{person.allocation === null ? "Allocation missing" : `${person.allocation}% allocation`}{person.businessDays !== null && person.businessDays !== undefined ? ` · ${person.businessDays} business days` : ""}</p><p className="text-[12px] text-(--ink-3)">US federal holidays</p></>}<p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : contributions.map((contributor) => (
                   <li key={contributor.id} className="break-words">
                     <p className="font-semibold">{contributor.builtBy.name}</p>
                     {contributor.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : <>
@@ -260,7 +265,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
             </Panel>
           )}
 
-          {!present && (
+          {!present && !catalogueOnly && !connected && (
             <button
               type="button"
               className="glass glass-sheen lift flex cursor-pointer items-center gap-3 rounded-[20px] p-5 text-left"
@@ -287,6 +292,10 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
   );
 }
 
+export function GalleryFigure({ caption, children }: { caption?: string; children: React.ReactNode }) {
+  return <figure className="m-0 min-w-0 overflow-hidden rounded-[14px] border border-(--glass-edge)">{children}{caption && <figcaption className="break-words px-3 py-2 text-[12.5px] text-(--ink-3)">{caption}</figcaption>}</figure>;
+}
+
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="glass glass-lite glass-sheen rounded-[20px] p-6">
@@ -309,10 +318,11 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function AssetRow({ solution, asset, basePath }: { solution: Solution; asset: DemoAsset; basePath?: string }) {
+function AssetRow({ solution, asset, basePath, onOpen }: { solution: Solution; asset: DemoAsset; basePath?: string; onOpen?: (asset: DemoAsset) => void }) {
   const behaviour = behaviourFor(asset);
 
   const act = () => {
+    if (onOpen) { onOpen(asset); return; }
     if (behaviour.mode === "viewer") {
       navigate(`${basePath ?? `/s/${solution.id}`}/demo/${asset.id}`);
     } else if (behaviour.mode === "external" && asset.externalUrl) {
@@ -361,7 +371,7 @@ function AssetRow({ solution, asset, basePath }: { solution: Solution; asset: De
           color: "var(--on-accent)",
         }}
       >
-        {behaviour.label}
+        {onOpen && asset.assetType === "Desktop app or script" ? "Demo arrangements" : behaviour.label}
       </button>
     </li>
   );

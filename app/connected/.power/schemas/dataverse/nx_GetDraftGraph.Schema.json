@@ -1,0 +1,44 @@
+{
+  "name": "nx_GetDraftGraph",
+  "title": "nx_GetDraftGraph",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "nx_GetDraftGraph",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "nx_GetDraftGraph",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/nx_GetDraftGraph": {
+          "post": {
+            "operationId": "nx_GetDraftGraph",
+            "parameters": [
+              {
+                "name": "SolutionId",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.nx_GetDraftGraphResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

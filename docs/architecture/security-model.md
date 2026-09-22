@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Agreed draft/review field protections and controlled transition contract; platform enforcement pending · **Last updated:** 2026-09-21
+**Status:** Draft/graph/media/deletion/technology protections deployed; tab recovery approved; users unassigned; non-admin and publication acceptance pending · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -21,8 +21,10 @@
 
 ## Ownership
 
+**Deployed ownership:** all 11 exported tables are UserOwned, including reference tables and Consultant. [Q8](../delivery/decision-log.md) retains these existing tables for the approved core-draft scope, with organization-level reference Read; do not recreate them. Solution child links use NoCascade for assign/share/unshare and RemoveLink for delete, so the parent-access contract requires explicit enforcement. Roles cannot grant 'published only' access as a row predicate: publication/unpublication must grant/revoke appropriate row and child access without exposing drafts through another API.
+
 - `nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, and `nx_demorequest` are **user/team-owned** (row-level security; contributor rows align with the Solution owner/team).
-- Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`) are **organization-owned**, and so is `cr6b0_consultant`.
+- Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`) and `cr6b0_consultant` retain their live **user/team-owned** model; organization ownership was an earlier design assumption, not a migration instruction.
 - `cr6b0_project` retains its existing ownership/security model. Per [schema v2](../data_model/SchemaV2.md#security-model), the `Solution`↔`cr6b0_project` native N:N association is created/read/written by Contributors for Solutions they own, read by CSMs for detail context, and fully accessible to Librarians — there is no custom junction table, so this governs the relationship itself rather than a row on either side. Associating a Solution with a Project grants no access to the linked Project itself. Client engagement names are omitted in present mode.
 
 ## Field-level security
@@ -39,17 +41,37 @@ All review fields and Library Notes are omitted before CSM/presentation search o
 
 ## Controlled transitions
 
-[ADR-0008](decisions/adr-0008-controlled-submission-transitions.md) requires synchronous Dataverse Custom APIs backed by plug-ins for save draft, submit and review. These are future platform operations, not server routes in the code app. Each handler resolves the authenticated caller, checks parent and child rights, verifies the expected row version, validates the source state and applies the operation-specific [schema contract](../data_model/SchemaV2.md#draft-and-transition-contract). Never trust owner identifiers, review fields or approval flags sent by a contributor.
+[ADR-0008](decisions/adr-0008-controlled-submission-transitions.md) requires synchronous Dataverse Custom APIs for saves and transitions. Draft, graph, mediated media and transition handlers are deployed in Dataverse, not SPA server routes. Handlers resolve authenticated identity, access, state, exact version and the [schema contract](../data_model/SchemaV2.md#draft-and-transition-contract). Never trust contributor-supplied owner or approval fields.
 
 Use narrowly scoped service execution for protected-field updates only after caller checks. A contributor may request Draft/Pending review and cause review invalidation without receiving field permission to publish or approve. Librarian status alone is insufficient for bypassing completeness or stale-version checks. Protect direct Web API/import writes and contributor/image/asset mutations as well: material edits must withdraw a published/pending record and clear Client Safe Reviewed before changed content can be exposed. Reject unsupported bypass paths. Upload files while Draft, finish uploads, and then validate the complete persisted graph before review/publication.
 
 State and related metadata transitions are transactional; file payload uploads are staged separately, not claimed to be atomic with a record transaction. Concurrent edits/reviews must fail visibly rather than approving an obsolete version. Power Automate sends notifications only after committed changes and never authorizes or validates a transition.
 
-The PoC mirrors validation and preserves protected fields from its current stored record, but browser storage and the visible librarian preview are not production authorization or cross-tab concurrency enforcement. No Custom APIs, plug-ins or field-security profiles have been deployed.
+The PoC mirrors validation and preserves protected fields from its stored record, but browser storage and the librarian preview are not production authorization or cross-tab concurrency enforcement. Initial PAC inspection found no Custom API, plug-in or role components in `PRISMA_Dev`; the approved deployment below changes that inventory. Effective environment permissions remain unverified.
+
+## Deployed core draft scope
+
+`nx_SaveCoreDraft` requires Solution Create privilege; updates additionally use caller rights, ownership, Draft-state checks and optimistic concurrency. `nx_GetMyCoreDrafts` requires Solution Read and filters active caller-owned Drafts. Neither API accepts a caller/owner override. Only setting Draft and clearing Client Safe Reviewed uses elevated service execution after caller validation, inside the save transaction. Review decisions and Library Notes are not writable through this API.
+
+Solution guards reject direct Create/Update outside controlled APIs and reject Delete/Assign/SetState, including ordinary administrator/import calls. Contributor, media/session metadata and scoped N:N guards are deployed. Owner-only, exact-version deletion in any publication state is mediated by `nx_TransitionSubmission`; it revokes publication shares and removes children/media/sessions without deleting shared references. Native file messages cannot be intercepted: contributors get only read access to team-owned media, with tokens in private sessions ([ADR-0009](decisions/adr-0009-mediated-media-and-publication-access.md)). Additive environment privileges still require verification.
+
+The same transition API accepts Draft-only `media` caption/order and `technology` creation/reuse actions after ownership and exact-version checks. Both advance the parent version and clear acknowledgment/clearance without changing review feedback. Technology creation is caller-owned; existing matches must be caller-readable. Case-insensitive lookup does not guarantee uniqueness across simultaneous requests on different drafts; librarian duplicate governance remains required.
+
+No users were assigned. Contributor has Basic Solution Read/Create/Write/Append/AppendTo, Basic contributor Read/Create/Write/Delete/Append and Basic media Read. CSM has Basic Solution/contributor/media Read. Librarian has Global equivalents for Solution/contributor and Global media Read. All have Global governed-reference Read; non-CSMs also have reference AppendTo. No Consultant/Project privileges or direct media Write privileges were added. Only the empty Media Custodian team received its narrow media-Read role and the empty Published Readers team received the CSM role.
+
+Approval shares Solution/contributor/finalized media rows read-only with **PRISMA Published Readers**; withdrawal/retirement revoke those shares. The contributor owner retains finalized-media read access; librarians have trusted Global read. Memberships and field-profile assignments remain manual. **PRISMA Media Custodian must remain empty.** `nx_uploadsession` is organization-owned with no application-role privileges. Administrators remain trusted platform administrators capable of bypass features, not least-privilege test identities.
+
+The review handler requires the explicit **PRISMA Librarian** role directly or through a team, plus caller row access. Administrator status alone was verified insufficient for approval. Approval requires independent client-safe confirmation, complete graph/files and an exact parent version. Feedback survives contributor edits; material graph/media changes clear acknowledgment and clearance. Pending/Published edits require owner withdrawal first.
+
+Pilot inspection found `jcastelblanco@nextant.com`, `mcubillos@nextant.com` and `lpreciado@nextant.com` directly assigned System Administrator; `mparry@nextant.com` was not matched by exact domain name. The user deferred permission tests and will make assignments. Resolve the missing identity and use non-admin effective role/profile sets before publication. Test cross-owner writes, CSM draft/child/file reads, direct file mutation, reviewer authorization, and withdrawal/retirement revocation.
+
+Review Outcome/Comments are now field-secured. New profiles PRISMA Contributor, PRISMA CSM and PRISMA Core Draft Librarian permit read of publication status/clearance, and non-CSM profiles permit review-field read; they grant no protected-field create/update. The existing **PRISMA Librarian** profile and its memberships were preserved, including its existing editorial/protected-field permissions. Rights are additive: audit all existing roles/profiles and test non-admin identities before rollout. Current live checks used a privileged caller only.
 
 ## Authentication
 
 Microsoft Entra ID SSO. Internal Nextant users only — clients never log in. In present mode the CSM is always the authenticated driver, screen-sharing their own session; no client ever holds a credential or a link.
+
+User-approved tab recovery stores bounded unsaved text and selections in identity/draft-scoped `sessionStorage`, without credentials or media bytes. It is not offline persistence or a save acknowledgment. Exact-version restoration resets safety confirmation; uncertain writes remain locked until reopen. Save/submit, discard, present entry and detected authentication/identity loss clear recovery. External host sign-out is not observable until authentication failure or reload. See [ADR-0008](decisions/adr-0008-controlled-submission-transitions.md).
 
 ## Content-safety controls
 

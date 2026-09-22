@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Browser-local draft/review flow aligned with dedicated review fields and submission validation, not deployed. The prior safety-first revision was published on 2026-09-21; authenticated hosted UI verification remains pending.
-**Last updated:** 2026-09-21
+**Status:** Published PRISMA PoC preserved; connected caption saves and linked-asset authoring/viewing verified with privileged owner. Full parity, librarian, least-privilege and hosted acceptance still block publication.
+**Last updated:** 2026-09-22
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -22,7 +22,7 @@ The point of this PoC is the **experience**, not the data. Everything renders fr
 | Searchable Person field by name/email, keyboard selection and duplicate prevention | `src/views/SubmitView.tsx` |
 | Captioned screenshot gallery (`nx_solutionimage`) on the detail page | `src/views/DetailView.tsx` |
 | Six-step safety-first form, required detail images, optional thumbnail and local media | `src/views/SubmitView.tsx` |
-| My submissions, inspection and editing; no welcome page | `src/views/MySubmissionsView.tsx`, `src/App.tsx` |
+| My submissions, inspection, editing and confirmed owner-only deletion; no welcome page | `src/views/MySubmissionsView.tsx`, `src/App.tsx` |
 | Browser-persisted drafts/media and publish/return lifecycle | `src/lib/submissions.ts` |
 | Librarian queue, inspection, required return comments and explicit approval | `src/views/ReviewView.tsx` |
 | Searchable tag pickers with case-insensitive technology deduplication | `src/views/SubmitView.tsx` |
@@ -37,7 +37,9 @@ Eligibility requires Published, Safety Acknowledged and librarian-controlled Cli
 
 **Save draft & close** stores incomplete submissions and media in browser-local IndexedDB. Saved drafts reopen from **My submissions**, including after reload. Submitting moves them to Pending review. The **Review queue** (`#/review`) supports inspection, approval/publication and return-to-Draft with required comments. Feedback appears in My submissions and the editor. Saving edits to a published record withdraws it until re-approved. Published local records join the mock catalogue and remain subject to present-mode safety filtering.
 
-Dedicated `reviewOutcome` and `reviewComments` (4000 characters) hold the latest librarian decision, separate from Library Notes. Contributor saves preserve them but always clear current approval; present mode strips both. Returning clears acknowledgment so resubmission requires a fresh confirmation. Submit and approve both validate identity, exactly one capability, effort, safety, anonymous context and required images; drafts can remain incomplete. Blank draft names get `Untitled solution` and reopen as an empty input.
+My submissions shows publication/review status inside each card and allows deletion of owned records in any publication state after confirmation. Deletion checks ownership inside the IndexedDB transaction and removes the record and embedded media before updating the UI; published records also leave the library. Failures keep the card and show an error for retry. This is browser-local PoC behavior, not Dataverse authorization or a production deletion policy.
+
+Dedicated `reviewOutcome` and `reviewComments` (4000 characters) hold the latest librarian decision, separate from Library Notes. Contributor saves preserve them but always clear current approval; present mode strips both. Returning clears acknowledgment so resubmission requires a fresh confirmation. Submit and approve both validate identity, exactly one capability, effort, safety, anonymous context and required images. Draft saves require an authored, nonblank solution name of at most 100 characters; other fields can remain incomplete. Legacy `Untitled solution` drafts reopen as an empty input and must be named before saving again. Temporary session text backups remain separate from saved drafts.
 
 Older browser submissions with the `changesRequested` envelope key are migrated on load: copy identifiable legacy feedback without deleting original Library Notes, preserve media/identity and write the normalized shape at the next explicit save. This is not a Dataverse migration. Production nullable columns, owner mapping, controlled transitions and concurrency are specified in [SchemaV2](../docs/data_model/SchemaV2.md#draft-and-transition-contract) and [ADR-0008](../docs/architecture/decisions/adr-0008-controlled-submission-transitions.md), not implemented as services here. The existing 2026 mock calendar and broader legacy catalogue mappings remain separate alignment work.
 
@@ -52,7 +54,7 @@ Everything here stays inside what the [code apps documentation](https://learn.mi
 - **Single-page app.** Code apps support SPAs; this is one.
 - **Official Vite plugin.** `@microsoft/power-apps-vite/plugin` is registered in `vite.config.ts` alongside React and Tailwind. Tailwind is a build-time plugin only — it emits plain CSS.
 - **Hash routing, not path routing.** A published app is served from `/play/e/{environmentId}/a/{appId}`, so the app never owns the path segment. All navigation goes through `window.location.hash`.
-- **No `initialize()`.** The client library is v1.0+, where initialization was removed. The only SDK call is `getContext()` for the signed-in user, wrapped so the app still renders outside the host.
+- **No `initialize()`.** The client library is v1.0+. The PoC wraps `getContext()` so it renders outside the host; the connected target requires host identity and uses generated SDK data services.
 - **No server-side code.** No API routes, no SSR, no build-time secrets.
 - **Relative asset references.** `./nextant-mark.svg` rather than `/nextant-mark.svg`, so assets resolve under the published base path.
 - **Nothing sensitive in the bundle.** Compiled assets are served from a public endpoint; all real data will come from Dataverse after authentication.
@@ -72,6 +74,7 @@ cd app
 npm install
 npm run dev          # design preview at http://localhost:5173
 npm test             # Node 22.6+; business-calendar calculations, mock data and builder search
+npm run test:ui      # shared form/media/review rendering and adapter-wiring checks
 npm run build        # TypeScript + production bundle
 npm run lint
 ```
@@ -97,21 +100,26 @@ The current [schema](../docs/data_model/SchemaV2.md#nx_solutioncontributor--buil
 
 The submission form adds/removes contributors, saves inputs in the session draft, validates calendar coverage and previews totals. Its Person field searches the mock people list by name or email, excludes already assigned people and supports arrow keys/Enter or pointer selection. Escape or leaving the field restores the committed selection; unmatched search text is never stored as a person. This is not a live directory integration. Catalogue search includes every builder. Detail shows a person-by-person breakdown internally; present mode keeps builder names and total hours but omits dates/allocation/calendar details.
 
-Calendar-mode contributors use **US business calendar (2026)** automatically, without a dropdown: Monday-Friday excluding the eleven [OPM observed federal holidays](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/#url=2026). Coverage is January 1-December 31, 2026. Direct-mode contributors need no dates or calendar. Mock idea/prototype totals were preserved as direct hours; production migration needs explicit confirmation, reviewed calendars and server-enforced validation ([ADR-0007](../docs/architecture/decisions/adr-0007-contributor-effort.md)). No Dataverse tables were created and the app was not published.
+Calendar-mode contributors use **US business calendar (2026)** automatically, without a dropdown: Monday-Friday excluding the eleven [OPM observed federal holidays](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/#url=2026). Coverage is January 1-December 31, 2026. Direct-mode contributors need no dates or calendar. Mock idea/prototype totals were preserved as direct hours; production migration needs explicit confirmation, reviewed calendars and server-enforced validation ([ADR-0007](../docs/architecture/decisions/adr-0007-contributor-effort.md)). No Dataverse tables were created; the current PoC deployment is recorded below.
 
 ## PoC deployment
 
 **[Open PRISMA PoC](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/69a956d5-2180-4ad6-9136-136c48cc197f?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)**
 
-Updated on 2026-09-21 in **Nextant Pulse** (not Nextant Pulse Prod) with the six-step safety-first submission, maturity-based effort, unified media, local My submissions/editing, themed dropdowns and compact add-technology input. The production build, all ten tests, lint and `pa app push` succeeded. The hosted link redirected to Microsoft sign-in in the verification browser; an authenticated smoke test of search, detail, viewer, present mode, submission controls and image/font loading remains pending. Submissions and uploaded media still have no Dataverse persistence and are lost on reload.
+Updated on 2026-09-21 in **Nextant Pulse** (not Nextant Pulse Prod) with browser-local draft/media persistence, My submissions editing, librarian approval/return UI, dedicated review outcome/comments, legacy draft migration and submit/approval validation. The latest upload also includes the shared themed review dropdown, draft-save button in the card footer, required authored draft names, in-card submission status and confirmed owner-only deletion. The production build, all 16 tests, lint and `npx pa app push` succeeded. App name, app ID and environment ID were verified and left unchanged.
+
+The returned hosted link redirected to Microsoft sign-in in the verification browser. Upload success is confirmed; an authenticated hosted smoke test of search, detail, viewer, present mode, draft/review controls and image/font loading remains pending. Saved submissions and media survive reload only in the same hosted browser origin/profile; localhost drafts do not transfer. No Dataverse persistence, production review authorization, Custom APIs or plug-ins were deployed. The librarian workspace remains a simulated PoC surface.
 
 | Setting | Value |
 |---|---|
 | Display name | PRISMA PoC |
 | Environment name | Nextant Pulse |
 | Environment ID | `ce09ad9b-57d1-e5df-9400-8ce973c86213` |
+| Power Platform solution | `PRISMA_Dev` |
 | App ID | `69a956d5-2180-4ad6-9136-136c48cc197f` |
 | Build output / entry point | `dist` / `index.html` |
+
+In [Power Apps](https://make.powerapps.com), select **Nextant Pulse** (not Nextant Pulse Prod), then **Solutions > PRISMA_Dev** to open the existing solution. `PRISMA_Dev` is the Power Platform solution name, not the code app display name. PAC inspection on 2026-09-21 confirmed that PRISMA PoC is included in this unmanaged solution; see the [verified inventory](../docs/architecture/technical-architecture.md#verified-solution-inventory).
 
 The existing [power.config.json](power.config.json) targets this deployment. Do not run `pa app init` again to update it.
 
@@ -146,6 +154,58 @@ npx pa app push
 ```
 
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
+
+## Connected PRISMA target
+
+The separate [connected/power.config.json](connected/power.config.json) targets **PRISMA** in the same Nextant Pulse environment, with `appId: null`, local URL `http://localhost:5174`, and its own `connected/dist` output. The [connected entry point](connected/src/ConnectedApp.tsx) is runnable locally but has not been published. Existing PoC commands, app ID, source entry point and persistence remain unchanged.
+
+From `app/`:
+
+```powershell
+npm run dev:connected
+npm run test:connected
+npm run build:connected
+```
+
+Open the **Local Play** URL printed by Vite in your signed-in Power Apps browser. For the default port: [open connected PRISMA in Local Play](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/a/local?_localAppUrl=http://localhost:5174/&_localConnectionUrl=http://localhost:5174/__vite_powerapps_plugin__/power.config.json). Allow local-network access if prompted. If 5174 is occupied, Vite selects a free port; use its printed URL. Opening localhost directly shows the sign-in-required state, not mock data.
+
+The current read slice queries published Solution records plus specialization, capability and related technology/industry tags. It uses the generated SDK services, explicit column projections, numeric choice mappings, GUID lookups, paged reads and native N:N OData filters. The live specialization names `ai`, `data`, and `ibo` were verified through PAC. Missing permissions, malformed mappings and failed requests are errors, not an empty catalogue. An actual empty result has a separate empty-catalogue state.
+
+Search, facets and cards reuse the PoC views; connected detail/viewer uses caller-authorized contributor, project and finalized-media reads. The masthead and My submissions expose review navigation only when the server reports the explicit Librarian role. Returning to the library refreshes catalogue state. Routes never reach PoC write views. The build rejects mock catalogue, IndexedDB adapter, PoC entry-point and demo-document imports. Shared metadata lives in [src/data/catalogueMetadata.ts](src/data/catalogueMetadata.ts).
+
+Connected submission and the PoC now use shared safety, identity, story, contributor-row, media, review-summary, footer and success components from [SubmissionForm](src/components/SubmissionForm.tsx), extracted from the PoC baseline. Both targets also share [TagPicker](src/components/TagPicker.tsx) and the queue plus review-action panel in [ReviewQueue](src/components/ReviewQueue.tsx). One wizard state coordinates core/graph saves; media keeps its protected upload adapter behind the shared stacked layout, caption tiles and file controls. Live effort previews use the backend's 2020-2035 observed US federal holiday policy, with server-calculated totals authoritative at final review. My submissions reuses the PoC card grid and hydrates saved technology chips; owner/reviewer/published detail reuses [DetailView](src/views/DetailView.tsx) and its gallery styling, and both viewers share [ViewerFrame](src/components/ViewerFrame.tsx) and asset-type labels. Document actions download directly through the protected SDK. Connected confirmations use [ConfirmDialog](src/components/ConfirmDialog.tsx), not native confirm boxes. No mock persistence is imported. Complete inheritance, including the remaining gaps, is a requirement: see the [UI/UX parity acceptance inventory](../docs/design/end-to-end-design.md#31-contribution--publication).
+
+Parity checks: `npm run test:ui` renders shared controls and verifies adapter wiring using the existing Vite/React toolchain with an isolated temporary cache. Eight checks cover required field examples, contributor structure, media/linked-asset controls, locked wizard actions and independent review clearance. The current frontend suites contain 16 PoC, 34 connected and 8 UI checks. Both form contents fit mobile widths. Earlier local PoC image-upload automation stalled on `Image.decode()` in a hidden integrated-browser tab and is not counted as a pass; its temporary backup was removed. The connected protected upload path was subsequently verified live as described below. Continue checkpoints, safety reconfirmation and withdrawal remain truthful connected workflows rather than local success simulations.
+
+**Integrated caption saving (2026-09-22):** captions remain in wizard memory across Back navigation and save with Save draft & close or Continue. Protected uploads/removals flush pending captions first. Each confirmed metadata version feeds the next core/graph save, preserves other media metadata and clears safety acknowledgment. Unconfirmed writes keep edits visible and require reopen, never blind retries. No separate Save captions action is needed. Captions are still excluded from tab-reload recovery. Local Play verified PNG and HTML upload, caption save/reopen, a simultaneous summary edit after Back, upload-time caption flush, Continue to final review, and stale-version rejection/reopen. Fixture `ce2e6482-85b6-f111-aaac-6045bd049fba` and its media were deleted through the controlled owner workflow; exactly three original drafts remain. These were privileged-owner tests, not librarian or least-privilege acceptance. No backend deployment, permission changes or app publication occurred.
+
+**Connected persistence:** `#/submit` creates a draft; `#/my-submissions` lists every caller-owned state; `#/submission/:id` inspects/submits/withdraws; `#/submit?draft=<id>` edits owned Drafts. Core limits are name 100, summary/use case/client contexts 200, long descriptions 4000. Graph saves persist contributors/effort and native tags/projects. Media uses private server-held sessions and sequential chunks, with read-only finalized access. String versions prevent stale writes; uncertain responses require reopen rather than blind retries. No local-success fallback is used.
+
+**Linked assets (2026-09-22):** connected Media also creates/edits hosted URLs, Power Apps, Power BI and desktop demo arrangements. The existing transition API's `asset` action validates HTTPS URLs, type, name, note, ownership, Draft state and exact version; no new schema/API registration is required. Links share the six-attachment limit, custodian ownership, review, sharing and removal lifecycle. Hosted apps can opt into opaque sandbox previews with pop-out; Power Apps/BI open externally; desktop entries show guidance without claiming request delivery. The user-approved plug-in update passed 39 backend tests and live privileged-owner create/edit/reopen/unsafe/stale/remove checks. Temporary fixture `c4fa1064-87b6-f111-aaac-6045bd049fba` was deleted, preserving three original drafts. The frontend suites now contain 16 PoC, 34 connected and 8 UI tests. External targets/rel were verified, but actual signed-in Power Apps/BI launch, linked publication/revocation and non-admin acceptance remain open. No code app was published or permissions/schema changed. See [media behavior](../docs/workflows/demo-assets.md) and [ADR-0009](../docs/architecture/decisions/adr-0009-mediated-media-and-publication-access.md).
+
+`#/review` and `#/review/:id` use explicit PRISMA Librarian authorization for return/approval/retirement. Approval requires independent safety confirmation; publication grants read-only Solution/contributor/media shares to PRISMA Published Readers. Owner withdrawal returns to Draft and revokes published shares. Owner deletion in any state uses the displayed version and controlled child/media cleanup. Draft-only caption saves and inline technology creation/reuse use the same transition API. Protected thumbnails appear in cards, final preview and detail; contributor names enter search and authorized contact/provenance appears in internal detail. See [scope and parity](../docs/design/end-to-end-design.md#31-contribution--publication) for unverified gates, PoC asset stand-ins and future product controls.
+
+User-approved recovery retains unsaved core text and contributor/tag/project selections in identity-scoped tab storage, not media bytes, captions or credentials. A backup cannot overwrite a changed server version; safety confirmation resets and uncertain writes require reopen. Successful save/submit, discard, present entry and detected identity/authentication loss clear recovery. External host sign-out is detected only on authentication failure or reload. This is not a local-save success fallback.
+
+The [backend](../docs/architecture/technical-architecture.md#deployed-core-draft-backend) is deployed in PRISMA_Dev. No users were assigned roles/profiles or team memberships. The approved empty Media Custodian and Published Readers teams have narrow roles. Current checks used the privileged owner, not least-privilege identities. This is not a production authorization sign-off. Consultant/Project data/security and the published PoC are unchanged.
+
+Present mode clears the prior catalogue immediately, starts a new server query requiring Published + Safety Acknowledged + Client Safe Reviewed, and omits internal client identity and search keywords from its projection. Notes and review fields are never selected. Unmounted requests cannot restore stale internal data. The UI authorizes no access: table/field/row protections remain platform work before release.
+
+PAC generated live models/services for all 11 inventoried tables under [connected/src/generated/index.ts](connected/src/generated/index.ts), plus required metadata under `connected/.power/schemas/`. Keep both generated directories with this target; services import their schema configuration. Generation reads metadata, not business records, and does not create or modify Dataverse rows. Generated CRUD methods do not implement the authorization/transition guarantees in [ADR-0008](../docs/architecture/decisions/adr-0008-controlled-submission-transitions.md); do not wire direct status/review writes into the UI.
+
+The verified non-interactive command, run from `app/connected/`, is:
+
+```powershell
+pac code add-data-source --apiId dataverse --table nx_solution --environment https://nextantpulse.crm.dynamics.com
+```
+
+Substitute another live logical table name only when adding an unregistered source. Do not run it in `app/`, which targets the mock PoC. The organization URL is not the `/api/data/v9.2` Web API endpoint. PAC 2.10.1 succeeded with the explicit URL; the earlier `pa` attempt rejected an advertised environment flag and then prompted for an organization URL without one.
+
+Validation on 2026-09-22: 16 PoC, 28 connected and 38 backend tests pass; both app builds and lint pass. Local Play verified six steps, core/contributor save/reopen, card grid, full 640x360 image, submit, shared detail/viewer, sandbox host-access denial and withdrawal. Additional checks cover tag search, effort preview, multi-image upload/removal, thumbnail/caption persistence, authorized contributor contact, tab recovery after reload, present-mode clearing, inline technology creation and themed deletion Cancel/confirm/refresh. Temporary technology/deletion/media fixtures were removed. Three original non-sensitive drafts remain; browser fixture `595ea718-1cb6-f111-aaac-6045bd049fba` retains its summary, original two media files and 13.25 hours. Backend smoke verifies direct/stale rejection and protected cleanup. Populated published discovery/performance, document file delivery, successful librarian review, revocation and non-admin acceptance remain unverified. Desktop and mobile app content fits; the outer Local Play host can overflow. Workflow checks used keyboard activation because integrated pointer clicks were unreliable. Neither app was published.
+
+Generate Custom API clients from `app/connected/` with the installed CLI: `..\node_modules\.bin\pa.cmd app add dataverse-api --api-name nx_SaveCoreDraft` (or `nx_GetMyCoreDrafts`). Both generated services and `.power` schemas are required; do not hand-edit them. The installed CLI rejects its advertised environment flag; confirm the connected configuration and active environment before generation.
+
+**Release gate:** full read/write, authorized review, permissions, revocation, concurrency and presentation must pass before publication. The user authorized a separate PRISMA upload only after these gates; deferred permission tests are not waived. Resolve the missing contributor-B identity, manually configure non-admin roles/profiles/readers membership, and complete successful librarian and hosted tests. Do not publish a placeholder, copy the PoC app ID or replace its mock data source.
 
 ---
 
