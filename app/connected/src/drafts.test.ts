@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
-import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
+import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
 import { hasCaptionChanges, mediaRequest, parseMedia, saveMediaCaptions, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
@@ -19,6 +19,29 @@ test("linked assets require safe URLs and honest desktop guidance", () => {
   const desktop = validateLinkedAsset({ ...input, assetType: "Desktop app or script", externalUrl: "", allowsEmbedding: false, embedHint: "Contact the builder to arrange a demonstration." });
   assert.equal(desktop.externalUrl, "");
   assert.throws(() => validateLinkedAsset({ ...input, name: "x".repeat(101) }));
+});
+
+test("consultant picker requires active employee status on every page, not VActive", async () => {
+  const calls: Parameters<Parameters<typeof loadGraphReferences>[0]>[] = [];
+  const person = { cr6b0_consultantid: "active", cr6b0_consultantname: "Active Consultant", cr6b0_email: "active@example.com", statecode: 0, cr6b0_employeestatus: true, cr6b0_vactive: false };
+  const references = await loadGraphReferences(async (table, options) => {
+    calls.push([table, options]);
+    if (table !== "people") return { success: true, data: [] };
+    if (options.skipToken) return { success: true, data: [{ ...person, cr6b0_consultantid: "second", cr6b0_consultantname: "Second Active" }] };
+    return { success: true, skipToken: "next", data: [person,
+      { ...person, cr6b0_consultantid: "inactive-employee", cr6b0_employeestatus: false, cr6b0_vactive: true },
+      { ...person, cr6b0_consultantid: "inactive-record", statecode: 1 },
+      { ...person, cr6b0_consultantid: "unknown", cr6b0_employeestatus: null },
+      { ...person, cr6b0_consultantid: "missing", cr6b0_employeestatus: undefined },
+    ] };
+  }, signal());
+  assert.deepEqual(references.people?.map(option => option.id), ["active", "second"]);
+  for (const [, options] of calls.filter(([table]) => table === "people")) {
+    assert.equal(options.filter, "statecode eq 0 and cr6b0_employeestatus eq true");
+    assert.ok(options.select?.includes("cr6b0_employeestatus"));
+    assert.ok(options.select?.includes("statecode"));
+  }
+  assert.equal(initialContributor(references, "active@example.com").contributors.length, 0);
 });
 
 test("linked URL limits preserve complete application links without truncation", () => {

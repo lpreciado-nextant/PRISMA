@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** URL persistence repaired and verified; performance/wrapping fixes implemented. External launch, delivery/playback and non-admin acceptance remain open; no publication sign-off.
+**Status:** URL persistence and active-employee consultant choices verified; external launch, delivery/playback and non-admin acceptance remain open; no publication sign-off.
 **Last updated:** 2026-09-22
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -156,6 +156,8 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+The connected contributor picker uses `statecode eq 0 and cr6b0_employeestatus eq true`, following the user-selected **Employee Status = Active** definition. `cr6b0_vactive` is not the selected rule. Returned records must also have those exact active values before becoming picker options or signed-in defaults. Live verification on 2026-09-22 returned 173 choices instead of 417 generic-active rows. Existing contributors outside that list remain identified as inactive/unavailable until explicitly replaced; historical credit is not erased. This is a picker restriction, not a new backend employment-status authorization rule. No consultant records or backend permissions were changed.
 
 The separate [connected/power.config.json](connected/power.config.json) targets **PRISMA** in the same Nextant Pulse environment, with `appId: null`, local URL `http://localhost:5174`, and its own `connected/dist` output. The [connected entry point](connected/src/ConnectedApp.tsx) is runnable locally but has not been published. Existing PoC commands, app ID, source entry point and persistence remain unchanged.
 
