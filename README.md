@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library
 
-**Status:** Mock PoC preserved; two-field story model adopted; connected review lifecycle and explicit share revocation verified; cross-account and non-admin acceptance remain open.
+**Status:** Mock PoC preserved; two-field story model adopted; connected review lifecycle and explicit share revocation verified; cross-account and non-admin acceptance remain open. Team responsibilities and planned allocations documented.
 **Last updated:** 2026-09-22
 
 An internal marketplace for the PoCs, prototypes, demos, and production solutions Nextant builds across its three Specialization Areas — **AI & Automation**, **Data Solutions**, and **Intelligent Business Operations**.
@@ -52,11 +52,15 @@ The Librarian is the **only** role that can publish. That gate is what makes it 
 
 ## Team
 
-| Name | Role |
-|---|---|
-| **Mauricio Cubillos** | Delivery Manager |
-| **Luis David Preciado** | Developer |
-| **Juliana Castelblanco** | Developer |
+| Name | Role | Planned Allocation | Primary Focus | FY |
+|---|---|---|---|---|
+| **Mauricio Cubillos** | Project Lead / Delivery Manager | 10% | Delivery coordination, architecture oversight, governance, and risk management | 26-27 |
+| **Luis David Preciado** | Application Development Lead | 50% | Power Apps code app development (React + TypeScript), UX and operational workflows, Dataverse integration and server-side plug-ins, media handling, testing, and deployment | 27 |
+| **Juliana Castelblanco** | Data & Automation Lead | 50% | Dataverse architecture and schema, relationships and ownership, business-rule definition, reference-data governance, and planned Power Automate flows and integrations | 27 |
+
+Roles, planned allocations, and fiscal years follow the team allocation plan. Application responsibilities reflect PRISMA's current **Power Apps code app** architecture, rather than the plan's original Model-Driven App wording. Allocations are staffing commitments, not measured effort or commit shares.
+
+Repository history records Luis's work on the [application foundation](https://github.com/lpreciado-nextant/PRISMA/commit/465e142), [server-side plug-ins and review lifecycle](https://github.com/lpreciado-nextant/PRISMA/commit/d027276), and [video transfer and playback](https://github.com/lpreciado-nextant/PRISMA/commit/e0756e7); Juliana's work includes [schema ownership and relationships](https://github.com/lpreciado-nextant/PRISMA/commit/ee0c2ee), [data governance](https://github.com/lpreciado-nextant/PRISMA/commit/3cb52b0), and [live Dataverse logical names and types](https://github.com/lpreciado-nextant/PRISMA/commit/bda021a). Mauricio's responsibilities come from the allocation plan; Power Automate delivery remains planned, not evidenced by these commits.
 
 ---
 
