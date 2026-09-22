@@ -80,7 +80,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
   const totalHours = Math.round(contributions.reduce((total, contributor) => total + contributor.hours, 0) * 100) / 100;
 
   return (
-    <div className="animate-rise mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
+    <div className="animate-rise mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6 [overflow-wrap:anywhere]">
       <button
         type="button"
         onClick={() => onBack ? onBack() : navigate(onEdit ? "/my-submissions" : "/")}

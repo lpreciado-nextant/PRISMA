@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
-import { hasCaptionChanges, parseMedia, saveMediaCaptions, uploadMedia, type MediaApi } from "./media.ts";
+import { hasCaptionChanges, mediaRequest, parseMedia, saveMediaCaptions, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
@@ -367,4 +367,30 @@ test("current contributor defaults only to one exact readable email match", () =
   assert.equal(initialContributor(references, "owner@example.com").contributors[0].personId, draft.areaId);
   assert.equal(initialContributor(references, "unmapped@example.com").contributors.length, 0);
   assert.equal(initialContributor({ ...references, people: [...references.people, ...references.people] }, "owner@example.com").contributors.length, 0);
+});
+
+test("cancelled media requests ignore late acknowledgments", async () => {
+  const controller = new AbortController();
+  let finish!: (value: unknown) => void;
+  const pending = mediaRequest(new Promise(resolve => { finish = resolve; }), controller.signal);
+  controller.abort();
+  await assert.rejects(pending, { name: "AbortError" });
+  finish(result({ id: draft.id, rowVersion: "90071992547409932", sessionId: null, blockSize: 524288, media: [] }));
+});
+
+test("a lost committed save response is not retried or followed by graph writes", async () => {
+  let writes = 0;
+  let graphWrites = 0;
+  let stored = draft;
+  const coreApi: DraftApi = { ...api, save: async json => {
+    writes++;
+    stored = { ...draft, ...JSON.parse(json), rowVersion: "90071992547409932" };
+    throw new Error("Response lost after commit");
+  } };
+  const graphApi: GraphApi = { read: async () => ({}), save: async () => { graphWrites++; return {}; } };
+  await assert.rejects(persistDraftGraph(coreApi, graphApi, { ...draft, summary: "Committed change" }, draft, { ...emptyGraph(), technologyIds: [draft.areaId] }, emptyGraph(), signal(), () => { throw new Error("Unconfirmed checkpoint"); }), /Response lost/);
+  assert.equal(writes, 1);
+  assert.equal(graphWrites, 0);
+  assert.equal(stored.summary, "Committed change");
+  assert.notEqual(stored.rowVersion, draft.rowVersion);
 });

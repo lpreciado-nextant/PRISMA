@@ -13,6 +13,8 @@ let server;
 let cacheDirectory;
 let form;
 let review;
+let viewer;
+let card;
 const noop = () => {};
 const render = (component, props) => renderToStaticMarkup(createElement(component, props));
 
@@ -21,6 +23,8 @@ before(async () => {
   server = await createServer({ configFile: false, root: fileURLToPath(new URL("../", import.meta.url)), cacheDir: cacheDirectory, plugins: [react()], optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: "custom" });
   form = await server.ssrLoadModule("/src/components/SubmissionForm.tsx");
   review = await server.ssrLoadModule("/src/components/ReviewQueue.tsx");
+  viewer = await server.ssrLoadModule("/src/components/ViewerFrame.tsx");
+  card = await server.ssrLoadModule("/src/components/SolutionCard.tsx");
 });
 after(async () => { await server?.close(); if (cacheDirectory) await rm(cacheDirectory, { recursive: true, force: true }); });
 
@@ -118,4 +122,14 @@ test("review summary and success use the baseline presentation", () => {
   assert.match(html, /No client/);
   assert.match(html, /rounded-xl border/);
   assert.match(render(form.SubmissionSuccess, { name: "Example", onSubmissions: noop, onAnother: noop, children: "is pending review." }), /Now it&#x27;s pending review/);
+});
+
+test("cards wrap long solution text and video controls have accessible names", () => {
+  const solution = { id: "fixture", name: "W".repeat(100), summary: "S".repeat(200), specializationArea: "ai", status: "Working prototype", publicationStatus: "Draft", contributors: [], capabilities: [], technologies: [], assets: [] };
+  const html = render(card.SolutionCard, { solution, present: false, index: 0 });
+  assert.match(html, /overflow-wrap:anywhere/);
+  assert.match(html, /tabindex="0"/i);
+  const video = render(viewer.VideoPlayer, { src: "blob:fixture", name: "Acceptance video", className: "h-full w-full" });
+  assert.match(video, /controls=""/);
+  assert.match(video, /aria-label="Acceptance video"/);
 });

@@ -344,6 +344,22 @@ namespace Prisma.Plugins
             return Sessions(service, parent).Select(row => Snapshot(service, row)).OrderBy(item => item.SortOrder).ThenBy(item => item.Id).ToArray();
         }
 
+        public static void VerifyStoredMedia(IOrganizationService service, Entity session)
+        {
+            var kind = session.GetAttributeValue<string>("nx_kind");
+            if (session.GetAttributeValue<string>("nx_mime") == LinkedAssetPolicy.Mime)
+            {
+                if (kind != "attachment" || !session.GetAttributeValue<bool>("nx_complete") || session.GetAttributeValue<int>("nx_bytes") != 0
+                    || session.GetAttributeValue<int>("nx_received") != 0 || session.GetAttributeValue<int>("nx_nextblock") != 0)
+                    throw MediaPolicy.Invalid("Invalid linked asset lifecycle record.");
+                Snapshot(service, session);
+                return;
+            }
+            var target = new EntityReference(MediaPolicy.Table(kind), Guid.Parse(session.GetAttributeValue<string>("nx_targetid")));
+            var download = (InitializeFileBlocksDownloadResponse)service.Execute(new InitializeFileBlocksDownloadRequest { Target = target, FileAttributeName = MediaPolicy.Column(kind) });
+            if (download.FileSizeInBytes != session.GetAttributeValue<int>("nx_bytes")) throw MediaPolicy.Invalid("Stored media changed or is unavailable.");
+        }
+
         public static MediaSnapshot Snapshot(IOrganizationService service, Entity row)
         {
             var kind = row.GetAttributeValue<string>("nx_kind");

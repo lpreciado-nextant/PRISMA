@@ -34,7 +34,7 @@ export function SolutionCard({
 
   return (
     <article
-      className="glass glass-lite glass-sheen lift animate-rise group flex cursor-pointer flex-col overflow-hidden rounded-[22px]"
+      className="glass glass-lite glass-sheen lift animate-rise group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] [overflow-wrap:anywhere]"
       style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}
       onClick={() => onOpen ? onOpen() : navigate(`/s/${solution.id}`)}
       onKeyDown={(e) => {

@@ -222,11 +222,7 @@ namespace Prisma.Plugins
                     foreach (var field in new[] { "nx_specializationarea", "nx_capability" }) RequireActive(caller, parent.GetAttributeValue<EntityReference>(field));
                     foreach (var person in DraftGraph.Read(server, parent).Graph.Contributors) RequireActive(caller, new EntityReference("cr6b0_consultant", Guid.Parse(person.PersonId)));
                     foreach (var item in media)
-                    {
-                        var target = new EntityReference(MediaPolicy.Table(item.GetAttributeValue<string>("nx_kind")), Guid.Parse(item.GetAttributeValue<string>("nx_targetid")));
-                        var download = (InitializeFileBlocksDownloadResponse)server.Execute(new InitializeFileBlocksDownloadRequest { Target = target, FileAttributeName = MediaPolicy.Column(item.GetAttributeValue<string>("nx_kind")) });
-                        if (download.FileSizeInBytes != item.GetAttributeValue<int>("nx_bytes")) throw MediaPolicy.Invalid("Stored media changed or is unavailable.");
-                    }
+                        MediaApi.VerifyStoredMedia(server, item);
                 }
                 PublicationAccess(server, identifier, media, action == "approve");
                 if (action == "delete")

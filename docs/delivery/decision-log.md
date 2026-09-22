@@ -1,6 +1,6 @@
 # Decision log — open questions
 
-**Status:** Living; graph/media/review deployment and empty publication team approved; manual assignments, acceptance and remaining parity open · **Last updated:** 2026-09-22
+**Status:** Living; pilot assignments and privileged functional lifecycle verified; cross-account, least-privilege and remaining acceptance open · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §11](../design/end-to-end-design.md#11-open-questions)
 
 Open questions live here until they resolve. Resolutions with lasting technical consequences become an [ADR](../architecture/decisions/README.md); the rest are recorded inline and reflected in the relevant doc.
@@ -15,13 +15,15 @@ Open questions live here until they resolve. Resolutions with lasting technical 
 | Q6 | Should the demo-request handoff route to the builder directly, or to their practice lead? | _TBD_ | Open | — |
 | Q7 | Is there an existing Nextant one-pager template that the downloadable asset should conform to? | _TBD_ | Open | — |
 | Q8 | Retain live UserOwned reference tables with organization-level read privileges, or migrate to the design's organization-owned model? | Platform owner | Resolved for core-draft scope | User approved retaining existing tables and scoped PRISMA privileges; all ownership types and Consultant/Project schema/data/security preserved. |
-| Q9 | Who provisions roles, profiles and least-privilege identities? | Platform owner + Librarian owner | Assignments deferred to user | User will make assignments. Proposed A/CSM/Librarian accounts currently have System Administrator; B email was not matched. No users were assigned by the agent. Non-admin tests explicitly deferred, not waived. |
-| Q10 | Approve metadata and controlled graph/media/review changes? | Platform owner | Approved and deployed; acceptance pending | Owner core/graph/media and submit/withdraw verified. Review/publication handlers deployed; successful reviewer and least-privilege sharing/revocation tests remain. |
+| Q9 | Who provisions roles, profiles and least-privilege identities? | Platform owner + Librarian owner | Approved pilot additions applied; least-privilege tests open | User approved the exact additive account mapping; eight role/profile/team additions were applied transactionally and verified. Michael exists and retains his preexisting Contributor role. Juliana/Luis/Mauricio retain System Administrator; these cannot establish least-privilege acceptance. See [assignment inventory](../architecture/security-model.md#approved-pilot-assignments). |
+| Q10 | Approve metadata and controlled graph/media/review changes? | Platform owner | Approved and deployed; functional lifecycle verified | Submit/return/revise/resubmit/approve/withdraw and explicit share grant/revocation passed with a privileged owner/Librarian. User approved the linked-asset submit/approval fix. Cross-account and effective non-admin access/denial tests remain. |
 | Q11 | What is the production deletion policy and cleanup behavior for published/owned solutions? | Product + Platform owner | Open | PoC permits owner deletion in any state; live child links use RemoveLink on delete and NoCascade on share/assign. Do not inherit the local simulation as production policy. |
 | Q12 | Private upload sessions and non-member media owner team? | Platform owner | Approved and deployed | One organization-owned protocol table and empty Media Custodian owner team; server-held tokens and read-only contributor media. ADR-0009. |
-| Q13 | Publication audience? | Platform owner | Approved; membership manual | Empty PRISMA Published Readers team with CSM read role; explicit read shares on approval and revocation on withdrawal/retirement. No members added. |
+| Q13 | Publication audience? | Platform owner | Approved pilot membership applied | PRISMA Published Readers has the CSM read role; Mauricio was added with explicit user approval. Approval grants row shares and withdrawal/retirement revokes them, but his retained System Administrator access prevents a least-privilege revocation test. Media Custodian remains empty. |
 
 ## Resolved
+
+2026-09-22: user approved the proposed additive assignments for Juliana (Contributor A), Michael (Contributor B), Luis (Librarian), and Mauricio (CSM/Published Readers). Applied and verified without removing existing privileges, changing role/profile definitions or publishing either app. Subsequent user-approved testing verified the positive review lifecycle and explicit parent/child reader-share revocation; [evidence and limitations](../workflows/contribution-and-review.md#verified-lifecycle). Effective non-admin and separate-identity acceptance remain open.
 
 2026-09-21: preserve the existing live **PRISMA PoC** app as the mock UI test environment. Create a separate backend-connected **PRISMA** app in Nextant Pulse. Full read/write, media and authorized review must pass verification before publication; no read-only first release. See the [integration plan](../architecture/technical-architecture.md#connected-app-integration-plan).
 

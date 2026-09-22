@@ -3,7 +3,7 @@ import { AREAS } from "../data/catalogueMetadata";
 import { Icon } from "../components/Icon";
 import { demoSrcDoc } from "../lib/demoDoc";
 import { navigate } from "../lib/router";
-import { ViewerFrame } from "../components/ViewerFrame";
+import { VideoPlayer, ViewerFrame } from "../components/ViewerFrame";
 
 export function ViewerView({
   solution,
@@ -48,7 +48,7 @@ function Stage({ solution, asset }: { solution: Solution; asset: DemoAsset }) {
   }
 
   if (asset.assetType === "Video walkthrough only") {
-    if (asset.fileData) return <video controls className="h-full w-full" src={asset.fileData} aria-label={asset.name} />;
+    if (asset.fileData) return <VideoPlayer key={asset.fileData} className="h-full w-full" src={asset.fileData} name={asset.name} />;
     return <VideoStage name={solution.name} />;
   }
 

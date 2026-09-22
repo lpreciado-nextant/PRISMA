@@ -1,6 +1,6 @@
 # Risk register
 
-**Status:** Living, safety controls updated · **Last updated:** 2026-09-21
+**Status:** Living; single-account acceptance exposed URL persistence and browser delivery/playback blockers · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §10](../design/end-to-end-design.md#10-risks)
 
 | # | Risk | Impact | Mitigation | Owner | Status |
@@ -11,6 +11,8 @@
 | R4 | **Librarian becomes a bottleneck** | Contributions queue up and stall | More than one librarian; SLA on review; auto-approve path for minor edits | _TBD_ | Open |
 | R5 | **Stale content presented as current** | Undermines G3 | `Date Added` surfaced on cards; retirement workflow; annual re-confirmation prompt to the contributor | _TBD_ | Open |
 | R6 | **Self-contained HTML assets carry active content** | Security exposure via embedded demo files | Sandboxed iframe with restrictive policy; librarian review of uploaded files; no same-origin access to the host app | _TBD_ | Open |
+| R7 | **Real application URLs fail storage despite compatible metadata** | Connected Power Apps/BI assets may fail to save | The 163-character approved MyPortal URL reproducibly returns Dataverse `0x80090429` on `nx_ExternalURL`; published/editable metadata both report 4000. Diagnose physical/metadata consistency with the platform owner; do not truncate URLs or silently change schema. | Platform owner | Reproduced 2026-09-22; unresolved |
+| R8 | **Browser acceptance cannot prove delivery/playback** | Successful byte reads could be mistaken for usable demos | PDF/PPTX/video round trips are checksum-exact, but integrated browser exposes no download event and fails WebM demuxing even on a direct reference source. Verify downloaded files and playback in a supported external browser. Error/download fallback added; no success claim for delivery. | App owner | Open |
 
 ## Process
 

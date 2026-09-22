@@ -10,6 +10,74 @@ namespace Prisma.Plugins.Tests
         private static string Input(string extra = "") { return "{\"name\":\"Named draft\",\"areaId\":\"" + Area + "\"" + extra + "}"; }
 
         [Fact]
+        public void RetirementRequiresLibrarianAndRestorationRequiresFreshSubmission()
+        {
+            var owner = Guid.NewGuid();
+            var parent = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "100", ["ownerid"] = new EntityReference("systemuser", owner), ["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published) };
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, false, "100", "retire", "", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "99", "retire", "", false));
+            var retired = ReviewPolicy.Change(parent, owner, true, "100", "retire", "", false);
+            Assert.Equal(ReviewPolicy.Retired, retired.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value);
+            Assert.False(retired.GetAttributeValue<bool>("nx_clientsafereviewed"));
+            parent["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Retired);
+            parent.RowVersion = "101";
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "101", "approve", "", true));
+            var withdrawn = ReviewPolicy.Change(parent, owner, false, "101", "withdraw", "", false);
+            Assert.Equal(DraftPolicy.DraftStatus, withdrawn.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value);
+            Assert.False(withdrawn.GetAttributeValue<bool>("nx_safetyacknowledged"));
+            parent["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus);
+            parent.RowVersion = "102";
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "102", "approve", "", true));
+            Assert.Equal(ReviewPolicy.Pending, ReviewPolicy.Change(parent, owner, false, "102", "submit", "", false).GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value);
+        }
+
+        [Fact]
+        public void ReviewValidatesLinkedMetadataWithoutDownloadingAndStillChecksFiles()
+        {
+            var service = new StoredMediaService();
+            var session = new Entity("nx_uploadsession", Guid.NewGuid()) {
+                ["nx_targetid"] = Area, ["nx_kind"] = "attachment", ["nx_filename"] = "Linked demo",
+                ["nx_mime"] = LinkedAssetPolicy.Mime, ["nx_complete"] = true, ["nx_bytes"] = 0, ["nx_received"] = 0, ["nx_nextblock"] = 0
+            };
+            MediaApi.VerifyStoredMedia(service, session);
+            Assert.Equal(0, service.Downloads);
+            service.Url = "javascript:alert(1)";
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaApi.VerifyStoredMedia(service, session));
+            service.Url = "https://example.com/";
+            session["nx_bytes"] = 10;
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaApi.VerifyStoredMedia(service, session));
+            session["nx_mime"] = "text/html";
+            MediaApi.VerifyStoredMedia(service, session);
+            Assert.Equal(1, service.Downloads);
+            session["nx_bytes"] = 11;
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaApi.VerifyStoredMedia(service, session));
+            Assert.Equal(2, service.Downloads);
+        }
+
+        private sealed class StoredMediaService : IOrganizationService
+        {
+            public int Downloads { get; private set; }
+            public string Url { get; set; } = "https://example.com/";
+            public Entity Retrieve(string entityName, Guid id, Microsoft.Xrm.Sdk.Query.ColumnSet columns)
+            {
+                Assert.Equal("nx_demoasset", entityName);
+                return new Entity(entityName, id) { ["nx_assettype"] = new OptionSetValue(125060007), ["nx_externalurl"] = Url, ["nx_allowsembedding"] = false, ["nx_embedhint"] = "", ["nx_sortorder"] = 1 };
+            }
+            public OrganizationResponse Execute(OrganizationRequest request)
+            {
+                Assert.IsType<Microsoft.Crm.Sdk.Messages.InitializeFileBlocksDownloadRequest>(request);
+                Downloads++;
+                return new Microsoft.Crm.Sdk.Messages.InitializeFileBlocksDownloadResponse { Results = new ParameterCollection { ["FileSizeInBytes"] = 10L } };
+            }
+            public Guid Create(Entity entity) { throw new NotSupportedException(); }
+            public void Update(Entity entity) { throw new NotSupportedException(); }
+            public void Delete(string entityName, Guid id) { throw new NotSupportedException(); }
+            public EntityCollection RetrieveMultiple(Microsoft.Xrm.Sdk.Query.QueryBase query) { throw new NotSupportedException(); }
+            public void Associate(string entityName, Guid id, Relationship relationship, EntityReferenceCollection relatedEntities) { throw new NotSupportedException(); }
+            public void Disassociate(string entityName, Guid id, Relationship relationship, EntityReferenceCollection relatedEntities) { throw new NotSupportedException(); }
+        }
+
+        [Fact]
         public void LinkedAssetsValidateUrlsTypesAndOwnedDraftTransitions()
         {
             var json = "{\"name\":\"Demo\",\"assetType\":\"Hosted web app (URL)\",\"externalUrl\":\"https://example.com/demo\",\"allowsEmbedding\":true,\"embedHint\":\"\"}";

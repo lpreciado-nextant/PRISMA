@@ -1,0 +1,40 @@
+import { createRequire } from "node:module";
+import { resolve, join } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+
+const [tools, output] = process.argv.slice(2);
+if (!tools || !output) throw new Error("Usage: node scripts/generate-acceptance-fixtures.mjs <temporary-tools-directory> <output-directory>");
+const require = createRequire(join(resolve(tools), "package.json"));
+const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
+const PptxGenJS = require("pptxgenjs");
+const directory = resolve(output);
+await mkdir(directory, { recursive: true });
+const pdf = await PDFDocument.create();
+const font = await pdf.embedFont(StandardFonts.Helvetica);
+const page = pdf.addPage([640, 360]);
+page.drawText("PRISMA acceptance fixture", { x: 35, y: 285, size: 26, font, color: rgb(0.11, 0.34, 0.49) });
+page.drawText("Invented data. No client information. Safe to delete.", { x: 35, y: 240, size: 16, font });
+await writeFile(join(directory, "acceptance.pdf"), await pdf.save());
+const presentation = new PptxGenJS();
+presentation.layout = "LAYOUT_WIDE";
+presentation.author = "PRISMA acceptance test";
+presentation.subject = "Disposable non-sensitive verification";
+presentation.title = "PRISMA acceptance fixture";
+const slide = presentation.addSlide();
+slide.background = { color: "EEF4F7" };
+slide.addText("PRISMA acceptance fixture", { x: 0.6, y: 0.7, w: 12, h: 0.8, fontSize: 28, color: "1C567C" });
+slide.addText("Invented data. No client information. Safe to delete.", { x: 0.6, y: 1.8, w: 12, h: 1, fontSize: 18 });
+await presentation.writeFile({ fileName: join(directory, "acceptance.pptx") });
+const files = [];
+for (const name of ["acceptance.pdf", "acceptance.pptx"]) {
+  const bytes = await readFile(join(directory, name));
+  files.push({ name, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
+}
+const reopened = await PDFDocument.load(await readFile(join(directory, "acceptance.pdf")));
+if (reopened.getPageCount() !== 1) throw new Error("Generated PDF is invalid.");
+const JSZip = require("jszip");
+const archive = await JSZip.loadAsync(await readFile(join(directory, "acceptance.pptx")));
+if (!archive.file("ppt/slides/slide1.xml") || !archive.file("[Content_Types].xml")) throw new Error("Generated PowerPoint is invalid.");
+await writeFile(join(directory, "manifest.json"), JSON.stringify(files, null, 2));
+console.log(JSON.stringify({ directory, files }, null, 2));

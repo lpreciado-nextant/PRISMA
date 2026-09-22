@@ -89,8 +89,10 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
   const areaMap = new Map(areas.map(row => [id(row, "nx_specializationareaid"), text(row, "nx_specializationareaname", true)]));
   const capabilityMap = new Map(capabilities.map(row => [id(row, "nx_capabilityid"), text(row, "nx_capabilityname", true)]));
   const catalogue: Solution[] = [];
-  for (const row of solutions) {
-    signal.throwIfAborted();
+  const controller = new AbortController();
+  const activeSignal = AbortSignal.any([signal, controller.signal]);
+  const hydrate = async (row: object): Promise<Solution> => {
+    activeSignal.throwIfAborted();
     if (value(row, "nx_publicationstatus") !== PUBLISHED) throw new Error("Dataverse returned a record outside the published catalogue.");
     const acknowledged = flag(row, "nx_safetyacknowledged");
     const cleared = flag(row, "nx_clientsafereviewed");
@@ -103,22 +105,22 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
     const maturityValue = value(row, "nx_status");
     const status = typeof maturityValue === "number" ? MATURITY[maturityValue] : undefined;
     if (!status) throw new Error("A solution has an unsupported maturity choice.");
-    const [technologies, industries] = await Promise.all([
+    const [technologies, industries, contributorNames] = await Promise.all([
       readAll(read, "technologies", {
         select: ["nx_technologyid", "nx_technologyname"],
         filter: `nx_Solution_nx_Technology_nx_Technology/any(solution:solution/nx_solutionid eq ${solutionId})`,
         orderBy: ["nx_technologyid asc"],
-      }, signal),
+      }, activeSignal),
       readAll(read, "industries", {
         select: ["nx_industryid", "nx_industryname"],
         filter: `nx_Solution_nx_Industry_nx_Industry/any(solution:solution/nx_solutionid eq ${solutionId})`,
         orderBy: ["nx_industryid asc"],
-      }, signal),
+      }, activeSignal),
+      readCredits?.(solutionId, present, activeSignal),
     ]);
-    const contributorNames = readCredits ? await readCredits(solutionId, present, signal) : undefined;
-    signal.throwIfAborted();
+    activeSignal.throwIfAborted();
     if (contributorNames && contributorNames.some(name => typeof name !== "string" || !name.trim())) throw new Error("Invalid contributor search projection.");
-    catalogue.push({
+    return {
       id: solutionId,
       name: text(row, "nx_solutionname", true),
       summary: text(row, "nx_onelinesummary", true),
@@ -140,7 +142,16 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       contributors: [],
       ...(contributorNames ? { contributorNames } : {}),
       assets: [],
-    });
+    };
+  };
+  try {
+    for (let offset = 0; offset < solutions.length; offset += 4) {
+      activeSignal.throwIfAborted();
+      catalogue.push(...await Promise.all(solutions.slice(offset, offset + 4).map(hydrate)));
+    }
+    return catalogue;
+  } catch (error) {
+    controller.abort();
+    throw error;
   }
-  return catalogue;
 }

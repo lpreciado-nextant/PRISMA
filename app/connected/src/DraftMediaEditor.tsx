@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
-import { ViewerFrame } from "../../src/components/ViewerFrame";
+import { VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
 import { ProtectedImage } from "./ProtectedImage";
 import { ImageUploadZone, SubmissionMedia } from "../../src/components/SubmissionForm";
 import type { AssetType } from "../../src/types";
@@ -171,7 +171,7 @@ export function MediaPreview({ item, onClose, viewerTitle }: { item: MediaItem; 
   const stage = error ? <p role="alert" className="p-6">Media could not be downloaded.</p> : !content ? <p role="status" className="p-6">Loading preview...</p>
     : item.kind !== "attachment" ? <img src={content.url} alt={item.caption || item.name} className={viewerTitle ? "h-full w-full object-contain" : "max-h-[65vh] w-full object-contain"} />
     : content.html !== undefined ? <iframe title={item.name} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={content.html} className={`${viewerTitle ? "h-full" : "h-[65vh]"} w-full border-0 bg-white`} />
-    : item.mime.startsWith("video/") ? <video controls src={content.url} className={viewerTitle ? "h-full w-full" : "max-h-[65vh] w-full"} />
+    : item.mime.startsWith("video/") ? <VideoPlayer key={content.url} src={content.url} name={item.name} className={viewerTitle ? "h-full w-full" : "max-h-[65vh] w-full"} />
     : <div className="grid h-full place-items-center p-6 text-center"><a className={button} href={content.url} download={item.name}><Icon name="download" /><span className="break-all">{item.name}</span></a></div>;
   if (viewerTitle) return <ViewerFrame name={viewerTitle} kind={item.kind === "attachment" ? mediaAsset(item, 0).assetType : "Screenshot"} onClose={onClose} actions={content && <a className={button} href={content.url} download={item.name} aria-label={`Download ${item.name}`} title="Download"><Icon name="download" /></a>}>{stage}</ViewerFrame>;
   return <div className="mt-6 border-t border-(--glass-edge) pt-5">

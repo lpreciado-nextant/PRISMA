@@ -11,18 +11,105 @@ const string organizationUrl = "https://nextantpulse.crm.dynamics.com";
 const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
-if (!new[] { "inspect", "apply", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Use inspect, apply, smoke, smoke-graph, smoke-media, smoke-review or smoke-delete.");
+if (!new[] { "inspect", "inspect-asset-columns", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Use inspect, inspect-asset-columns, apply, assign-acceptance, smoke, smoke-graph, smoke-media, smoke-review or smoke-delete.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "inspect-asset-columns")
+{
+    foreach (var name in new[] { "nx_demoassetid1", "nx_externalurl", "nx_embedhint" })
+    {
+        foreach (var editable in new[] { false, true })
+        {
+            var attribute = ((RetrieveAttributeResponse)client.Execute(new RetrieveAttributeRequest { EntityLogicalName = "nx_demoasset", LogicalName = name, RetrieveAsIfPublished = editable })).AttributeMetadata;
+            Console.WriteLine($"nx_demoasset.{name}: editable={editable}; type={attribute.AttributeType}; maxLength={(attribute as StringAttributeMetadata)?.MaxLength ?? (attribute as MemoAttributeMetadata)?.MaxLength}; managed={attribute.IsManaged}");
+        }
+    }
+    return;
+}
+if (command == "assign-acceptance") { AssignAcceptance(client, args.Skip(1).ToArray()); return; }
 if (command == "smoke") { Smoke(client); return; }
 if (command == "smoke-graph") { SmokeGraph(client); return; }
 if (command == "smoke-media") { SmokeMedia(client); return; }
 if (command == "smoke-review") { SmokeReview(client); return; }
 if (command == "smoke-delete") { SmokeDelete(client); return; }
+
+static void AssignAcceptance(IOrganizationService service, string[] options)
+{
+    if (options.Length > 1 || (options.Length == 1 && options[0] != "--execute")) throw new ArgumentException("Use assign-acceptance [--execute]. Without --execute this is read-only.");
+    var execute = options.Length == 1;
+    var approved = new[] {
+        (Email: "jcastelblanco@nextant.com", Role: "PRISMA Contributor", Profile: "PRISMA Contributor", Reader: false),
+        (Email: "mparry@nextant.com", Role: "PRISMA Contributor", Profile: "PRISMA Contributor", Reader: false),
+        (Email: "lpreciado@nextant.com", Role: "PRISMA Librarian", Profile: "PRISMA Core Draft Librarian", Reader: false),
+        (Email: "mcubillos@nextant.com", Role: "PRISMA CSM", Profile: "PRISMA CSM", Reader: true),
+    };
+    Entity Unique(string table, string column, string value, ColumnSet columns, Guid? unit = null)
+    {
+        var query = new QueryExpression(table) { ColumnSet = columns, TopCount = 2 };
+        query.Criteria.AddCondition(column, ConditionOperator.Equal, value);
+        if (unit.HasValue) query.Criteria.AddCondition("businessunitid", ConditionOperator.Equal, unit.Value);
+        var rows = service.RetrieveMultiple(query).Entities;
+        if (rows.Count != 1) throw new InvalidOperationException($"Expected one {table} matching {value}; found {rows.Count}. No assignments applied.");
+        return rows[0];
+    }
+    ManyToManyRelationshipMetadata RelationshipMetadata(string schema, string target)
+    {
+        var response = (RetrieveRelationshipResponse)service.Execute(new RetrieveRelationshipRequest { Name = schema });
+        if (response.RelationshipMetadata is not ManyToManyRelationshipMetadata relationship
+            || !((relationship.Entity1LogicalName == "systemuser" && relationship.Entity2LogicalName == target)
+                || (relationship.Entity2LogicalName == "systemuser" && relationship.Entity1LogicalName == target)))
+            throw new InvalidOperationException($"Unexpected relationship {schema}.");
+        return relationship;
+    }
+    HashSet<Guid> Members(Guid user, ManyToManyRelationshipMetadata relationship)
+    {
+        var userColumn = relationship.Entity1LogicalName == "systemuser" ? relationship.Entity1IntersectAttribute : relationship.Entity2IntersectAttribute;
+        var targetColumn = relationship.Entity1LogicalName == "systemuser" ? relationship.Entity2IntersectAttribute : relationship.Entity1IntersectAttribute;
+        var query = new QueryExpression(relationship.IntersectEntityName) { ColumnSet = new ColumnSet(targetColumn) };
+        query.Criteria.AddCondition(userColumn, ConditionOperator.Equal, user);
+        return service.RetrieveMultiple(query).Entities.Select(row => row.GetAttributeValue<Guid>(targetColumn)).ToHashSet();
+    }
+    var roles = RelationshipMetadata("systemuserroles_association", "role");
+    var profiles = RelationshipMetadata("systemuserprofiles_association", "fieldsecurityprofile");
+    var teams = RelationshipMetadata("teammembership_association", "team");
+    var readers = Unique("team", "name", "PRISMA Published Readers", new ColumnSet("teamtype"));
+    if (readers.GetAttributeValue<OptionSetValue>("teamtype")?.Value != 0) throw new InvalidOperationException("Published Readers must be the existing owner team.");
+    var requests = new OrganizationRequestCollection();
+    var checks = new List<(Guid User, string Email, ManyToManyRelationshipMetadata Relationship, HashSet<Guid> Before, Guid Required)>();
+    void Plan(Entity user, string email, Entity target, ManyToManyRelationshipMetadata relationship, string label)
+    {
+        var before = Members(user.Id, relationship);
+        checks.Add((user.Id, email, relationship, before, target.Id));
+        if (before.Contains(target.Id)) { Console.WriteLine($"Already assigned: {email} -> {label}"); return; }
+        Console.WriteLine($"ADD: {email} -> {label}");
+        if (target.LogicalName == "team") requests.Add(new AddMembersTeamRequest { TeamId = target.Id, MemberIds = new[] { user.Id } });
+        else requests.Add(new AssociateRequest { Target = user.ToEntityReference(), Relationship = new Relationship(relationship.SchemaName), RelatedEntities = new EntityReferenceCollection { target.ToEntityReference() } });
+    }
+    foreach (var assignment in approved)
+    {
+        var user = Unique("systemuser", "domainname", assignment.Email, new ColumnSet("fullname", "isdisabled", "businessunitid"));
+        if (user.GetAttributeValue<bool>("isdisabled")) throw new InvalidOperationException($"Account {assignment.Email} is disabled.");
+        var unit = user.GetAttributeValue<EntityReference>("businessunitid")?.Id ?? throw new InvalidOperationException("User business unit missing.");
+        var role = Unique("role", "name", assignment.Role, new ColumnSet("name"), unit);
+        var profile = Unique("fieldsecurityprofile", "name", assignment.Profile, new ColumnSet("name"));
+        Plan(user, assignment.Email, role, roles, $"role {assignment.Role}");
+        Plan(user, assignment.Email, profile, profiles, $"profile {assignment.Profile}");
+        if (assignment.Reader) Plan(user, assignment.Email, readers, teams, "team PRISMA Published Readers");
+    }
+    Console.WriteLine($"{requests.Count} additive associations planned; existing roles/profiles/memberships will not be removed.");
+    if (!execute) { Console.WriteLine("Preview only. Use --execute only after approval of these exact assignments."); return; }
+    if (requests.Count > 0) service.Execute(new ExecuteTransactionRequest { Requests = requests, ReturnResponses = false });
+    foreach (var check in checks)
+    {
+        var after = Members(check.User, check.Relationship);
+        if (!after.Contains(check.Required) || !check.Before.IsSubsetOf(after)) throw new InvalidOperationException($"Assignment verification failed for {check.Email}: {check.Relationship.SchemaName}.");
+    }
+    Console.WriteLine("Verified all approved assignments and preservation of every preexisting association in the checked relationships. No role definitions, schema or app publication changed.");
+}
 
 var existingAssembly = Find(client, "pluginassembly", "name", "Prisma.Plugins");
 var solutionMetadata = Metadata(client, "nx_solution");

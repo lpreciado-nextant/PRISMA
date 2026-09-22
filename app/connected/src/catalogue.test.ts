@@ -97,3 +97,43 @@ test("authorized contributor names are searchable and late credits are discarded
   const controller = new AbortController();
   await assert.rejects(loadCatalogue(reader(), false, controller.signal, async () => { controller.abort(); return ["Late Builder"]; }), { name: "AbortError" });
 });
+
+test("catalogue hydration is bounded and preserves source order", async () => {
+  const rows = Array.from({ length: 12 }, (_, index) => ({ ...record, nx_solutionid: `11111111-1111-1111-1111-${String(index + 1).padStart(12, "0")}`, nx_solutionname: `Fixture ${index}` }));
+  const base = reader();
+  let active = 0;
+  let maximum = 0;
+  const read: ReadRows = async (table, options) => {
+    if (table === "solutions") return { success: true, data: rows };
+    if (table !== "technologies" && table !== "industries") return base(table, options);
+    active++; maximum = Math.max(maximum, active);
+    await new Promise(resolve => setImmediate(resolve));
+    active--;
+    return base(table, options);
+  };
+  const result = await loadCatalogue(read, false, signal(), async () => {
+    active++; maximum = Math.max(maximum, active);
+    await new Promise(resolve => setImmediate(resolve));
+    active--;
+    return ["Builder"];
+  });
+  assert.equal(maximum, 12);
+  assert.equal(active, 0);
+  assert.deepEqual(result.map(item => item.id), rows.map(row => row.nx_solutionid));
+});
+
+test("a failed hydration batch cancels siblings and never starts the next batch", async () => {
+  const rows = Array.from({ length: 8 }, (_, index) => ({ ...record, nx_solutionid: `11111111-1111-1111-1111-${String(index + 1).padStart(12, "0")}` }));
+  const base = reader();
+  const seen: string[] = [];
+  let batchSignal: AbortSignal | undefined;
+  await assert.rejects(loadCatalogue(async (table, options) => table === "solutions" ? { success: true, data: rows } : base(table, options), true, signal(), async (id, _present, currentSignal) => {
+    seen.push(id); batchSignal = currentSignal;
+    if (id === rows[0].nx_solutionid) throw new Error("Credit access denied");
+    await new Promise(resolve => setImmediate(resolve));
+    currentSignal.throwIfAborted();
+    return ["Builder"];
+  }), /Credit access denied/);
+  assert.equal(seen.length, 4);
+  assert.equal(batchSignal?.aborted, true);
+});

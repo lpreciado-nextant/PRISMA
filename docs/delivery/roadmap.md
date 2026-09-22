@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Living; connected graph/media/owner transitions verified; librarian, least-privilege and hosted publication gates pending · **Last updated:** 2026-09-22
+**Status:** Living; retirement/concurrency and small-catalogue performance tested; real URL, delivery/playback, cross-account and hosted gates pending · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §9](../design/end-to-end-design.md#9-delivery-phases)
 
 Phases 2 and 3 justify the project to a CSM; phase 4 keeps it alive. Neither can be dropped.
@@ -8,14 +8,14 @@ Phases 2 and 3 justify the project to a CSM; phase 4 keeps it alive. Neither can
 | Phase | Scope | Proves | Status |
 |---|---|---|---|
 | **1 — Foundation** | Dataverse schema incl. §6 deltas, security roles, reference data seeded, librarian-only bulk entry of the initial known solutions | G2 is achievable before any CSM sees the app | Tables exist; reference data partially seeded; schema/security gaps open |
-| **2 — Discovery** | Card grid, search, facets, connected detail/gallery/viewer | G1 | Implemented; populated published and non-admin acceptance pending |
-| **3 — Present mode** | Server-restricted eligible catalogue and projection | G3 safety | Implemented; successful published/present smoke and non-admin permissions pending |
-| **4 — Contribution** | Draft graph, media, submission and review | G2 at scale | Owner persistence/submit/withdraw verified; successful librarian return/approval and remaining UI parity pending; notifications absent |
+| **2 — Discovery** | Card grid, search, facets, connected detail/gallery/viewer | G1 | Twelve-record benchmark improved to 1.52s data load/1.94s UI; larger-scale and non-admin acceptance pending |
+| **3 — Present mode** | Server-restricted eligible catalogue and projection | G3 safety | Published present-mode redaction passed; non-admin permissions and hosted acceptance pending |
+| **4 — Contribution** | Draft graph, media, submission and review | G2 at scale | Privileged lifecycle, retirement/restoration, two-tab conflicts and upload recovery passed; real-URL truncation and cross-account/non-admin acceptance unresolved; notifications absent |
 | **5 — Handoff** | Demo requests, contributor dashboards, one-pager downloads | G3/G4 | Not started |
 
 ## Current state
 
-- **Power Platform solution:** PAC verified `PRISMA_Dev` in **Nextant Pulse**, unmanaged `1.0.0.1`, publisher `nx`; 11 exported table definitions and the existing PRISMA PoC app. The approved core-draft deployment added two APIs, synchronous guards and unassigned roles/profiles. Three labelled test drafts now exist; published catalogue remains empty. See the [inventory and deployed scope](../architecture/technical-architecture.md#deployed-core-draft-backend).
+- **Power Platform solution:** PAC verified `PRISMA_Dev` in **Nextant Pulse**, with controlled APIs, synchronous guards and user-approved pilot role/profile/readers assignments. The disposable published lifecycle fixture was withdrawn and deleted; three original drafts remain and the published catalogue is empty again. See the [inventory and deployed scope](../architecture/technical-architecture.md#deployed-core-draft-backend) and [lifecycle evidence](../workflows/contribution-and-review.md#verified-lifecycle).
 - **Look-and-feel PoC** implemented in [`app/`](../../app/README.md) — the visual and interaction reference for phases 2–4. Mock in-memory data shaped like the Dataverse schema.
 - **Connected app:** separate PRISMA target; preserve the live PoC as UI testing. Full read/write and backend authorization must work before publishing the new app. Execute the [integration plan](../architecture/technical-architecture.md#connected-app-integration-plan); resolve [platform decisions](decision-log.md) before changing shared security/schema.
 - Design doc and schema spec drafted for review.

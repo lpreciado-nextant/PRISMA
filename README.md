@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library
 
-**Status:** Mock PoC preserved; separate connected graph/media/review backend deployed; owner workflow verified; non-admin and librarian acceptance block connected publication.
+**Status:** Mock PoC preserved; connected review lifecycle and explicit share revocation verified; cross-account, non-admin and hosted acceptance block connected publication.
 **Last updated:** 2026-09-22
 
 An internal marketplace for the PoCs, prototypes, demos, and production solutions Nextant builds across its three Specialization Areas — **AI & Automation**, **Data Solutions**, and **Intelligent Business Operations**.
@@ -15,7 +15,7 @@ The deployed app uses mock data, with no Dataverse persistence. Build and upload
 
 The Power Platform solution **`PRISMA_Dev`** exists in **Nextant Pulse** (environment ID: `ce09ad9b-57d1-e5df-9400-8ce973c86213`, not Nextant Pulse Prod). This is distinct from the published code app named **PRISMA PoC**; see [environment and solution context](docs/architecture/technical-architecture.md#environment-and-solution).
 
-The separate connected target implements caller-owned drafts, contributors/tags/projects, protected gallery/attachment uploads, submission/review and published detail/viewer routes, using the server-side 2020-2035 US calendar. Owner persistence and submit/withdraw are verified; successful librarian and least-privilege tests remain open. No connected app was published and no users were assigned. See [connected setup and release gates](app/README.md#connected-prisma-target). The mock PoC remains separate.
+The separate connected target implements caller-owned drafts, contributors/tags/projects, protected uploads and linked assets, submission/review and published detail/viewer routes. Approved pilot assignments are in place. A privileged owner/Librarian verified submit, return, resubmit, approval, published presentation and withdrawal, including explicit reader-share revocation. Cross-account and effective non-admin access still require testing. No connected app was published. See [connected setup and release gates](app/README.md#connected-prisma-target). The mock PoC remains separate.
 
 The sections below describe the target product, not the current PoC's implemented capabilities.
 

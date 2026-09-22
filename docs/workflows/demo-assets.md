@@ -1,6 +1,6 @@
 # Demo assets
 
-**Status:** Connected uploads and linked-asset create/edit/preview verified with privileged owner; external-launch and least-privilege acceptance pending · **Last updated:** 2026-09-22
+**Status:** Connected files/links passed privileged review/publication/withdrawal; external-launch and effective non-admin acceptance pending · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
@@ -37,7 +37,7 @@ Choose a linked format to add an asset name, URL and optional access note; hoste
 
 Hosted previews use an opaque sandbox (`allow-scripts allow-forms allow-popups`, no same-origin) and a pop-out fallback. Embedding is subject to the destination's CSP, framing policy and authentication requirements. Power Apps/BI open externally with `noopener,noreferrer`. Desktop arrangements are informational, not request delivery.
 
-HTML and PNG upload/download/removal passed live; browser HTML sandbox blocks host-document access and network capabilities, and full-size image download preserves 640x360 rather than the native thumbnail. Native SDK reads enforce caller access. Object URLs are revoked on unmount. Published detail/gallery/viewer is implemented but awaits successful librarian publication and non-admin acceptance. Original PoC behavior and limits above are unchanged.
+HTML and PNG upload/download/removal passed live; browser HTML sandbox blocks host-document access and network capabilities, and full-size image download preserves 640x360 rather than the native thumbnail. Native SDK reads enforce caller access. Object URLs are revoked on unmount. The [privileged lifecycle test](contribution-and-review.md#verified-lifecycle) passed publication, published detail/HTML viewer and withdrawal of uploaded and linked assets. Submit/approve validate link fields without file download, while uploaded assets retain byte-size verification. Reader-team share masks on all test media changed from Read to zero on withdrawal. Effective non-admin access and revocation denial remain unverified. Original PoC behavior and limits above are unchanged.
 
 Linked-asset live checks on 2026-09-22 covered all four types, hosted edit, reopen, sandbox preview, desktop guidance, server unsafe/stale rejection, removal and cleanup. External-link attributes were checked; the integrated browser did not expose a popup event, so actual signed-in Power Apps/BI launch is still an acceptance item. Linked publication/revocation and non-admin reads remain unverified.
 

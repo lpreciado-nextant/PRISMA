@@ -1,5 +1,11 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
+
+export function VideoPlayer({ src, name, className }: { src: string; name: string; className: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <div role="alert" className="grid h-full min-h-48 place-items-center p-6 text-center"><div><p className="text-[16px] font-semibold">Video could not be played in this browser.</p><a href={src} download={name} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px]"><Icon name="download" />Download video</a></div></div>;
+  return <video controls src={src} aria-label={name} className={className} onError={() => setFailed(true)} />;
+}
 
 export function ViewerFrame({ name, kind, onClose, externalUrl, hint, actions, children }: { name: string; kind?: string; onClose: () => void; externalUrl?: string; hint?: string; actions?: ReactNode; children: ReactNode }) {
   useEffect(() => {

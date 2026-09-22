@@ -1,6 +1,6 @@
 # Accessibility
 
-**Status:** Living · **Last updated:** 2026-09-17
+**Status:** Partial automated and keyboard/mobile checks completed; manual contrast and screen-reader acceptance pending · **Last updated:** 2026-09-22
 
 PRISMA targets **WCAG 2.1 AA**. This was partially implemented in the HTML prototype and must not regress ("accessible by default", design principle 6).
 
@@ -22,9 +22,13 @@ PRISMA targets **WCAG 2.1 AA**. This was partially implemented in the HTML proto
 - [ ] Full keyboard pass of the hero flow
 - [ ] Screen-reader pass (NVDA) of library, detail, submit
 - [ ] Contrast audit of both themes after any token change
-- [ ] `prefers-reduced-motion` smoke test
+- [x] `prefers-reduced-motion` smoke test (2026-09-22 browser emulation)
 - [ ] Focus-visible audit on glass surfaces
 
 ## Known gaps
 
-_Track gaps here as they are found; none logged yet._
+The 2026-09-22 [acceptance pass](../workflows/contribution-and-review.md#eight-area-acceptance-pass) found no axe-core WCAG A/AA violations in light/dark library and identity form, but contrast on glass surfaces remained incomplete and needs manual review. No NVDA pass was performed.
+
+Dialog Cancel initial focus, Tab containment, Escape and focus restoration to a keyboard-activated opener passed. The integrated browser's dispatched clicks do not focus the opener, so that automation cannot by itself prove pointer focus restoration.
+
+Unbroken 100-character solution titles clipped inside mobile cards. Shared card/detail layouts now use `overflow-wrap:anywhere`; recheck measured card scroll width equal to its client width (332px) and title scroll/client width 292px. App content fit 365px, while Power Apps Local Play outer chrome overflowed to 546px in a 390px viewport. Hosted mobile acceptance remains open. Video decode failures now have an accessible error and download fallback in both targets; actual playback remains unverified in the integrated browser.
