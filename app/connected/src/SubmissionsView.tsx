@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
+import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { MySubmissionsView } from "../../src/views/MySubmissionsView";
 import { DetailView } from "../../src/views/DetailView";
@@ -39,7 +40,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
     }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [review, attempt]);
-  if (error || !state) return <section className={shell}>{error ? <div role="alert"><p className="mb-4">{review ? "Review queue unavailable. An explicit PRISMA Librarian role and Dataverse read access are required." : "Submissions unavailable. Check your Dataverse access and connection."}</p><button className={button} onClick={() => { setError(false); setState(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></div> : <p role="status">Loading submissions...</p>}</section>;
+  if (error || !state) return <section className={shell}>{error ? <div role="alert"><p className="mb-4">{review ? "Review queue unavailable. An explicit PRISMA Librarian role and Dataverse read access are required." : "Submissions unavailable. Check your Dataverse access and connection."}</p><button className={button} onClick={() => { setError(false); setState(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></div> : <LoadingState variant="page" label={review ? "Loading review queue..." : "Loading submissions..."} />}</section>;
   const open = (solution: Solution) => navigate(solution.publicationStatus === "Draft" ? `/submit?draft=${solution.id}` : `/submission/${solution.id}`);
   const remove = async (id: string) => {
     const entry = state.entries.find(item => item.solution.id === id);
@@ -128,7 +129,7 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
   const core = state?.record.core;
   const status = state?.record.publication;
   const missing = !core || !core.summary.trim() || !core.capabilityId || !core.safetyAcknowledged || (!!core.clientContext.trim() && !core.clientContextRedacted.trim()) || !state?.graph.hours.length || state.graph.hours.some(hours => hours === null) || !state.media.some(item => item.kind === "image" && item.complete) || state.media.some(item => !item.complete);
-  if (!state || !core || !namesLoaded || !["ai", "data", "ibo"].includes(names[core.areaId])) return <section className={shell}><button className={button} onClick={() => navigate(review ? "/review" : "/my-submissions")}><Icon name="chevronLeft" />{review ? "Review queue" : "My submissions"}</button>{error || namesLoaded ? <div role="alert" className="my-6"><p className="mb-3">{error || "Specialization unavailable. Check your reference-data access."}</p><button className={button} onClick={reload}><Icon name="arrowRight" />Reopen</button></div> : <p role="status" className="mt-6">Loading submission...</p>}</section>;
+  if (!state || !core || !namesLoaded || !["ai", "data", "ibo"].includes(names[core.areaId])) return <section className={shell}><button className={button} onClick={() => navigate(review ? "/review" : "/my-submissions")}><Icon name="chevronLeft" />{review ? "Review queue" : "My submissions"}</button>{error || namesLoaded ? <div role="alert" className="my-6"><p className="mb-3">{error || "Specialization unavailable. Check your reference-data access."}</p><button className={button} onClick={reload}><Icon name="arrowRight" />Reopen</button></div> : <LoadingState variant="page" label="Loading submission..." />}</section>;
   if (preview) return <MediaPreview key={preview.id} item={preview} solutionId={core.id} mode="submission" viewerTitle={core.name} onClose={() => setPreview(null)} />;
   const graph = state.graph.graph;
   const thumbnail = state.media.find(item => item.kind === "thumbnail" && item.complete);
@@ -138,14 +139,14 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
     poster={thumbnail && <div className="h-40 overflow-hidden sm:h-52"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} onOpen={setPreview} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={
       <>{review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
-        comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} notice={mediaAction.message}
+        comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} notice={mediaAction.message} noticeBusy={mediaAction.downloading}
         error={error && <><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></>}
         onReturn={() => void transition("return")} onApprove={() => void transition("approve")}>
         {missing && status === 125060002 && <p role="status" className="mt-4 text-[14px]">Required content, contributor effort, images and safety acknowledgment must be complete before approval.</p>}
         {state.librarian && status === 125060000 && <button className={`${button} mt-4`} disabled={busy || uncertain} onClick={() => setConfirmation("retire")}><Icon name="close" />Retire</button>}
       </ReviewPanel> : <section aria-label="Submission status" className="mt-5 border-y border-(--glass-edge) py-5">
         <p className="eyebrow">Contributor workspace</p><h2 className="mt-2 text-[20px]">{PUBLICATIONS[state.record.publication]}</h2>
-        {mediaAction.message && <p className="mt-4 text-[14px]" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
+        {mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
         {error && <div role="alert" className="my-4"><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></div>}
         {state.record.comments && <section className="my-4 border-l-2 border-(--proto) pl-3"><h3 className="text-[14px] font-semibold">Latest review comments</h3><p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{state.record.comments}</p></section>}
         <p className="mb-4 text-[14px]">{core.safetyAcknowledged ? "Safety acknowledged" : "Safety acknowledgment required"}{state.record.cleared ? " · Cleared for presentation" : ""}</p>
@@ -153,7 +154,7 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
         <fieldset disabled={busy || uncertain} className="min-w-0 space-y-4">
           {!review && status === 125060003 && <div className="flex flex-wrap gap-3"><button className={button} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="file" />Edit draft</button><button className={button} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" />Submit for review</button></div>}
           {!review && status !== 125060003 && <button className={button} onClick={() => setConfirmation("withdraw")}><Icon name="file" />Withdraw &amp; edit</button>}
-        </fieldset>{busy && <p role="status" className="mt-4">Saving transition...</p>}
+        </fieldset>{busy && <LoadingState className="mt-4" label="Updating submission..." />}
       </section>}
         {confirmation && <ConfirmDialog title={confirmation === "withdraw" ? "Withdraw submission?" : "Retire solution?"} confirmLabel={confirmation === "withdraw" ? "Withdraw & edit" : "Retire solution"} onCancel={() => setConfirmation(null)} onConfirm={() => { setConfirmation(null); void transition(confirmation); }}>
           <p className="mb-3 font-semibold text-(--ink)">{core.name}</p>

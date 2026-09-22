@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { LoadingState } from "../../src/components/LoadingState";
 import { downloadMedia } from "./dataSource";
 import { imageDataUrl, type MediaItem } from "./media";
 
@@ -10,5 +11,7 @@ export function ProtectedImage({ item, className = "h-full w-full object-contain
     return () => { controller.abort(); };
   }, [item]);
   const current = preview?.item === item ? preview : null;
-  return current?.url ? <img src={current.url} alt={item.caption || item.name} className={className} onError={() => setPreview({ item, error: true })} /> : <div role="status" className={`${className} grid place-items-center text-[13px] text-(--ink-2)`}>{current?.error ? "Image unavailable" : "Loading image..."}</div>;
+  return current?.url ? <img src={current.url} alt={item.caption || item.name} className={className} onError={() => setPreview({ item, error: true })} />
+    : current?.error ? <div role="status" className={`${className} grid place-items-center text-[13px] text-(--ink-2)`}>Image unavailable</div>
+    : <LoadingState variant="media" className={className} label="Loading image..." />;
 }

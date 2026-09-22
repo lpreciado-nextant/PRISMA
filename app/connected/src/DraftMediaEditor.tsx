@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
+import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { LocalVideoPreview, VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
 import { ProtectedImage } from "./ProtectedImage";
@@ -173,10 +174,10 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, linkedAsset: item.linkedAsset, status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
     {error && <p role="alert" className="mb-4 text-[14px]">{error}</p>}
     {uncertain && !busy && onReopen && <button type="button" className={button} onClick={onReopen}><Icon name="file" />Reopen saved draft</button>}
-    {!state && !error && <p role="status">Loading media...</p>}
+    {!state && !error && <LoadingState label="Loading media..." />}
     {error && !uncertain && <button className={button} onClick={() => { setError(""); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button>}
-    {busy && <p role="status" className="mt-4 text-[14px]">Saving media...</p>}
-    {hashing !== null && <p role="status" className="text-[14px]">Checking video identity: {hashing}%</p>}
+    {busy && hashing === null && <LoadingState className="mt-4" label="Saving media..." />}
+    {hashing !== null && <LoadingState label={`Checking video identity: ${hashing}%`} progress={hashing} />}
     {busy && uploadFile && <button type="button" className={button} onClick={pauseUpload}><Icon name="close" />Pause upload</button>}
     {uploadFile && <PreparedFileDownload file={uploadFile} />}
     {!busy && !uncertain && !blocked && state?.media.filter(item => !item.complete && item.mime.startsWith("video/")).map(item => <label key={item.sessionId} className="block text-[14px]">Resume {item.name}<input type="file" accept=".mp4,.webm" className="mt-2 block max-w-full" disabled={disabled} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) { setUploadFile(file); void mutate([file], "attachment", undefined, item); } }} /></label>)}
@@ -233,7 +234,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
     if (viewerTitle) return <ViewerFrame name={viewerTitle} kind={link.assetType} onClose={onClose} externalUrl={link.externalUrl || undefined} hint={embedded ? link.embedHint : undefined}>{content}</ViewerFrame>;
     return <div className="mt-6 border-t border-(--glass-edge) pt-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="min-w-0 flex-1 break-words text-[18px] font-semibold">{link.name}</h3>{embedded && <a className={button} href={link.externalUrl} target="_blank" rel="noopener noreferrer"><Icon name="external" />Open in new tab</a>}<button className={button} onClick={onClose} aria-label="Close preview"><Icon name="close" /></button></div>{embedded && link.embedHint && <p className="mb-3 break-words text-[13px] text-(--ink-2)">{link.embedHint}</p>}{content}</div>;
   }
-  const stage = error ? <p role="alert" className="p-6">Media could not be downloaded.</p> : !content ? <p role="status" className="p-6">Loading preview...</p>
+  const stage = error ? <p role="alert" className="p-6">Media could not be downloaded.</p> : !content ? <LoadingState variant="media" className={viewerTitle ? "h-full w-full" : "h-64"} label="Loading preview..." />
     : item.kind !== "attachment" ? <img src={content.url} alt={item.caption || item.name} className={viewerTitle ? "h-full w-full object-contain" : "max-h-[65vh] w-full object-contain"} />
     : content.html !== undefined ? <iframe title={item.name} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={content.html} className={`${viewerTitle ? "h-full" : "h-[65vh]"} w-full border-0 bg-white`} />
     : item.mime.startsWith("video/") ? <VideoPlayer key={content.url} src={content.url} name={item.name} className={viewerTitle ? "h-full w-full" : "max-h-[65vh] w-full"} />

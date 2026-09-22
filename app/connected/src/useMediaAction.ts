@@ -5,6 +5,7 @@ import type { MediaItem } from "./media";
 export function useMediaAction(onPreview: (item: MediaItem) => void) {
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const lifetime = useRef<AbortController | null>(null);
   const running = useRef(false);
   const urls = useRef<string[]>([]);
@@ -28,6 +29,7 @@ export function useMediaAction(onPreview: (item: MediaItem) => void) {
     const controller = lifetime.current;
     if (!controller || controller.signal.aborted) return;
     running.current = true;
+    setDownloading(true);
     setMessage(`Downloading ${item.name}...`);
     try {
       const blob = await downloadMedia(item);
@@ -43,7 +45,7 @@ export function useMediaAction(onPreview: (item: MediaItem) => void) {
       setMessage(`Download started: ${item.name}`);
     } catch {
       if (!controller.signal.aborted) { setFailed(true); setMessage("Download unavailable. Check your connection and access, then try again."); }
-    } finally { running.current = false; }
+    } finally { running.current = false; if (!controller.signal.aborted) setDownloading(false); }
   };
-  return { open, message, failed };
+  return { open, message, failed, downloading };
 }

@@ -11,6 +11,7 @@ export function MediaGuidance({ capabilities }: { capabilities: string[] }) {
 }
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
+import { LoadingState, ProgressRail } from "./LoadingState";
 import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
 import type { AssetType } from "../types";
@@ -136,8 +137,7 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
     <ul className="space-y-4">{attachments.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={attachments.map(entry => entry.id)} label={item.name} group="attachments" disabled={disabled || attachmentDisabled || linkedDirty || !!editing} onReorder={onReorderAttachments} className="min-w-0 border-b border-(--glass-edge) pb-3"><div className="flex min-w-0 flex-wrap items-center gap-3"><Icon name="file" className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{item.linkedAsset.assetType}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!editing || linkedDirty} title="Edit asset" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (linkedDirty) return; setEditing(item.id); onFormat(item.linkedAsset!.assetType); }}><Icon name="file" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview attachment" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editing === item.id} title="Remove attachment" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></div></MediaReorderItem>)}</ul>
     </fieldset>
     {preparation.progress && <div className="min-w-0 border-t border-(--glass-edge) pt-4">
-      <p role="status" className="text-[14px]">{preparation.progress.phase === "loading" ? "Loading video compressor..." : preparation.progress.phase === "checking" ? "Checking compressed video..." : `Compressing video: ${preparation.progress.percent ?? 0}%`}</p>
-      <progress aria-label="Video compression" max={100} value={preparation.progress.percent} className="mt-2 h-2 w-full accent-(--accent)" />
+      <LoadingState label={preparation.progress.phase === "loading" ? "Loading video compressor..." : preparation.progress.phase === "checking" ? "Checking compressed video..." : preparation.progress.percent === undefined ? "Compressing video..." : `Compressing video: ${preparation.progress.percent}%`} progress={preparation.progress.phase === "encoding" ? preparation.progress.percent : undefined} />
       <button type="button" onClick={preparation.cancel} className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 text-[14px]"><Icon name="close" />Cancel compression</button>
     </div>}
     {preparation.failure && <div className="min-w-0 border-t border-(--glass-edge) pt-4"><p role="alert" className="text-[14px]">Video compression could not finish in this browser. Nothing has been uploaded.</p><div className="mt-3 flex flex-wrap gap-3"><button type="button" onClick={preparation.cancel} className="min-h-10 cursor-pointer rounded-lg border border-(--glass-edge) px-3 text-[14px]">Cancel</button><button type="button" onClick={preparation.useOriginal} className="min-h-10 cursor-pointer rounded-lg bg-(--accent) px-3 text-[14px] text-(--on-accent)">Use original</button></div></div>}
@@ -175,7 +175,7 @@ export function UploadProgress({ name, received, size, active }: { name: string;
   const bytes = (value: number) => value < 1024 * 1024 ? `${Math.round(value / 1024)} KB` : `${(value / 1024 / 1024).toFixed(1)} MB`;
   return <div className="mt-2 w-full min-w-0 space-y-2">
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[12px]"><span className="text-(--ink-2)">{active ? percent === 100 ? "Finalizing..." : "Uploading..." : "Upload incomplete"}</span><span className="font-mono text-(--accent)">{percent}%</span></div>
-    <div role="progressbar" aria-label={`Upload ${name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} aria-valuetext={`${percent}%${active && percent === 100 ? ", finalizing" : !active ? ", incomplete" : ""}`} className="h-2 overflow-hidden rounded-full border border-(--glass-edge) bg-(--glass-edge)"><div className="h-full rounded-full bg-(--accent) transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${percent}%` }} /></div>
+    <ProgressRail label={`Upload ${name}`} value={percent} valueText={`${percent}%${active && percent === 100 ? ", finalizing" : !active ? ", incomplete" : ""}`} />
     <p className="font-mono text-[10.5px] text-(--ink-3)">{bytes(received)} / {bytes(size)}</p>
   </div>;
 }

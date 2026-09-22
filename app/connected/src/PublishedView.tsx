@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Solution } from "../../src/types";
 import { Icon } from "../../src/components/Icon";
+import { LoadingState } from "../../src/components/LoadingState";
 import { DetailView, GalleryFigure } from "../../src/views/DetailView";
 import { navigate } from "../../src/lib/router";
 import { workflowApi } from "./dataSource";
@@ -30,15 +31,7 @@ export function PublishedView({ solution, present, assetId }: { solution: Soluti
   }, [solution.id, present, attempt]);
   const asset = detail?.media.find(item => item.id === assetId);
   if (error) return <section className="mx-auto max-w-[1100px] px-6 py-12" role="alert"><h1 className="text-[28px] font-semibold">Detail unavailable</h1><p className="my-4">The solution may have changed or your access may be insufficient.</p><button className={button} onClick={() => { setError(false); setDetail(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></section>;
-  if (!detail) return <section className="solution-loading" aria-labelledby="solution-loading-title">
-    <div className="welcome-emblem" aria-hidden="true">
-      <div className="welcome-facet welcome-facet-back glass" />
-      <div className="welcome-facet welcome-facet-front glass" />
-      <img className="welcome-mark" src="./prisma-mark-v2.svg" alt="" width="72" height="72" />
-    </div>
-    <h1 id="solution-loading-title" role="status" aria-live="polite" aria-atomic="true">Loading solution<span aria-hidden="true">...</span></h1>
-    <div className="welcome-track" aria-hidden="true"><span /></div>
-  </section>;
+  if (!detail) return <LoadingState variant="page" label="Loading solution..." />;
   if (assetId) return asset ? <MediaPreview item={asset} solutionId={solution.id} mode={present ? "present" : "published"} viewerTitle={solution.name} onClose={() => navigate(`/s/${solution.id}`)} /> : <section className="mx-auto max-w-[1340px] px-4 py-6"><p role="alert" className="mb-4">Asset unavailable.</p><button className={button} onClick={() => navigate(`/s/${solution.id}`)}><Icon name="chevronLeft" />Back to solution</button></section>;
   const hydrated: Solution = { ...solution, libraryNotes: present ? undefined : detail.libraryNotes, assets: detail.media.filter(item => item.kind === "attachment").map(mediaAsset), projects: present ? [] : detail.projects.map((projectName, index) => ({ id: String(index), projectName })) };
   const maturity = MATURITY_OPTIONS.find(option => option.label === solution.status)!.value;
@@ -47,7 +40,7 @@ export function PublishedView({ solution, present, assetId }: { solution: Soluti
   return <DetailView solution={hydrated} present={present} connected effort={effort} imageCount={detail.media.filter(item => item.kind === "image").length}
     poster={thumbnail && <div className="h-40 overflow-hidden sm:h-52"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     gallery={<PublishedGallery media={detail.media} onOpen={item => navigate(`/s/${solution.id}/demo/${item.id}`)} />}
-    reviewActions={mediaAction.message && <p className="mt-4 text-[14px]" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
+    reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
     onAssetOpen={asset => void mediaAction.open(detail.media.find(item => item.id === asset.id))} />;
 }
 

@@ -3,6 +3,7 @@ import { transferApi, downloadMedia } from "./dataSource";
 import { readVideoRange, type PlaybackMode } from "./mediaTransfer";
 import type { MediaItem } from "./media";
 import { Icon } from "../../src/components/Icon";
+import { LoadingState } from "../../src/components/LoadingState";
 
 export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; solutionId: string; mode: PlaybackMode }) {
   const video = useRef<HTMLVideoElement>(null);
@@ -102,7 +103,7 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
     };
   }, [item, solutionId, mode, full]);
   return <div className="flex h-full min-h-64 flex-col gap-3 p-3">
-    {loading && !error && <p role="status" className="text-[14px]">{full ? "Downloading video..." : "Buffering video..."}</p>}
+    {loading && !error && <LoadingState label={full ? "Downloading video..." : "Buffering video..."} />}
     {(error || fullVideoReason) && <div role={error ? "alert" : "status"} className="text-[14px]"><p>{error || fullVideoReason}</p>{!full && <button type="button" className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3" onClick={() => { setError(""); setFullVideoReason(""); setLoading(true); setFull(true); }}><Icon name="download" />Load full video</button>}</div>}
     <video ref={video} controls preload="metadata" aria-label={item.name} className="min-h-0 w-full flex-1 object-contain" />
     {captionError && <p role="status" className="text-[13px]">{captionError}</p>}

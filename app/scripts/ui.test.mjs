@@ -72,17 +72,69 @@ test("masthead renders optional profile photos, retains initials and omits ident
   assert.doesNotMatch(present, /Sample User|data:image\/jpeg|>SU</);
 });
 
+test("shared loading variants announce status and only expose measured progress", async () => {
+  const { LoadingState, ProgressRail } = await server.ssrLoadModule("/src/components/LoadingState.tsx");
+  for (const variant of ["page", "media", "inline"]) {
+    const html = render(LoadingState, { label: "Loading preview...", variant });
+    assert.match(html, new RegExp(`loading-state--${variant}`));
+    assert.match(html, /role="status" aria-live="polite" aria-atomic="true"/);
+    assert.match(html, /data-indeterminate="true" aria-hidden="true"/);
+    assert.doesNotMatch(html, /aria-valuenow|<button/);
+    if (variant === "inline") assert.doesNotMatch(html, /<img|<h1/);
+    else assert.match(html, /src="\.\/prisma-mark-v2.svg" alt=""/);
+    if (variant === "page") assert.match(html, /<h1[^>]*><span role="status"/);
+  }
+  assert.match(render(LoadingState, { label: "Checking video identity", progress: 42 }), /aria-valuenow="42"/);
+  assert.match(render(ProgressRail, { label: "Compression", value: 120 }), /aria-valuenow="100"/);
+  assert.match(render(ProgressRail, { label: "Compression", value: -1 }), /aria-valuenow="0"/);
+  assert.doesNotMatch(render(ProgressRail, { label: "Compression" }), /aria-valuenow/);
+});
+
 test("published detail loading uses the branded accessible state without exposing solution data", async () => {
   const { PublishedView } = await server.ssrLoadModule("/connected/src/PublishedView.tsx");
   const solution = { id: "loading-fixture", name: "Private solution name", clientContext: "Internal client" };
   for (const present of [false, true]) {
     const html = render(PublishedView, { solution, present });
-    assert.match(html, /class="solution-loading" aria-labelledby="solution-loading-title"/);
+    assert.match(html, /loading-state--page/);
     assert.match(html, /src="\.\/prisma-mark-v2.svg" alt="" width="72" height="72"/);
     assert.match(html, /role="status" aria-live="polite" aria-atomic="true">Loading solution/);
-    assert.match(html, /class="welcome-track" aria-hidden="true"/);
+    assert.match(html, /class="loading-rail" data-indeterminate="true" aria-hidden="true"/);
     assert.doesNotMatch(html, /Private solution name|Internal client|<button|aria-valuenow/);
   }
+});
+
+test("submission routes use page loaders with contextual labels and retain back navigation", async () => {
+  const { DraftsView } = await server.ssrLoadModule("/connected/src/DraftsView.tsx");
+  const { SubmissionsView, SubmissionView } = await server.ssrLoadModule("/connected/src/SubmissionsView.tsx");
+  assert.match(render(DraftsView, { owner: "fixture@example.com" }), /loading-state--page/);
+  for (const review of [false, true]) {
+    const list = render(SubmissionsView, { review });
+    assert.match(list, /loading-state--page/);
+    assert.match(list, review ? /Loading review queue/ : /Loading submissions/);
+    const detail = render(SubmissionView, { id: "fixture", review });
+    assert.match(detail, /loading-state--page/);
+    assert.match(detail, review ? />Review queue<\/button>/ : />My submissions<\/button>/);
+  }
+});
+
+test("media placeholders stay compact and video buffering preserves playback controls", async () => {
+  const { ProtectedImage } = await server.ssrLoadModule("/connected/src/ProtectedImage.tsx");
+  const { MediaPreview } = await server.ssrLoadModule("/connected/src/DraftMediaEditor.tsx");
+  const { StreamingVideo } = await server.ssrLoadModule("/connected/src/StreamingVideo.tsx");
+  const item = { id: "fixture", kind: "image", name: "Fixture image", mime: "image/png", complete: true };
+  const image = render(ProtectedImage, { item, className: "h-full w-full" });
+  assert.match(image, /loading-state--media h-full w-full/);
+  assert.match(image, /Loading image/);
+  const preview = render(MediaPreview, { item, onClose: noop, viewerTitle: "Fixture solution" });
+  assert.match(preview, /loading-state--media h-full w-full/);
+  assert.match(preview, /Loading preview/);
+  assert.match(preview, /aria-label="Close the viewer"/);
+  assert.match(render(MediaPreview, { item, onClose: noop }), /loading-state--media h-64/);
+  const video = render(StreamingVideo, { item: { ...item, kind: "attachment", mime: "video\/mp4" }, solutionId: "fixture", mode: "published" });
+  assert.match(video, /loading-state--inline/);
+  assert.match(video, /Buffering video/);
+  assert.match(video, /<video[^>]*controls=""/);
+  assert.doesNotMatch(video, /aria-valuenow/);
 });
 
 test("welcome reflects actual connection state and withholds Begin until ready", () => {
@@ -230,7 +282,7 @@ test("upload progress uses themed bounded progress and distinguishes finalizatio
   const html = render(form.UploadProgress, { name: "demo.html", received: 720, size: 1000, active: true });
   assert.match(html, /role="progressbar"/);
   assert.match(html, /aria-valuenow="72"/);
-  assert.match(html, /bg-\(--accent\)/);
+  assert.match(html, /class="loading-rail"/);
   assert.match(html, /Uploading/);
   assert.doesNotMatch(html, /Unfinished upload/);
   assert.match(render(form.UploadProgress, { name: "demo.html", received: 1000, size: 1000, active: true }), /Finalizing/);
@@ -247,6 +299,9 @@ test("review actions require comments on return and independent clearance on app
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, comments: "Ready", cleared: true }), /disabled=""/);
   assert.match(render(review.ReviewPanel, { ...props, comments: "Ready", cleared: true, canApprove: false }), /disabled=""/);
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Approve &amp; publish/);
+  assert.match(render(review.ReviewPanel, { ...props, busy: true }), /loading-state--inline/);
+  assert.match(render(review.ReviewPanel, { ...props, notice: "Downloading document...", noticeBusy: true }), /loading-state--inline/);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...props, notice: "Download started: document" }), /loading-state--inline/);
 });
 
 test("review summary and success use the baseline presentation", () => {

@@ -1,6 +1,6 @@
 # Design system
 
-**Status:** Living, badge inventory aligned with revised submission · **Last updated:** 2026-09-21
+**Status:** Living, shared loading states aligned across connected and PoC apps · **Last updated:** 2026-09-22
 **Reference implementation:** [`app/src/index.css`](../../app/src/index.css) and the component set in [`app/src/components/`](../../app/src/components/)
 
 The HTML prototype established the visual language; the code app PoC evolved it into the **liquid-glass system** and is the current reference. The production app matches the PoC.
@@ -40,6 +40,16 @@ Light and dark themes are both first-class. Theme logic lives in [`app/src/lib/t
 
 - Purposeful and short; no decorative animation on the CSM hero path.
 - `prefers-reduced-motion` disables the aurora drift and non-essential transitions.
+
+## Loading states
+
+Both apps use [`LoadingState`](../../app/src/components/LoadingState.tsx) and the shared tokens in [`index.css`](../../app/src/index.css):
+
+- **Page:** compact prism with glass facets, a display heading and an indeterminate rail when loading replaces the main content. Keep existing back navigation available. The initial welcome screen remains a separate entry experience.
+- **Media:** small prism and status inside the image or preview bounds. Reserve space and retain viewer controls; do not turn a media wait into a full-page blocker.
+- **Inline:** body-sized status with a short rail for saves, reads, buffering and downloads. Known percentages use the shared `ProgressRail`, also used for uploads. Unknown progress never displays a fabricated percentage.
+
+Status text uses a polite live region; page titles retain heading semantics. Progress bars expose measured values and upload finalization/incomplete states. Reduced motion stops decorative movement. Completion and errors replace loading indicators rather than leaving them active. Busy button labels and the draft header's save status stay compact.
 
 ## Present mode treatment
 

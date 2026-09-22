@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { SOLUTIONS } from "./data/solutions";
 import { Background } from "./components/Background";
+import { LoadingState } from "./components/LoadingState";
 import { Masthead } from "./components/Masthead";
 import { PresentBanner } from "./components/PresentBanner";
 import { LibraryView } from "./views/LibraryView";
@@ -135,7 +136,7 @@ export default function App() {
 
       <main key={route.path}>
         {!present && !storageReady && (isSubmissionRoute || isSolutionRoute || isReviewRoute || route.path === "/my-submissions") ? (
-          <p className="mx-auto max-w-[980px] px-6 py-12" role={storageError ? "alert" : "status"}>{storageError || "Loading saved submissions..."}</p>
+          storageError ? <p className="mx-auto max-w-[980px] px-6 py-12" role="alert">{storageError}</p> : <LoadingState variant="page" label="Loading saved submissions..." />
         ) : !present && reviewEntry && reviewAsset ? (
           <ViewerView solution={reviewEntry.solution} asset={reviewAsset} present={false} backPath={`/review/${reviewEntry.solution.id}`} />
         ) : isReviewRoute && !present ? (

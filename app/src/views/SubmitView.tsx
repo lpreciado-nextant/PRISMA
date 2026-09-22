@@ -9,6 +9,7 @@ import type {
 } from "../types";
 import { AREA_ORDER, AREAS, BUILDERS, BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID, SOLUTIONS } from "../data/solutions";
 import { Icon } from "../components/Icon";
+import { LoadingState } from "../components/LoadingState";
 import { TagPicker } from "../components/TagPicker";
 import { SolutionCard } from "../components/SolutionCard";
 import { navigate } from "../lib/router";
@@ -357,7 +358,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                   } catch { setUploadError("This file could not be read. Try another file."); }
                   finally { setUploading(false); }
             }}>
-            {uploading && <p role="status">Reading attachment...</p>}
+            {uploading && <LoadingState label="Reading attachment..." />}
             {uploadError && <p role="alert">{uploadError}</p>}
           </SubmissionMedia>
         )}
@@ -424,7 +425,7 @@ function UploadZone({
           } catch { setError("An image could not be read. Choose a valid PNG, JPG or WebP file."); }
           finally { setBusy(false); onBusyChange(false); }
         }}>
-      {busy && <p role="status">Reading images...</p>}
+      {busy && <LoadingState label="Reading images..." />}
       {error && <p role="alert">{error}</p>}
     </ImageUploadZone>;
 }

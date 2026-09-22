@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Chip } from "./Badges";
 import { Icon } from "./Icon";
+import { LoadingState } from "./LoadingState";
 import { submissionInputClass } from "./SubmissionForm";
 
 export function TagPicker({ label, options, selected, onChange, governed = false, allowNew = false, getLabel = value => value, onCreate }: {
@@ -42,7 +43,7 @@ export function TagPicker({ label, options, selected, onChange, governed = false
       <input disabled={creating} className="h-8 min-w-0 flex-1 rounded-full border border-(--glass-edge) bg-transparent px-3 py-1 text-[12.5px] font-medium text-(--ink) outline-none placeholder:text-(--ink-3) focus:border-(--accent)" value={newTag} onChange={event => setNewTag(event.target.value)} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); void add(); } }} placeholder="Add a new technology" aria-label="Add a new technology" maxLength={100} />
       <button type="button" title="Add new technology" aria-label="Add new technology" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-full border border-(--glass-edge) disabled:opacity-40" disabled={!newTag.trim() || creating} onClick={() => void add()}><Icon name="plus" /></button>
     </div>}
-    {creating && <p role="status" className="mt-2 text-[13px]">Saving technology...</p>}
+    {creating && <LoadingState className="mt-2" label="Saving technology..." />}
     {error && <p role="alert" className="mt-2 text-[13px]">{error}</p>}
   </fieldset>;
 }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
+import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { TagPicker } from "../../src/components/TagPicker";
 import { SolutionCard } from "../../src/components/SolutionCard";
@@ -47,7 +48,7 @@ export function DraftsView({ draftId, owner }: { draftId?: string; owner: string
   const retry = () => { createdId.current = undefined; setState({ kind: "loading" }); setAttempt(current => current + 1); };
 
   return <section className="mx-auto w-full max-w-[980px] px-4 pt-8 pb-24 sm:px-6">
-    {state.kind === "loading" ? <p role="status">Loading submission...</p>
+    {state.kind === "loading" ? <LoadingState variant="page" label="Loading submission..." />
       : state.kind === "error" ? <div role="alert"><h1 className="text-[28px] font-semibold">Draft unavailable</h1><p className="my-4 text-(--ink-2)">Check your Dataverse access and connection. Only your Draft submissions can be edited.</p><button className={buttonClass} onClick={retry}><Icon name="arrowRight" />Retry</button></div>
       : <DraftEditor key={state.revision} owner={owner} initial={state.detail} references={state.references} graphReferences={state.graphReferences} onReload={retry} onCreated={id => { createdId.current = id; replaceQuery("/submit", { draft: id }); }} />}
   </section>;

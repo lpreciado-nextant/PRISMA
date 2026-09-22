@@ -3,6 +3,7 @@ import type { Solution, SpecializationArea } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
 import { navigate } from "../lib/router";
 import { Icon } from "./Icon";
+import { LoadingState } from "./LoadingState";
 import { SelectPicker } from "./SelectPicker";
 
 const filters = ["Pending review", "Changes requested", "Published"] as const;
@@ -10,16 +11,16 @@ type Entry = { solution: Solution; owner?: string; imageCount?: number; attachme
 const matches = ({ solution }: Entry, status: string) => status === "Changes requested"
   ? solution.publicationStatus === "Draft" && solution.reviewOutcome === status : solution.publicationStatus === status;
 
-export function ReviewPanel({ status, owner, client, context, feedback, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, error, onReturn, onApprove, children }: {
+export function ReviewPanel({ status, owner, client, context, feedback, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, children }: {
   status: string; owner?: string; client?: string; context?: string; feedback?: string; comments: string; onComments: (value: string) => void;
   cleared: boolean; onCleared: (value: boolean) => void; busy: boolean; locked?: boolean; canApprove?: boolean; local?: boolean;
-  notice?: ReactNode; error?: ReactNode; onReturn: () => void; onApprove: () => void; children?: ReactNode;
+  notice?: ReactNode; noticeBusy?: boolean; error?: ReactNode; onReturn: () => void; onApprove: () => void; children?: ReactNode;
 }) {
   const heading = useId();
   return <section aria-labelledby={heading} className="mt-5 border-y border-(--glass-edge) py-5">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Librarian{local && " · local preview"}</p><h2 id={heading} className="mt-2 text-[20px]">{status}</h2></div>{owner && <p className="break-all text-[13px] text-(--ink-2)">Submitted by {owner}</p>}</div>
     <dl className="mt-4 grid gap-3 text-[14px] sm:grid-cols-2"><div className="min-w-0"><dt className="font-semibold">Client (internal)</dt><dd className="mt-1 break-words text-(--ink-2)">{client || "No client"}</dd></div><div className="min-w-0"><dt className="font-semibold">Presentation context</dt><dd className="mt-1 break-words text-(--ink-2)">{context || "Not provided"}</dd></div></dl>
-    {notice && <div role="status" className="mt-3">{notice}</div>}
+    {noticeBusy && typeof notice === "string" ? <LoadingState className="mt-3" label={notice} /> : notice && <div role="status" className="mt-3 text-[14px] text-(--ink-2)">{notice}</div>}
     {feedback && <div className="mt-4 border-l-2 border-(--proto) pl-3"><h3 className="text-[14px] font-semibold">Latest review comments</h3><p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{feedback}</p></div>}
     {status === "Pending review" && <fieldset disabled={busy || locked} className="mt-5 grid min-w-0 gap-5 lg:grid-cols-2">
       <label className="block text-[14px] font-semibold">Comments to contributor <span className="font-normal text-(--ink-2)">(required when returning)</span><textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={3} className="mt-2 block w-full resize-y rounded-lg border border-(--glass-edge) bg-transparent px-3 py-2 font-normal" /></label>
@@ -27,7 +28,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, comments
         <div className="flex flex-wrap gap-3"><button type="button" disabled={!comments.trim() || busy || locked} onClick={onReturn} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"><Icon name="chevronLeft" />Return for changes</button><button type="button" disabled={!cleared || !canApprove || busy || locked} onClick={onApprove} className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-(--accent) px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40"><Icon name="check" />Approve &amp; publish</button></div>
       </div>
     </fieldset>}
-    {busy && <p role="status" className="mt-3">Saving review...</p>}{error && <div role="alert" className="mt-3">{error}</div>}{children}
+    {busy && <LoadingState className="mt-3" label="Saving review..." />}{error && <div role="alert" className="mt-3">{error}</div>}{children}
   </section>;
 }
 
