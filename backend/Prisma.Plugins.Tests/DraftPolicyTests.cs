@@ -111,6 +111,21 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
+        public void LinkedUrlContractPreservesLongValuesAndRejectsOverLimit()
+        {
+            const string prefix = "https://example.com/";
+            foreach (var length in new[] { 100, 101, 163, 230, 2000 })
+            {
+                var url = prefix + new string('a', length - prefix.Length);
+                var input = new LinkedAssetInput { Name = "Application", AssetType = "Power Apps", ExternalUrl = url, AllowsEmbedding = false, EmbedHint = "" };
+                Assert.Equal(url, LinkedAssetPolicy.Parse(DraftPolicy.Serialize(input)).ExternalUrl);
+            }
+            const string fullUrl = "https://apps.powerapps.com/play/e/example/a/example?tenantId=example&source=one%20two#view";
+            Assert.Equal(fullUrl, LinkedAssetPolicy.Validate(new LinkedAssetInput { Name = "Application", AssetType = "Power Apps", ExternalUrl = fullUrl, EmbedHint = "" }).ExternalUrl);
+            Assert.Throws<InvalidPluginExecutionException>(() => LinkedAssetPolicy.Validate(new LinkedAssetInput { Name = "Application", AssetType = "Power Apps", ExternalUrl = prefix + new string('a', 2001 - prefix.Length), EmbedHint = "" }));
+        }
+
+        [Fact]
         public void PresentationCreditsOmitInternalOptionalFields()
         {
             var json = DraftPolicy.Serialize(new PublishedDetail { Contributors = new[] { new PublishedCredit { Name = "Consultant", Hours = null } } });

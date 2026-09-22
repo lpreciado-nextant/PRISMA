@@ -21,6 +21,17 @@ test("linked assets require safe URLs and honest desktop guidance", () => {
   assert.throws(() => validateLinkedAsset({ ...input, name: "x".repeat(101) }));
 });
 
+test("linked URL limits preserve complete application links without truncation", () => {
+  const prefix = "https://example.com/";
+  for (const length of [100, 101, 163, 230, 2000]) {
+    const externalUrl = prefix + "a".repeat(length - prefix.length);
+    assert.equal(validateLinkedAsset({ name: "Application", assetType: "Power Apps", externalUrl, allowsEmbedding: false, embedHint: "" }).externalUrl, externalUrl);
+  }
+  const externalUrl = "https://apps.powerapps.com/play/e/example/a/example?tenantId=example&source=one%20two#view";
+  assert.equal(validateLinkedAsset({ name: "Application", assetType: "Power Apps", externalUrl, allowsEmbedding: false, embedHint: "" }).externalUrl, externalUrl);
+  assert.throws(() => validateLinkedAsset({ name: "Application", assetType: "Power Apps", externalUrl: prefix + "a".repeat(2001 - prefix.length), allowsEmbedding: false, embedHint: "" }));
+});
+
 test("linked asset create and edit confirm type and exact versions without file uploads", async () => {
   const input: LinkedAssetInput = { name: "Demo", assetType: "Power Apps", externalUrl: "https://apps.powerapps.com/play/demo", allowsEmbedding: false, embedHint: "Sign in with your work account." };
   const item = { id: draft.areaId, sessionId: draft.areaId, kind: "attachment" as const, name: input.name, mime: "application/vnd.prisma.link", size: 0, received: 0, nextBlock: 0, complete: true, linkedAsset: input };
