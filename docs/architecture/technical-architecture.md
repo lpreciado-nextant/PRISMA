@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Connected lifecycle and bounded catalogue hydration verified; URL storage mismatch, browser acceptance and least-privilege gates remain open · **Last updated:** 2026-09-22
+**Status:** Connected lifecycle and URL storage repair verified; browser and least-privilege acceptance remain open · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -54,6 +54,18 @@ Keep **PRISMA PoC** as the live UI test app. Create **PRISMA** with a separate c
 The frontend baseline has 16 PoC, 34 connected and 8 rendered UI checks; the latest backend lifecycle fix passes 40 server tests. Shared views preserve PoC interactions without mock persistence. Local Play verified saves, protected media, captions, linked assets, return/resubmit/approval, a published catalogue/detail/HTML viewer and present-mode redaction. Explicit reader-team parent/child shares changed from Read to zero on withdrawal; the disposable fixture and children were deleted. See [lifecycle evidence](../workflows/contribution-and-review.md#verified-lifecycle). These privileged-owner/Librarian checks do not establish effective non-admin access, cross-account review or revocation denial. Populated-catalogue performance, document delivery, external launches, retirement and hosted acceptance remain open. Neither app was published.
 
 ### Deployed core draft backend
+
+### URL storage repair
+
+On 2026-09-22, controlled create/readback probes established a 100-character effective boundary on `nx_demoasset.nx_externalurl`: 99/100 saved exactly, while 101/163/500/2000 failed with SQL truncation `0x80090429`. Both published and editable metadata reported MaxLength=4000 for attribute `16b74fe9-2575-4897-a3ca-bdd6cebc26cd`. The plug-in preserved input unchanged; the fault was a Dataverse storage/metadata inconsistency, not client shortening.
+
+The user separately approved two scoped operations. Reapplying the unchanged 4000 definition and publishing `nx_demoasset` did not resolve it. A guarded metadata change 4000 -> 3999 -> 4000, restoring 4000 before table publication, did. Preflight paged all existing assets: one row, no stored URL, so no existing value exceeded the temporary limit. The utility attempts restoration in `finally` and stops on unexpected metadata or any stored URL above 3999. Table publication may include other pending customizations on that table; this was disclosed and approved. No URL row values were truncated, no roles changed, and no code app or plug-in assembly was uploaded.
+
+Afterward, protected writes and independent readback preserved 101- and 2000-character URLs and the original MyPortal URL (230 characters, including query parameters). Updating an existing link from a short URL to the full MyPortal URL and reopening also passed. A 2001-character API input was rejected without advancing the row version, preserving the existing 2000-character application contract. Final metadata remains 4000; storage beyond the application's 2000-character contract was not probed. All disposable probes were removed, including final fixture `1085a433-92b6-f111-aaac-6045bd049fba`, leaving the three original drafts.
+
+The utility command `repair-asset-url` previews only; `--execute` reapplies unchanged metadata and `--execute-resize` performs the guarded resize. These are incident-specific operations requiring fresh explicit approval, not routine provisioning. Actual external app launch from PRISMA remains unverified because the integrated browser exposed no new-tab event. Regression suites passed 39 connected and 42 backend tests, including exact query/fragment preservation and URL length boundaries.
+
+### Core backend implementation
 
 Latest single-account evidence and limits are in the [eight-area acceptance results](../workflows/contribution-and-review.md#eight-area-acceptance-pass). Catalogue hydration now uses batches of four solutions, each reading independent tags/credits in parallel, with ordering and batch-failure cancellation tests. Twelve records retain 39 requests but measured 7,992ms before and 1,518ms after; this is a local single-run comparison, not an SLA. Current suites are 16 PoC, 38 connected, 9 rendered UI and 41 backend tests. `inspect-asset-columns` on Prisma.Deploy is read-only and compares published/editable metadata. It found 4000-character URL metadata despite repeated physical `nx_ExternalURL` truncation for a 163-character approved URL. No schema fix or deployment was attempted in this acceptance pass.
 

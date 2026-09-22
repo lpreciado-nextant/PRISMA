@@ -11,13 +11,61 @@ const string organizationUrl = "https://nextantpulse.crm.dynamics.com";
 const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
-if (!new[] { "inspect", "inspect-asset-columns", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Use inspect, inspect-asset-columns, apply, assign-acceptance, smoke, smoke-graph, smoke-media, smoke-review or smoke-delete.");
+if (!new[] { "inspect", "inspect-asset-columns", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Use inspect, inspect-asset-columns, repair-asset-url, apply, assign-acceptance, smoke, smoke-graph, smoke-media, smoke-review or smoke-delete.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "repair-asset-url")
+{
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "--execute" && args[1] != "--execute-resize")) throw new ArgumentException("Use repair-asset-url [--execute|--execute-resize]; preview is read-only. Resize requires separate approval.");
+    StringAttributeMetadata ReadUrl(bool editable) => ((RetrieveAttributeResponse)client.Execute(new RetrieveAttributeRequest { EntityLogicalName = "nx_demoasset", LogicalName = "nx_externalurl", RetrieveAsIfPublished = editable })).AttributeMetadata as StringAttributeMetadata
+        ?? throw new InvalidOperationException("External URL is not a String attribute.");
+    var published = ReadUrl(false);
+    var editable = ReadUrl(true);
+    if (published.MetadataId != editable.MetadataId || published.MaxLength != 4000 || editable.MaxLength != 4000 || editable.IsManaged != false
+        || editable.IsCustomizable?.Value != true) throw new InvalidOperationException("Unexpected URL metadata. Reassess before changing the column.");
+    Console.WriteLine($"Verified nx_demoasset.nx_externalurl {editable.MetadataId}; published/editable length 4000. Reapply the existing length without reducing it, then publish nx_demoasset only.");
+    Console.WriteLine("Publishing this table also publishes any other pending customizations on nx_demoasset. No roles, rows, other tables or code apps will be changed.");
+    if (args.Length == 1) { Console.WriteLine("Preview only. --execute requires explicit approval."); return; }
+    if (args[1] == "--execute-resize")
+    {
+        var query = new QueryExpression("nx_demoasset") { ColumnSet = new ColumnSet("nx_externalurl"), PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 } };
+        query.Orders.Add(new OrderExpression("nx_demoassetid", OrderType.Ascending));
+        var checkedRows = 0;
+        var maximum = 0;
+        EntityCollection rows;
+        do
+        {
+            rows = client.RetrieveMultiple(query);
+            foreach (var row in rows.Entities)
+            {
+                var length = (row.GetAttributeValue<string>("nx_externalurl") ?? "").Length;
+                if (length > 3999) throw new InvalidOperationException("An existing URL exceeds 3999 characters. Refusing resize; no metadata changed.");
+                checkedRows++; maximum = Math.Max(maximum, length);
+            }
+            query.PageInfo.PageNumber++; query.PageInfo.PagingCookie = rows.PagingCookie;
+        } while (rows.MoreRecords);
+        Console.WriteLine($"Checked {checkedRows} existing asset rows; maximum URL length {maximum}. Applying separately approved 3999 -> 4000 metadata sequence.");
+        try
+        {
+            editable.MaxLength = 3999;
+            client.Execute(new UpdateAttributeRequest { EntityName = "nx_demoasset", Attribute = editable, MergeLabels = false, SolutionUniqueName = solutionName });
+        }
+        finally
+        {
+            editable.MaxLength = 4000;
+            client.Execute(new UpdateAttributeRequest { EntityName = "nx_demoasset", Attribute = editable, MergeLabels = false, SolutionUniqueName = solutionName });
+        }
+    }
+    else client.Execute(new UpdateAttributeRequest { EntityName = "nx_demoasset", Attribute = editable, MergeLabels = false, SolutionUniqueName = solutionName });
+    client.Execute(new PublishXmlRequest { ParameterXml = "<importexportxml><entities><entity>nx_demoasset</entity></entities><nodes/><securityroles/><settings/><workflows/></importexportxml>" });
+    if (ReadUrl(false).MaxLength != 4000 || ReadUrl(true).MaxLength != 4000) throw new InvalidOperationException("URL metadata verification failed after update/publish.");
+    Console.WriteLine("Update/publish completed; metadata remains 4000. A protected API write/readback probe is still required to confirm physical storage capacity.");
+    return;
+}
 if (command == "inspect-asset-columns")
 {
     foreach (var name in new[] { "nx_demoassetid1", "nx_externalurl", "nx_embedhint" })

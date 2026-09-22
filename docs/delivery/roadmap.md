@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Living; retirement/concurrency and small-catalogue performance tested; real URL, delivery/playback, cross-account and hosted gates pending · **Last updated:** 2026-09-22
+**Status:** Living; URL persistence repaired, retirement/concurrency and small-catalogue performance tested; external launch, delivery/playback and cross-account gates pending · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §9](../design/end-to-end-design.md#9-delivery-phases)
 
 Phases 2 and 3 justify the project to a CSM; phase 4 keeps it alive. Neither can be dropped.
@@ -10,7 +10,7 @@ Phases 2 and 3 justify the project to a CSM; phase 4 keeps it alive. Neither can
 | **1 — Foundation** | Dataverse schema incl. §6 deltas, security roles, reference data seeded, librarian-only bulk entry of the initial known solutions | G2 is achievable before any CSM sees the app | Tables exist; reference data partially seeded; schema/security gaps open |
 | **2 — Discovery** | Card grid, search, facets, connected detail/gallery/viewer | G1 | Twelve-record benchmark improved to 1.52s data load/1.94s UI; larger-scale and non-admin acceptance pending |
 | **3 — Present mode** | Server-restricted eligible catalogue and projection | G3 safety | Published present-mode redaction passed; non-admin permissions and hosted acceptance pending |
-| **4 — Contribution** | Draft graph, media, submission and review | G2 at scale | Privileged lifecycle, retirement/restoration, two-tab conflicts and upload recovery passed; real-URL truncation and cross-account/non-admin acceptance unresolved; notifications absent |
+| **4 — Contribution** | Draft graph, media, submission and review | G2 at scale | Privileged lifecycle, retirement/restoration, two-tab conflicts and upload recovery passed; real-URL persistence repaired and verified; cross-account/non-admin acceptance unresolved; notifications absent |
 | **5 — Handoff** | Demo requests, contributor dashboards, one-pager downloads | G3/G4 | Not started |
 
 ## Current state

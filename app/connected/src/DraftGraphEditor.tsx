@@ -17,7 +17,7 @@ export function DraftGraphEditor({ graph, references, maturity, section, onChang
         return <ContributorRow key={person.id ?? `new-${index}`} index={index} direct={direct} result={results[index]} minDate="2020-01-01" maxDate="2035-12-31"
           value={{ ...person, startDate: person.startDate ?? "", endDate: person.endDate ?? "" }} onChange={fields => update(index, fields)}
           onRemove={index > 0 ? () => onChange({ ...graph, contributors: graph.contributors.filter((_, position) => position !== index) }) : undefined}
-          person={<PersonPicker value={people.find(option => option.id === person.personId) ?? { id: person.personId, name: person.personId ? "Existing consultant (unavailable)" : "" }} options={people} onChange={value => update(index, { personId: value.id })} />} />;
+          person={<><PersonPicker value={people.find(option => option.id === person.personId) ?? { id: person.personId, name: person.personId ? "Existing consultant (inactive or unavailable)" : "" }} options={people} onChange={value => update(index, { personId: value.id })} />{references.people !== null && person.personId && !people.some(option => option.id === person.personId) && <p role="status" className="mt-2 text-[13px] text-(--proto)">This saved consultant is no longer active or available. Select an active consultant to replace them.</p>}</>} />;
       })}
     </ContributorEditor> : <div className="space-y-6">{([
         { key: "technologyIds", reference: "technologies", label: "Technologies" },

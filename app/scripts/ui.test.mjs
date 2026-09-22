@@ -83,6 +83,9 @@ test("media uses stacked baseline controls and inline screenshot captions", () =
   assert.match(html, /aria-label="Screenshot caption"/);
   assert.match(html, /aria-label="Remove this screenshot"/);
   assert.match(html, /accept=".html,.htm"/);
+  assert.match(html, /file:bg-\(--accent\)/);
+  assert.match(html, /file:rounded-lg/);
+  assert.match(html, /focus-visible:outline-offset-2/);
   assert.ok(html.indexOf("Card thumbnail") < html.indexOf("Detail screenshots"));
   assert.ok(html.indexOf("Detail screenshots") < html.indexOf("Additional media format"));
 });

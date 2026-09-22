@@ -33,8 +33,8 @@ export async function loadGraphReferences(read: ReadRows, signal: AbortSignal): 
   ] as const;
   const lists = await Promise.all(definitions.map(async definition => {
     try {
-      const rows = await readAll(read, definition.table, { select: [definition.id, definition.name, ...(definition.table === "people" ? ["cr6b0_email"] : [])], filter: "statecode eq 0", orderBy: [`${definition.name} asc`] }, signal);
-      return rows.map(row => {
+      const rows = await readAll(read, definition.table, { select: [definition.id, definition.name, ...(definition.table === "people" ? ["cr6b0_email", "statecode", "cr6b0_employeestatus"] : [])], filter: definition.table === "people" ? "statecode eq 0 and cr6b0_employeestatus eq true" : "statecode eq 0", orderBy: [`${definition.name} asc`] }, signal);
+      return rows.filter(row => definition.table !== "people" || ((row as Record<string, unknown>).statecode === 0 && (row as Record<string, unknown>).cr6b0_employeestatus === true)).map(row => {
         const values = row as Record<string, unknown>;
         const identifier = values[definition.id];
         const title = values[definition.name];
