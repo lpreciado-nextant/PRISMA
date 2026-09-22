@@ -137,7 +137,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const [uploadError, setUploadError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [imageUploads, setImageUploads] = useState(0);
-  const mediaBusy = uploading || imageUploads > 0;
+  const [preparingVideo, setPreparingVideo] = useState(false);
+  const mediaBusy = uploading || preparingVideo || imageUploads > 0;
   const imageBusyChanged = (busy: boolean) => setImageUploads((count) => count + (busy ? 1 : -1));
 
   // Draft saving at every step — the design's contribution-friction requirement.
@@ -331,7 +332,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         )}
 
         {step === 4 && safetyValid && (
-          <SubmissionMedia capabilities={draft.capabilities} local disabled={mediaBusy}
+          <SubmissionMedia capabilities={draft.capabilities} local disabled={mediaBusy} onPreparationBusy={setPreparingVideo}
             onReorderImages={ids => set("images", ids.map(id => draft.images.find(image => image.id === id)!))}
             onReorderAttachments={ids => set("assets", ids.map((id, sortOrder) => ({ ...draft.assets.find(asset => asset.id === id)!, sortOrder })))}
             thumbnail={draft.thumbnail ? <img src={draft.thumbnail} alt="Thumbnail preview" className="h-full w-full object-cover" /> : undefined} onRemoveThumbnail={() => set("thumbnail", "")}

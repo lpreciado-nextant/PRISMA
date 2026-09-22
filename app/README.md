@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Connected 50/500 MiB MP4 upload, integrity and playback verified. Preview latency, browser delivery and non-admin acceptance remain open; no publication sign-off.
+**Status:** Automatic 200 MiB video compression implemented locally; hosted compression, protected streaming and non-admin acceptance remain open; no publication sign-off.
 **Last updated:** 2026-09-22
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -156,6 +156,12 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+Both runnable apps now prepare MP4/WebM videos of 200-500 MiB with a lazy local WASM encoder before passing them to the upload adapter. Smaller videos are unchanged; larger outputs keep the original; failure offers explicit Use original/Cancel. Progress, cancellation and wizard locks are shared. Originals are not modified. The self-contained walkthrough excludes the encoder. Local/production-bundle short encodes and a padded 200 MiB threshold fixture passed, but full-length large-video and Power Apps hosted tests remain open. The core adds 32.2 MB of lazy assets and requires GPL distribution review before publication. See [automatic preparation and release gates](../docs/workflows/demo-assets.md#automatic-video-preparation).
+
+Local compression tooling is available in [scripts/benchmark-video.mjs](scripts/benchmark-video.mjs). Synthetic 50/500 MiB samples became 10.1/50.7 MiB while retaining 1080p, at 24.4s/125.5s encoding cost. This is not a built-in optimization feature or real-screen quality acceptance. Local video-only partial playback succeeded, but credentialed direct Dataverse fetch failed CORS and fragmented AAC playback failed in the integrated browser. The full-download viewer remains unchanged. See [benchmark results, repeat command and streaming prerequisites](../docs/workflows/demo-assets.md#compression-and-progressive-playback-feasibility).
+
+New uploads negotiate sequential 4 MiB blocks when advertised, preserving 2 MiB and legacy 512 KiB sessions. The user-approved backend update is deployed. Paired 50 MiB browser-SDK uploads took 44.4s at 2 MiB and 35.2s at 4 MiB; 500 MiB took 5m59s (125 blocks), versus the earlier 7m26s at 2 MiB. Both files persisted and matched source checksums. Aggregate upload timings stay in module memory; encoding was under 4% of elapsed time, so read-ahead was deferred. Resume is not implemented. Selecting a video also shows an ephemeral, explicitly local preview before upload finishes (previously measured at 83ms/63ms), with object-URL cleanup and no persistent cache. This does not replace upload confirmation or accelerate saved-file downloads. No connected code app was published, and benchmark drafts/files were deleted.
 
 The attachment File column now supports 512,000 KB (500 MiB), matching the application's video allowance. The former 32 MiB limit rejected both samples before staging. Both now upload, finalize, reopen and return exact SHA-256 hashes. Both MP4s played at 1920x1080 with pause/resume and seeking verified. The 500 MiB preview took 144 seconds to download the full file before playback; seeking near the end reached the ended event at 300 seconds. This is not progressive streaming or uninterrupted full-duration acceptance. The larger upload previously took about 13 minutes. Disposable drafts/files were removed, preserving existing user submissions. Reopen an editor locked by an earlier unconfirmed upload before retrying. See [large-video evidence and limits](../docs/workflows/demo-assets.md#large-video-verification).
 

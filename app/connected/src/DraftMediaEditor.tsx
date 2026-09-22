@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
-import { VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
+import { LocalVideoPreview, VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
 import { ProtectedImage } from "./ProtectedImage";
 import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/components/SubmissionForm";
 import type { AssetType } from "../../src/types";
@@ -16,11 +16,13 @@ const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-l
 export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersion, onBusy, onPending, embedded = false, onMedia, capabilities = [] }: { saved: SavedDraft; blocked: boolean; captions: Record<string, string>; onCaptions: (captions: Record<string, string>) => void; onVersion: (version: string) => void; onBusy: (busy: boolean) => void; onPending?: (pending: boolean) => void; embedded?: boolean; onMedia?: (media: MediaItem[]) => void; capabilities?: string[] }) {
   const [state, setState] = useState<MediaState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState("");
   const [uncertain, setUncertain] = useState(false);
   const [linkedPending, setLinkedPending] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [preview, setPreview] = useState<MediaItem | null>(null);
+  const [localVideo, setLocalVideo] = useState<File | null>(null);
   const [removeTarget, setRemoveTarget] = useState<MediaItem | null>(null);
   const [format, setFormat] = useState<AssetType>("Self-contained HTML file");
   const operation = useRef<AbortController | null>(null);
@@ -36,9 +38,9 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   useEffect(() => () => operation.current?.abort(), []);
   useEffect(() => { if (state) onMedia?.(state.media); }, [state, onMedia]);
   useEffect(() => {
-    onBusy(busy);
+    onBusy(busy || preparing);
     return () => onBusy(false);
-  }, [busy, onBusy]);
+  }, [busy, preparing, onBusy]);
   useEffect(() => {
     onPending?.(uncertain || linkedPending);
     return () => onPending?.(false);
@@ -58,6 +60,11 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     let started = false;
     try {
       if (!remove && (!files.length || files.length + state.media.filter(item => item.kind === kind).length > (kind === "thumbnail" ? 1 : 6))) throw new Error("Choose up to six files per media category and one thumbnail.");
+      if (remove) setLocalVideo(null);
+      else if (kind === "attachment") {
+        const selected = files[0];
+        setLocalVideo(selected && /\.(mp4|webm)$/i.test(selected.name) && selected.size > 0 && selected.size <= 500 * 1024 * 1024 ? selected : null);
+      }
       let next = state;
       if (Object.keys(captions).length) {
         started = true;
@@ -85,20 +92,21 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       started = true;
       const version = next.rowVersion;
       next = remove ? await mediaRequest(mediaApi.remove(saved.id, version, remove.sessionId), controller.signal)
-        : await uploadMedia(mediaApi, { id: saved.id, rowVersion: version }, file!, kind, controller.signal, setState);
+        : await uploadMedia(mediaApi, { id: saved.id, rowVersion: version, uploadProtocol: next.uploadProtocol, maxBlockSize: next.maxBlockSize }, file!, kind, controller.signal, setState);
       if (next.id !== saved.id || next.rowVersion === version) throw new Error("Unconfirmed media update.");
       setState(next);
       setPreview(null);
       onVersion(next.rowVersion);
       }
     } catch {
+      setLocalVideo(null);
       if (!controller.signal.aborted) { setUncertain(started); setError(started ? "Media save was not confirmed. Reopen the draft before retrying; unfinished uploads can be removed there." : "Use a valid image up to 5 MB and 40 megapixels. WebP is converted to PNG within that size limit."); }
     } finally {
       operation.current = null;
       if (!controller.signal.aborted) setBusy(false);
     }
   };
-  const disabled = blocked || busy || uncertain || !state || state.rowVersion !== saved.rowVersion;
+  const disabled = blocked || busy || preparing || uncertain || !state || state.rowVersion !== saved.rowVersion;
   const saveLink = async (input: LinkedAssetInput, id?: string) => {
     if (disabled || operation.current || !state) throw new Error("Media unavailable. Reopen the draft.");
     const controller = new AbortController(); operation.current = controller; setBusy(true); setError("");
@@ -137,7 +145,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   const remove = (id: string) => setRemoveTarget(state?.media.find(item => item.id === id) ?? null);
   const open = (id: string) => setPreview(state?.media.find(item => item.id === id && item.complete) ?? null);
   return <section className={embedded ? "min-w-0" : "mt-12 border-t border-(--glass-edge) pt-8"}>
-    <SubmissionMedia capabilities={capabilities} disabled={disabled} attachmentDisabled={uploadDisabled} format={format} onFormat={setFormat} onAttachment={file => void mutate([file], "attachment")}
+    <SubmissionMedia capabilities={capabilities} disabled={disabled} attachmentDisabled={uploadDisabled} format={format} onFormat={setFormat} onAttachment={file => void mutate([file], "attachment")} onPreparationBusy={setPreparing}
       onLinkedAsset={saveLink} onLinkedPending={setLinkedPending}
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
@@ -151,6 +159,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     {!state && !error && <p role="status">Loading media...</p>}
     {error && !uncertain && <button className={button} onClick={() => { setError(""); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button>}
     {busy && <p role="status" className="mt-4 text-[14px]">Saving media...</p>}
+    {localVideo && !uncertain && !blocked && <LocalVideoPreview file={localVideo} onClose={() => setLocalVideo(null)} />}
     {preview && <MediaPreview key={preview.id} item={preview} onClose={() => setPreview(null)} />}
     {removeTarget && <ConfirmDialog title="Remove attachment?" confirmLabel="Remove attachment" onCancel={() => setRemoveTarget(null)} onConfirm={() => { setRemoveTarget(null); void mutate([], removeTarget.kind, removeTarget); }}><p className="mb-3 font-semibold text-(--ink)">{removeTarget.name}</p><p>This file will be removed from the saved draft.</p></ConfirmDialog>}
     </SubmissionMedia>

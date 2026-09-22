@@ -44,6 +44,8 @@ test("both adapters consume the shared form and review surfaces", async () => {
   for (const source of [pocReview, connectedReview]) assert.match(source, /<ReviewPanel\b/);
   assert.match(connected, /captions=\{captions\} onCaptions=\{setCaptions\}/);
   assert.match(connected, /await saveMediaCaptions\(/);
+  assert.match(media, /onPreparationBusy=\{setPreparing\}/);
+  assert.match(poc, /onPreparationBusy=\{setPreparingVideo\}/);
   assert.doesNotMatch(media, /Save captions|Discard caption edits/);
 });
 
@@ -148,6 +150,16 @@ test("review summary and success use the baseline presentation", () => {
   assert.match(html, /No client/);
   assert.match(html, /rounded-xl border/);
   assert.match(render(form.SubmissionSuccess, { name: "Example", onSubmissions: noop, onAnother: noop, children: "is pending review." }), /Now it&#x27;s pending review/);
+});
+
+test("local video preview labels its source and exposes playback and close controls", () => {
+  const html = render(viewer.LocalVideoPreview, { file: new File(["fixture"], "local-video.mp4", { type: "video/mp4" }), onClose: noop });
+  assert.match(html, /aria-label="Local video preview"/);
+  assert.match(html, /Local file preview/);
+  assert.match(html, /aria-label="Local preview: local-video.mp4"/);
+  assert.match(html, /aria-label="Close local preview"/);
+  assert.match(html, /controls=""/);
+  assert.doesNotMatch(html, /Saved to Dataverse|Upload complete|src=/);
 });
 
 test("cards wrap long solution text and video controls have accessible names", () => {

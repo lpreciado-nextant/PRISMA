@@ -2,10 +2,10 @@ import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linked
 
 export type MediaKind = "image" | "attachment" | "thumbnail";
 export type MediaItem = { id: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput };
-export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[] };
+export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[]; uploadProtocol?: 2; maxBlockSize?: 4194304 };
 export type MediaApi = {
   read: (id: string) => Promise<unknown>;
-  begin: (id: string, version: string, kind: MediaKind, name: string, size: number) => Promise<unknown>;
+  begin: (id: string, version: string, kind: MediaKind | `${MediaKind}:v2` | `${MediaKind}:v3`, name: string, size: number) => Promise<unknown>;
   block: (id: string, version: string, session: string, index: number, content: string) => Promise<unknown>;
   finish: (id: string, version: string, session: string) => Promise<unknown>;
   remove: (id: string, version: string, session: string) => Promise<unknown>;
@@ -21,7 +21,8 @@ export function parseMedia(response: unknown): MediaState {
   const state = object(JSON.parse(data.ResultJson));
   if (typeof state.id !== "string" || !guid.test(state.id) || typeof state.rowVersion !== "string" || !/^\d+$/.test(state.rowVersion)) throw new Error("Invalid media identity/version.");
   if (state.sessionId !== null && (typeof state.sessionId !== "string" || !guid.test(state.sessionId))) throw new Error("Invalid upload session.");
-  if (state.blockSize !== 524288 || !Array.isArray(state.media) || state.media.length > 13) throw new Error("Invalid media limits.");
+  if (![524288, 2097152, 4194304].includes(state.blockSize as number) || (state.uploadProtocol !== undefined && state.uploadProtocol !== 2)
+    || (state.maxBlockSize !== undefined && (state.maxBlockSize !== 4194304 || state.uploadProtocol !== 2)) || !Array.isArray(state.media) || state.media.length > 13) throw new Error("Invalid media limits.");
   const media = state.media.map(value => {
     const item = object(value);
     if (typeof item.id !== "string" || !guid.test(item.id) || typeof item.sessionId !== "string" || !guid.test(item.sessionId)
@@ -39,10 +40,24 @@ export function parseMedia(response: unknown): MediaState {
     return item as MediaItem;
   });
   if (new Set(media.map(item => item.id)).size !== media.length) throw new Error("Duplicate media record.");
-  return { id: state.id, rowVersion: state.rowVersion, sessionId: state.sessionId, blockSize: state.blockSize, media };
+  return { id: state.id, rowVersion: state.rowVersion, sessionId: state.sessionId, blockSize: state.blockSize as number, media, ...(state.uploadProtocol === 2 ? { uploadProtocol: 2 as const } : {}), ...(state.maxBlockSize === 4194304 ? { maxBlockSize: 4194304 as const } : {}) };
 }
 
-export async function mediaRequest(operation: Promise<unknown>, signal: AbortSignal): Promise<MediaState> {
+export function parseUploadProgress(response: unknown, previous: MediaState): MediaState {
+  const result = object(response);
+  const data = object(result.data);
+  if (result.success !== true || typeof data.ResultJson !== "string") throw new Error("Media request failed.");
+  const value = object(JSON.parse(data.ResultJson));
+  if (value.uploadProgress !== true) return parseMedia(response);
+  if (previous.uploadProtocol !== 2 || value.id !== previous.id || value.sessionId !== previous.sessionId || value.blockSize !== previous.blockSize
+    || typeof value.rowVersion !== "string" || !/^\d+$/.test(value.rowVersion) || value.rowVersion === previous.rowVersion
+    || !integer(value.received) || !integer(value.nextBlock)) throw new Error("Unconfirmed upload progress.");
+  const current = previous.media.find(item => item.sessionId === previous.sessionId);
+  if (!current || current.complete || value.nextBlock !== current.nextBlock + 1 || value.received !== Math.min(current.received + previous.blockSize, current.size)) throw new Error("Out-of-order upload progress.");
+  return { ...previous, rowVersion: value.rowVersion, media: previous.media.map(item => item.id === current.id ? { ...item, received: value.received as number, nextBlock: value.nextBlock as number } : item) };
+}
+
+export async function mediaRequest(operation: Promise<unknown>, signal: AbortSignal, parse: (response: unknown) => MediaState = parseMedia): Promise<MediaState> {
   const deadline = AbortSignal.any([signal, AbortSignal.timeout(60_000)]);
   deadline.throwIfAborted();
   let abort: () => void = () => {};
@@ -53,7 +68,7 @@ export async function mediaRequest(operation: Promise<unknown>, signal: AbortSig
     });
     const result = await Promise.race([operation, cancelled]);
     deadline.throwIfAborted();
-    return parseMedia(result);
+    return parse(result);
   } finally { deadline.removeEventListener("abort", abort); }
 }
 
@@ -84,32 +99,60 @@ export async function saveMediaCaptions(api: Pick<MediaApi, "metadata">, saved: 
   return next;
 }
 
-export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersion: string }, file: File, kind: MediaKind, signal: AbortSignal, progress: (state: MediaState) => void): Promise<MediaState> {
-  signal.throwIfAborted();
-  let state = await mediaRequest(api.begin(initial.id, initial.rowVersion, kind, file.name, file.size), signal);
-  const session = state.sessionId;
-  const check = (previousVersion: string) => {
-    if (state.id !== initial.id || state.sessionId !== session || state.rowVersion === previousVersion) throw new Error("Unconfirmed upload response.");
+export type UploadTiming = { bytes: number; blockSize: number; blocks: number; beginMs: number; encodingMs: number; requestsMs: number; finishMs: number; totalMs: number; complete: boolean };
+let lastUploadTiming: UploadTiming | null = null;
+export function getLastUploadTiming(): UploadTiming | null { return lastUploadTiming ? { ...lastUploadTiming } : null; }
+
+export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersion: string; uploadProtocol?: 2; maxBlockSize?: 4194304 }, file: File, kind: MediaKind, signal: AbortSignal, progress: (state: MediaState) => void): Promise<MediaState> {
+  const started = performance.now();
+  const timing: UploadTiming = { bytes: file.size, blockSize: 0, blocks: 0, beginMs: 0, encodingMs: 0, requestsMs: 0, finishMs: 0, totalMs: 0, complete: false };
+  lastUploadTiming = null;
+  const timed = async <Result>(field: "beginMs" | "requestsMs" | "finishMs", operation: () => Promise<Result>): Promise<Result> => {
+    const start = performance.now();
+    try { return await operation(); } finally { timing[field] += performance.now() - start; }
   };
-  if (!session) throw new Error("Missing upload session.");
-  check(initial.rowVersion);
-  progress(state);
-  for (let offset = 0, index = 0; offset < file.size; offset += state.blockSize, index++) {
-    const bytes = new Uint8Array(await file.slice(offset, offset + state.blockSize).arrayBuffer());
+  try {
     signal.throwIfAborted();
-    let binary = "";
-    for (let position = 0; position < bytes.length; position += 8192) binary += String.fromCharCode(...bytes.subarray(position, position + 8192));
-    const previous = state.rowVersion;
-    state = await mediaRequest(api.block(initial.id, previous, session, index, btoa(binary)), signal);
-    check(previous);
-    const item = state.media.find(item => item.sessionId === session);
-    if (!item || item.nextBlock !== index + 1 || item.received !== Math.min(offset + state.blockSize, file.size)) throw new Error("Unconfirmed upload block.");
+    const negotiatedKind = initial.uploadProtocol === 2 ? initial.maxBlockSize === 4194304 ? `${kind}:v3` as const : `${kind}:v2` as const : kind;
+    let state = await timed("beginMs", () => mediaRequest(api.begin(initial.id, initial.rowVersion, negotiatedKind, file.name, file.size), signal));
+    const session = state.sessionId;
+    const check = (previousVersion: string) => {
+      if (state.id !== initial.id || state.sessionId !== session || state.rowVersion === previousVersion) throw new Error("Unconfirmed upload response.");
+    };
+    if (!session) throw new Error("Missing upload session.");
+    const blockSize = state.blockSize;
+    const expectedBlockSize = negotiatedKind.endsWith(":v3") ? 4194304 : negotiatedKind.endsWith(":v2") ? 2097152 : 524288;
+    if (blockSize !== expectedBlockSize) throw new Error("Upload block size was not negotiated.");
+    timing.blockSize = blockSize;
+    check(initial.rowVersion);
     progress(state);
+    for (let offset = 0, index = 0; offset < file.size; offset += blockSize, index++) {
+      const encodingStart = performance.now();
+      const bytes = new Uint8Array(await file.slice(offset, offset + blockSize).arrayBuffer());
+      signal.throwIfAborted();
+      let binary = "";
+      for (let position = 0; position < bytes.length; position += 8192) binary += String.fromCharCode(...bytes.subarray(position, position + 8192));
+      const content = btoa(binary);
+      timing.encodingMs += performance.now() - encodingStart;
+      const previous = state.rowVersion;
+      const checkpoint = state;
+      state = await timed("requestsMs", () => mediaRequest(api.block(initial.id, previous, session, index, content), signal, response => parseUploadProgress(response, checkpoint)));
+      check(previous);
+      if (state.blockSize !== blockSize) throw new Error("Upload block size changed.");
+      const item = state.media.find(item => item.sessionId === session);
+      if (!item || item.nextBlock !== index + 1 || item.received !== Math.min(offset + blockSize, file.size)) throw new Error("Unconfirmed upload block.");
+      timing.blocks++;
+      progress(state);
+    }
+    signal.throwIfAborted();
+    const previous = state.rowVersion;
+    state = await timed("finishMs", () => mediaRequest(api.finish(initial.id, previous, session), signal));
+    check(previous);
+    if (!state.media.find(item => item.sessionId === session)?.complete) throw new Error("Unconfirmed media finalization.");
+    timing.complete = true;
+    return state;
+  } finally {
+    timing.totalMs = performance.now() - started;
+    lastUploadTiming = { ...timing };
   }
-  signal.throwIfAborted();
-  const previous = state.rowVersion;
-  state = await mediaRequest(api.finish(initial.id, previous, session), signal);
-  check(previous);
-  if (!state.media.find(item => item.sessionId === session)?.complete) throw new Error("Unconfirmed media finalization.");
-  return state;
 }

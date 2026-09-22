@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
-import { hasCaptionChanges, mediaRequest, parseMedia, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaApi } from "./media.ts";
+import { hasCaptionChanges, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
@@ -442,4 +442,73 @@ test("a lost committed save response is not retried or followed by graph writes"
   assert.equal(graphWrites, 0);
   assert.equal(stored.summary, "Committed change");
   assert.notEqual(stored.rowVersion, draft.rowVersion);
+});
+
+test("optimized progress preserves other media and rejects stale or mismatched acknowledgments", () => {
+  const item = { id: draft.areaId, sessionId: draft.areaId, kind: "attachment" as const, name: "test.mp4", mime: "video/mp4", size: 3000000, received: 0, nextBlock: 0, complete: false };
+  const previous = { id: draft.id, rowVersion: draft.rowVersion, sessionId: item.sessionId, blockSize: 2097152, uploadProtocol: 2 as const, media: [item, { ...item, id: draft.id, sessionId: draft.id, complete: true }] };
+  const ack = { id: draft.id, rowVersion: "90071992547409932", sessionId: item.sessionId, blockSize: 2097152, received: 2097152, nextBlock: 1, uploadProgress: true };
+  const next = parseUploadProgress(result(ack), previous);
+  assert.equal(next.media[0].received, 2097152);
+  assert.deepEqual(next.media[1], previous.media[1]);
+  for (const patch of [{ id: item.id }, { sessionId: draft.id }, { rowVersion: draft.rowVersion }, { blockSize: 524288 }, { received: 1 }, { nextBlock: 2 }]) assert.throws(() => parseUploadProgress(result({ ...ack, ...patch }), previous));
+  assert.throws(() => parseUploadProgress(result(ack), { ...previous, uploadProtocol: undefined }));
+  assert.equal(parseUploadProgress(result({ ...ack, rowVersion: "90071992547409933", received: 3000000, nextBlock: 2 }), next).media[0].received, 3000000);
+});
+
+test("4 MiB negotiation rejects unsupported capabilities and never replays uncertain blocks", async () => {
+  const blockSize = 4194304;
+  const item = { id: draft.areaId, sessionId: draft.areaId, kind: "attachment", name: "sample.mp4", mime: "video/mp4", size: 1, received: 0, nextBlock: 0, complete: false };
+  const state = { id: draft.id, rowVersion: "2", sessionId: item.sessionId, blockSize, uploadProtocol: 2, maxBlockSize: 4194304, media: [item] };
+  assert.equal(parseMedia(result(state)).maxBlockSize, 4194304);
+  assert.throws(() => parseMedia(result({ ...state, maxBlockSize: 8388608 })));
+  assert.throws(() => parseMedia(result({ ...state, uploadProtocol: undefined })));
+  let blocks = 0;
+  let finishes = 0;
+  const api: MediaApi = {
+    read: async () => result(state), remove: async () => result(state), metadata: async () => result(state),
+    begin: async () => result(state),
+    block: async () => { blocks++; throw new Error("Response lost"); },
+    finish: async () => { finishes++; return result(state); },
+  };
+  const file = new File(["x"], item.name);
+  const initial = { id: draft.id, rowVersion: "1", uploadProtocol: 2 as const, maxBlockSize: 4194304 as const };
+  await assert.rejects(uploadMedia({ ...api, begin: async () => result({ ...state, blockSize: 2097152 }) }, initial, file, "attachment", signal(), () => {}), /not negotiated/);
+  assert.equal(blocks, 0);
+  await assert.rejects(uploadMedia(api, initial, file, "attachment", signal(), () => {}), /Response lost/);
+  assert.equal(blocks, 1);
+  assert.equal(finishes, 0);
+  const { getLastUploadTiming } = await import("./media.ts");
+  assert.equal(getLastUploadTiming()!.complete, false);
+  assert.equal(getLastUploadTiming()!.blocks, 0);
+});
+
+for (const blockSize of [2097152, 4194304]) test(`negotiated upload sends ${blockSize} byte blocks and preserves attachments and timing`, async () => {
+  const item = { id: draft.areaId, sessionId: draft.areaId, kind: "attachment", name: "sample.mp4", mime: "video/mp4", size: blockSize + 3, received: 0, nextBlock: 0, complete: false };
+  const existing = { ...item, id: draft.id, sessionId: draft.id, name: "existing.mp4", complete: true };
+  const state = { id: draft.id, rowVersion: "2", sessionId: item.sessionId, blockSize, uploadProtocol: 2, media: [existing, item] };
+  const lengths: number[] = [];
+  const api: MediaApi = {
+    read: async () => result(state), remove: async () => result(state), metadata: async () => result(state),
+    begin: async (_id, version, kind) => { assert.equal(version, "1"); assert.equal(kind, blockSize === 4194304 ? "attachment:v3" : "attachment:v2"); return result(state); },
+    block: async (id, version, sessionId, index, content) => {
+      assert.equal(version, String(index + 2)); lengths.push(atob(content).length);
+      return result({ id, sessionId, rowVersion: String(index + 3), blockSize, uploadProgress: true, nextBlock: index + 1, received: Math.min((index + 1) * blockSize, item.size) });
+    },
+    finish: async (_id, version) => { assert.equal(version, "4"); return result({ ...state, rowVersion: "5", media: [existing, { ...item, received: item.size, nextBlock: 2, complete: true }] }); },
+  };
+  const progress: number[] = [];
+  const uploaded = await uploadMedia(api, { id: draft.id, rowVersion: "1", uploadProtocol: 2, ...(blockSize === 4194304 ? { maxBlockSize: 4194304 as const } : {}) }, new File([new Uint8Array(item.size)], item.name), "attachment", signal(), snapshot => {
+    assert.equal(snapshot.media.length, 2); progress.push(snapshot.media[1].received);
+  });
+  assert.deepEqual(lengths, [blockSize, 3]);
+  assert.deepEqual(progress, [0, blockSize, blockSize + 3]);
+  assert.equal(uploaded.media[1].complete, true);
+  const { getLastUploadTiming } = await import("./media.ts");
+  const timing = getLastUploadTiming()!;
+  assert.equal(timing.complete, true);
+  assert.equal(timing.blockSize, blockSize);
+  assert.equal(timing.blocks, 2);
+  assert.equal(timing.bytes, item.size);
+  assert.ok(timing.totalMs >= timing.beginMs + timing.encodingMs + timing.requestsMs + timing.finishMs);
 });

@@ -10,6 +10,44 @@ namespace Prisma.Plugins.Tests
         private static string Input(string extra = "") { return "{\"name\":\"Named draft\",\"areaId\":\"" + Area + "\"" + extra + "}"; }
 
         [Fact]
+        public void LargeUploadsKeepExistingSessionSizesAndEnforceFourMiBBoundaries()
+        {
+            Assert.Equal(524288, MediaPolicy.RequestedBlockSize("attachment"));
+            Assert.Equal(2097152, MediaPolicy.RequestedBlockSize("attachment:v2"));
+            Assert.Equal(4194304, MediaPolicy.RequestedBlockSize("attachment:v3"));
+            var session = new Entity("nx_uploadsession") { ["nx_name"] = MediaPolicy.LargeSessionPrefix + Guid.NewGuid().ToString("N") };
+            Assert.Equal(4194304, MediaPolicy.SessionBlockSize(session));
+            var block = Convert.ToBase64String(new byte[4194304]);
+            Assert.Equal(4194304, MediaPolicy.Block(block, 0, 0, 4194305, 0, 4194304).Length);
+            Assert.Single(MediaPolicy.Block("AA==", 1, 1, 4194305, 4194304, 4194304));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block(block, 0, 0, 4194305, 0, 2097152));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block("AA==", 1, 1, 4194305, 2097152, 4194304));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block("AA==", 2, 1, 4194305, 4194304, 4194304));
+            var json = DraftPolicy.Serialize(new MediaResult());
+            Assert.Contains("\"uploadProtocol\":2", json);
+            Assert.Contains("\"maxBlockSize\":4194304", json);
+        }
+
+        [Fact]
+        public void OptimizedUploadsKeepLegacySessionsAndValidateBlockBoundaries()
+        {
+            var session = new Entity("nx_uploadsession");
+            Assert.Equal(524288, MediaPolicy.SessionBlockSize(session));
+            session["nx_name"] = MediaPolicy.OptimizedSessionPrefix + Guid.NewGuid().ToString("N");
+            Assert.Equal(2097152, MediaPolicy.SessionBlockSize(session));
+            var block = Convert.ToBase64String(new byte[2097152]);
+            Assert.Equal(2097152, MediaPolicy.Block(block, 0, 0, 2097153, 0, 2097152).Length);
+            Assert.Single(MediaPolicy.Block("AA==", 1, 1, 2097153, 2097152, 2097152));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block(block, 0, 0, 2097153, 0));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block("AA==", 1, 1, 2097153, 524288, 2097152));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block("AA==", 2, 1, 2097153, 2097152, 2097152));
+            var json = DraftPolicy.Serialize(new MediaProgress { Id = Area, RowVersion = "123", SessionId = Area, BlockSize = 2097152, Received = 2097152, NextBlock = 1 });
+            Assert.Contains("\"uploadProgress\":true", json);
+            Assert.DoesNotContain("token", json);
+            Assert.DoesNotContain("\"media\"", json);
+        }
+
+        [Fact]
         public void RetirementRequiresLibrarianAndRestorationRequiresFreshSubmission()
         {
             var owner = Guid.NewGuid();

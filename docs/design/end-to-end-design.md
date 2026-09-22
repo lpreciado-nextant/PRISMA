@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Agreed design; single-project selection and media ordering implemented; external launch, delivery/playback and least-privilege acceptance remain open
+**Status:** Agreed design; 200 MiB video preparation implemented locally; hosted compression, delivery/playback and least-privilege acceptance remain open
 **Last updated:** 2026-09-22
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
@@ -175,6 +175,8 @@ The connected Media step supports images, videos, one-pagers/slides and self-con
 | Client-ready one-pager / slide | Download | — |
 
 New submissions require at least one detail image; images alone are sufficient. A thumbnail alone is not. The librarian reviews all client-visible media before publication. Capability-specific upload guidance should be validated with practice leads, especially data/BI and business teams.
+
+Following explicit user approval, both runnable submission forms automatically attempt local compression for MP4/WebM videos from 200 MiB through the existing 500 MiB input limit. Smaller files are unchanged. Only a smaller validated output replaces the selected file; failures require an explicit original-file choice or cancellation before upload. No original file is overwritten. Progress/cancellation and wizard locking are shared; the single-file presentation excludes the encoder and offers original-file fallback. Hosted validation and GPL distribution review are release gates. Details and verification limits are owned by [demo assets](../workflows/demo-assets.md#automatic-video-preparation).
 
 **Request a live demo (planned)** will create a lightweight handoff: the CSM picks a solution, adds context (client, date, what they need to show), and the builder is notified. The current connected desktop viewer only displays author-provided arrangements; it does not create a request or notify anyone. This future handoff is the escape hatch for solutions that can't be self-served and a signal of which solutions matter to the business (G3).
 

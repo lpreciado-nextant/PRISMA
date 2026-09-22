@@ -1,5 +1,22 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
+
+export function LocalVideoPreview({ file, onClose }: { file: File; onClose: () => void }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [failedFile, setFailedFile] = useState<File | null>(null);
+  useEffect(() => {
+    const element = video.current;
+    if (!element) return;
+    const url = URL.createObjectURL(file);
+    element.src = url;
+    return () => { element.pause(); element.removeAttribute("src"); element.load(); URL.revokeObjectURL(url); };
+  }, [file]);
+  return <section aria-label="Local video preview" className="mt-6 border-t border-(--glass-edge) pt-5">
+    <div className="mb-3 flex items-center gap-3"><div className="min-w-0 flex-1"><p className="eyebrow">Local file preview</p><h3 className="mt-1 break-words text-[16px] font-semibold">{file.name}</h3></div><button type="button" aria-label="Close local preview" title="Close local preview" className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-(--glass-edge)" onClick={onClose}><Icon name="close" /></button></div>
+    {failedFile === file && <p role="alert" className="mb-3 text-[14px]">This local video could not be played in this browser.</p>}
+    <video ref={video} controls aria-label={`Local preview: ${file.name}`} className="max-h-[65vh] w-full" onError={() => setFailedFile(file)} />
+  </section>;
+}
 
 export function VideoPlayer({ src, name, className }: { src: string; name: string; className: string }) {
   const [failed, setFailed] = useState(false);

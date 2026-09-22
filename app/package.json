@@ -16,6 +16,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "@microsoft/power-apps": "^1.2.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

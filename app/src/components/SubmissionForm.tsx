@@ -15,6 +15,8 @@ import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
 import type { AssetType } from "../types";
 import { LINK_ASSET_TYPES, validateLinkedAsset, type LinkedAssetInput, type LinkAssetType } from "../lib/linkedAssets";
+import { useVideoPreparation } from "../lib/useVideoPreparation";
+import { LocalVideoPreview } from "./ViewerFrame";
 
 export const SUBMISSION_STEPS = ["Before you start", "What is it?", "What & why", "Tag it", "Media", "Review & submit"] as const;
 
@@ -97,7 +99,7 @@ export function ImageUploadZone({ line, sub, multiple, disabled, onFiles, childr
   </label>;
 }
 
-export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, format, onFormat, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, disabled = false, attachmentDisabled = false, local = false, children }: {
+export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, format, onFormat, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
   capabilities: string[]; thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
   images: { id: string; preview: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
   format: AssetType; onFormat: (format: AssetType) => void; onAttachment: (file: File) => void;
@@ -105,14 +107,17 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
   onLinkedAsset?: (input: LinkedAssetInput, id?: string) => Promise<void>; onLinkedPending?: (pending: boolean) => void;
   onPreviewThumbnail?: () => void; onPreviewImage?: (id: string) => void; onPreviewAttachment?: (id: string) => void;
   onReorderImages?: (ids: string[]) => void; onReorderAttachments?: (ids: string[]) => void;
+  onPreparationBusy?: (busy: boolean) => void;
   disabled?: boolean; attachmentDisabled?: boolean; local?: boolean; children?: ReactNode;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [linkedDirty, setLinkedDirty] = useState(false);
+  const preparation = useVideoPreparation(onAttachment, onPreparationBusy);
   useEffect(() => { onLinkedPending?.(linkedDirty); return () => onLinkedPending?.(false); }, [linkedDirty, onLinkedPending]);
   const linked = LINK_ASSET_TYPES.includes(format as LinkAssetType);
   const edited = attachments.find(item => item.id === editing);
   return <StepShell title="Media">
+    <fieldset disabled={preparation.busy} className="flex min-w-0 flex-col gap-5">
     <div className="border-l-2 border-(--accent) pl-4 text-[14px] text-(--ink-2)"><MediaGuidance capabilities={capabilities} /><p className="mt-2">Remove confidential data and client identifiers from every attachment before uploading.</p></div>
     <div><p className="mb-1.5 text-[13.5px] font-semibold">Card thumbnail</p><p className="mb-2 text-[12px] text-(--ink-3)">The card grid's hero image — without one, the card gets a generated poster</p>
       {thumbnail ? <div className="flex flex-wrap items-center gap-4"><div className="h-24 w-40 shrink-0 overflow-hidden rounded-[12px] border border-(--glass-edge)">{onPreviewThumbnail ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={onPreviewThumbnail} aria-label="Preview thumbnail">{thumbnail}</button> : thumbnail}</div><button type="button" disabled={disabled} onClick={onRemoveThumbnail} className="cursor-pointer rounded-lg border border-(--glass-edge) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink-2) disabled:opacity-40">Remove</button></div> : thumbnailUpload}
@@ -126,9 +131,18 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
     <fieldset disabled={disabled || linkedDirty || !!editing} className="min-w-0 disabled:opacity-60"><Field label="Additional media format"><SelectPicker label="Additional media format" value={format} options={["Self-contained HTML file", "Video walkthrough only", "Client-ready one-pager / slide", ...(onLinkedAsset ? LINK_ASSET_TYPES : [])]} onChange={value => { if (!editing && !linkedDirty) onFormat(value); }} /></Field></fieldset>
     {onLinkedAsset && (linked || edited?.linkedAsset) ? <LinkedAssetEditor key={editing ?? format} type={edited?.linkedAsset?.assetType ?? format as LinkAssetType} initial={edited?.linkedAsset} disabled={disabled || attachmentDisabled || (!editing && attachments.length >= 6)} onPending={setLinkedDirty}
       onSave={async value => { await onLinkedAsset(value, editing ?? undefined); setEditing(null); }} onCancel={() => { setEditing(null); onFormat("Self-contained HTML file"); }} /> : <Field label="Attach additional media" hint={`Optional. MP4/WebM videos up to 500 MB each; HTML and PDF/PPT/PPTX documents up to 25 MB each. Up to 6 additional files.${local ? " Local preview only." : ""}`}>
-      <input type="file" className="max-w-full rounded-lg text-[14px] text-(--ink-2) file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-lg file:border file:border-(--glass-edge) file:bg-(--accent) file:px-4 file:py-2.5 file:text-[14px] file:font-semibold file:text-(--on-accent) hover:file:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40 disabled:file:cursor-not-allowed" disabled={disabled || attachmentDisabled || attachments.length >= 6} accept={format === "Self-contained HTML file" ? ".html,.htm" : format === "Video walkthrough only" ? ".mp4,.webm" : ".pdf,.ppt,.pptx"} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onAttachment(file); }} />
+      <input type="file" className="max-w-full rounded-lg text-[14px] text-(--ink-2) file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-lg file:border file:border-(--glass-edge) file:bg-(--accent) file:px-4 file:py-2.5 file:text-[14px] file:font-semibold file:text-(--on-accent) hover:file:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40 disabled:file:cursor-not-allowed" disabled={disabled || attachmentDisabled || attachments.length >= 6} accept={format === "Self-contained HTML file" ? ".html,.htm" : format === "Video walkthrough only" ? ".mp4,.webm" : ".pdf,.ppt,.pptx"} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) { if (format === "Video walkthrough only") void preparation.select(file); else onAttachment(file); } }} />
     </Field>}
     <ul className="space-y-4">{attachments.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={attachments.map(entry => entry.id)} label={item.name} group="attachments" disabled={disabled || attachmentDisabled || linkedDirty || !!editing} onReorder={onReorderAttachments} className="min-w-0 border-b border-(--glass-edge) pb-3"><div className="flex min-w-0 flex-wrap items-center gap-3"><Icon name="file" className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{item.linkedAsset.assetType}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!editing || linkedDirty} title="Edit asset" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (linkedDirty) return; setEditing(item.id); onFormat(item.linkedAsset!.assetType); }}><Icon name="file" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview attachment" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editing === item.id} title="Remove attachment" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></div></MediaReorderItem>)}</ul>
+    </fieldset>
+    {preparation.progress && <div className="min-w-0 border-t border-(--glass-edge) pt-4">
+      <p role="status" className="text-[14px]">{preparation.progress.phase === "loading" ? "Loading video compressor..." : preparation.progress.phase === "checking" ? "Checking compressed video..." : `Compressing video: ${preparation.progress.percent ?? 0}%`}</p>
+      <progress aria-label="Video compression" max={100} value={preparation.progress.percent} className="mt-2 h-2 w-full accent-(--accent)" />
+      <button type="button" onClick={preparation.cancel} className="mt-3 inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 text-[14px]"><Icon name="close" />Cancel compression</button>
+    </div>}
+    {preparation.failure && <div className="min-w-0 border-t border-(--glass-edge) pt-4"><p role="alert" className="text-[14px]">Video compression could not finish in this browser. Nothing has been uploaded.</p><div className="mt-3 flex flex-wrap gap-3"><button type="button" onClick={preparation.cancel} className="min-h-10 cursor-pointer rounded-lg border border-(--glass-edge) px-3 text-[14px]">Cancel</button><button type="button" onClick={preparation.useOriginal} className="min-h-10 cursor-pointer rounded-lg bg-(--accent) px-3 text-[14px] text-(--on-accent)">Use original</button></div></div>}
+    {preparation.note && <p role="status" className="text-[14px] text-(--ink-2)">{preparation.note}</p>}
+    {preparation.preview && <LocalVideoPreview file={preparation.preview} onClose={preparation.closePreview} />}
     {children}
   </StepShell>;
 }

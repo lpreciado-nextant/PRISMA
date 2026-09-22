@@ -10,7 +10,16 @@ const result = await build({
   root,
   configFile: false,
   publicDir: false,
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), {
+    name: "standalone-video-preparation",
+    enforce: "pre",
+    resolveId(source, importer) {
+      if (source === "./videoEncoder" && importer?.replaceAll("\\", "/").endsWith("/lib/videoCompression.ts")) return "\0standalone-video-encoder";
+    },
+    load(id) {
+      if (id === "\0standalone-video-encoder") return 'export async function encodeVideo() { throw new Error("Video compression requires the running app."); }';
+    },
+  }],
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
   build: {
     write: false,
