@@ -4,6 +4,7 @@ import { getContext } from "@microsoft/power-apps/app";
 export interface AppUser {
   fullName: string;
   userPrincipalName: string;
+  photoUrl?: string;
   /** False when running outside the Power Apps host (plain `npm run dev`). */
   live: boolean;
 }

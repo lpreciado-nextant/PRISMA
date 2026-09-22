@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Xml.Linq;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
@@ -11,13 +12,78 @@ const string organizationUrl = "https://nextantpulse.crm.dynamics.com";
 const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
-if (!new[] { "inspect", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+if (!new[] { "inspect", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "remove-story-field")
+{
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "--execute")) throw new ArgumentException("Use remove-story-field [--execute]; preview is read-only.");
+    AttributeMetadata? ReadStoryField(bool editable) => ((RetrieveEntityResponse)client.Execute(new RetrieveEntityRequest {
+        LogicalName = "nx_solution", EntityFilters = EntityFilters.Attributes, RetrieveAsIfPublished = editable
+    })).EntityMetadata.Attributes.SingleOrDefault(attribute => attribute.LogicalName == "nx_usecase");
+    var published = ReadStoryField(false);
+    var editable = ReadStoryField(true);
+    if (published == null && editable == null) { Console.WriteLine("Verified retired story column is absent from published and editable metadata. No changes made."); return; }
+    if (editable is not StringAttributeMetadata || published?.MetadataId != editable.MetadataId || editable.MetadataId != Guid.Parse("9849a6a2-f765-43f4-8bdf-5cd157a524a6")
+        || editable.SchemaName != "nx_UseCase" || editable.IsManaged != false || editable.IsCustomizable?.Value != true)
+        throw new InvalidOperationException("Unexpected story-column metadata. Refusing deletion.");
+    EntityCollection Dependencies() => ((RetrieveDependenciesForDeleteResponse)client.Execute(new RetrieveDependenciesForDeleteRequest {
+        ComponentType = 2, ObjectId = editable.MetadataId.Value
+    })).EntityCollection;
+    var dependencies = Dependencies().Entities;
+    Console.WriteLine($"Column nx_solution.nx_usecase {editable.MetadataId}; deletion dependencies: {dependencies.Count}.");
+    foreach (var dependency in dependencies)
+        Console.WriteLine($"Dependent component type {dependency.GetAttributeValue<OptionSetValue>("dependentcomponenttype")?.Value}; ID {dependency.GetAttributeValue<Guid>("dependentcomponentobjectid")}.");
+    var formId = Guid.Parse("f753494e-cfb7-486a-8a69-6e66975d94be");
+    if (dependencies.Any(dependency => dependency.GetAttributeValue<OptionSetValue>("dependentcomponenttype")?.Value != 60
+        || dependency.GetAttributeValue<Guid>("dependentcomponentobjectid") != formId)) throw new InvalidOperationException("Unexpected dependency; reassess before modifying any component.");
+    Entity ReadForm() => ((RetrieveUnpublishedResponse)client.Execute(new RetrieveUnpublishedRequest {
+        Target = new EntityReference("systemform", formId), ColumnSet = new ColumnSet("formxml", "objecttypecode", "ismanaged", "name")
+    })).Entity;
+    var form = ReadForm();
+    if (form.GetAttributeValue<string>("objecttypecode") != "nx_solution" || form.GetAttributeValue<bool>("ismanaged"))
+        throw new InvalidOperationException("Unexpected form ownership or table.");
+    var originalXml = form.GetAttributeValue<string>("formxml");
+    var document = XDocument.Parse(originalXml, LoadOptions.PreserveWhitespace);
+    var controls = document.Descendants("control").Where(control => string.Equals((string?)control.Attribute("datafieldname"), "nx_usecase", StringComparison.OrdinalIgnoreCase)).ToArray();
+    if (controls.Length > 1 || (dependencies.Count > 0 && controls.Length != 1)) throw new InvalidOperationException("Unexpected story controls on the form.");
+    foreach (var control in controls) {
+        var row = control.Parent?.Parent;
+        if (control.Parent?.Name != "cell" || row?.Name != "row" || row.Elements("cell").Count() != 1 || row.Descendants("control").Count() != 1)
+            throw new InvalidOperationException("The story control no longer occupies an isolated form row.");
+        row.Remove();
+    }
+    Console.WriteLine($"Information form: remove {controls.Length} isolated story row; preserve every other control.");
+    var query = new QueryExpression("nx_solution") { ColumnSet = new ColumnSet(false), PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 } };
+    query.Criteria.AddCondition("nx_usecase", ConditionOperator.NotNull);
+    query.Orders.Add(new OrderExpression("nx_solutionid", OrderType.Ascending));
+    var populated = 0;
+    EntityCollection rows;
+    do {
+        rows = client.RetrieveMultiple(query); populated += rows.Entities.Count;
+        query.PageInfo.PageNumber++; query.PageInfo.PagingCookie = rows.PagingCookie;
+    } while (rows.MoreRecords);
+    Console.WriteLine($"Records with a stored value: {populated}. Deletion permanently removes these values; other columns and records are retained.");
+    Console.WriteLine("Deploy the compatible connected app and tested plug-in first. Only nx_solution will be published; table publication can include other pending customizations. No roles or unrelated form controls are changed.");
+    if (args.Length == 1) { Console.WriteLine("Read-only preview. No changes made."); return; }
+    if (populated > 1) throw new InvalidOperationException("The populated record count exceeds the approved preflight; reassess before deletion.");
+    const string publishSolution = "<importexportxml><entities><entity>nx_solution</entity></entities></importexportxml>";
+    if (controls.Length != 0) {
+        if (ReadForm().GetAttributeValue<string>("formxml") != originalXml) throw new InvalidOperationException("The form changed during preflight. Reopen before retrying.");
+        client.Update(new Entity("systemform", formId) { ["formxml"] = document.ToString(SaveOptions.DisableFormatting) });
+        client.Execute(new PublishXmlRequest { ParameterXml = publishSolution });
+    }
+    if (Dependencies().Entities.Count != 0) throw new InvalidOperationException("Deletion dependencies remain after the scoped form update.");
+    client.Execute(new DeleteAttributeRequest { EntityLogicalName = "nx_solution", LogicalName = "nx_usecase" });
+    client.Execute(new PublishXmlRequest { ParameterXml = publishSolution });
+    if (ReadStoryField(false) != null || ReadStoryField(true) != null) throw new InvalidOperationException("Column deletion could not be verified.");
+    Console.WriteLine("Verified retired story column is absent from published and editable metadata.");
+    return;
+}
 if (command == "seed-reference-data") { SeedReferenceData(client, args.Skip(1).ToArray()); return; }
 if (command == "smoke-transfer")
 {

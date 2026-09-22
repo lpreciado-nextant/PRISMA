@@ -1,6 +1,6 @@
 # Nextant Solution Library — example row per table (SchemaV2)
 
-**Status:** Illustrative companion, aligned with authored draft names, draft/review fields and code-based US holiday policy · **Last updated:** 2026-09-21
+**Status:** Illustrative companion, aligned with the two-field story model, authored draft names, draft/review fields and code-based US holiday policy · **Last updated:** 2026-09-22
 **Companion to:** [SchemaV2.md](SchemaV2.md)
 
 One illustrative row per table in the v2 model, all pointing at the same story so the relationships stay traceable: **S1 — Invoice Reconciliation Assistant**, the same example used in SchemaV2's diagrams. GUIDs below are placeholders (`{table}-001` style), not real Dataverse ids. Sample data only — no real client information.
@@ -58,7 +58,6 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | Business Value | Cuts manual reconciliation time and reduces duplicate/incorrect payments. |
 | Specialization Area | sa-001 — AI & Automation |
 | Capability | cap-001 — AI & agents |
-| Use Case | Reduce manual invoice handling |
 | Client / Context | Acería del Norte — AP team, 2026 pilot |
 | Client Context (Redacted) | A regional manufacturing company |
 | Status | Client demo |

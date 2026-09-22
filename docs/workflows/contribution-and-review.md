@@ -1,6 +1,6 @@
 # Contribution & review workflow
 
-**Status:** Deployed-app submission, return/revision, publication and present-mode workflow passed with one privileged account; non-admin and separate-reviewer gates remain · **Last updated:** 2026-09-22
+**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §3.1](../design/end-to-end-design.md#31-contribution--publication) · Roles: [Contributor, Librarian](../design/end-to-end-design.md#2-users-and-roles)
 
 ## Lifecycle
@@ -23,10 +23,10 @@ The test solution **[PRISMA TEST] Hosted workflow 2026-09-22**, ID `3e16f641-b8b
 | Media | Thumbnail and screenshot uploaded and decoded at 960 x 600. Caption survived the following HTML upload. HTML and captioned MP4 finalized without app alerts. Small-video hashing/upload worked under the deployed CSP; compression was not triggered by this small file. |
 | Save and reopen | Save draft & close returned to My submissions. Reopening retained name, summary, effort, internal/redacted context, story, caption and both attachments; opening safety acknowledgment reset. |
 | Initial submission | Final Submit stayed disabled before the separate final safety confirmation. Submission entered Pending review and appeared in the librarian queue with one screenshot and two attachments; success explicitly said nothing was published. |
-| Return and revision | Return disabled without comments; approval disabled without reviewer confirmation. Return with feedback restored Draft. Contributor editor showed that feedback, required fresh acknowledgment and saved the requested use-case revision. Resubmission retained feedback and showed the revision in Pending review. |
+| Return and revision | Return disabled without comments; approval disabled without reviewer confirmation. Return with feedback restored Draft. Contributor editor showed that feedback, required fresh acknowledgment and saved the requested narrative revision. Resubmission retained feedback and showed the revision in Pending review. |
 | Reviewer inspection | Saved HTML button changed Pending sample to Approved sample in the sandboxed viewer. Captioned MP4 offered full-file fallback for its extra subtitle track, then protected retrieval decoded 640 x 360 / 2 seconds with two caption cues. |
 | Publication | After independent reviewer confirmation, Approve & publish succeeded. The review panel showed Published and Client review Cleared, with final comments saved. |
-| Discovery and persistence | Library title search returned one result; the published `#/s/:id` detail loaded. A fresh frame reload retained the published detail and revised use case. |
+| Discovery and persistence | Library title search returned one result; the published `#/s/:id` detail loaded. A fresh frame reload retained the published detail and narrative revision. |
 | Present mode | Authored anonymous context replaced the internal marker. Review comments and individual effort detail were absent; contributor name and total 2.5 hours remained. Searching for the internal marker returned zero results; public-title search returned one. |
 | Published viewers | Present-mode HTML remained interactive with `sandbox="allow-scripts"`; attempting parent DOM access was denied. Published/present MP4 full-file playback decoded with captions and, in the visible browser tab, played from zero to the ended event at 2 seconds without a media error. Audio was muted. |
 

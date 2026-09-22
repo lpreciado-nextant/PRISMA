@@ -16,6 +16,7 @@ let review;
 let viewer;
 let card;
 let welcome;
+let masthead;
 const noop = () => {};
 const render = (component, props) => renderToStaticMarkup(createElement(component, props));
 
@@ -27,8 +28,62 @@ before(async () => {
   viewer = await server.ssrLoadModule("/src/components/ViewerFrame.tsx");
   card = await server.ssrLoadModule("/src/components/SolutionCard.tsx");
   welcome = await server.ssrLoadModule("/connected/src/WelcomeScreen.tsx");
+  masthead = await server.ssrLoadModule("/src/components/Masthead.tsx");
 });
 after(async () => { await server?.close(); if (cacheDirectory) await rm(cacheDirectory, { recursive: true, force: true }); });
+
+test("profile photo lookup uses the signed-in identity and tolerates missing, denied or invalid photos", async () => {
+  const { getUserPhoto } = await server.ssrLoadModule("/connected/src/dataSource.ts");
+  const { Office365UsersService } = await server.ssrLoadModule("/connected/src/generated/services/Office365UsersService.ts");
+  const original = Office365UsersService.UserPhoto_V2;
+  const calls = [];
+  let response = { success: true, data: "/9j/AA==" };
+  Office365UsersService.UserPhoto_V2 = async identity => { calls.push(identity); return response; };
+  try {
+    assert.equal(await getUserPhoto("sample@example.com"), "data:image/jpeg;base64,/9j/AA==");
+    assert.deepEqual(calls, ["sample@example.com"]);
+    assert.equal(await getUserPhoto(""), undefined);
+    assert.equal(calls.length, 1);
+    for (const data of [undefined, "", "https://example.com/photo", "PHN2Zz4=", "/9j/ invalid", "A".repeat(6 * 1024 * 1024 + 1)]) {
+      response = { success: true, data };
+      assert.equal(await getUserPhoto("sample@example.com"), undefined);
+    }
+    response = { success: true, data: "iVBORw0KGgo=" };
+    assert.equal(await getUserPhoto("sample@example.com"), "data:image/png;base64,iVBORw0KGgo=");
+    response = { success: false, data: "/9j/AA==" };
+    assert.equal(await getUserPhoto("sample@example.com"), undefined);
+    Office365UsersService.UserPhoto_V2 = async () => { throw new Error("Photo unavailable"); };
+    assert.equal(await getUserPhoto("sample@example.com"), undefined);
+  } finally {
+    Office365UsersService.UserPhoto_V2 = original;
+  }
+});
+
+test("masthead renders optional profile photos, retains initials and omits identity in present mode", () => {
+  const user = { fullName: "Sample User", userPrincipalName: "sample@example.com", live: true };
+  const props = { user, theme: "light", onToggleTheme: noop, present: false, onTogglePresent: noop };
+  const fallback = render(masthead.Masthead, props);
+  assert.match(fallback, />SU<\/span>/);
+  const photoUrl = "data:image/jpeg;base64,/9j/AA==";
+  const photo = render(masthead.Masthead, { ...props, user: { ...user, photoUrl } });
+  assert.match(photo, /src="data:image\/jpeg;base64,\/9j\/AA==" alt="" width="28" height="28"/);
+  assert.match(photo, />SU<img/);
+  const present = render(masthead.Masthead, { ...props, present: true, user: { ...user, photoUrl } });
+  assert.doesNotMatch(present, /Sample User|data:image\/jpeg|>SU</);
+});
+
+test("published detail loading uses the branded accessible state without exposing solution data", async () => {
+  const { PublishedView } = await server.ssrLoadModule("/connected/src/PublishedView.tsx");
+  const solution = { id: "loading-fixture", name: "Private solution name", clientContext: "Internal client" };
+  for (const present of [false, true]) {
+    const html = render(PublishedView, { solution, present });
+    assert.match(html, /class="solution-loading" aria-labelledby="solution-loading-title"/);
+    assert.match(html, /src="\.\/prisma-mark-v2.svg" alt="" width="72" height="72"/);
+    assert.match(html, /role="status" aria-live="polite" aria-atomic="true">Loading solution/);
+    assert.match(html, /class="welcome-track" aria-hidden="true"/);
+    assert.doesNotMatch(html, /Private solution name|Internal client|<button|aria-valuenow/);
+  }
+});
 
 test("welcome reflects actual connection state and withholds Begin until ready", () => {
   const connecting = render(welcome.WelcomeScreen, { authenticated: false, present: false });
@@ -84,6 +139,20 @@ test("both adapters consume the shared form and review surfaces", async () => {
   assert.match(connected, /onReopen=\{\(\) => setConfirmation\("reopen"\)\}/);
   assert.match(poc, /onPreparationBusy=\{setPreparingVideo\}/);
   assert.doesNotMatch(media, /Save captions|Discard caption edits/);
+});
+
+test("story section contains only the two narrative fields in both adapters", async () => {
+  const html = render(form.StoryFields, { whatItDoes: "Actions and results", businessValue: "Business benefit", onChange: noop });
+  assert.match(html, /What does it do, and why does it matter\?/);
+  assert.match(html, /What it does/);
+  assert.match(html, /Business value/);
+  assert.equal((html.match(/<textarea/g) ?? []).length, 2);
+  const { readFile } = await import("node:fs/promises");
+  for (const path of ["../src/views/SubmitView.tsx", "../connected/src/DraftsView.tsx"]) {
+    const source = await readFile(new URL(path, import.meta.url), "utf8");
+    assert.match(source, /<StoryFields\b/);
+    assert.doesNotMatch(source, /field\("useCase"/);
+  }
 });
 
 test("wizard footer preserves labels and locks every action during uncertain saves", () => {

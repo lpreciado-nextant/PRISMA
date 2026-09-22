@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Icon } from "./Icon";
 import { initials, type AppUser } from "../lib/powerContext";
 import type { Theme } from "../lib/theme";
@@ -104,12 +105,7 @@ export function Masthead({
                 background: "color-mix(in srgb, var(--ink) 6%, transparent)",
               }}
             >
-              <span
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-lg font-mono text-[10px] font-medium"
-                style={{ background: "var(--accent)", color: "var(--on-accent)" }}
-              >
-                {initials(user.fullName)}
-              </span>
+              <UserAvatar key={`${user.userPrincipalName}:${user.photoUrl ?? ""}`} user={user} />
               <span className="leading-tight">
                 <span
                   className="block max-w-[160px] truncate text-[13px] font-semibold"
@@ -130,6 +126,16 @@ export function Masthead({
       </div>
     </header>
   );
+}
+
+function UserAvatar({ user }: { user: AppUser }) {
+  const [failed, setFailed] = useState(false);
+  return <span className="relative grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-lg font-mono text-[10px] font-medium"
+    style={{ background: "var(--accent)", color: "var(--on-accent)" }} aria-hidden="true">
+    {initials(user.fullName)}
+    {user.photoUrl && !failed && <img src={user.photoUrl} alt="" width={28} height={28}
+      className="absolute inset-0 h-full w-full object-cover" onError={() => setFailed(true)} />}
+  </span>;
 }
 
 function PresentToggle({ present, onToggle }: { present: boolean; onToggle: () => void }) {

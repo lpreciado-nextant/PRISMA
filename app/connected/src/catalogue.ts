@@ -18,7 +18,7 @@ const MATURITY: Record<number, SolutionStatus> = {
 };
 const SOLUTION_COLUMNS = [
   "nx_solutionid", "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes",
-  "nx_businessvalue", "nx_usecase", "nx_status", "nx_publicationstatus",
+  "nx_businessvalue", "nx_status", "nx_publicationstatus",
   "nx_safetyacknowledged", "nx_clientsafereviewed", "nx_clientcontextredacted",
   "nx_dateadded", "_nx_specializationarea_value", "_nx_capability_value",
 ];
@@ -126,7 +126,6 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       summary: text(row, "nx_onelinesummary", true),
       whatItDoes: text(row, "nx_whatitdoes"),
       businessValue: text(row, "nx_businessvalue"),
-      useCase: text(row, "nx_usecase") || undefined,
       specializationArea: area as SpecializationArea,
       status,
       publicationStatus: "Published",

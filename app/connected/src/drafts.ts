@@ -15,7 +15,6 @@ export interface CoreDraft {
   maturity: number;
   whatItDoes: string;
   businessValue: string;
-  useCase: string;
   clientContext: string;
   clientContextRedacted: string;
   safetyAcknowledged: boolean;
@@ -32,12 +31,12 @@ export interface DraftApi {
 
 export const EMPTY_DRAFT: CoreDraft = {
   name: "", summary: "", areaId: "", capabilityId: "", maturity: 125060004,
-  whatItDoes: "", businessValue: "", useCase: "", clientContext: "",
+  whatItDoes: "", businessValue: "", clientContext: "",
   clientContextRedacted: "", safetyAcknowledged: false,
 };
 
 const GUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
-const TEXT_FIELDS = ["name", "summary", "areaId", "capabilityId", "whatItDoes", "businessValue", "useCase", "clientContext", "clientContextRedacted"] as const;
+const TEXT_FIELDS = ["name", "summary", "areaId", "capabilityId", "whatItDoes", "businessValue", "clientContext", "clientContextRedacted"] as const;
 
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid draft response.");
@@ -66,7 +65,7 @@ export function coreFields(draft: CoreDraft): CoreDraft {
   return {
     name: draft.name, summary: draft.summary, areaId: draft.areaId, capabilityId: draft.capabilityId,
     maturity: draft.maturity, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
-    useCase: draft.useCase, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
+    clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
     safetyAcknowledged: draft.safetyAcknowledged,
   };
 }

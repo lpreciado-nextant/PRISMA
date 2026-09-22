@@ -54,7 +54,6 @@ export interface Nx_solutionsBase {
   nx_solutionname: string;
   "nx_SpecializationArea@odata.bind": string;
   nx_status: Nx_solutionsnx_status;
-  nx_usecase?: string;
   nx_whatitdoes?: string;
   overriddencreatedon?: string;
   ownerid: string;

@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library
 
-**Status:** Mock PoC preserved; connected review lifecycle and explicit share revocation verified; cross-account, non-admin and hosted acceptance block connected publication.
+**Status:** Mock PoC preserved; two-field story model adopted; connected review lifecycle and explicit share revocation verified; cross-account and non-admin acceptance remain open.
 **Last updated:** 2026-09-22
 
 An internal marketplace for the PoCs, prototypes, demos, and production solutions Nextant builds across its three Specialization Areas — **AI & Automation**, **Data Solutions**, and **Intelligent Business Operations**.
@@ -127,7 +127,7 @@ Existing table: `cr6b0_project`, with fixed columns and its existing Project Own
 
 `nx_solutioncontributor` replaces the single builder lookup and solution-wide effort category. In Calendar mode, one row per Solution/person stores dates and allocation. Person hours = business days × 8 × allocation / 100, rounded to two decimals; total effort sums those rounded hours. `Business Days` counts Monday-Friday between Start Date and End Date, inclusive, excluding observed US federal holidays calculated in code for 2020-2035. There are no calendar tables or contributor calendar lookups; dates outside supported coverage are rejected. These are capacity-based hours, not actual timesheets or deployment lead time. Ideas and working prototypes use directly reported hours instead. See the [schema contract](docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
-Vocabulary governance: capabilities, industries, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates). `Capability` is single-valued, same shape as `Specialization Area`, not a tag. Use case is a freeform text column on `nx_solution`, not a vocabulary. Industry tags are optional at schema level, with at least one industry or "Cross-industry" expected at review.
+Vocabulary governance: capabilities, industries, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates). `Capability` is single-valued, same shape as `Specialization Area`, not a tag. Solution narratives consist of What it does and Business value. Industry tags are optional at schema level, with at least one industry or "Cross-industry" expected at review.
 
 Full column-by-column spec: [docs/data_model/SchemaV2.md](docs/data_model/SchemaV2.md)
 

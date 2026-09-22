@@ -10,6 +10,18 @@ namespace Prisma.Plugins.Tests
         private static string Input(string extra = "") { return "{\"name\":\"Named draft\",\"areaId\":\"" + Area + "\"" + extra + "}"; }
 
         [Fact]
+        public void CoreStoryContractExcludesRetiredField()
+        {
+            var entity = DraftPolicy.Parse(Input(",\"whatItDoes\":\"Actions\",\"businessValue\":\"Benefits\""));
+            Assert.Equal("Actions", entity.GetAttributeValue<string>("nx_whatitdoes"));
+            Assert.Equal("Benefits", entity.GetAttributeValue<string>("nx_businessvalue"));
+            Assert.False(entity.Contains("nx_usecase"));
+            Assert.DoesNotContain("nx_usecase", DraftPolicy.CoreColumns);
+            Assert.DoesNotContain("useCase", DraftPolicy.Serialize(new DraftSnapshot()));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"useCase\":\"Retired\"")));
+        }
+
+        [Fact]
         public void ResumeRequiresExactFileOwnerExpiryAndConfirmedCheckpoint()
         {
             var parent = Guid.NewGuid(); var owner = Guid.NewGuid(); var now = DateTime.UtcNow;
@@ -389,7 +401,7 @@ namespace Prisma.Plugins.Tests
         {
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input().Replace("Named draft", new string('x', 101))));
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"summary\":\"" + new string('x', 4001) + "\"")));
-            foreach (var field in new[] { "summary", "useCase", "clientContext", "clientContextRedacted" })
+            foreach (var field in new[] { "summary", "clientContext", "clientContextRedacted" })
                 Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"" + field + "\":\"" + new string('x', 201) + "\"")));
             Assert.NotNull(DraftPolicy.Parse(Input(",\"whatItDoes\":\"" + new string('x', 4000) + "\"")));
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse("[]"));

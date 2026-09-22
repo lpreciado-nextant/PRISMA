@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Connected lifecycle and URL storage repair verified; browser and least-privilege acceptance remain open · **Last updated:** 2026-09-22
+**Status:** Connected lifecycle, URL storage repair and two-field story retirement verified; broader browser and least-privilege acceptance remain open · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -19,7 +19,7 @@ Evidence: `pac solution list`, FetchXML queries through `pac env fetch`, and an 
 
 | Live logical table | Rows visible to inspection caller | UI mapping / integration note |
 |---|---:|---|
-| `nx_solution` | 0 | Core catalogue; `nx_solutionname`, `nx_onelinesummary`, `nx_whatitdoes`, `nx_businessvalue`, `nx_usecase`; specialization and capability are lookups, not string enums/N:N capability tags |
+| `nx_solution` | 0 | Core catalogue; current narrative columns are `nx_solutionname`, `nx_onelinesummary`, `nx_whatitdoes`, `nx_businessvalue`; specialization and capability are lookups, not string enums/N:N capability tags |
 | `nx_solutioncontributor` | 0 | `nx_builtby` references `cr6b0_consultant`; direct/calendar effort fields; no calendar lookup |
 | `nx_solutionimage` | 0 | Gallery image column `nx_imagefile`, caption and sort order |
 | `nx_demoasset` | 0 | File column `nx_filemedia`, asset choice, external URL and embedding fields; name column is `nx_demoassetid1` |
@@ -39,11 +39,19 @@ The **PRISMA Librarian** field-security profile grants read/create/update for `n
 
 - All 11 exported tables are **UserOwned**, including the four reference tables and Consultant. The design's organization-owned assumption is not the deployed model. Prefer explicit organization-level reference Read privileges with controlled writes; do not recreate tables or change existing Consultant/Project security without approval.
 - Review Outcome/Comments were unsecured in the initial inventory. The approved core-draft deployment secured both and created unassigned read profiles; effective non-admin permissions remain unverified. Publication status, clearance and Library Notes were already secured.
-- Capability was ApplicationRequired; deployment made it optional for Draft. Submit/approve enforce completeness. Product limits are name 100; summary/use case/internal and redacted context 200; what-it-does/business-value 4000. Live name metadata remains 850. Generated max lengths are not product limits.
+- Capability was ApplicationRequired; deployment made it optional for Draft. Submit/approve enforce completeness. Product limits are name 100; summary/internal and redacted context 200; what-it-does/business-value 4000. Live name metadata remains 850. Generated max lengths are not product limits.
 - Publication and maturity choices have no configured default (`AppDefaultValue=-1`); creation must supply the agreed state. Publication values are Published `125060000`, Retired `125060001`, Pending review `125060002`, Draft `125060003`. Maturity values are Live in production `125060000`, Idea / concept `125060001`, Client demo `125060002`, Retired `125060003`, Working prototype `125060004`.
 - Child-to-parent relationships currently use `NoCascade` for Assign/Share/Unshare and `RemoveLink` for Delete. A parent lookup does not propagate access or guarantee child cleanup. Define and enforce ownership, sharing/revocation and deletion for every child and file.
 
 Track decisions and required owners in the [decision log](../delivery/decision-log.md). These observations do not authorize changes to shared environment security or destructive table recreation.
+
+### Story-column retirement
+
+The approved 2026-09-22 model retains only What It Does and Business Value in the story section. The app, search, draft/recovery contracts, plug-in responses and generated schema no longer reference the retired column. Older recovery payloads discard it rather than restoring it.
+
+Live preflight found one populated value and one isolated row on the Solution Information form. The user approved publishing the current connected app (including existing profile-photo changes), updating the existing plug-in, removing that form row and permanently deleting the column. All steps completed in Nextant Pulse; repeated metadata reads confirm absence in published/editable definitions, and form readback retains every other control. Hosted creation/save/reopen of both narrative values passed; disposable draft `ca8e071a-c2b6-f111-aaac-6045bd049fba` was deleted. Existing published search/detail, present-mode redaction, images/fonts and interactive HTML passed. Package and test results are recorded in the [deployment record](../../app/README.md#pilot-deployment-2026-09-22).
+
+`Prisma.Deploy remove-story-field` is read-only by default; `--execute` checks the organization, exact column/form IDs, editable XML and dependencies, publishes only `nx_solution`, and verifies absence in published/editable metadata. It refuses unrelated dependencies or more populated records than approved; subsequent previews are no-ops. Other columns, existing records, roles, CSP and the PoC deployment are unchanged. Existing app tabs must refresh after rollout. The earlier hosted lifecycle narrative revision was in the now-retired field; that historical check does not imply its value was migrated into either remaining narrative.
 
 ## Connected-app integration plan
 

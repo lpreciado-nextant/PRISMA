@@ -32,6 +32,7 @@ export * as Nx_solutionimagesModel from './models/Nx_solutionimagesModel';
 export * as Nx_solutionsModel from './models/Nx_solutionsModel';
 export * as Nx_specializationareasModel from './models/Nx_specializationareasModel';
 export * as Nx_technologiesModel from './models/Nx_technologiesModel';
+export * as Office365UsersModel from './models/Office365UsersModel';
 
 // Services
 export * from './services/Cr6b0_consultantsService';
@@ -61,3 +62,4 @@ export * from './services/Nx_solutionimagesService';
 export * from './services/Nx_solutionsService';
 export * from './services/Nx_specializationareasService';
 export * from './services/Nx_technologiesService';
+export * from './services/Office365UsersService';

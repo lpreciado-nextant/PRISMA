@@ -10,7 +10,7 @@ import { navigate, replaceQuery, useRoute } from "../../src/lib/router";
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue } from "./catalogue";
-import { getSignedInUser, readRows, workflowApi } from "./dataSource";
+import { getSignedInUser, getUserPhoto, readRows, workflowApi } from "./dataSource";
 import { parsePublished, workflowData } from "./workflow";
 import { DraftsView } from "./DraftsView";
 import { SubmissionsView, SubmissionView } from "./SubmissionsView";
@@ -107,6 +107,16 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [present]);
   useEffect(() => {
+    if (present || !user.live || !user.userPrincipalName) return;
+    const identity = user.userPrincipalName;
+    let active = true;
+    const timeout = window.setTimeout(() => { active = false; }, 10_000);
+    void getUserPhoto(identity).then(photoUrl => {
+      if (active && photoUrl) setUser(current => current.userPrincipalName === identity ? { ...current, photoUrl } : current);
+    }).finally(() => window.clearTimeout(timeout));
+    return () => { active = false; window.clearTimeout(timeout); };
+  }, [present, user.live, user.userPrincipalName]);
+  useEffect(() => {
     if (present || !user.live) return;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 20_000);
@@ -143,7 +153,7 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     <Background />
     <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} />
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
-    <main key={route.path} ref={main} tabIndex={-1}>
+    <main key={route.path} ref={main} tabIndex={-1} className="focus-visible:outline-none">
       {state.kind === "loading" || (state.kind === "ready" && !entered) ? <WelcomeScreen authenticated={user.live} present={present} ready={state.kind === "ready"} entering={entering} onBegin={onBegin} />
         : state.kind === "host-required" ? <Message title="Power Apps sign-in required" message="Open this app through Power Apps Local Play in your signed-in browser." onRetry={onRetry} />
         : state.kind === "error" ? <Message title="Catalogue unavailable" message="Check your Dataverse access and connection, then retry." onRetry={onRetry} alert />

@@ -1,4 +1,5 @@
 import { getContext } from "@microsoft/power-apps/app";
+import { Office365UsersService } from "./generated/services/Office365UsersService";
 import type { AppUser } from "../../src/lib/powerContext";
 import type { ReadRows } from "./catalogue";
 import { Nx_solutionsService } from "./generated/services/Nx_solutionsService";
@@ -79,6 +80,20 @@ export async function getSignedInUser(): Promise<AppUser> {
   const context = await getContext();
   if (!context.user?.fullName || !context.user.userPrincipalName) throw new Error("Power Apps sign-in is required.");
   return { fullName: context.user.fullName, userPrincipalName: context.user.userPrincipalName, live: true };
+}
+
+export async function getUserPhoto(userPrincipalName: string): Promise<string | undefined> {
+  if (!userPrincipalName) return;
+  try {
+    const result = await Office365UsersService.UserPhoto_V2(userPrincipalName);
+    const photo = result.data;
+    if (!result.success || typeof photo !== "string" || !photo.length || photo.length > 6 * 1024 * 1024) return;
+    if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(photo)) return;
+    const mime = photo.startsWith("/9j/") ? "image/jpeg" : photo.startsWith("iVBORw0KGgo") ? "image/png" : undefined;
+    return mime ? `data:${mime};base64,${photo}` : undefined;
+  } catch {
+    return;
+  }
 }
 
 export const readRows: ReadRows = (table, options) => {

@@ -30,7 +30,15 @@ export function PublishedView({ solution, present, assetId }: { solution: Soluti
   }, [solution.id, present, attempt]);
   const asset = detail?.media.find(item => item.id === assetId);
   if (error) return <section className="mx-auto max-w-[1100px] px-6 py-12" role="alert"><h1 className="text-[28px] font-semibold">Detail unavailable</h1><p className="my-4">The solution may have changed or your access may be insufficient.</p><button className={button} onClick={() => { setError(false); setDetail(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></section>;
-  if (!detail) return <p className="mx-auto max-w-[1100px] px-6 py-12" role="status">Loading solution...</p>;
+  if (!detail) return <section className="solution-loading" aria-labelledby="solution-loading-title">
+    <div className="welcome-emblem" aria-hidden="true">
+      <div className="welcome-facet welcome-facet-back glass" />
+      <div className="welcome-facet welcome-facet-front glass" />
+      <img className="welcome-mark" src="./prisma-mark-v2.svg" alt="" width="72" height="72" />
+    </div>
+    <h1 id="solution-loading-title" role="status" aria-live="polite" aria-atomic="true">Loading solution<span aria-hidden="true">...</span></h1>
+    <div className="welcome-track" aria-hidden="true"><span /></div>
+  </section>;
   if (assetId) return asset ? <MediaPreview item={asset} solutionId={solution.id} mode={present ? "present" : "published"} viewerTitle={solution.name} onClose={() => navigate(`/s/${solution.id}`)} /> : <section className="mx-auto max-w-[1340px] px-4 py-6"><p role="alert" className="mb-4">Asset unavailable.</p><button className={button} onClick={() => navigate(`/s/${solution.id}`)}><Icon name="chevronLeft" />Back to solution</button></section>;
   const hydrated: Solution = { ...solution, libraryNotes: present ? undefined : detail.libraryNotes, assets: detail.media.filter(item => item.kind === "attachment").map(mediaAsset), projects: present ? [] : detail.projects.map((projectName, index) => ({ id: String(index), projectName })) };
   const maturity = MATURITY_OPTIONS.find(option => option.label === solution.status)!.value;

@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to v2, including live ownership and private SHA-bound upload sessions; connected backend deployed, acceptance and UI parity pending · **Last updated:** 2026-09-22
+> **Status:** Maintained companion to the two-field story model in v2, including live ownership and private SHA-bound upload sessions; story-column retirement deployed, broader acceptance pending · **Last updated:** 2026-09-22
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Proposed new table names below use an `nx_` publisher prefix; confirm the actual publisher prefix before creating components. The fixed `cr6b0_project` and `cr6b0_consultant` names remain as specified in v2.
 
@@ -67,7 +67,6 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 | One-line Summary | Single line of text (200) | At submit/publication | Optional column metadata allows incomplete drafts; nonblank at transition boundary |
 | What It Does | Multiple lines of text (plain, 4000) | No | |
 | Business Value | Multiple lines of text (plain, 4000) | No | |
-| Use Case | Single line of text (200) | No | Freeform — the client-side framing of the problem the solution addresses ("reduce manual invoice handling", "forecast demand"). Was a governed `nx_usecase` reference table; folded into a text column to cut governance overhead |
 | Specialization Area | Lookup → `nx_specializationarea` | Yes | |
 | Capability | Lookup → `nx_capability` | At submit/publication | Single-valued; optional column metadata for Draft |
 | Status | Choice — **global**, single-select | Yes | See `nx_solutionstatus` below — describes the solution's own maturity |

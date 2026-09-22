@@ -18,7 +18,7 @@ export function submissionSolution(record: Submission, names: Record<string, str
   const area = names[core.areaId];
   if (area !== "ai" && area !== "data" && area !== "ibo") throw new Error("Submission specialization unavailable.");
   return {
-    id: core.id, name: core.name, summary: core.summary, whatItDoes: core.whatItDoes, businessValue: core.businessValue, useCase: core.useCase,
+    id: core.id, name: core.name, summary: core.summary, whatItDoes: core.whatItDoes, businessValue: core.businessValue,
     specializationArea: area, status: MATURITY_OPTIONS.find(option => option.value === core.maturity)!.label as Solution["status"], publicationStatus: PUBLICATIONS[record.publication] as Solution["publicationStatus"],
     reviewOutcome: record.outcome === 125060001 ? "Changes requested" : record.outcome === 125060002 ? "Approved" : "None", reviewComments: record.comments,
     safetyAcknowledged: core.safetyAcknowledged, clientSafeReviewed: record.cleared, clientContext: core.clientContext || undefined, clientContextRedacted: core.clientContextRedacted || undefined,

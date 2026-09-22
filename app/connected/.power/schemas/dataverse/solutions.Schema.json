@@ -464,14 +464,6 @@
           "x-ms-schema-name": "nx_statusName",
           "x-ms-read-only": true
         },
-        "nx_usecase": {
-          "type": "string",
-          "title": "Use Case",
-          "x-ms-dataverse-attribute": "nx_usecase",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "nx_UseCase",
-          "maxLength": 4000
-        },
         "nx_whatitdoes": {
           "type": "string",
           "title": "What It Does?",

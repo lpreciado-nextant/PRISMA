@@ -3,7 +3,7 @@ import { Icon } from "../../src/components/Icon";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { TagPicker } from "../../src/components/TagPicker";
 import { SolutionCard } from "../../src/components/SolutionCard";
-import { Field, StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, IdentityFields, StoryFields, SubmissionReview, submissionInputClass as inputClass } from "../../src/components/SubmissionForm";
+import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, IdentityFields, StoryFields, SubmissionReview } from "../../src/components/SubmissionForm";
 import type { Solution } from "../../src/types";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
 import { AREAS } from "../../src/data/catalogueMetadata";
@@ -213,18 +213,6 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     if (saved) onReload();
     else navigate("/my-submissions");
   };
-  const hints = {
-    name: "Give the solution a short, recognizable product name.",
-    summary: `Describe who it helps and what it achieves in one sentence. ${draft.summary.length}/200 characters.`,
-    whatItDoes: "Describe the main actions a user takes and the results they see.",
-    businessValue: "Explain the business problem and the benefit of solving it; include measured results only when known.",
-    useCase: "Describe the scenario where this solution is useful.",
-    clientContext: "Optional. Client and engagement name for internal discovery only; never included in present mode.",
-    clientContextRedacted: "Client-visible context without names or identifying details. Leave empty if this work has no client.",
-  };
-  const field = (key: "name" | "summary" | "whatItDoes" | "businessValue" | "useCase" | "clientContext" | "clientContextRedacted", label: string, multiline = false) => <Field label={label} hint={hints[key]} required={key === "name" || key === "summary" || (key === "clientContextRedacted" && !!draft.clientContext.trim())}>{multiline
-    ? <textarea className={inputClass} rows={4} maxLength={key === "whatItDoes" || key === "businessValue" ? 4000 : 200} value={draft[key]} onChange={event => change(key, event.target.value)} />
-    : <input className={inputClass} required={key === "name"} maxLength={key === "name" ? 100 : 200} value={draft[key]} onChange={event => change(key, event.target.value)} />}</Field>;
   const area = references.areas.find(option => option.id === draft.areaId)?.name;
   const preview: Solution = {
     id: saved?.id ?? "preview", name: draft.name, summary: draft.summary, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
@@ -271,7 +259,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
             status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
           <DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="contributors" onChange={changeGraph} />
         </StepShell>}
-        {step === 2 && <StoryFields whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={change}>{field("useCase", "Use case", true)}</StoryFields>}
+        {step === 2 && <StoryFields whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={change} />}
         {step === 3 && <StepShell title="Tag it"><TagPicker label="Capability (required, choose one)" governed options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
       </fieldset>
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}

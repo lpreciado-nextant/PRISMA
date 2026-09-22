@@ -146,7 +146,6 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
             <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.businessValue}</p>
           </Panel>
 
-          {connected && solution.useCase && <Panel title="Use case"><p className="whitespace-pre-wrap break-words text-[15.5px]">{solution.useCase}</p></Panel>}
 
           {(gallery || (solution.images && solution.images.length > 0)) && (
             <Panel title={`Screenshots · ${imageCount ?? solution.images?.length ?? 0}`}>

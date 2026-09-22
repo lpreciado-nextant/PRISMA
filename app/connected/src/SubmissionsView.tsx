@@ -60,7 +60,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
     } catch { throw new Error("Deletion was not confirmed. Cancel and refresh submissions before retrying."); }
     finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", abort); }
   };
-  if (!review) return <MySubmissionsView connected entries={state.entries} onOpen={open} onEdit={open} onDelete={remove} renderCard={(solution, index) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned onOpen={() => open(solution)} />} actions={<div className="flex flex-wrap gap-3"><button className={button} onClick={() => { setState(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Refresh submissions</button>{state.librarian && <button className={button} onClick={() => navigate("/review")}><Icon name="shield" />Review queue</button>}</div>} />;
+  if (!review) return <MySubmissionsView connected entries={state.entries} onOpen={open} onEdit={open} onDelete={remove} renderCard={(solution, index) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned onOpen={() => open(solution)} />} actions={<div className="flex flex-wrap gap-3"><button className={button} onClick={() => { setState(null); setAttempt(current => current + 1); }}><Icon name="refresh" />Refresh submissions</button>{state.librarian && <button className={button} onClick={() => navigate("/review")}><Icon name="shield" />Review queue</button>}</div>} />;
   return <ReviewQueue entries={state.entries} connected />;
 }
 

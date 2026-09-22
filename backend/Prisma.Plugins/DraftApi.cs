@@ -89,7 +89,6 @@ namespace Prisma.Plugins
                 Maturity = record.GetAttributeValue<OptionSetValue>("nx_status")?.Value ?? 125060004,
                 WhatItDoes = record.GetAttributeValue<string>("nx_whatitdoes") ?? "",
                 BusinessValue = record.GetAttributeValue<string>("nx_businessvalue") ?? "",
-                UseCase = record.GetAttributeValue<string>("nx_usecase") ?? "",
                 ClientContext = record.GetAttributeValue<string>("nx_clientcontext") ?? "",
                 ClientContextRedacted = record.GetAttributeValue<string>("nx_clientcontextredacted") ?? "",
                 SafetyAcknowledged = record.GetAttributeValue<bool>("nx_safetyacknowledged")
@@ -117,7 +116,6 @@ namespace Prisma.Plugins
         [DataMember(Name = "maturity")] public int Maturity { get; set; }
         [DataMember(Name = "whatItDoes")] public string WhatItDoes { get; set; }
         [DataMember(Name = "businessValue")] public string BusinessValue { get; set; }
-        [DataMember(Name = "useCase")] public string UseCase { get; set; }
         [DataMember(Name = "clientContext")] public string ClientContext { get; set; }
         [DataMember(Name = "clientContextRedacted")] public string ClientContextRedacted { get; set; }
         [DataMember(Name = "safetyAcknowledged")] public bool SafetyAcknowledged { get; set; }

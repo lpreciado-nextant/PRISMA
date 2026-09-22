@@ -76,8 +76,6 @@ export interface Solution {
   summary: string;
   whatItDoes: string;
   businessValue: string;
-  /** Freeform client-side framing of the problem — mirrors the `Use Case` text column on `nx_solution`. */
-  useCase?: string;
   specializationArea: SpecializationArea;
   contributors: SolutionContributor[];
   contributorNames?: string[];

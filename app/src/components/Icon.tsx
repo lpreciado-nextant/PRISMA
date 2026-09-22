@@ -28,6 +28,7 @@ const PATHS = {
   plus: "M12 5v14M5 12h14",
   trash: "M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-14M10 10v7m4-7v7",
   arrowRight: "M4 12h15m0 0-5.5-5.5M19 12l-5.5 5.5",
+  refresh: "M3 12a9 9 0 0 1 15.4-6.4L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.4 6.4L3 16M8 16H3v5",
 } as const;
 
 export function Icon({ name, size = 16, className }: IconProps) {

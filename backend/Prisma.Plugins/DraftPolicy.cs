@@ -14,12 +14,12 @@ namespace Prisma.Plugins
         public const string SaveMessage = "nx_SaveCoreDraft";
         public const string ListMessage = "nx_GetMyCoreDrafts";
         public static readonly string[] CoreColumns = {
-            "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes", "nx_businessvalue", "nx_usecase",
+            "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes", "nx_businessvalue",
             "nx_specializationarea", "nx_capability", "nx_status", "nx_clientcontext", "nx_clientcontextredacted", "nx_safetyacknowledged"
         };
         private static readonly Dictionary<string, string> TextColumns = new Dictionary<string, string> {
             { "name", "nx_solutionname" }, { "summary", "nx_onelinesummary" }, { "whatItDoes", "nx_whatitdoes" },
-            { "businessValue", "nx_businessvalue" }, { "useCase", "nx_usecase" },
+            { "businessValue", "nx_businessvalue" },
             { "clientContext", "nx_clientcontext" }, { "clientContextRedacted", "nx_clientcontextredacted" }
         };
 

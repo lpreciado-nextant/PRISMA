@@ -19,7 +19,7 @@ export function parseRecovery(text: string, owner: string, id?: string): DraftRe
   if (value.uncertain !== undefined && typeof value.uncertain !== "boolean") throw new Error("Invalid recovery operation state.");
   const draft = value.draft;
   if (!draft || Object.keys(EMPTY_DRAFT).some(key => typeof draft[key as keyof CoreDraft] !== typeof EMPTY_DRAFT[key as keyof CoreDraft]) || !MATURITY_OPTIONS.some(option => option.value === draft.maturity)) throw new Error("Invalid recovery draft.");
-  for (const [key, limit] of Object.entries({ name: 100, summary: 200, whatItDoes: 4000, businessValue: 4000, useCase: 200, clientContext: 200, clientContextRedacted: 200 })) if ((draft[key as keyof CoreDraft] as string).length > limit) throw new Error("Invalid recovery text.");
+  for (const [key, limit] of Object.entries({ name: 100, summary: 200, whatItDoes: 4000, businessValue: 4000, clientContext: 200, clientContextRedacted: 200 })) if ((draft[key as keyof CoreDraft] as string).length > limit) throw new Error("Invalid recovery text.");
   if ((draft.areaId && !guid.test(draft.areaId)) || (draft.capabilityId && !guid.test(draft.capabilityId))) throw new Error("Invalid recovery reference.");
   const graph = value.graph;
   if (!graph || !Array.isArray(graph.contributors) || graph.contributors.length > 100) throw new Error("Invalid recovery contributors.");

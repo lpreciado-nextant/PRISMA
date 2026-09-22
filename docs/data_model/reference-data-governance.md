@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Active governance; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-09-22
+**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-09-22
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -12,7 +12,7 @@
 | Industries | `nx_industry` | **Governed** | Librarian only |
 | Technologies | `nx_technology` | **Open** | Contributors, inline at submission; librarian periodically merges duplicates |
 
-> Use case is not a vocabulary: it lives as a freeform single-line-of-text column on `nx_solution` ([schema spec (v2)](SchemaV2.md)).
+The problem and benefits belong in the Business Value narrative, not a separate vocabulary ([schema spec (v2)](SchemaV2.md)).
 
 The connected app creates technologies through `nx_TransitionSubmission` action `technology`, not direct client CRUD. Require an owned Draft and exact parent version; trim names, reject empty/control characters and names over 100 characters, and reuse an active case-insensitive match. New rows are caller-owned. The existing graph operation attaches the returned ID. Clear safety acknowledgment and clearance without changing review feedback. Failed or ambiguous writes require reopen. Case-insensitive lookup avoids ordinary duplicate entry; simultaneous creation on different drafts can still race and remains subject to librarian duplicate merges. No new privileges or Consultant/Project writes are required.
 
@@ -45,7 +45,7 @@ Seeded in **Nextant Pulse** on 2026-09-22 after user approval: 43 additions, bri
 | Knowledge & search | Finding, organizing or retrieving documents and knowledge |
 | Digital applications & experiences | A portal, business application or user-facing experience not primarily covered above |
 
-An approvals application that uses AI is normally **Workflow & approvals**; a document-search solution with an AI-generated answer is normally **Knowledge & search**. Use **AI & agents** when the assistant or agent itself is the principal deliverable. Use case remains free text for the specific problem being solved.
+An approvals application that uses AI is normally **Workflow & approvals**; a document-search solution with an AI-generated answer is normally **Knowledge & search**. Use **AI & agents** when the assistant or agent itself is the principal deliverable. Describe the specific problem and benefit in Business Value.
 
 **Industries describe who the solution serves; multiple selections are allowed.** Use Cross-industry for genuinely industry-agnostic solutions instead of tagging every sector. Starter values: Financial services; IT; Manufacturing; Public sector; Cross-industry; Professional services; Healthcare; Life sciences; Retail & consumer goods; Energy & utilities; Telecommunications; Transportation & logistics; Education; Media & entertainment; Real estate & construction; Travel & hospitality; Nonprofit.
 

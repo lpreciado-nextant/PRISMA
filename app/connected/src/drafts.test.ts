@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EMPTY_DRAFT, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
+import { EMPTY_DRAFT, coreFields, snapshot, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
 import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
@@ -106,6 +106,21 @@ test("linked asset create and edit confirm type and exact versions without file 
   assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, linkedAsset: { ...input, externalUrl: "javascript:alert(1)" } }] })));
   assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, mime: "text/html" }] })), /linked asset/);
   assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, linkedAsset: undefined }] })));
+});
+
+test("draft snapshots, saves and recovery discard retired story properties", async () => {
+  const legacy = { ...draft, useCase: "Retired content" };
+  assert.deepEqual(snapshot(legacy), draft);
+  assert.deepEqual(coreFields(legacy), coreFields(draft));
+  const api: DraftApi = { list: async () => result({}), save: async json => {
+    assert.equal(Object.hasOwn(JSON.parse(json), "useCase"), false);
+    return result({ ...draft, rowVersion: "90071992547409932" });
+  } };
+  await saveDraft(api, legacy, draft, signal());
+  const text = recoveryPayload("owner@example.com", draft.id, draft.rowVersion, draft, emptyGraph(), 2);
+  const stored = JSON.parse(text);
+  stored.draft.useCase = "Retired content";
+  assert.equal(Object.hasOwn(parseRecovery(JSON.stringify(stored), "owner@example.com", draft.id).draft, "useCase"), false);
 });
 
 test("tab recovery is identity scoped, strips extras and requires renewed acknowledgment", () => {
