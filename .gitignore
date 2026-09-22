@@ -23,6 +23,5 @@ Thumbs.db
 # Batch scripts
 *.bat
 
-# Local video test fixtures
-/sample-50mb.mp4
-/sample-500mb.mp4
+# Local test media and generated output
+/test-data/
