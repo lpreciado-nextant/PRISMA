@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative model with approved private upload-session extension; connected backend deployed; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending · **Last updated:** 2026-09-22
+**Status:** Authoritative model with approved private upload-session extension; connected backend deployed; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); visual schema and the two pre-existing tables (`cr6b0_project`, `cr6b0_consultant`) reconciled with Dataverse; acceptance and remaining UI parity pending · **Last updated:** 2026-09-22
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1) — refined through several rounds of review: in v1, `Use Case` was already a plain field on `nx_solution` (not a governed table) and `Capability` was already a reference table with a native N:N to `nx_solution`; an earlier v2 draft flattened every tag relationship to a single-valued lookup, but that was reverted for `Industry` and `Technology` — they stay **native N:N** as in v1, while `SpecializationArea` and (as of this round) `Capability` are single-valued lookups; a `Project` concept was added (confirmed in scope) to separate "the reusable Solution" from "the evidence it's been built before" — the underlying table already exists in Dataverse with fixed columns as `cr6b0_project`, so it never gets touched directly; and Solution↔Project, which needed to stay many-sided, is a **native N:N** relationship (no attributes needed on the link itself, so no custom junction table).
 
@@ -146,18 +146,35 @@ erDiagram
     }
     cr6b0_project {
         guid cr6b0_projectid PK
-        text ProjectName
-        lookup ProjectOwner FK
+        text cr6b0_projectidentifier UK
+        text cr6b0_projecttitle
+        memo cr6b0_projectdescription
+        choice cr6b0_projecttype
+        choice cr6b0_currentprojectstatus
+        date cr6b0_projectstartdate
+        date cr6b0_projectenddate
+        lookup cr6b0_customersuccessmanager FK
+        lookup cr6b0_deliverymanager FK
+        lookup cr6b0_account FK
     }
     cr6b0_consultant {
         guid cr6b0_consultantid PK
-        text Name
+        text cr6b0_consultantname UK
+        text cr6b0_email
+        text cr6b0_consultantlevel
+        boolean cr6b0_employeestatus
+        boolean cr6b0_vactive
+        boolean cr6b0_iscsm
+        boolean cr6b0_isdeliverymanager
+        lookup cr6b0_specializationarea FK
     }
 ```
 
 `Industry` and `Technology` are native Dataverse many-to-many with `nx_solution` — the intersect tables exist but are platform-managed and not modeled here. `Solution` ↔ `cr6b0_project` is also a native N:N (no attributes on the link), so it needs no custom junction table either. `SpecializationArea` and `Capability` are both single-valued 1:N lookups on `nx_solution`.
 
 `cr6b0_project` stays untouched — no lookup added to it, no lookup pointing out of it. The native N:N relationship lets one `Solution` link to several `Project` rows (and, structurally, vice versa), without either of those two tables needing a multi-valued column of their own.
+
+`cr6b0_project` and `cr6b0_consultant` are drawn with their **live logical names**, not business labels, because they are pre-existing tables this schema never designs — their columns are whatever Dataverse already carries. Both boxes are **excerpts**: `cr6b0_project` has roughly ninety columns of its own (pricing, approvals, resourcing, opportunity links) and `cr6b0_consultant` about thirty; only the identifiers, the person links and the columns PRISMA actually reads are shown. `cr6b0_consultant.cr6b0_specializationarea` points at a **different** specialization-area table outside this solution, not at `nx_specializationarea`. `systemuser` is deliberately **not** drawn: `cr6b0_project.cr6b0_deliverymanager` still points at the platform user table, but that link belongs to the source system and PRISMA never reads it, so it stays in the `cr6b0_project` column table below rather than in the model diagram. Read the consultant migration as covering the lookups PRISMA owns, not every lookup on a pre-existing table.
 
 ---
 
@@ -205,11 +222,21 @@ Native N:N with `nx_solution` — a solution can carry several technologies.
 
 ### `cr6b0_consultant` — person reference
 
-New custom table. Replaces the PRISMA-owned lookups that used to point at the platform `systemuser` table: `Built By` on `nx_solutioncontributor` and `Requested By` on `nx_demorequest`. On `cr6b0_project`, `cr6b0_customersuccessmanager` also points here.
+Pre-existing table in the environment, adopted rather than designed here — earlier rounds called it "new", which it is not. It replaces the PRISMA-owned lookups that used to point at the platform `systemuser` table: `Built By` on `nx_solutioncontributor` and `Requested By` on `nx_demorequest`. On `cr6b0_project`, `cr6b0_customersuccessmanager` also points here.
+
+It carries about thirty columns of its own. The ones PRISMA reads or depends on:
 
 | Column | Logical name | Type | Required | Notes |
 |---|---|---|---|---|
-| Name *(primary name)* | `cr6b0_consultantname` | StringType | Yes | Consultant's display name |
+| Consultant Name *(primary name)* | `cr6b0_consultantname` | StringType | Yes | Display name in every person picker. Alternate key `cr6b0_consultantnamekey` |
+| Email | `cr6b0_email` | StringType | — | Read for contributor identity in the person picker and published detail |
+| Employee Status | `cr6b0_employeestatus` | BooleanType | — | The person picker lists only `statecode eq 0 and cr6b0_employeestatus eq true` |
+| V-Active | `cr6b0_vactive` | BooleanType | — | Separate activity flag on the table; not the picker filter |
+| Consultant Level | `cr6b0_consultantlevel` | StringType | — | Not read by the app |
+| IsCSM / IsDeliveryManager | `cr6b0_iscsm`, `cr6b0_isdeliverymanager` | BooleanType | — | Role flags owned by the source table, not by PRISMA |
+| Specialization Area | `cr6b0_specializationarea` | LookupType | — | Points at a **different** specialization-area table outside this solution — **not** `nx_specializationarea` |
+
+Its remaining columns (hire/end dates, manager aliases, allocation rollups, credentials) belong to the source system and are neither read nor written here. Required levels are whatever the table already enforces; PRISMA sets none.
 
 ---
 
@@ -347,12 +374,23 @@ The "request a live demo" escape hatch, and a signal of which solutions the busi
 
 ### `cr6b0_project` — the evidence (already exists in Dataverse, fixed columns)
 
-`cr6b0_project` isn't being designed in this document — it already exists as a table in Dataverse, and its columns don't change here at all. The one connection that already lives on it:
+`cr6b0_project` isn't being designed in this document — it already exists as a table in Dataverse, and its columns don't change here at all. It carries roughly ninety columns spanning pricing, approvals, resourcing and opportunity links. The identifying columns, the two person links and the fields relevant to PRISMA:
 
-- **Customer Success Manager** (`cr6b0_customersuccessmanager`) — LookupType → `cr6b0_consultant`.
-- **Delivery Manager** (`cr6b0_deliverymanager`) — LookupType → `systemuser`. This one still points at the platform user table; it belongs to the pre-existing table and is out of scope for the consultant migration.
+| Column | Logical name | Type | Notes |
+|---|---|---|---|
+| Project Identifier *(primary name)* | `cr6b0_projectidentifier` | StringType | The table's primary name. Alternate key `cr6b0_projectidentifierkey` |
+| Project Title | `cr6b0_projecttitle` | StringType | What the app actually displays for a linked project; falls back to `Untitled project ({id})` when blank |
+| Project Description | `cr6b0_projectdescription` | MemoType | Not read by the app |
+| Project Type | `cr6b0_projecttype` | PicklistType | Source-system choice; PRISMA does not interpret its values |
+| Current Project Status | `cr6b0_currentprojectstatus` | PicklistType | Source-system choice |
+| Project Start / End Date | `cr6b0_projectstartdate`, `cr6b0_projectenddate` | DateTimeType | Delivery dates on the project, unrelated to contributor effort dates |
+| Customer Success Manager | `cr6b0_customersuccessmanager` | LookupType → `cr6b0_consultant` | The person link already aligned with the consultant migration |
+| Delivery Manager | `cr6b0_deliverymanager` | LookupType → `systemuser` | Still points at the platform user table. It belongs to the pre-existing table and is out of scope for the consultant migration — not a leftover to clean up here |
+| Account | `cr6b0_account` | LookupType → `account` | Client of record in the source system |
 
-There is no column literally named `Project Owner`. Earlier drafts of this document used that label for the person link on `cr6b0_project`; the two columns above are what the table actually carries.
+The app reads only `cr6b0_projectid` and `cr6b0_projecttitle` (`app/connected/src/draftGraph.ts`, `backend/Prisma.Plugins/PublishedApi.cs`); everything else above is documented so the table is recognizable, not because PRISMA consumes it.
+
+There is no column literally named `Project Owner`. Earlier drafts of this document used that label for the person link on `cr6b0_project`, and the visual schema carried it until this round; the columns above are what the table actually carries.
 
 It gets **no** new lookup column — not to `nx_solution`, not to `nx_technology`. Its link to `nx_solution` is modeled as a native N:N relationship (see below), not a column on either fixed table.
 
@@ -439,7 +477,7 @@ Reviewed and accepted, not defects:
 
 - Column lengths in Dataverse are largely 850 (text) and 4000 (multiline); the design lengths above were not applied and are not enforced at the column level.
 - Required levels do not match the Required column above — notably `nx_capability` is `ApplicationRequired` in Dataverse while drafts may leave it empty. `ApplicationRequired` is not enforced on SDK writes, so the draft plugin is unaffected; a model-driven form would be.
-- `cr6b0_consultant` carries about two dozen columns of its own and a `cr6b0_specializationarea` lookup to a **different** table of that name, outside this solution. It is treated as an independent, pre-existing table.
+- `cr6b0_consultant` and `cr6b0_project` carry many columns of their own beyond the ones documented above, and `cr6b0_consultant.cr6b0_specializationarea` points to a **different** table of that name, outside this solution. Both are treated as independent, pre-existing tables; the sections above list their identifiers, person links and the columns PRISMA reads, not their full column sets.
 - `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet.
 
 ---
