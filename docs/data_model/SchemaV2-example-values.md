@@ -1,6 +1,6 @@
 # Nextant Solution Library — example row per table (SchemaV2)
 
-**Status:** Illustrative companion, aligned with the two-field story model, authored draft names, draft/review fields and code-based US holiday policy · **Last updated:** 2026-09-22
+**Status:** Illustrative companion, aligned with the two-field story model, authored draft names, draft/review fields, code-based US holiday policy and the 2026-09-23 changes (Specialization Area N:N, Client Role, contributor Role) · **Last updated:** 2026-09-23
 **Companion to:** [SchemaV2.md](SchemaV2.md)
 
 One illustrative row per table in the v2 model, all pointing at the same story so the relationships stay traceable: **S1 — Invoice Reconciliation Assistant**, the same example used in SchemaV2's diagrams. GUIDs below are placeholders (`{table}-001` style), not real Dataverse ids. Sample data only — no real client information.
@@ -14,6 +14,7 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | nx_specializationareaid | Specialization Area | Description | Sort Order |
 |---|---|---|---|
 | sa-001 | AI & Automation | Agents, copilots, and workflow automation built on top of an LLM. | 1 |
+| sa-002 | Intelligent Business Operations | Process and operations improvement across finance, supply chain and service. | 3 |
 
 ### `nx_capability`
 
@@ -56,10 +57,10 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | One-line Summary | Matches vendor invoices to POs and flags mismatches automatically. |
 | What It Does | Ingests incoming invoices, extracts line items, and reconciles them against open purchase orders, routing exceptions to an approver queue. |
 | Business Value | Cuts manual reconciliation time and reduces duplicate/incorrect payments. |
-| Specialization Area | sa-001 — AI & Automation |
 | Capability | cap-001 — AI & agents |
 | Client / Context | Acería del Norte — AP team, 2026 pilot |
 | Client Context (Redacted) | A regional manufacturing company |
+| Client Role | Chief Financial Officer (CFO) — 125060009 |
 | Status | Client demo |
 | Publication Status | Published |
 | Review Outcome | Approved |
@@ -71,7 +72,7 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 | Library Notes | Internal catalogue curation note; separate from contributor review feedback. |
 | Search Keywords | AP automation, invoice matching, PO reconciliation |
 
-Tags on this row: `Industry` = Manufacturing · `Technology` = LangChain, Power Automate (native N:N, not columns — see [SchemaV2.md](SchemaV2.md#nx_solution)). `Specialization Area` and `Capability` are both single-valued lookup columns on the row above, not tags.
+Tags on this row: `Specialization Area` = AI & Automation, Intelligent Business Operations · `Industry` = Manufacturing · `Technology` = LangChain, Power Automate. These are native N:N relationships, not columns (see [SchemaV2.md](SchemaV2.md#nx_solution)). `Capability` is the only single-valued lookup column on the row above.
 
 For a new incomplete draft, require an authored name such as `Solution Name = Invoice Matcher`, null summary/capability, Publication Status Draft, Review Outcome None, null Review Comments and both safety booleans false. Blank names and the legacy label `Untitled solution` cannot be saved. Contributors and images may be absent. On return, use Draft + Changes requested with actionable comments and both safety booleans false. On resubmission, retain that latest outcome/comments while setting Pending review; outcome alone is not publication clearance. See the [transition contract](SchemaV2.md#draft-and-transition-contract).
 
@@ -83,10 +84,10 @@ For a new incomplete draft, require an authored name such as `Solution Name = In
 
 Both rows use **Effort Mode = Calendar** and **Direct Hours = not applicable**, because the parent is a Client demo. Ideas and working prototypes instead require Direct Hours and do not require the Start Date/End Date/Allocation inputs below.
 
-| nx_solutioncontributorid | Name | Solution | Built By | Effort Mode | Direct Hours | Start Date | End Date | Allocation (%) |
-|---|---|---|---|---|---|---|---|---|
-| sc-001 | Invoice Reconciliation Assistant — Juliana Castelblanco | sol-001 | con-001 — Juliana Castelblanco | Calendar | — | 2026-09-07 | 2026-09-18 | 50 |
-| sc-002 | Invoice Reconciliation Assistant — Luis Preciado | sol-001 | con-002 — Luis Preciado | Calendar | — | 2026-09-08 | 2026-09-18 | 100 |
+| nx_solutioncontributorid | Name | Solution | Built By | Role | Effort Mode | Direct Hours | Start Date | End Date | Allocation (%) |
+|---|---|---|---|---|---|---|---|---|---|
+| sc-001 | Invoice Reconciliation Assistant — Juliana Castelblanco | sol-001 | con-001 — Juliana Castelblanco | Consultant | Calendar | — | 2026-09-07 | 2026-09-18 | 50 |
+| sc-002 | Invoice Reconciliation Assistant — Luis Preciado | sol-001 | con-002 — Luis Preciado | Consultant | Calendar | — | 2026-09-08 | 2026-09-18 | 100 |
 
 Derived (not stored): sc-001 → 9 business days × 8h × 50% = **36 effort hours**, excluding Labor Day on 2026-09-07; sc-002 → 9 business days × 8h × 100% = **72 effort hours**, since its range starts after Labor Day; `Total Effort Hours` for sol-001 = **108**. Observed US federal holidays are calculated in code under the agreed 2020-2035 policy, with no calendar table or contributor calendar lookup.
 
@@ -101,6 +102,14 @@ Derived (not stored): sc-001 → 9 business days × 8h × 50% = **36 effort hour
 | nx_solutionimageid | Name | Solution | Image | Caption | Sort Order |
 |---|---|---|---|---|---|
 | si-001 | Invoice Reconciliation Assistant — image 1 | sol-001 | invoice-recon-screenshot-1.png | Exception queue with flagged mismatches | 1 |
+
+### `nx_solutionfavorite`
+
+| nx_solutionfavoriteid | Name | Solution | User | Saved on (`createdon`) |
+|---|---|---|---|---|
+| fav-001 | Invoice Reconciliation Assistant — Carlos Mejía | sol-001 | con-003 — Carlos Mejía | 2026-09-20 |
+
+The row is visible only to its owner, Carlos's signed-in account. `User` points at `cr6b0_consultant`, not `systemuser`.
 
 ### `nx_demorequest`
 

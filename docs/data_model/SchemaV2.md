@@ -1,10 +1,16 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending · **Last updated:** 2026-09-22
+**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending · **Last updated:** 2026-09-23
 
-This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `Industry` and `Technology` remain **native N:N**, while `SpecializationArea` and `Capability` are single-valued lookups. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
+This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `SpecializationArea`, `Industry` and `Technology` are **native N:N**, while `Capability` is a single-valued lookup. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
 
-**Changed in this round (2026-09-21):**
+**Changed in this round (2026-09-23), read back from Nextant Pulse:**
+1. `nx_specializationarea` moved from a 1:N lookup to a **native N:N** with `nx_solution` (`nx_Solution_nx_SpecializationArea_nx_SpecializationArea`). The `nx_solution.nx_specializationarea` lookup column has been **deleted**. See [Known divergences](#known-divergences-from-this-document): no values were carried over, and the plugins still reference the deleted column.
+2. `nx_solution.nx_clientrole` (**Client Role**) added, a local choice.
+3. `nx_solutioncontributor.nx_role` (**Role**: CSM · Consultant) added, a local choice.
+4. New table **`nx_solutionfavorite`**: per-person favorite Solutions, linked to `nx_solution` and `cr6b0_consultant`. It is UserOwned and not used by the app yet. See [its section](#nx_solutionfavorite--per-person-favorites).
+
+**Changed in the previous round (2026-09-21):**
 1. `nx_capability` moved from native N:N to a **1:N** relationship — each `nx_solution` now carries a single `Capability` lookup, same shape as `SpecializationArea`.
 2. `nx_businesscalendar` and `nx_businesscalendarholiday` are **removed**, along with the contributor's `Business Calendar` lookup. US federal holiday exclusions are retained in code for 2020-2035; this overrides the earlier weekday-only proposal. See the updated derivation below.
 3. Every PRISMA-owned lookup that pointed to the platform `systemuser` table (`Built By` on `nx_solutioncontributor`, `Requested By` on `nx_demorequest`) now points to a new custom table, **`cr6b0_consultant`**. On the pre-existing `cr6b0_project`, `cr6b0_customersuccessmanager` already points there; `cr6b0_deliverymanager` still points at `systemuser` and is out of scope.
@@ -39,8 +45,8 @@ The [legacy v1 entry point](nextant-solution-library-dataverse-schema.md) was sy
 
 - **Primary key vs. primary name** — every table gets an auto-generated GUID key (e.g. `nx_solutionid`) plus a required text *primary name* column, used as its display label in lookups.
 - **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` exist on every table without being modeled.
-- **Ownership** — all 11 original business tables are live **user/team-owned**, including references, Consultant and Project. Preserve these existing tables and use Global reference Read privileges. Only the private `nx_uploadsession` extension is organization-owned. Media has the dedicated non-member team owner; credit does not imply ownership.
-- **Two single-valued tags, two multi-valued tags** — each `Solution` points to exactly one `SpecializationArea` and, at submit/publication, exactly one `Capability`, each via its own lookup column. Capability may be empty in Draft. `Industry` and `Technology` are **native N:N** relationships: a solution can carry several of each, and Dataverse creates and manages the intersect tables — no hand-built junction tables for these two.
+- **Ownership** — all 11 original business tables are live **user/team-owned**, including references, Consultant and Project. The 2026-09-23 `nx_solutionfavorite` table is also UserOwned, which keeps favorites private per person. Preserve these existing tables and use Global reference Read privileges. Only the private `nx_uploadsession` extension is organization-owned. Media has the dedicated non-member team owner; credit does not imply ownership.
+- **One single-valued tag, three multi-valued tags** — at submit/publication each `Solution` points to exactly one `Capability` through its lookup column. Capability may be empty in Draft. `SpecializationArea`, `Industry` and `Technology` are **native N:N** relationships: a solution can carry several of each, and Dataverse creates and manages the intersect tables. None of the three needs a hand-built junction table.
 - **`cr6b0_project` is fixed** — it already exists in Dataverse with its own columns. Nothing new gets added to it, and it gets no new lookup pointing out of it either. Where a Solution needs to link to *several* Projects (and vice versa), a **native N:N** relationship connects `nx_solution` and `cr6b0_project` directly — no hand-built junction table, since the link carries no attributes of its own.
 - **Governance** — `SpecializationArea`, `Capability`, and `Industry` are governed (only the Librarian adds new values). `Technology` is open (anyone adds a value inline; the Librarian periodically merges duplicates).
 - **Builder credit is multi-person** — `nx_solutioncontributor` carries one row per Solution/person, including that person's effort inputs. It replaces the single `Built By` lookup and `Effort / Time to Deploy` choice on `nx_solution`; it is not a native N:N because the relationship has attributes. Credit is independent of `ownerid` and does not grant access.
@@ -51,7 +57,7 @@ The [legacy v1 entry point](nextant-solution-library-dataverse-schema.md) was sy
 
 ```mermaid
 erDiagram
-    nx_specializationarea ||--o{ nx_solution : "tag (1:N)"
+    nx_specializationarea }o--o{ nx_solution : "tag (N:N)"
     nx_capability |o--o{ nx_solution : "required at submit (1:N)"
     nx_industry }o--o{ nx_solution : "tag (N:N)"
     nx_technology }o--o{ nx_solution : "tag (N:N)"
@@ -63,6 +69,8 @@ erDiagram
     cr6b0_consultant ||--o{ nx_solutioncontributor : "Built By"
     cr6b0_consultant ||--o{ nx_demorequest : "Requested By"
     cr6b0_consultant ||--o{ cr6b0_project : "Customer Success Manager"
+    nx_solution ||--o{ nx_solutionfavorite : "1:N"
+    cr6b0_consultant ||--o{ nx_solutionfavorite : "User (saved by)"
 
     nx_solution {
         guid nx_solutionid PK
@@ -70,10 +78,10 @@ erDiagram
         text OneLineSummary
         text WhatItDoes
         text BusinessValue
-        lookup SpecializationArea FK
         lookup Capability FK
         text ClientContext
         text ClientContextRedacted
+        choice ClientRole
         choice Status
         choice PublicationStatus
         choice ReviewOutcome
@@ -96,6 +104,7 @@ erDiagram
         text Name
         lookup Solution FK
         lookup BuiltBy FK
+        choice Role
         choice EffortMode
         decimal DirectHours
         date StartDate
@@ -144,6 +153,12 @@ erDiagram
         date NeededBy
         choice RequestStatus
     }
+    nx_solutionfavorite {
+        guid nx_solutionfavoriteid PK
+        text nx_name
+        lookup nx_solution FK
+        lookup nx_user FK
+    }
     cr6b0_project {
         guid cr6b0_projectid PK
         text cr6b0_projectidentifier UK
@@ -170,7 +185,7 @@ erDiagram
     }
 ```
 
-`Industry` and `Technology` are native Dataverse many-to-many with `nx_solution` — the intersect tables exist but are platform-managed and not modeled here. `Solution` ↔ `cr6b0_project` is also a native N:N (no attributes on the link), so it needs no custom junction table either. `SpecializationArea` and `Capability` are both single-valued 1:N lookups on `nx_solution`.
+`SpecializationArea`, `Industry` and `Technology` are native Dataverse many-to-many relationships with `nx_solution`. Their intersect tables exist but are platform-managed and not modeled here. `Solution` ↔ `cr6b0_project` is also a native N:N (the link has no attributes), so it needs no custom junction table either. `Capability` is the only single-valued 1:N lookup on `nx_solution`.
 
 `cr6b0_project` stays untouched — no lookup added to it, no lookup pointing out of it. The native N:N relationship lets one `Solution` link to several `Project` rows (and, structurally, vice versa), without either of those two tables needing a multi-valued column of their own.
 
@@ -180,7 +195,7 @@ erDiagram
 
 ## Reference tables
 
-Shared vocabularies retain live user/team ownership with Global Read privileges. `SpecializationArea` and `Capability` connect via single lookups; `Industry` and `Technology` remain native N:N tags.
+Shared vocabularies retain live user/team ownership with Global Read privileges. `Capability` connects through a single lookup. `SpecializationArea`, `Industry` and `Technology` are native N:N tags.
 
 ### `nx_specializationarea`
 
@@ -190,7 +205,7 @@ Shared vocabularies retain live user/team ownership with Global Read privileges.
 | Description | `nx_description` | StringType | No | Powers the per-tab note in the public app |
 | Sort Order | `nx_sortordernumber` | IntegerType | No |  |
 
-1:N with `nx_solution` — each solution has exactly one specialization area, set via a lookup column on `nx_solution`.
+Native N:N with `nx_solution` (since 2026-09-23; it was a 1:N lookup before). A solution can carry several specialization areas. The relationship is `nx_Solution_nx_SpecializationArea_nx_SpecializationArea`, with intersect `nx_Solution_nx_SpecializationArea`. The earlier rule of exactly one required area at submit/publication becomes **at least one**. Dataverse can't make an N:N required, so the transition handlers must enforce it, and they don't do so yet (see [Known divergences](#known-divergences-from-this-document)). No maximum has been set.
 
 ### `nx_capability`
 
@@ -201,7 +216,7 @@ Reintegrated after review — dropped from the first v2 draft, brought back with
 | Capability *(primary name)* | `nx_capabilityname` | StringType | Yes | "AI & agents", "Planning & analytics", etc. |
 | Sort Order | `nx_sortordernumber` | IntegerType | No | Controls chip order |
 
-1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a lookup column on `nx_solution`, same shape as `SpecializationArea`. Drafts may leave it empty. Not connected to `cr6b0_project`.
+1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a lookup column on `nx_solution`. Drafts may leave it empty. Not connected to `cr6b0_project`.
 
 ### `nx_industry`
 
@@ -252,10 +267,10 @@ The reusable offering — the unit of value shown to a CSM.
 | One-line Summary | `nx_onelinesummary` | StringType | At submit/publication | Optional column metadata so incomplete drafts can be saved; nonblank at the transition boundary |
 | What It Does | `nx_whatitdoes` | StringType | No |  |
 | Business Value | `nx_businessvalue` | StringType | No |  |
-| Specialization Area | `nx_specializationarea` | LookupType → `nx_specializationarea` | Yes | Single-valued |
 | Capability | `nx_capability` | LookupType → `nx_capability` | At submit/publication | Single-valued; optional column metadata for Draft, exactly one governed value at submit/publication |
 | Client / Context | `nx_clientcontext` | StringType | No | Freeform for now; revisit as a lookup if reporting by client is needed later. **Internal-only** — never rendered in present mode |
 | Client Context (Redacted) | `nx_clientcontextredacted` | StringType | Conditional | The only context shown in present mode; required at submission when Client / Context is populated. Never infer or scrub names automatically. |
+| Client Role | `nx_clientrole` | PicklistType (local) | No | Added 2026-09-23. Client stakeholder roles, from Chief of Staff and C-suite to Other; values under [Choice values](#choice-values). No default. Not read by the app yet |
 | Status | `nx_status` | PicklistType (global) | Yes | Idea / concept · Working prototype · Client demo · Live in production · Retired |
 | Publication Status | `nx_publicationstatus` | PicklistType (global) | Yes | Default Draft. Draft · Pending review · Published · Retired. Protected; controlled transition handler writes after caller authorization; only Librarian may request publication |
 | Review Outcome | `nx_reviewoutcome` | PicklistType (local) | Yes | Default None. None · Changes requested · Approved. Latest librarian decision; preserved on contributor edits/resubmission, not proof of current approval. Protected write; readable by owner/authorized editors and Librarian, not CSM |
@@ -267,7 +282,7 @@ The reusable offering — the unit of value shown to a CSM.
 | Library Notes | `nx_librarynote` | StringType | No | **Field-level security** — separate internal editorial notes, not contributor feedback; Librarian-controlled write |
 | Search Keywords | `nx_searchkeywords` | StringType | No | Editorial boost terms not naturally present in the visible narrative text |
 
-Links to `nx_specializationarea` and `nx_capability` via the two single-valued lookup columns above. `Industry` and `Technology` are **not columns** — they attach through native N:N relationships (multi-valued tags, several per solution). Its link to `cr6b0_project` (potentially several) is also a native N:N relationship, not a column here.
+Links to `nx_capability` through the single-valued lookup column above. `SpecializationArea`, `Industry` and `Technology` are **not columns**. They attach through native N:N relationships (multi-valued tags, several per solution). Its link to `cr6b0_project` (potentially several) is also a native N:N relationship, not a column here.
 
 Builders and effort now live in `nx_solutioncontributor`, not columns on `nx_solution`. Total effort is derived from its contributor rows.
 
@@ -275,9 +290,9 @@ Builders and effort now live in `nx_solutioncontributor`, not columns on `nx_sol
 
 Use the same Solution and child tables for drafts and submitted records; no draft table, JSON payload column or review-history table is introduced. `ownerid` determines ownership, not builder credit or the PoC's email key. My submissions queries records the caller owns or is authorized to edit under the agreed team-ownership policy; it does not equate `createdby` with the current owner.
 
-Every draft save requires an authored, nonblank solution name of at most 100 characters, not the legacy reserved label `Untitled solution`. Existing unnamed drafts remain readable and must be renamed before saving again. At draft creation, supply valid specialization/maturity defaults, Publication Status Draft, Review Outcome None, and both safety booleans false. Summary and Capability use optional column metadata. Drafts may omit contributors/images entirely; contributor rows require a selected person, parent, generated name and effort mode, but active effort inputs can remain null until submission. Empty person-picker rows are UI-only and are not written to Dataverse. Blank numeric/date inputs map to null, never zero, NaN or empty-string dates. Supplied values must still satisfy column types, lengths, ranges, lookup validity and unique-person constraints; invalid editor values stay client-side for correction.
+Every draft save requires an authored, nonblank solution name of at most 100 characters, not the legacy reserved label `Untitled solution`. Existing unnamed drafts remain readable and must be renamed before saving again. At draft creation, supply a valid maturity default, Publication Status Draft, Review Outcome None, and both safety booleans false. Summary and Capability use optional column metadata. Drafts may omit contributors/images entirely; contributor rows require a selected person, parent, generated name and effort mode, but active effort inputs can remain null until submission. Empty person-picker rows are UI-only and are not written to Dataverse. Blank numeric/date inputs map to null, never zero, NaN or empty-string dates. Supplied values must still satisfy column types, lengths, ranges, lookup validity and unique-person constraints; invalid editor values stay client-side for correction.
 
-At submit and publication, synchronously validate authored name (not the reserved label), summary, specialization, exactly one capability, at least one unique contributor with complete valid maturity-selected effort, fresh safety acknowledgment, anonymous context when Client / Context is set, and one to six stored detail images. Complete all required file uploads before the transition. App validation improves usability but is not the production enforcement boundary.
+At submit and publication, synchronously validate authored name (not the reserved label), summary, at least one specialization area, exactly one capability, at least one unique contributor with complete valid maturity-selected effort, fresh safety acknowledgment, anonymous context when Client / Context is set, and one to six stored detail images. Complete all required file uploads before the transition. App validation improves usability but is not the production enforcement boundary.
 
 | Operation | Authorized caller and source | Result and protected fields |
 |---|---|---|
@@ -307,6 +322,7 @@ One row per person credited on a Solution. User/team-owned, with access aligned 
 | Name *(primary name)* | `nx_contributorname` | StringType | Yes | Auto-generated display label from Solution/person; truncate to 100 characters, never use as identity |
 | Solution | `nx_solution` | LookupType → `nx_solution` | Yes | Parent reusable offering |
 | Built By | `nx_builtby` | LookupType → `cr6b0_consultant` | Yes | One credited person; multiple people require multiple rows |
+| Role | `nx_role` | PicklistType (local) | No | Added 2026-09-23. CSM · Consultant. No default |
 | Effort Mode | `nx_effortmode` | PicklistType (local) | Yes | Direct for Idea / concept and Working prototype; Calendar for Client demo and Live in production. Validate against parent maturity. Retired records retain their last valid mode. |
 | Direct Hours | `nx_directhours` | DecimalType | At submit/publication in Direct mode | Nullable in Draft; finite and nonnegative when supplied. Include preparation/discovery. Zero is valid; empty is not zero |
 | Start Date | `nx_startdate` | DateTimeType (Date Only) | At submit/publication in Calendar mode | Nullable in Draft; inclusive first date |
@@ -314,6 +330,8 @@ One row per person credited on a Solution. User/team-owned, with access aligned 
 | Allocation (%) | `nx_allocationpercent` | DecimalType | At submit/publication in Calendar mode | Nullable in Draft; constant allocation; zero permitted |
 
 No `Business Calendar` lookup or calendar tables. Calendar mode uses one code-based US federal holiday policy, with no calendar selector — `usBusinessCalendar(2020, 2035)` in `app/src/lib/effort.ts`, called by the connected app in `app/connected/src/draftGraph.ts`. The `BusinessCalendar` type and the `calendarId` field in `app/src/types.ts` are code-level constructs belonging to that function, **not Dataverse columns**; the schema-shaped-mock rule does not apply to them. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
+
+**Role (`nx_role`)** marks the solution's CSM separately from the consultants who built it. The CSM lives in the same child table, so it is read back with the other contributors. Because of the alternate key below, one person holds one role per Solution. Rules for CSM rows are **not yet defined**: whether they carry effort, how many are allowed, and whether they count toward the contributor minimum (see [Still open](#still-open)).
 
 Alternate key: `(Solution, Built By)` enforces one effort record per person per Solution — deployed as `nx_solutioncontributorkey` (`nx_builtby` + `nx_solution`). Require at least one complete contributor at submit/publication; a 1:N relationship cannot itself enforce a minimum child count. Validate only the active mode: direct hours in Direct mode, or dates/allocation in Calendar mode. Maturity changes preserve draft inputs but change the active mode for every contributor; never use stale inactive values in totals. Conditional validation must be enforced on all production writes, not just the UI.
 
@@ -330,6 +348,34 @@ Example: 2026-09-07 through 2026-09-18 contains ten weekdays minus Labor Day on 
 Calendar-mode hours represent capacity; Direct-mode hours represent reported effort. Neither is a timesheet system or an estimate of deployment lead time. Demo effort is not a production estimate. Allocation changes within a person's period and cross-solution over-allocation/capacity checks remain out of scope. The app calculates from loaded contributor data; no Dataverse calculated-column capability or stored total is assumed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
 
 **Migration:** create a contributor row for each former `nx_solution.Built By` value. Dates and allocation require explicit confirmation; do not infer them from the old Days/Weeks/Months choice. Keep legacy values during a real migration until backfill is verified, then retire the old lookup/choice and any unused global choice. The PoC's dates and allocations are illustrative, not historical work records. The connected app already applies the code-based 2020-2035 policy. The look-and-feel PoC in `app/src/` still carries a single hardcoded 2026 holiday list for its illustrative totals; that is a PoC data detail, not a schema question, and its calendar identifiers are code-level, not columns to migrate. No live integration or deployment is authorized by this policy change.
+
+### `nx_solutionfavorite` — per-person favorites
+
+Created 2026-09-23 in the maker portal. It will back a future "My favorites" view: each person saves the solutions they like and sees their own list. The app does not use it yet: it isn't a connected-app data source, and no plugin or security privilege is configured. One row per person per saved Solution. The table is **UserOwned**, and `ownerid` is the signed-in account that created the row. With user-level (Basic) privileges, that makes each person's list private. `nx_user` records *which consultant* saved the solution; `ownerid` controls *who can read* the row.
+
+| Column | Logical name | Type | Required | Notes |
+|---|---|---|---|---|
+| Name *(primary name)* | `nx_name` | StringType | No (metadata) | Display label, for example "{Solution name} — {Consultant name}". Never used as identity |
+| Solution | `nx_solution` | LookupType → `nx_solution` | Yes (ApplicationRequired) | The saved Solution |
+| User | `nx_user` | LookupType → **`cr6b0_consultant`** | Yes (ApplicationRequired) | The consultant who saved it. Despite the label "User", it points at `cr6b0_consultant`, **not** `systemuser` |
+| Saved on | `createdon` (system) | — | — | When the solution was saved. Not a custom column |
+
+Alternate key `nx_SolutionUser` (`nx_solutionuser`) = `nx_solution` + `nx_user`, so a consultant can save the same Solution only once. The key is Active.
+
+**Relationship behavior** (verified 2026-09-23):
+
+| Relationship | Delete | Assign / Share / Unshare / Reparent | Why |
+|---|---|---|---|
+| `nx_solutionfavorite_Solution_nx_solution` | **Cascade** (Archive: Cascade) | NoCascade | Deleting a Solution removes its favorites. This is the table's single parental relationship. Sharing must **not** cascade: approval shares a Solution with Published Readers, and a cascading share would expose every person's favorites of it |
+| `nx_solutionfavorite_User_cr6b0_consultant` | RemoveLink | NoCascade | Dataverse allows only one parental relationship per table, and any Delete = Cascade makes a relationship parental, so this one can't cascade. Restrict is avoided because it would block deletions in the source consultant table. If a consultant is deleted, their favorites keep an empty `nx_user`; readers ignore such rows, and cleanup is a later job |
+
+**Intended behavior once the app uses it (not yet implemented):**
+
+- The signed-in account maps to its consultant by `cr6b0_email`. An account with no active consultant row can't save favorites.
+- Saving creates a row and un-saving deletes it. Rows are never updated.
+- A server-side rule should force `nx_user` to the caller's consultant, and should allow saving only Published solutions. Until that exists, nothing stops a caller from saving a favorite in someone else's name.
+- A solution that is later withdrawn or retired keeps its favorite rows, but the reader no longer has access to it, so "My favorites" hides it.
+- Favorite counts are a candidate signal for a future "top ranking". Because rows are private, counts across people must come from an elevated server-side aggregate, not from client reads.
 
 ### `nx_demoasset` — the demo
 
@@ -433,6 +479,7 @@ The per-column **Logical name** and **Type** cells in the tables above come from
 | `nx_technology` | `nx_Technology` | `nx_technologies` | `nx_technologyid` | `nx_technologyname` | UserOwned |
 | `cr6b0_consultant` | `cr6b0_Consultant` | `cr6b0_consultants` | `cr6b0_consultantid` | `cr6b0_consultantname` | UserOwned |
 | `cr6b0_project` | `cr6b0_Project` | `cr6b0_projects` | `cr6b0_projectid` | `cr6b0_projectidentifier` | UserOwned |
+| `nx_solutionfavorite` | `nx_solutionfavorite` | `nx_solutionfavorites` | `nx_solutionfavoriteid` | `nx_name` | UserOwned |
 | `nx_uploadsession` | `nx_UploadSession` | `nx_uploadsessions` | `nx_uploadsessionid` | `nx_name` | **OrgOwned** |
 
 Two naming warts worth knowing rather than fixing: `nx_demoasset`'s primary name is `nx_demoassetid1`, not `nx_demoassetname`; and Sort Order is `nx_sortordernumber` on the reference tables but `nx_sortorder` on `nx_demoasset` and `nx_solutionimage`.
@@ -446,11 +493,13 @@ Integers, not labels, are what a write must send. Unknown values must fail expli
 | `nx_solution.nx_status` | Global | 125060000 Live in production · 125060001 Idea / concept · 125060002 Client demo · 125060003 Retired · 125060004 Working prototype |
 | `nx_solution.nx_publicationstatus` | Global | 125060000 Published · 125060001 Retired · 125060002 Pending review · 125060003 Draft |
 | `nx_solution.nx_reviewoutcome` | Local | 125060000 None · 125060001 Changes requested · 125060002 Approved |
+| `nx_solution.nx_clientrole` | Local | 125060000 Chief of Staff · 125060001 Chief Executive Officer (CEO) · 125060002 Chief Information Officer (CIO) · **125060008** Chief Operating Officer (COO) · **125060009** Chief Financial Officer (CFO) · 125060003 Enterprise Architect · 125060004 Solution Architect · 125060005 Product Owner · 125060006 Project Manager · 125060007 Business Unit Leader · 125060010 Operation Manager · 125060011 IT Manager · 125060012 Director · 125060013 Other |
 | `nx_solutioncontributor.nx_effortmode` | Local | 125060000 direct · 125060001 calendar |
+| `nx_solutioncontributor.nx_role` | Local | 125060000 CSM · 125060001 Consultant |
 | `nx_demoasset.nx_assettype` | Local | 125060000 Self-contained HTML file · 125060001 Video walkthrough only · 125060002 Client-ready one-pager / slide · 125060003 Power BI · 125060004 Desktop app or script · **125060007** Hosted web app (URL) · **125060008** Power Apps |
 | `nx_demorequest.nx_requeststatus` | Local | 125060000 New · 125060001 Acknowledged · 125060002 Scheduled · 125060003 Delivered · 125060004 Declined |
 
-`nx_assettype` is not contiguous — 125060005 and 125060006 are unused. Never derive an asset type from its ordinal position. The two effort-mode labels are lowercase (`direct`, `calendar`) in Dataverse.
+`nx_assettype` is not contiguous: 125060005 and 125060006 are unused. `nx_clientrole` is listed in display order, and COO/CFO (125060008/125060009) sit between CIO and Enterprise Architect. Never derive a choice value from its ordinal position. The live `nx_clientrole` label for Director has a trailing space (`"Director "`), so compare labels trimmed, or better, compare values. The two effort-mode labels are lowercase (`direct`, `calendar`) in Dataverse.
 
 ### Relationship schema names
 
@@ -458,6 +507,7 @@ Native N:N relationships must be addressed by these exact names; the plugins alr
 
 | Relationship | Between | Intersect entity |
 |---|---|---|
+| `nx_Solution_nx_SpecializationArea_nx_SpecializationArea` | `nx_solution` ↔ `nx_specializationarea` | `nx_Solution_nx_SpecializationArea` |
 | `nx_Solution_nx_Industry_nx_Industry` | `nx_solution` ↔ `nx_industry` | `nx_Solution_nx_Industry` |
 | `nx_Solution_nx_Technology_nx_Technology` | `nx_solution` ↔ `nx_technology` | `nx_Solution_nx_Technology` |
 | `nx_Solution_cr6b0_Project_cr6b0_Project` | `nx_solution` ↔ `cr6b0_project` | `nx_Solution_cr6b0_Project` |
@@ -469,6 +519,7 @@ Native N:N relationships must be addressed by these exact names; the plugins alr
 | `nx_solutioncontributorkey` | `nx_solutioncontributor` | `nx_builtby` + `nx_solution` |
 | `cr6b0_consultantnamekey` | `cr6b0_consultant` | `cr6b0_consultantname` |
 | `cr6b0_projectidentifierkey` | `cr6b0_project` | `cr6b0_projectidentifier` |
+| `nx_solutionuser` (schema `nx_SolutionUser`) | `nx_solutionfavorite` | `nx_solution` + `nx_user` |
 
 ### Known divergences from this document
 
@@ -477,7 +528,19 @@ Reviewed and accepted, not defects:
 - Column lengths in Dataverse are largely 850 (text) and 4000 (multiline); the design lengths above were not applied and are not enforced at the column level.
 - Required levels do not match the Required column above — notably `nx_capability` is `ApplicationRequired` in Dataverse while drafts may leave it empty. `ApplicationRequired` is not enforced on SDK writes, so the draft plugin is unaffected; a model-driven form would be.
 - `cr6b0_consultant` and `cr6b0_project` carry many columns of their own beyond the ones documented above, and `cr6b0_consultant.cr6b0_specializationarea` points to a **different** table of that name, outside this solution. Both are treated as independent, pre-existing tables; the sections above list their identifiers, person links and the columns PRISMA reads, not their full column sets.
-- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet.
+- `nx_solution.nx_image`, `nx_sortordernumber`, `nx_solution.nx_clientrole`, `nx_solutioncontributor.nx_role` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet.
+
+**Open after the 2026-09-23 changes (these are defects, not accepted divergences):**
+
+- **Deployed code still uses the deleted `nx_solution.nx_specializationarea` lookup.** It appears in `DraftPolicy.cs` (allowed fields, draft write), `DraftApi.cs` (validation, read-back) and `ReviewApi.cs` (submit/approve validation, active-reference check), and in the connected app's generated `solutions` schema. The connected app's Library load, draft list/save/reopen, submit and approval will fail until they move to the N:N. The app must be fixed before real data is entered.
+- **Test data only, no backfill needed.** The lookup was deleted without carrying its values to the N:N, so on 2026-09-23 the existing solutions have no linked areas. Every row in `PRISMA_Dev` is fake test data that can be deleted and recreated, so no migration is planned. Real data will be entered only after the app reads and writes the N:N.
+- **The N:N relationship is not in `PRISMA_Dev`** (it only appears in Default). Add it before exporting or moving the solution.
+- **`nx_solutionfavorite` naming and metadata, accepted:**
+  - The person lookup is named `nx_user` ("User") even though it targets `cr6b0_consultant`.
+  - The schema name is lowercase (`nx_solutionfavorite`).
+  - `nx_name` is optional (length 850).
+- **`nx_solutionfavorite` has no security or enforcement yet.** It isn't in any PRISMA role, it isn't a connected-app data source, and no plugin binds `nx_user` to the caller.
+- **`nx_role` is not read or written by the app.** No layer knows the column yet: the contributor editor has no role selector, `ContributorInput` has no role field, and `DraftGraph.cs` doesn't write `nx_role` on Create/Update or select and return it on read. Graph saves update retained contributor rows with explicit columns only, so a role set in the maker portal **survives** an app save. It is lost only when a person is removed and re-added, because that deletes the row and creates a new one. New rows created by the app have a null role. Existing contributor rows are test data. All four layers must carry `nx_role` before real data is entered.
 
 ---
 
@@ -485,7 +548,7 @@ Reviewed and accepted, not defects:
 
 | From | To | Type |
 |---|---|---|
-| `nx_specializationarea` | `nx_solution` | 1:N |
+| `nx_specializationarea` | `nx_solution` | Native N:N |
 | `nx_capability` | `nx_solution` | 1:N |
 | `nx_industry` | `nx_solution` | Native N:N |
 | `nx_technology` | `nx_solution` | Native N:N |
@@ -497,8 +560,10 @@ Reviewed and accepted, not defects:
 | `nx_solution` | `nx_demorequest` | 1:N |
 | `cr6b0_consultant` | `nx_demorequest` | 1:N (Requested By) |
 | `cr6b0_consultant` | `cr6b0_project` | 1:N (`cr6b0_customersuccessmanager`) |
+| `nx_solution` | `nx_solutionfavorite` | 1:N (parental: Delete Cascade, no share/assign cascade) |
+| `cr6b0_consultant` | `nx_solutionfavorite` | 1:N (`nx_user`, Delete: RemoveLink) |
 
-**12 tables:** the 11 original business tables (`nx_solution`, `nx_solutioncontributor`, four governed/tag reference tables, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, existing `cr6b0_consultant` and `cr6b0_project`) plus private `nx_uploadsession`. Platform-managed N:N intersect tables are excluded. Consultant/Project columns and security are unchanged. Connected owner edits currently require explicit withdrawal to Draft; librarian content editing, separate thumbnail/caption editing and solution deletion remain gaps against the target contract.
+**13 tables:** the 11 original business tables (`nx_solution`, `nx_solutioncontributor`, four governed/tag reference tables, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, existing `cr6b0_consultant` and `cr6b0_project`), private `nx_uploadsession`, and `nx_solutionfavorite` (2026-09-23). Platform-managed N:N intersect tables are excluded. Consultant/Project columns and security are unchanged. Connected owner edits currently require explicit withdrawal to Draft; librarian content editing, separate thumbnail/caption editing and solution deletion remain gaps against the target contract.
 
 
 **Dropped from the first v2 draft, then reintegrated, then flattened this round:** `nx_capability` — brought back as a reference table scoped to a single connection (`nx_solution` only, not `cr6b0_project`), and as of this round a 1:N single-valued lookup rather than N:N.
@@ -523,19 +588,25 @@ Reviewed and accepted, not defects:
 
 Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. Publication Status, Client Safe Reviewed, Review Outcome, Review Comments and Library Notes have the field permissions and controlled-write rules in the [security model](../architecture/security-model.md). Review fields and notes are excluded from the CSM/presentation projection. `cr6b0_project`'s own security model lives with the existing table, not here.
 
+`nx_solutionfavorite` (**planned, not configured**): Contributor, CSM and Librarian get Create, Read and Delete at **User** depth only, with no Write, Assign or Share. Each person sees only their own favorites. Nobody, including the Librarian, reads other people's rows directly; aggregate counts go through a server-side operation.
+
 `nx_solutioncontributor`: Contributor create/read/write/delete only where they can manage the parent Solution; CSM read only for published parents; Librarian full access. Per-person dates and allocations are omitted from present-mode rendering; builder names and total effort remain available. Present mode is not a security boundary for the bundled mock data.
 
 ## Still open
 
 - Who creates the `Solution`↔`Project` N:N association — the Librarian during triage, or the Contributor who owns the Solution?
+- Specialization areas per solution: is the minimum one at submit? Is there a maximum? Does the UI need a "primary" area for the card color and badge?
+- `nx_clientrole`: what does it represent (the client stakeholder the solution targets?), is it required at submit, and is it shown in present mode?
+- `nx_role` = CSM rows: do they carry effort, is there exactly one per solution, and do they count toward the contributor minimum?
+- `nx_solutionfavorite`: should the ranking count favorites, and who sees the ranking? Who cleans up favorites with an empty `nx_user` after a consultant is deleted?
 
-*(Resolved: `Industry` and `Technology` cardinality — settled as native N:N, multi-valued. `Capability` cardinality — settled as 1:N, single-valued. `cr6b0_project` + `Solution`↔`Project` link — confirmed in scope, native N:N, no junction table. `systemuser` lookups replaced by `cr6b0_consultant`. `nx_businesscalendar`/`nx_businesscalendarholiday` — removed from scope.)*
+*(Resolved: `SpecializationArea` cardinality — changed to native N:N on 2026-09-23. `Industry` and `Technology` cardinality — settled as native N:N, multi-valued. `Capability` cardinality — settled as 1:N, single-valued. `cr6b0_project` + `Solution`↔`Project` link — confirmed in scope, native N:N, no junction table. `systemuser` lookups replaced by `cr6b0_consultant`. `nx_businesscalendar`/`nx_businesscalendarholiday` — removed from scope.)*
 
 ---
 
 ## Example: one Solution, several Projects, via the native N:N relationship
 
-Each `Solution` has exactly one `SpecializationArea` and one `Capability`, but can link to **several** `Project` rows directly — through the native N:N relationship, not through a junction table or a column on either fixed side.
+Each `Solution` has exactly one `Capability` and one or more `SpecializationArea` rows, and it can link to **several** `Project` rows directly — through the native N:N relationship, not through a junction table or a column on either fixed side.
 
 ```mermaid
 graph LR
@@ -560,10 +631,11 @@ graph LR
         P5["P5 Client TBD<br/>(no link yet)"]
     end
 
-    SA1 -- 1:N --> S1
-    SA1 -- 1:N --> S3
-    SA2 -- 1:N --> S2
-    SA3 -- 1:N --> S4
+    SA1 -- N:N --> S1
+    SA2 -- N:N --> S1
+    SA1 -- N:N --> S3
+    SA2 -- N:N --> S2
+    SA3 -- N:N --> S4
 
     S1 -- N:N --> P1
     S1 -- N:N --> P2
@@ -578,13 +650,13 @@ S1 links to **both** P1 (Acería del Norte) and P2 (Retail Co X) — the reuse s
 
 ## Example: everything hanging off one Solution
 
-Zooming into a single Solution (S1) shows every other table it touches: its specialization-area and capability lookups, its N:N tags, the demo asset the CSM opens, a live-demo request raised against it, and — through the native N:N relationship — its delivery evidence.
+Zooming into a single Solution (S1) shows every other table it touches: its capability lookup, its N:N tags (specialization areas included), the demo asset the CSM opens, a live-demo request raised against it, and — through the native N:N relationship — its delivery evidence.
 
 ```mermaid
 graph TD
     S1["S1 Invoice Reconciliation Assistant"]
 
-    SA1[AI & Automation] -- 1:N --> S1
+    SA1[AI & Automation] -- N:N --> S1
     CAP1[AI & agents] -- 1:N --> S1
     IND1[Manufacturing] -- N:N --> S1
     TECH1[LangChain] -- N:N --> S1
@@ -600,4 +672,4 @@ graph TD
     Owner["cr6b0_consultant<br/>Juliana Castelblanco"] -- "Customer Success Manager" --> P1
 ```
 
-One Solution row is the hub: the tags describe *what it is* (exactly one specialization area, exactly one capability, plus as many industries and technologies as apply), while What It Does and Business Value describe its actions and benefits. `nx_demoasset` is *what a CSM can show*, `nx_demorequest` is *who's asking for a live one right now*, and the native N:N relationship to `cr6b0_project` is the bridge to *proof it already happened* — pointing at a table this schema never modifies directly.
+One Solution row is the hub: the tags describe *what it is* (exactly one capability, plus as many specialization areas, industries and technologies as apply), while What It Does and Business Value describe its actions and benefits. `nx_demoasset` is *what a CSM can show*, `nx_demorequest` is *who's asking for a live one right now*, and the native N:N relationship to `cr6b0_project` is the bridge to *proof it already happened* — pointing at a table this schema never modifies directly.

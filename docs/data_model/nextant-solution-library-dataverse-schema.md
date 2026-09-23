@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to the two-field story model in v2, including live ownership and private SHA-bound upload sessions; story-column retirement deployed, broader acceptance pending · **Last updated:** 2026-09-22
+> **Status:** Maintained companion to the two-field story model in v2, including live ownership and private SHA-bound upload sessions; story-column retirement deployed; Specialization Area N:N, Client Role and contributor Role synchronized 2026-09-23; broader acceptance pending · **Last updated:** 2026-09-23
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Proposed new table names below use an `nx_` publisher prefix; confirm the actual publisher prefix before creating components. The fixed `cr6b0_project` and `cr6b0_consultant` names remain as specified in v2.
 
@@ -14,7 +14,7 @@ The Power Platform solution **`PRISMA_Dev`** already exists in **Nextant Pulse**
 - **System columns are automatic** — `createdon`, `createdby`, `modifiedon`, `modifiedby`, `ownerid`, `statecode`/`statuscode` are platform-managed as applicable to table ownership. `ownerid` is distinct from builder credit: each `nx_solutioncontributor` row points to one credited `cr6b0_consultant`. Credit does not grant edit access.
 - **Global vs local choices** — every Choice column below is called out as **global** or **local**. Global choices are defined once and reused; use them for anything that mirrors the values on your old `Lists` tab, since that's exactly the "add a value and it becomes selectable everywhere" behavior you want.
 - **Ownership model** — all 11 original business tables retain live user/team ownership, including the shared reference tables, Consultant and Project. Global reference Read is configured instead of recreating tables. Only the private upload-session extension is organization-owned. Media is owned by the empty Media Custodian team and shared read-only through controlled APIs.
-- **Native N:N over custom junction tables** — the tagging relationships that stay multi-valued (technology, industry) don't need any extra attributes of their own (no "date tagged", no "confidence score"), so build them as **native many-to-many relationships** rather than modeling junction tables by hand. Dataverse creates and manages the intersect table for you; you just add a subgrid to the form and query the relationship's navigation property from the code app. `Capability`, like `SpecializationArea`, is single-valued instead — a plain 1:N lookup column on `nx_solution`, not a tag. The `Solution`↔`Project` link is native N:N too, for the same reason (no attributes of its own) — see below.
+- **Native N:N over custom junction tables** — the tagging relationships that stay multi-valued (specialization area, technology, industry) don't need any extra attributes of their own (no "date tagged", no "confidence score"), so build them as **native many-to-many relationships** rather than modeling junction tables by hand. Dataverse creates and manages the intersect table for you; you just add a subgrid to the form and query the relationship's navigation property from the code app. `Capability` is single-valued instead: a plain 1:N lookup column on `nx_solution`, not a tag. `SpecializationArea` was single-valued too until 2026-09-23 and is now native N:N. The `Solution`↔`Project` link is native N:N too, for the same reason (no attributes of its own) — see below.
 - **Vocabulary governance** — `Capability`, `Industry`, and `SpecializationArea` are **governed**: contributors pick from existing values only, and the library team adds new ones. `Technology` is **open**: contributors can create values inline, and the library team periodically merges duplicates.
 
 ---
@@ -29,6 +29,8 @@ The Power Platform solution **`PRISMA_Dev`** already exists in **Nextant Pulse**
 | Description | Multiple lines of text (plain, 500) | No | Powers the per-tab note in the public app |
 | Sort Order | Whole Number | No | Controls tab order |
 
+Native N:N with `nx_solution` since 2026-09-23: a solution can carry several specialization areas, with at least one expected at submit/publication. See [SchemaV2](SchemaV2.md#nx_specializationarea).
+
 ### `nx_capability`
 
 | Column | Type | Required | Notes |
@@ -36,7 +38,7 @@ The Power Platform solution **`PRISMA_Dev`** already exists in **Nextant Pulse**
 | Capability *(primary name)* | Single line of text (100) | Yes | "AI & agents", "Planning & analytics", etc. |
 | Sort Order | Whole Number | No | Controls chip order |
 
-1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a single lookup column, same shape as `SpecializationArea`. Drafts may leave it empty. Not a tag, not connected to anything else.
+1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a single lookup column. Drafts may leave it empty. Not a tag, not connected to anything else.
 
 ### `nx_technology`
 
@@ -67,7 +69,6 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 | One-line Summary | Single line of text (200) | At submit/publication | Optional column metadata allows incomplete drafts; nonblank at transition boundary |
 | What It Does | Multiple lines of text (plain, 4000) | No | |
 | Business Value | Multiple lines of text (plain, 4000) | No | |
-| Specialization Area | Lookup → `nx_specializationarea` | Yes | |
 | Capability | Lookup → `nx_capability` | At submit/publication | Single-valued; optional column metadata for Draft |
 | Status | Choice — **global**, single-select | Yes | See `nx_solutionstatus` below — describes the solution's own maturity |
 | Publication Status | Choice — **global**, single-select | Yes | Default Draft; protected controlled-transition write, not contributor-writable directly; only Librarian may request publication |
@@ -77,6 +78,7 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 | Client Safe Reviewed | Yes/No | Yes | Default false; protected transition-handler write. Only authorized librarian approval sets true; contributor material edits and returns clear it. Present eligibility requires this, acknowledgment and Published |
 | Client / Context | Single line of text (200) | No | Freeform for now; revisit as a lookup if you need to report by client later. **Internal-only** — never rendered in present mode |
 | Client Context (Redacted) | Single line of text (200) | Conditional | Required at submit when Client / Context is populated; the only context used in present mode. No runtime scrubbing. |
+| Client Role (`nx_clientrole`) | Choice — **local**, single-select | No | Client stakeholder roles (Chief of Staff, CEO, CIO, COO, CFO, Enterprise Architect, Solution Architect, Product Owner, Project Manager, Business Unit Leader, Operation Manager, IT Manager, Director, Other). Values in [SchemaV2](SchemaV2.md#choice-values) |
 | Thumbnail | Image column | No | Hero image for the card grid. Fall back to a per-specialization generated placeholder when empty |
 | Date Added | Date Only | No | Business date, distinct from the automatic `createdon` audit timestamp |
 | Library Notes | Multiple lines of text (plain, 2000) | No | Separate internal editorial notes, not reviewer feedback. Librarian-controlled write; CSM cannot read |
@@ -88,7 +90,7 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 
 > **Field-level security and controlled transitions required.** Contributors cannot directly write publication/review fields. Authorized synchronous Dataverse operations save drafts, submit, return and approve; only a librarian can request approval. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [security model](../architecture/security-model.md).
 
-Drafts use these same tables. Permit absent summary/capability, no images, and no contributors or selected contributors with nullable effort inputs. Require an authored, nonblank solution name of at most 100 characters on every draft save and supply valid specialization/maturity defaults. Legacy unnamed drafts remain readable but require a name before saving again. Persist only selected-person child rows; blank numeric/date values become null. Require complete valid data at submission and approval, not merely in the form. Supplied values still obey column constraints. The authoritative [draft and transition contract](SchemaV2.md#draft-and-transition-contract) defines operation preconditions, protected fields, optimistic concurrency, owner mapping and conservative legacy-browser migration.
+Drafts use these same tables. Permit absent summary/capability, no images, and no contributors or selected contributors with nullable effort inputs. Require an authored, nonblank solution name of at most 100 characters on every draft save and supply a valid maturity default. Legacy unnamed drafts remain readable but require a name before saving again. Persist only selected-person child rows; blank numeric/date values become null. Require complete valid data at submission and approval, not merely in the form. Supplied values still obey column constraints. The authoritative [draft and transition contract](SchemaV2.md#draft-and-transition-contract) defines operation preconditions, protected fields, optimistic concurrency, owner mapping and conservative legacy-browser migration.
 
 `Review Outcome` is the latest decision and remains unchanged on contributor saves/resubmission. Changes requested means Draft + outcome Changes requested; pending re-reviews belong to Pending review even when the last outcome is Changes requested. Return clears both safety booleans; approval replaces Review Comments (clears it when blank). Outcome Approved alone never permits presentation. Library Notes stay separate and unchanged. No review-history table or reviewer/time columns are introduced.
 
@@ -111,6 +113,7 @@ Required lookups do not automatically inherit Dataverse security. Configure and 
 | Name *(primary name)* | Text (100) | Yes | Solution/person display label, truncated to 100; not an identity key |
 | Solution | Lookup → `nx_solution` | Yes | Parent offering |
 | Built By | Lookup → `cr6b0_consultant` | Yes | One credited person per row |
+| Role (`nx_role`) | Choice — **local**: CSM / Consultant | No | Marks the solution's CSM separately from the building consultants. CSM-row rules still open |
 | Effort Mode | Choice: Direct / Calendar | Yes | Direct for ideas/prototypes; Calendar for demos/production; validate against parent maturity |
 | Direct Hours | Decimal Number (2 decimal places, minimum 0) | At submit/publication in Direct mode | Nullable in Draft; finite, nonnegative when supplied; includes preparation/discovery; zero is valid |
 | Start Date | Date Only | At submit/publication in Calendar mode | Nullable in Draft; inclusive first day |
@@ -193,7 +196,7 @@ No direct Project lookup is added to `nx_solution`, and no Solution lookup is ad
 
 | From | To | Type |
 |---|---|---|
-| `nx_solution` | `nx_specializationarea` | N:1 (lookup) |
+| `nx_solution` | `nx_specializationarea` | Native N:N |
 | `nx_solution` | `nx_capability` | N:1 (lookup) |
 | `nx_solutioncontributor` | `nx_solution` | N:1 (lookup) |
 | `nx_solutioncontributor` | `cr6b0_consultant` | N:1 (Built By) |

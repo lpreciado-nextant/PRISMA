@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-09-22
+**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-09-23
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -20,7 +20,7 @@ The connected app creates technologies through `nx_TransitionSubmission` action 
 
 - CSMs filter by these constantly — a fragmented vocabulary breaks faceting and live counts.
 - Industry is modeled as a table (not a multi-select Choice) because multi-select picklists can't be filtered efficiently and can't carry sort order.
-- Capability is a single-valued lookup rather than a tag, same shape as Specialization Area — one Capability per Solution, governed the same way.
+- Capability is a single-valued lookup rather than a tag: one Capability per Solution. Specialization Area is a native N:N tag since 2026-09-23, so a Solution can carry several. Both stay governed.
 
 ## Why technologies stay open
 
