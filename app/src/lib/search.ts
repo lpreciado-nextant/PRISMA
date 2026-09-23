@@ -7,6 +7,8 @@ export interface Filters {
   capabilities: string[];
   technologies: string[];
   industries: string[];
+  /** Target client roles (`nx_role`). Single-valued per solution, so these match any-of. */
+  roles: string[];
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -15,6 +17,7 @@ export const EMPTY_FILTERS: Filters = {
   capabilities: [],
   technologies: [],
   industries: [],
+  roles: [],
 };
 
 function haystack(s: Solution): string {
@@ -31,6 +34,7 @@ function haystack(s: Solution): string {
     ...s.capabilities,
     ...s.technologies,
     ...s.industries,
+    s.targetRole ?? "",
   ]
     .join(" ")
     .toLowerCase();
@@ -60,7 +64,8 @@ function matchesFacets(s: Solution, f: Filters): boolean {
     (f.area === "all" || solutionAreas(s).includes(f.area)) &&
     f.capabilities.every((c) => s.capabilities.includes(c)) &&
     f.technologies.every((t) => s.technologies.includes(t)) &&
-    f.industries.every((i) => s.industries.includes(i))
+    f.industries.every((i) => s.industries.includes(i)) &&
+    (f.roles.length === 0 || (s.targetRole !== undefined && f.roles.includes(s.targetRole)))
   );
 }
 
@@ -68,7 +73,12 @@ export function filterSolutions(all: Solution[], f: Filters): Solution[] {
   return all.filter((s) => matchesFacets(s, f) && matchesQuery(s, f.q));
 }
 
-export type FacetKey = "capabilities" | "technologies" | "industries";
+export type FacetKey = "capabilities" | "technologies" | "industries" | "roles";
+
+function facetValues(s: Solution, key: FacetKey): string[] {
+  if (key === "roles") return s.targetRole ? [s.targetRole] : [];
+  return s[key];
+}
 
 /**
  * Counts are computed with the facet's own selection removed, so a CSM can see
@@ -80,7 +90,7 @@ export function facetCounts(all: Solution[], f: Filters, key: FacetKey): Map<str
   );
   const counts = new Map<string, number>();
   for (const s of base) {
-    for (const value of s[key]) {
+    for (const value of facetValues(s, key)) {
       counts.set(value, (counts.get(value) ?? 0) + 1);
     }
   }
@@ -103,6 +113,7 @@ export function activeChips(f: Filters): { key: FacetKey; value: string }[] {
     ...f.capabilities.map((value) => ({ key: "capabilities" as const, value })),
     ...f.technologies.map((value) => ({ key: "technologies" as const, value })),
     ...f.industries.map((value) => ({ key: "industries" as const, value })),
+    ...f.roles.map((value) => ({ key: "roles" as const, value })),
   ];
 }
 
@@ -113,6 +124,7 @@ export function filtersToQuery(f: Filters): Record<string, string | undefined> {
     cap: f.capabilities.length ? f.capabilities.join("~") : undefined,
     tech: f.technologies.length ? f.technologies.join("~") : undefined,
     ind: f.industries.length ? f.industries.join("~") : undefined,
+    role: f.roles.length ? f.roles.join("~") : undefined,
   };
 }
 
@@ -125,5 +137,6 @@ export function filtersFromQuery(params: URLSearchParams): Filters {
     capabilities: list("cap"),
     technologies: list("tech"),
     industries: list("ind"),
+    roles: list("role"),
   };
 }

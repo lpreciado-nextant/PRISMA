@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import type { Solution } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
-import { activeChips, areaCounts, filterSolutions, type Filters } from "../lib/search";
+import { activeChips, areaCounts, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
 import { Chip } from "../components/Badges";
 import { FacetRail } from "../components/FacetRail";
 import { Icon } from "../components/Icon";
@@ -233,7 +233,7 @@ function EmptyState({
                     (v) => v !== mostRestrictive.value,
                   ),
                 }
-              : { q: "", area: "all", capabilities: [], technologies: [], industries: [] },
+              : EMPTY_FILTERS,
           )
         }
         className="mt-6 cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold"

@@ -5,6 +5,7 @@ import { Icon } from "./Icon";
 import { Poster } from "./Poster";
 import { navigate } from "../lib/router";
 import { initials } from "../lib/powerContext";
+import { solutionAreas } from "../lib/areas";
 
 export function SolutionCard({
   solution,
@@ -62,7 +63,7 @@ export function SolutionCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-3 p-5">
-        <AreaTag area={solution.specializationArea} />
+        <div className="flex flex-wrap gap-1.5">{solutionAreas(solution).map((area) => <AreaTag key={area} area={area} />)}</div>
 
         <h3 className="text-[19px] leading-snug font-semibold" style={{ color: "var(--ink)" }}>
           {solution.name}
@@ -101,7 +102,7 @@ export function SolutionCard({
             {names.length > 1 ? names.length : initials(builderNames)}
           </span>
           <span className="truncate text-[13px]" title={builderNames} style={{ color: "var(--ink-3)" }}>
-            {clientLine ?? (builderNames || (catalogueOnly ? "Published solution" : "Contributors pending"))}
+            {clientLine ?? (builderNames || (catalogueOnly || present ? "Published solution" : "Contributors pending"))}
           </span>
         </div>
         <span

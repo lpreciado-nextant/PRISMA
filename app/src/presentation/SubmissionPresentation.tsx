@@ -21,7 +21,7 @@ const chapters = [
       ["One internal exception", "The dedicated client field supports internal discovery. An authored anonymous description takes its place in presentations."],
       ["Acknowledgment is not approval", "Submission still requires librarian review. Contributors cannot clear their own work for client presentation."],
     ],
-    tryIt: "Accept the safety requirements to unlock Continue. Editing requires a fresh acknowledgment.",
+    tryIt: "Accept the safety requirements to unlock Next. Editing requires a fresh acknowledgment.",
     boundary: "This is a local preview. Production requires Dataverse access controls and server-side validation.",
     output: "Safety acknowledgment",
   },
@@ -69,7 +69,7 @@ const chapters = [
       ["Four categories", "Images, videos, one-pagers or slides, and self-contained HTML. Permission-dependent app links are deferred."],
       ["Show the outcome", "Use user flows, understandable diagrams or dashboard screenshots. Remove confidential data and client identifiers."],
     ],
-    tryIt: "Remove the detail images to see Continue disabled. A thumbnail alone is not sufficient. Add a PNG, JPG or WebP to continue.",
+    tryIt: "Remove the detail images to see Next disabled. A thumbnail alone is not sufficient. Add a PNG, JPG or WebP to continue.",
     boundary: "Media stays in memory and is lost on reload. No file is uploaded to Dataverse. HTML runs in a restrictive sandbox in the app viewer.",
     output: "Required gallery + optional thumbnail and attachments",
   },
@@ -89,12 +89,12 @@ const chapters = [
 
 function seedDraft() {
   sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
-    name: example.name, summary: example.summary, area: example.specializationArea,
+    name: example.name, summary: example.summary, areas: example.specializationAreas ?? [example.specializationArea],
     status: example.status, whatItDoes: example.whatItDoes, businessValue: example.businessValue,
     capabilities: example.capabilities, technologies: example.technologies, industries: example.industries,
     assetType: "Self-contained HTML file", assets: [],
     thumbnail: "", images: example.images, safetyAcknowledged: false,
-    clientContext: example.clientContext, redacted: example.clientContextRedacted,
+    clientContext: example.clientContext, redacted: example.clientContextRedacted, targetRole: example.targetRole ?? "",
     contributors: example.contributors.map((contributor) => ({ ...contributor, calendarId: DEFAULT_BUSINESS_CALENDAR_ID })),
   }));
 }

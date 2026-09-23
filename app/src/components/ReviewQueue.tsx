@@ -5,6 +5,7 @@ import { navigate } from "../lib/router";
 import { Icon } from "./Icon";
 import { LoadingState } from "./LoadingState";
 import { SelectPicker } from "./SelectPicker";
+import { solutionAreas } from "../lib/areas";
 
 const filters = ["Pending review", "Changes requested", "Published"] as const;
 type Entry = { solution: Solution; owner?: string; imageCount?: number; attachmentCount?: number };
@@ -37,7 +38,7 @@ export function ReviewQueue({ entries, connected = false }: { entries: Entry[]; 
   const [query, setQuery] = useState("");
   const [area, setArea] = useState<SpecializationArea | "">("");
   const visible = entries.filter(entry => matches(entry, filter))
-    .filter(({ solution }) => !area || solution.specializationArea === area)
+    .filter(({ solution }) => !area || solutionAreas(solution).includes(area))
     .filter(({ solution, owner }) => `${solution.name} ${solution.summary} ${owner ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
   return <section className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
     <p className="eyebrow">Librarian{!connected && " · local preview"}</p><h1 className="mt-2 text-[28px]">Review queue</h1>
@@ -52,7 +53,7 @@ export function ReviewQueue({ entries, connected = false }: { entries: Entry[]; 
     <p className="text-[13px] text-(--ink-2)" role="status">{visible.length} {visible.length === 1 ? "submission" : "submissions"}</p>
     {!visible.length ? <div className="py-16 text-center"><Icon name="check" size={26} className="mx-auto" /><h2 className="mt-4 text-[20px]">{query || area ? "No matching submissions" : filter === "Pending review" ? "Nothing awaiting review" : "No submissions in this status"}</h2></div> : <ul className="mt-3">
       {visible.map(({ solution, owner, imageCount, attachmentCount }) => <li key={solution.id} className="grid min-w-0 gap-4 border-b border-(--glass-edge) py-5 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="min-w-0"><p className="eyebrow">{AREAS[solution.specializationArea].name}</p><h2 className="mt-1 break-words text-[18px] font-semibold">{solution.name || "Untitled solution"}</h2><p className="mt-1 break-words text-[14px] text-(--ink-2)">{solution.summary}</p>
+        <div className="min-w-0"><p className="eyebrow">{solutionAreas(solution).map(value => AREAS[value].name).join(" · ")}</p><h2 className="mt-1 break-words text-[18px] font-semibold">{solution.name || "Untitled solution"}</h2><p className="mt-1 break-words text-[14px] text-(--ink-2)">{solution.summary}</p>
           {(!connected || imageCount !== undefined) && <p className="mt-2 break-all text-[12px] text-(--ink-3)">{[owner, solution.dateAdded, `${imageCount ?? solution.images?.length ?? 0} images`, `${attachmentCount ?? solution.assets.length} attachments`].filter(Boolean).join(" · ")}</p>}
         </div>
         <button type="button" aria-label={`${filter === "Pending review" ? "Review" : "View"} ${solution.name}`} onClick={() => navigate(`/review/${solution.id}`)} className="inline-flex cursor-pointer items-center justify-center gap-2 self-center justify-self-start rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px] font-semibold">{filter === "Pending review" ? "Review submission" : "View status"}<Icon name="arrowRight" /></button>

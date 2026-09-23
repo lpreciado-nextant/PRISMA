@@ -16,10 +16,10 @@ export function ViewerView({
   present: boolean;
   backPath?: string;
 }) {
-  return <ViewerFrame name={solution.name} kind={asset.assetType} externalUrl={asset.externalUrl} hint={present ? undefined : asset.embedHint} onClose={() => navigate(backPath ?? `/s/${solution.id}`)}><Stage solution={solution} asset={asset} /></ViewerFrame>;
+  return <ViewerFrame name={solution.name} kind={asset.assetType} externalUrl={asset.externalUrl} hint={present ? undefined : asset.embedHint} onClose={() => navigate(backPath ?? `/s/${solution.id}`)}><DemoStage solution={solution} asset={asset} /></ViewerFrame>;
 }
 
-function Stage({ solution, asset }: { solution: Solution; asset: DemoAsset }) {
+export function DemoStage({ solution, asset }: { solution: Solution; asset: DemoAsset }) {
   const accent = AREAS[solution.specializationArea].cssVar;
 
   if (asset.assetType === "Self-contained HTML file") {

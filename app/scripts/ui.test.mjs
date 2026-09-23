@@ -177,10 +177,14 @@ test("both adapters consume the shared form and review surfaces", async () => {
     read("../src/views/SubmitView.tsx"), read("../connected/src/DraftsView.tsx"), read("../connected/src/DraftGraphEditor.tsx"),
     read("../connected/src/DraftMediaEditor.tsx"), read("../src/views/ReviewView.tsx"), read("../connected/src/SubmissionsView.tsx"),
   ]);
-  for (const component of ["SubmissionSafety", "IdentityFields", "StoryFields", "SubmissionReview", "SubmissionFooter", "SubmissionSuccess"]) {
+  for (const component of ["SubmissionSafety", "StoryFields", "SubmissionReview", "SubmissionFooter", "SubmissionSuccess"]) {
     assert.match(poc, new RegExp(`<${component}\\b`));
     assert.match(connected, new RegExp(`<${component}\\b`));
   }
+  // The guided PoC flow uses IdentityFields' two halves as separate steps; the connected app keeps the combined step.
+  assert.match(connected, /<IdentityFields\b/);
+  assert.match(poc, /<SolutionDetailsFields\b/);
+  assert.match(poc, /<ClientFields\b/);
   for (const source of [poc, graph]) assert.match(source, /<ContributorRow\b/);
   for (const source of [poc, media]) assert.match(source, /<SubmissionMedia\b/);
   for (const source of [pocReview, connectedReview]) assert.match(source, /<ReviewPanel\b/);
@@ -223,7 +227,7 @@ test("identity fields retain PoC examples, limits and separate client contexts",
   assert.match(html, /e.g. Ledger Reconciler/);
   assert.match(html, /maxLength="100"/);
   assert.equal((html.match(/maxLength="200"/g) ?? []).length, 3);
-  assert.match(html, /How should we describe this client\?/);
+  assert.match(html, /Anonymous client profile/);
   assert.match(html, /0\/200 characters/);
 });
 
@@ -331,4 +335,27 @@ test("cards wrap long solution text and video controls have accessible names", (
   const video = render(viewer.VideoPlayer, { src: "blob:fixture", name: "Acceptance video", className: "h-full w-full" });
   assert.match(video, /controls=""/);
   assert.match(video, /aria-label="Acceptance video"/);
+});
+test("select picker shows a greyed placeholder until a value is chosen", async () => {
+  const { SelectPicker } = await server.ssrLoadModule("/src/components/SelectPicker.tsx");
+  const props = { label: "Target client role", options: ["Chief of Staff"], onChange: noop, placeholder: "e.g. Chief of Staff", getLabel: value => value || "No specific role" };
+  assert.match(render(SelectPicker, { ...props, value: "" }), /<span class="[^"]*text-\(--ink-3\)">e\.g\. Chief of Staff<\/span>/);
+  assert.doesNotMatch(render(SelectPicker, { ...props, value: "" }), /No specific role/);
+  assert.doesNotMatch(render(SelectPicker, { ...props, value: "Chief of Staff" }), /e\.g\./);
+});
+
+test("section cards carry one section-level visibility badge and mixed sections badge each field", async () => {
+  const { SectionCardsContext } = await server.ssrLoadModule("/src/components/sectionCards.ts");
+  const inCards = element => renderToStaticMarkup(createElement(SectionCardsContext.Provider, { value: true }, element));
+  const built = render(form.NamedSection, { title: "Built by & effort", children: createElement("p", null, "Contributor 1") });
+  assert.match(built, /<h3[^>]*>Built by &amp; effort<\/h3>/);
+  assert.equal((built.match(/Internal only/g) ?? []).length, 1);
+  assert.match(built, /used for internal tracking only/);
+  const client = render(form.ClientFields, { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, role: "", roles: ["Chief of Staff"], onRole: noop, framed: true });
+  assert.equal((client.match(/Internal only/g) ?? []).length, 1);
+  assert.equal((client.match(/Shown to clients/g) ?? []).length, 2);
+  // "What is it?" holds three cards, so the step itself stays unframed; single-section steps become cards.
+  assert.doesNotMatch(inCards(createElement(form.StepShell, { title: "What is it?" })), /rounded-\[20px\] border/);
+  assert.match(inCards(createElement(form.StepShell, { title: "Tag it" })), /<h2[^>]*>Tag it<\/h2>.*Shown to clients/);
+  assert.doesNotMatch(render(form.StepShell, { title: "Tag it" }), /Shown to clients/);
 });
