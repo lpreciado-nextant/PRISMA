@@ -94,7 +94,7 @@ function seedDraft() {
     capabilities: example.capabilities, technologies: example.technologies, industries: example.industries,
     assetType: "Self-contained HTML file", assets: [],
     thumbnail: "", images: example.images, safetyAcknowledged: false,
-    clientContext: example.clientContext, redacted: example.clientContextRedacted, targetRole: example.targetRole ?? "",
+    clientContext: example.clientContext, redacted: example.clientContextRedacted, clientRole: example.clientRole ?? "",
     contributors: example.contributors.map((contributor) => ({ ...contributor, calendarId: DEFAULT_BUSINESS_CALENDAR_ID })),
   }));
 }

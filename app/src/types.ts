@@ -13,16 +13,22 @@ export type SolutionStatus =
   | "Live in production"
   | "Retired";
 
-/** `nx_role` Choice on `nx_solution` — placeholder options until the live choice list is confirmed. */
+/** `nx_solution.nx_clientrole` local choice labels (live 2026-09-23). Values are in CLIENT_ROLE_VALUES. */
 export type ClientRole =
-  | "Chief Executive Officer"
   | "Chief of Staff"
-  | "Chief Financial Officer"
-  | "Chief Operating Officer"
-  | "Chief Information Officer"
-  | "Chief Data Officer"
-  | "Head of Sales"
-  | "Head of Operations";
+  | "Chief Executive Officer (CEO)"
+  | "Chief Information Officer (CIO)"
+  | "Chief Operating Officer (COO)"
+  | "Chief Financial Officer (CFO)"
+  | "Enterprise Architect"
+  | "Solution Architect"
+  | "Product Owner"
+  | "Project Manager"
+  | "Business Unit Leader"
+  | "Operation Manager"
+  | "IT Manager"
+  | "Director"
+  | "Other";
 
 export type PublicationStatus = "Draft" | "Pending review" | "Published" | "Retired";
 
@@ -34,13 +40,13 @@ export interface BusinessCalendar {
   holidays: string[];
 }
 
-/** Contributor role Choice on `nx_solutioncontributor` (logical name to confirm). */
+/** `nx_solutioncontributor.nx_role` local choice: 125060000 CSM · 125060001 Consultant. */
 export type ContributorRole = "CSM" | "Consultant";
 
 export interface SolutionContributor {
   id: string;
   builtBy: { id: string; name: string; email: string };
-  /** How this person contributed. Internal only, like the rest of the contributor row. */
+  /** `nx_role` — CSM or Consultant. Optional, no default. Internal only, like the rest of the contributor row. */
   contributorRole?: ContributorRole;
   effortMode?: "direct" | "calendar";
   directHours?: number;
@@ -98,12 +104,10 @@ export interface Solution {
   specializationAreas?: SpecializationArea[];
   contributors: SolutionContributor[];
   contributorNames?: string[];
-  /** Proposed `nx_leadcsm` lookup → `cr6b0_consultant`. Internal only; stripped in present mode. */
-  leadCsm?: { id: string; name: string; email: string };
   /** Proposed `nx_estimatedcost` (Currency, USD). Internal only; stripped in present mode. */
   estimatedCost?: number;
-  /** `nx_role` — the primary client role this solution supports. Client-safe. */
-  targetRole?: ClientRole;
+  /** `nx_clientrole` — the primary client role this solution supports. Optional, no default. Client-safe. */
+  clientRole?: ClientRole;
   status: SolutionStatus;
   publicationStatus: PublicationStatus;
   reviewOutcome?: "None" | "Changes requested" | "Approved";

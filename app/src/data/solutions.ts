@@ -10,7 +10,7 @@ export const BUILDERS = [
   { id: "mcubillos", name: "Mauricio Cubillos", email: "mcubillos@nextant.com" },
 ];
 
-/** Mock `cr6b0_consultant` rows flagged `cr6b0_iscsm` — Lead CSM picker options. */
+/** Mock `cr6b0_consultant` rows flagged `cr6b0_iscsm`. They join a solution as contributors with `nx_role` = CSM. */
 export const CSMS = [
   { id: "acontreras", name: "Andrea Contreras", email: "acontreras@nextant.com" },
   { id: "dwhitfield", name: "Daniel Whitfield", email: "dwhitfield@nextant.com" },
@@ -46,8 +46,10 @@ const catalogue: Solution[] = [
     specializationArea: "ai",
     specializationAreas: ["ai", "data"],
     contributors: [
-      { id: "bso-mp", builtBy: BUILDERS[0], startDate: "2026-01-05", endDate: "2026-02-11", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
-      { id: "bso-lp", builtBy: BUILDERS[2], startDate: "2026-01-19", endDate: "2026-02-06", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "bso-mp", builtBy: BUILDERS[0], contributorRole: "Consultant", startDate: "2026-01-05", endDate: "2026-02-11", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "bso-lp", builtBy: BUILDERS[2], contributorRole: "Consultant", startDate: "2026-01-19", endDate: "2026-02-06", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "bso-quota-csm", builtBy: CSMS[0], contributorRole: "CSM", startDate: "2026-01-05", endDate: "2026-02-11", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -56,9 +58,8 @@ const catalogue: Solution[] = [
     clientContext: "Contoso Global Partner Sales",
     clientContextRedacted: "a global technology vendor's partner organisation",
     dateAdded: "2026-02-11",
-    leadCsm: CSMS[0],
     estimatedCost: 48500,
-    targetRole: "Head of Sales",
+    clientRole: "Business Unit Leader",
     libraryNotes: "Copilot answers are scripted for the demo path — avoid freeform questions on stage.",
     searchKeywords:
       "quota partner MSX MINT WWIC variance copilot excel EMEA sales allocation governance audit",
@@ -100,7 +101,9 @@ const catalogue: Solution[] = [
       "The adoption plan stops being a workbook filled in from memory the night before a review, and the customer answers questions about their own business instead of someone guessing at them.",
     specializationArea: "ai",
     contributors: [
-      { id: "adoption-mp", builtBy: BUILDERS[0], startDate: "2026-02-16", endDate: "2026-03-04", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "adoption-mp", builtBy: BUILDERS[0], contributorRole: "Consultant", startDate: "2026-02-16", endDate: "2026-03-04", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "adoption-plan-studio-csm", builtBy: CSMS[1], contributorRole: "CSM", startDate: "2026-02-16", endDate: "2026-03-04", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -108,9 +111,8 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Internal build — three invented accounts",
     dateAdded: "2026-03-04",
-    leadCsm: CSMS[1],
     estimatedCost: 32000,
-    targetRole: "Chief of Staff",
+    clientRole: "Chief of Staff",
     searchKeywords:
       "adoption consumption plan agent assistant MSX MSXi Lynx SPM workbook sponsor milestone copilot",
     capabilities: ["AI & agents", "Planning & analytics"],
@@ -137,7 +139,9 @@ const catalogue: Solution[] = [
       "Status decks disappear and risk surfaces the week it appears rather than at the quarterly review. The check-in is short enough that leads actually complete it, which is the only reason an executive view is ever current.",
     specializationArea: "ibo",
     contributors: [
-      { id: "score-mp", builtBy: BUILDERS[0], startDate: "2026-01-05", endDate: "2026-01-22", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "score-mp", builtBy: BUILDERS[0], contributorRole: "Consultant", startDate: "2026-01-05", endDate: "2026-01-22", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "project-health-scorecard-csm", builtBy: CSMS[2], contributorRole: "CSM", startDate: "2026-01-05", endDate: "2026-01-22", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -145,9 +149,8 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Seven sample engagements",
     dateAdded: "2026-01-22",
-    leadCsm: CSMS[2],
     estimatedCost: 18750,
-    targetRole: "Chief Operating Officer",
+    clientRole: "Chief Operating Officer (COO)",
     searchKeywords:
       "portfolio delivery RAG health check-in engagement risk fluent dataverse executive scorecard PMO",
     capabilities: ["Planning & analytics", "Workflow & approvals"],
@@ -185,7 +188,9 @@ const catalogue: Solution[] = [
       "Approvers stop reconstructing the allocation impact from a mail thread, nothing stalls invisibly, and finance sees committed demand before the invoice arrives.",
     specializationArea: "ibo",
     contributors: [
-      { id: "caip-jc", builtBy: BUILDERS[1], startDate: "2026-02-09", endDate: "2026-02-27", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "caip-jc", builtBy: BUILDERS[1], contributorRole: "Consultant", startDate: "2026-02-09", endDate: "2026-02-27", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "caip-budget-csm", builtBy: CSMS[0], contributorRole: "CSM", startDate: "2026-02-09", endDate: "2026-02-27", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -193,9 +198,8 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Sample budget requests",
     dateAdded: "2026-02-28",
-    leadCsm: CSMS[0],
     estimatedCost: 27400,
-    targetRole: "Chief Financial Officer",
+    clientRole: "Chief Financial Officer (CFO)",
     searchKeywords:
       "budget request approval GTM programs purchase order finance allocation requester owner react",
     capabilities: ["Workflow & approvals"],
@@ -222,7 +226,9 @@ const catalogue: Solution[] = [
       "A concrete answer to “can you build us something bespoke, hosted, and real?” — with a URL a prospect can open on their own phone.",
     specializationArea: "ai",
     contributors: [
-      { id: "padel-lp", builtBy: BUILDERS[2], startDate: "2026-03-23", endDate: "2026-04-09", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "padel-lp", builtBy: BUILDERS[2], contributorRole: "Consultant", startDate: "2026-03-23", endDate: "2026-04-09", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "padelscope-csm", builtBy: CSMS[1], contributorRole: "CSM", startDate: "2026-03-23", endDate: "2026-04-09", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Live in production",
     publicationStatus: "Published",
@@ -230,9 +236,8 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Internal build",
     dateAdded: "2026-04-09",
-    leadCsm: CSMS[1],
     estimatedCost: 9800,
-    targetRole: "Chief Executive Officer",
+    clientRole: "Chief Executive Officer (CEO)",
     searchKeywords: "padel sport video analysis azure app service computer vision rally tagging",
     capabilities: ["AI & agents"],
     technologies: ["Azure App Service", "Python", "Computer vision", "React"],
@@ -260,8 +265,10 @@ const catalogue: Solution[] = [
       "Staffing decisions stop depending on who the resourcing manager happens to remember, and the reasoning behind a placement survives the conversation.",
     specializationArea: "data",
     contributors: [
-      { id: "kairo-mc", builtBy: BUILDERS[3], startDate: "2026-03-02", endDate: "2026-05-15", allocation: 60, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
-      { id: "kairo-jc", builtBy: BUILDERS[1], startDate: "2026-04-06", endDate: "2026-05-01", allocation: 25, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "kairo-mc", builtBy: BUILDERS[3], contributorRole: "Consultant", startDate: "2026-03-02", endDate: "2026-05-15", allocation: 60, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "kairo-jc", builtBy: BUILDERS[1], contributorRole: "Consultant", startDate: "2026-04-06", endDate: "2026-05-01", allocation: 25, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "kairo-csm", builtBy: CSMS[2], contributorRole: "CSM", startDate: "2026-03-02", endDate: "2026-05-15", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Live in production",
     publicationStatus: "Published",
@@ -270,9 +277,8 @@ const catalogue: Solution[] = [
     clientContext: "Northwind Staffing Group",
     clientContextRedacted: "a European professional-services firm",
     dateAdded: "2026-05-16",
-    leadCsm: CSMS[2],
     estimatedCost: 61200,
-    targetRole: "Chief Information Officer",
+    clientRole: "Chief Information Officer (CIO)",
     libraryNotes: "Real headcount figures in the skills matrix — do not screenshot outside present mode.",
     searchKeywords: "talent skills matching resourcing bench staffing people analytics power apps",
     capabilities: ["AI & agents", "Planning & analytics"],
@@ -314,7 +320,9 @@ const catalogue: Solution[] = [
     specializationArea: "data",
     specializationAreas: ["data", "ibo"],
     contributors: [
-      { id: "supply-jc", builtBy: BUILDERS[1], startDate: "2026-04-01", endDate: "2026-06-02", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "supply-jc", builtBy: BUILDERS[1], contributorRole: "Consultant", startDate: "2026-04-01", endDate: "2026-06-02", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "supply-signal-csm", builtBy: CSMS[0], contributorRole: "CSM", startDate: "2026-04-01", endDate: "2026-06-02", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -323,9 +331,8 @@ const catalogue: Solution[] = [
     clientContext: "Fabrikam Logistics",
     clientContextRedacted: "a national logistics provider",
     dateAdded: "2026-06-02",
-    leadCsm: CSMS[0],
     estimatedCost: 39900,
-    targetRole: "Head of Operations",
+    clientRole: "Operation Manager",
     searchKeywords:
       "supply chain fabric lakehouse medallion power bi semantic model shipments ETA logistics",
     capabilities: ["Data platform", "Planning & analytics"],
@@ -363,7 +370,9 @@ const catalogue: Solution[] = [
       "Close moves from nine days to four, and the exceptions that remain arrive with a hypothesis attached.",
     specializationArea: "data",
     contributors: [
-      { id: "ledger-mc", builtBy: BUILDERS[3], startDate: "2026-07-01", endDate: "2026-07-17", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "ledger-mc", builtBy: BUILDERS[3], contributorRole: "Consultant", startDate: "2026-07-01", endDate: "2026-07-17", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "ledger-reconciler-csm", builtBy: CSMS[1], contributorRole: "CSM", startDate: "2026-07-01", endDate: "2026-07-17", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -371,9 +380,8 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Internal build",
     dateAdded: "2026-07-18",
-    leadCsm: CSMS[1],
     estimatedCost: 22300,
-    targetRole: "Chief Financial Officer",
+    clientRole: "Chief Financial Officer (CFO)",
     searchKeywords: "finance close reconciliation general ledger journal exceptions audit fabric sql",
     capabilities: ["Data platform", "Workflow & approvals"],
     technologies: ["Azure SQL", "Python", "Power Apps code app"],
@@ -398,7 +406,9 @@ const catalogue: Solution[] = [
       "First-response time drops from hours to seconds, and the service desk stops spending its morning sorting mail.",
     specializationArea: "ibo",
     contributors: [
-      { id: "intake-lp", builtBy: BUILDERS[2], startDate: "2026-07-20", endDate: "2026-08-05", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "intake-lp", builtBy: BUILDERS[2], contributorRole: "Consultant", startDate: "2026-07-20", endDate: "2026-08-05", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "intake-triage-csm", builtBy: CSMS[2], contributorRole: "CSM", startDate: "2026-07-20", endDate: "2026-08-05", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -407,9 +417,8 @@ const catalogue: Solution[] = [
     clientContext: "Tailwind Traders shared services",
     clientContextRedacted: "a multinational retailer's shared-services centre",
     dateAdded: "2026-08-05",
-    leadCsm: CSMS[2],
     estimatedCost: 15600,
-    targetRole: "Chief of Staff",
+    clientRole: "Chief of Staff",
     searchKeywords:
       "service desk intake triage classification copilot studio teams routing queue ITSM shared services",
     capabilities: ["AI & agents", "Workflow & approvals"],
@@ -445,7 +454,9 @@ const catalogue: Solution[] = [
       "Paperwork that used to land three days late lands before the engineer leaves site, which is the only way the invoice goes out on time.",
     specializationArea: "ibo",
     contributors: [
-      { id: "field-jc", builtBy: BUILDERS[1], startDate: "2026-08-31", endDate: "2026-09-01", allocation: 25, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "field-jc", builtBy: BUILDERS[1], contributorRole: "Consultant", startDate: "2026-08-31", endDate: "2026-09-01", allocation: 25, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
+      { id: "field-ops-companion-csm", builtBy: CSMS[0], contributorRole: "CSM", startDate: "2026-08-31", endDate: "2026-09-01", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
     status: "Idea / concept",
     publicationStatus: "Published",
@@ -453,9 +464,8 @@ const catalogue: Solution[] = [
     clientSafeReviewed: false,
     clientContext: "Concept for an upcoming utilities pursuit",
     dateAdded: "2026-09-01",
-    leadCsm: CSMS[0],
     estimatedCost: 4500,
-    targetRole: "Head of Operations",
+    clientRole: "Operation Manager",
     libraryNotes: "Concept only — no working build yet. Do not show to clients.",
     searchKeywords: "field service offline mobile engineer job sheet PWA utilities voice capture",
     capabilities: ["Workflow & approvals"],

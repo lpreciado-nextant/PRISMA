@@ -5,10 +5,9 @@ export function presentCatalogue(solutions: Solution[]): Solution[] {
     .map((solution) => ({
       ...solution,
       clientContext: undefined,
-      // Builder credit, effort, cost and Lead CSM are internal-only.
+      // Builder credit, CSM rows, effort and cost are internal-only.
       contributors: [],
       contributorNames: undefined,
-      leadCsm: undefined,
       estimatedCost: undefined,
       projects: undefined,
       libraryNotes: undefined,

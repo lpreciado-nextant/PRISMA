@@ -65,6 +65,7 @@
   --live: #5fd3a2;
   --proto: #e0b860;
   --idea: #9bb0bf;
+  --favorite: #b4a5ec;
 
   /* glass */
   --glass-bg: rgba(255, 255, 255, 0.028);
@@ -98,6 +99,7 @@
   --live: #0b6145;
   --proto: #7c5408;
   --idea: #5b6b77;
+  --favorite: #45357a;
 
   --glass-bg: rgba(255, 255, 255, 0.32);
   --glass-bg-2: rgba(255, 255, 255, 0.48);

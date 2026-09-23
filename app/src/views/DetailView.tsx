@@ -7,6 +7,7 @@ import { navigate } from "../lib/router";
 import { calculateEffort } from "../lib/effort";
 import { DemoStage } from "./ViewerView";
 import { solutionAreas } from "../lib/areas";
+import { FavoriteButton } from "../components/FavoriteButton";
 
 type Behaviour = {
   label: string;
@@ -61,8 +62,8 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster }: {
-  solution: Solution; present: boolean; onEdit?: () => void; onBack?: () => void;
+export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false }: {
+  solution: Solution; present: boolean; favoritable?: boolean; onEdit?: () => void; onBack?: () => void;
   backLabel?: string; reviewActions?: React.ReactNode; assetBasePath?: string;
   catalogueOnly?: boolean;
   connected?: boolean;
@@ -84,6 +85,9 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
     const calendar = BUSINESS_CALENDARS.find((entry) => entry.id === contributor.calendarId);
     return { ...contributor, calendar, ...calculateEffort(contributor, calendar) };
   });
+  // nx_role = CSM rows are listed as the solution's CSM, not as builders.
+  const csms = contributions.filter((contributor) => contributor.contributorRole === "CSM");
+  const builders = contributions.filter((contributor) => contributor.contributorRole !== "CSM");
   const totalHours = Math.round(contributions.reduce((total, contributor) => total + contributor.hours, 0) * 100) / 100;
 
   return (
@@ -114,6 +118,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
           <div className="flex flex-wrap items-center gap-2.5">
             {areas.map((area) => <AreaTag key={area} area={area} size="md" />)}
             <StatusPill status={solution.status} />
+            {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="order-last ml-auto" />}
             {!present && !solution.clientSafeReviewed && (
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.1em] uppercase"
@@ -244,7 +249,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
             <dl className="flex flex-col gap-3 text-[14px]">
               {!present && !catalogueOnly && <Row label="Built by">
                 <ul className="space-y-1 break-words">
-                  {effort ? effort.contributors.map((person, index) => <li key={index}>{!present && person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>) : contributions.map(({ id, builtBy }) => (
+                  {effort ? effort.contributors.map((person, index) => <li key={index}>{!present && person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>) : builders.map(({ id, builtBy }) => (
                     <li key={id}>
                       {present ? builtBy.name : <a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a>}
                     </li>
@@ -252,14 +257,18 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
                 </ul>
               </Row>}
               <Row label={areas.length > 1 ? "Areas" : "Area"}>{areas.map((area) => AREAS[area].name).join(" · ")}</Row>
-              {!present && solution.leadCsm && <Row label="Lead CSM"><a href={`mailto:${solution.leadCsm.email}`} style={{ color: "var(--accent)" }}>{solution.leadCsm.name}</a></Row>}
+              {!present && csms.length > 0 && <Row label={csms.length > 1 ? "CSMs" : "CSM"}>
+                <ul className="space-y-1 break-words">
+                  {csms.map(({ id, builtBy }) => <li key={id}><a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a></li>)}
+                </ul>
+              </Row>}
               {!present && !catalogueOnly && <Row label="Total effort">{effort ? effort.totalHours === null ? "Incomplete" : `${effort.totalHours.toLocaleString()} hours` : `${totalHours.toLocaleString()} hours`}</Row>}
               {!present && !catalogueOnly && solution.status === "Client demo" && <Row label="Effort scope">Demo effort only; production delivery may take longer.</Row>}
               {!present && solution.estimatedCost !== undefined && <Row label="Est. cost">{solution.estimatedCost.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</Row>}
               {clientLine && <Row label="Context">{clientLine}</Row>}
               {!present && <Row label="Client review">{solution.clientSafeReviewed ? "Cleared" : "Required"}</Row>}
               {!present && solution.dateAdded && <Row label="Added">{solution.dateAdded}</Row>}
-              {solution.targetRole && <Row label="Client role">{solution.targetRole}</Row>}
+              {solution.clientRole && <Row label="Client role">{solution.clientRole}</Row>}
               <Row label="Industries">{solution.industries.join(" · ")}</Row>
             </dl>
           </Panel>

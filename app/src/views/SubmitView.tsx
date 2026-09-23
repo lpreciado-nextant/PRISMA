@@ -8,7 +8,7 @@ import type {
   SolutionStatus,
   SpecializationArea,
 } from "../types";
-import { AREA_ORDER, AREAS, BUILDERS, BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID, SOLUTIONS } from "../data/solutions";
+import { AREA_ORDER, AREAS, BUILDERS, CSMS, BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID, SOLUTIONS } from "../data/solutions";
 import { CLIENT_ROLES, CONTRIBUTOR_ROLES } from "../data/catalogueMetadata";
 import { Icon } from "../components/Icon";
 import { LoadingState } from "../components/LoadingState";
@@ -43,7 +43,7 @@ interface Draft {
   safetyAcknowledged: boolean;
   clientContext: string;
   redacted: string;
-  targetRole: ClientRole | "";
+  clientRole: ClientRole | "";
   contributors: SolutionContributor[];
 }
 
@@ -64,7 +64,7 @@ const EMPTY_DRAFT: Draft = {
   safetyAcknowledged: false,
   clientContext: "",
   redacted: "",
-  targetRole: "",
+  clientRole: "",
   contributors: [],
 };
 
@@ -92,6 +92,10 @@ function loadDraft(draftKey: string): Draft {
     parsed.technologies ??= [];
     parsed.industries ??= [];
     parsed.contributors ??= [];
+    // Drafts saved before the nx_clientrole rename carry `targetRole`; drop values that are no longer live choices.
+    const legacyRole = (parsed as Partial<Draft> & { targetRole?: string }).targetRole;
+    if (!parsed.clientRole && legacyRole && (CLIENT_ROLES as string[]).includes(legacyRole)) parsed.clientRole = legacyRole as ClientRole;
+    if (parsed.clientRole && !CLIENT_ROLES.includes(parsed.clientRole)) parsed.clientRole = "";
     // Drafts saved before specialization areas became N:N carry a single `area`.
     const legacyArea = (parsed as Partial<Draft> & { area?: SpecializationArea }).area;
     if (!parsed.areas?.length) parsed.areas = legacyArea ? [legacyArea] : EMPTY_DRAFT.areas;
@@ -130,7 +134,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       industries: initialSolution.industries, contributors: initialSolution.contributors,
       thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
-      redacted: initialSolution.clientContextRedacted ?? "", targetRole: initialSolution.targetRole ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
+      redacted: initialSolution.clientContextRedacted ?? "", clientRole: initialSolution.clientRole ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
     } : loadDraft(draftKey);
     if (saved.contributors.length) return saved;
     return { ...saved, contributors: [{
@@ -180,6 +184,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const normalizedContributors = draft.contributors.map((contributor) => ({ ...contributor, effortMode: directEffort ? "direct" as const : "calendar" as const }));
   const builders = [...new Map([
     ...BUILDERS,
+    ...CSMS,
     BUILDERS.find((builder) => builder.email.toLowerCase() === user.userPrincipalName.toLowerCase()) ??
       { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName },
     ...draft.contributors.map((contributor) => contributor.builtBy),
@@ -227,7 +232,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       clientSafeReviewed: false,
       clientContext: draft.clientContext || undefined,
       clientContextRedacted: draft.redacted || undefined,
-      targetRole: draft.targetRole || undefined,
+      clientRole: draft.clientRole || undefined,
       thumbnail: draft.thumbnail || undefined,
       images: draft.images.map(({ id, src, caption }) => ({ id, src, caption: caption || undefined })),
       dateAdded: initialSolution?.dateAdded ?? new Date().toISOString().slice(0, 10),
@@ -317,7 +322,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             <NamedSection title="Solution details">
             <SolutionDetailsFields grouped value={draft} onText={set} area={draft.areas[0] ?? "ai"} areas={AREA_ORDER.map(value => ({ value, label: AREAS[value].name }))} onArea={value => set("areas", [value])} selectedAreas={draft.areas} onAreas={value => set("areas", value)} maxAreas={MAX_AREAS} status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
             </NamedSection>
-            <ClientFields framed value={draft} onText={set} role={draft.targetRole} roles={CLIENT_ROLES} onRole={value => set("targetRole", value)} />
+            <ClientFields framed value={draft} onText={set} role={draft.clientRole} roles={CLIENT_ROLES} onRole={value => set("clientRole", value)} />
             <NamedSection title="Built by & effort">
             <ContributorEditor bare direct={directEffort} total={contributorsValid ? totalHours : null} onAdd={() => set("contributors", [...draft.contributors, {
               id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" }, startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID,
@@ -388,7 +393,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
         {step === 5 && safetyValid && (
           <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.contributorRole ? `${contributor.builtBy.name} (${contributor.contributorRole})` : contributor.builtBy.name).join(", ")} hours={totalHours}
-            images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.targetRole} nextState="Pending review (local)">
+            images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.clientRole} nextState="Pending review (local)">
             {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete What is it? (details, client and effort), select one capability and add at least one detail image before submitting.</p>}
           </SubmissionReview>
         )}

@@ -16,6 +16,8 @@ import { useAppUser } from "./lib/powerContext";
 import { navigate, replaceQuery, useRoute } from "./lib/router";
 import { filtersFromQuery, filtersToQuery, type Filters } from "./lib/search";
 import { presentCatalogue } from "./lib/catalogue";
+import { useFavorites } from "./lib/favorites";
+import { FavoritesView } from "./views/FavoritesView";
 import { deleteSubmission, loadSubmissions, reviewContribution, saveContribution, storeSubmission, type SubmissionEntry } from "./lib/submissions";
 
 const PRESENT_KEY = "nsl.present";
@@ -104,7 +106,7 @@ export default function App() {
   useEffect(() => {
     if (isSolutionRoute && !solution && storageReady) navigate("/");
     if (ownSolution?.publicationStatus === "Draft") navigate(`/submit/${ownSolution.id}`);
-    if (present && (isSubmissionRoute || isReviewRoute || route.path === "/my-submissions")) navigate("/");
+    if (present && (isSubmissionRoute || isReviewRoute || route.path === "/my-submissions" || route.path === "/favorites")) navigate("/");
     if (!present && storageReady && isSubmissionRoute && recordId && !editing) navigate("/my-submissions");
   }, [isSolutionRoute, solution, ownSolution, present, route.path, isSubmissionRoute, isReviewRoute, editing, recordId, storageReady]);
 
@@ -112,6 +114,10 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [route.path]);
+
+  const favoriteIds = useFavorites();
+  // Count only favorites that are still in the catalogue this person can see.
+  const favoriteCount = favoriteIds.filter((id) => catalogue.some((entry) => entry.id === id)).length;
 
   const showBanner = present && !bannerHidden;
 
@@ -128,6 +134,7 @@ export default function App() {
         onToggleTheme={toggleTheme}
         present={present}
         onTogglePresent={togglePresent}
+        favoriteCount={favoriteCount}
       />
 
       {showBanner && (
@@ -148,9 +155,11 @@ export default function App() {
         ) : ownSolution?.publicationStatus === "Draft" ? null : solution && asset ? (
           <ViewerView solution={solution} asset={asset} present={present} />
         ) : solution ? (
-          <DetailView solution={solution} present={present} onEdit={ownSolution ? () => navigate(`/submit/${solution.id}`) : undefined} />
+          <DetailView solution={solution} present={present} favoritable={!ownSolution} onEdit={ownSolution ? () => navigate(`/submit/${solution.id}`) : undefined} />
         ) : isSubmissionRoute && !present && (!segments[1] || editing) ? (
           <SubmitView user={user} initialSolution={editing} draftKey={editing ? `nsl.edit.${editing.id}` : `nsl.draft.v2.${owner}`} onSubmitted={(solution) => saveSubmission(solution, "Pending review")} onSaveDraft={(solution) => saveSubmission(solution, "Draft")} />
+        ) : route.path === "/favorites" && !present ? (
+          <FavoritesView catalogue={catalogue} />
         ) : route.path === "/my-submissions" && !present ? (
           <MySubmissionsView entries={ownedEntries} onDelete={removeSubmission} />
         ) : (
