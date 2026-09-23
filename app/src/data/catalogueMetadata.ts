@@ -1,4 +1,4 @@
-import type { AreaMeta, BusinessCalendar, SpecializationArea } from "../types";
+import type { AreaMeta, BusinessCalendar, ClientRole, ContributorRole, SpecializationArea } from "../types";
 
 export const DEFAULT_BUSINESS_CALENDAR_ID = "us-federal-2026";
 
@@ -31,5 +31,12 @@ export const AREAS: Record<SpecializationArea, AreaMeta> = {
     cssVar: "var(--sa-ibo)",
   },
 };
+
+export const CLIENT_ROLES: ClientRole[] = [
+  "Chief Executive Officer", "Chief of Staff", "Chief Financial Officer", "Chief Operating Officer",
+  "Chief Information Officer", "Chief Data Officer", "Head of Sales", "Head of Operations",
+];
+
+export const CONTRIBUTOR_ROLES: ContributorRole[] = ["CSM", "Consultant"];
 
 export const AREA_ORDER: SpecializationArea[] = ["ai", "data", "ibo"];

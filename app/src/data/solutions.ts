@@ -10,6 +10,13 @@ export const BUILDERS = [
   { id: "mcubillos", name: "Mauricio Cubillos", email: "mcubillos@nextant.com" },
 ];
 
+/** Mock `cr6b0_consultant` rows flagged `cr6b0_iscsm` — Lead CSM picker options. */
+export const CSMS = [
+  { id: "acontreras", name: "Andrea Contreras", email: "acontreras@nextant.com" },
+  { id: "dwhitfield", name: "Daniel Whitfield", email: "dwhitfield@nextant.com" },
+  { id: "sramirez", name: "Sofía Ramírez", email: "sramirez@nextant.com" },
+];
+
 /** Generated stand-in for an `nx_solutionimage` screenshot payload. */
 function shot(label: string, from: string, to: string): string {
   const svg =
@@ -37,6 +44,7 @@ const catalogue: Solution[] = [
     businessValue:
       "A cycle that ran on email and 47 uploaded workbooks runs in one place, and every number that reaches the system of record carries a name and a reason.",
     specializationArea: "ai",
+    specializationAreas: ["ai", "data"],
     contributors: [
       { id: "bso-mp", builtBy: BUILDERS[0], startDate: "2026-01-05", endDate: "2026-02-11", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
       { id: "bso-lp", builtBy: BUILDERS[2], startDate: "2026-01-19", endDate: "2026-02-06", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
@@ -48,6 +56,9 @@ const catalogue: Solution[] = [
     clientContext: "Contoso Global Partner Sales",
     clientContextRedacted: "a global technology vendor's partner organisation",
     dateAdded: "2026-02-11",
+    leadCsm: CSMS[0],
+    estimatedCost: 48500,
+    targetRole: "Head of Sales",
     libraryNotes: "Copilot answers are scripted for the demo path — avoid freeform questions on stage.",
     searchKeywords:
       "quota partner MSX MINT WWIC variance copilot excel EMEA sales allocation governance audit",
@@ -97,6 +108,9 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Internal build — three invented accounts",
     dateAdded: "2026-03-04",
+    leadCsm: CSMS[1],
+    estimatedCost: 32000,
+    targetRole: "Chief of Staff",
     searchKeywords:
       "adoption consumption plan agent assistant MSX MSXi Lynx SPM workbook sponsor milestone copilot",
     capabilities: ["AI & agents", "Planning & analytics"],
@@ -131,6 +145,9 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Seven sample engagements",
     dateAdded: "2026-01-22",
+    leadCsm: CSMS[2],
+    estimatedCost: 18750,
+    targetRole: "Chief Operating Officer",
     searchKeywords:
       "portfolio delivery RAG health check-in engagement risk fluent dataverse executive scorecard PMO",
     capabilities: ["Planning & analytics", "Workflow & approvals"],
@@ -176,6 +193,9 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Sample budget requests",
     dateAdded: "2026-02-28",
+    leadCsm: CSMS[0],
+    estimatedCost: 27400,
+    targetRole: "Chief Financial Officer",
     searchKeywords:
       "budget request approval GTM programs purchase order finance allocation requester owner react",
     capabilities: ["Workflow & approvals"],
@@ -210,6 +230,9 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Internal build",
     dateAdded: "2026-04-09",
+    leadCsm: CSMS[1],
+    estimatedCost: 9800,
+    targetRole: "Chief Executive Officer",
     searchKeywords: "padel sport video analysis azure app service computer vision rally tagging",
     capabilities: ["AI & agents"],
     technologies: ["Azure App Service", "Python", "Computer vision", "React"],
@@ -247,6 +270,9 @@ const catalogue: Solution[] = [
     clientContext: "Northwind Staffing Group",
     clientContextRedacted: "a European professional-services firm",
     dateAdded: "2026-05-16",
+    leadCsm: CSMS[2],
+    estimatedCost: 61200,
+    targetRole: "Chief Information Officer",
     libraryNotes: "Real headcount figures in the skills matrix — do not screenshot outside present mode.",
     searchKeywords: "talent skills matching resourcing bench staffing people analytics power apps",
     capabilities: ["AI & agents", "Planning & analytics"],
@@ -286,6 +312,7 @@ const catalogue: Solution[] = [
     businessValue:
       "The daily supply stand-up stops arguing about whose number is right and starts deciding what to expedite.",
     specializationArea: "data",
+    specializationAreas: ["data", "ibo"],
     contributors: [
       { id: "supply-jc", builtBy: BUILDERS[1], startDate: "2026-04-01", endDate: "2026-06-02", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
     ],
@@ -296,6 +323,9 @@ const catalogue: Solution[] = [
     clientContext: "Fabrikam Logistics",
     clientContextRedacted: "a national logistics provider",
     dateAdded: "2026-06-02",
+    leadCsm: CSMS[0],
+    estimatedCost: 39900,
+    targetRole: "Head of Operations",
     searchKeywords:
       "supply chain fabric lakehouse medallion power bi semantic model shipments ETA logistics",
     capabilities: ["Data platform", "Planning & analytics"],
@@ -341,6 +371,9 @@ const catalogue: Solution[] = [
     clientSafeReviewed: true,
     clientContext: "Internal build",
     dateAdded: "2026-07-18",
+    leadCsm: CSMS[1],
+    estimatedCost: 22300,
+    targetRole: "Chief Financial Officer",
     searchKeywords: "finance close reconciliation general ledger journal exceptions audit fabric sql",
     capabilities: ["Data platform", "Workflow & approvals"],
     technologies: ["Azure SQL", "Python", "Power Apps code app"],
@@ -374,6 +407,9 @@ const catalogue: Solution[] = [
     clientContext: "Tailwind Traders shared services",
     clientContextRedacted: "a multinational retailer's shared-services centre",
     dateAdded: "2026-08-05",
+    leadCsm: CSMS[2],
+    estimatedCost: 15600,
+    targetRole: "Chief of Staff",
     searchKeywords:
       "service desk intake triage classification copilot studio teams routing queue ITSM shared services",
     capabilities: ["AI & agents", "Workflow & approvals"],
@@ -417,6 +453,9 @@ const catalogue: Solution[] = [
     clientSafeReviewed: false,
     clientContext: "Concept for an upcoming utilities pursuit",
     dateAdded: "2026-09-01",
+    leadCsm: CSMS[0],
+    estimatedCost: 4500,
+    targetRole: "Head of Operations",
     libraryNotes: "Concept only — no working build yet. Do not show to clients.",
     searchKeywords: "field service offline mobile engineer job sheet PWA utilities voice capture",
     capabilities: ["Workflow & approvals"],

@@ -9,8 +9,9 @@ export function MediaGuidance({ capabilities }: { capabilities: string[] }) {
     {!isAgent && !isData && !isWorkflow && <p>Show the experience and its business outcome. Use screenshots or explanatory diagrams that a client can understand without technical context.</p>}
   </div>;
 }
-import { useEffect, useId, useState, type ReactNode } from "react";
-import { Icon } from "./Icon";
+import { useContext, useEffect, useId, useState, type ReactNode } from "react";
+import { Icon, type IconName } from "./Icon";
+import { SectionCardsContext } from "./sectionCards";
 import { LoadingState, ProgressRail } from "./LoadingState";
 import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
@@ -21,11 +22,34 @@ import { LocalVideoPreview } from "./ViewerFrame";
 
 export const SUBMISSION_STEPS = ["Before you start", "What is it?", "What & why", "Tag it", "Media", "Review & submit"] as const;
 
+const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> = {
+  "Before you start": { icon: "shield" },
+  "Solution details": { icon: "file", visibility: "client" },
+  Client: { icon: "briefcase" },
+  "Built by & effort": { icon: "users", visibility: "internal" },
+  "What does it do, and why does it matter?": { icon: "sparkle", visibility: "client" },
+  "Tag it": { icon: "tag", visibility: "client" },
+  Media: { icon: "image", visibility: "client" },
+  "Review & submit": { icon: "check" },
+};
+
+const STEP_INTRODUCTIONS: Record<string, string> = {
+  "Before you start": "Your work will help CSMs present solutions to clients. Prepare a client-safe story before adding content.",
+  "What is it?": "The card's first impression — name it like a product, not a project code.",
+  "Solution details": "The card's first impression. Name it like a product, not a project code, and say in one line what it does.",
+  Client: "Optional. Who this is for, and how to talk about them in front of other clients.",
+  "Built by & effort": "Add the contributors who worked on this solution and capture the effort required to deliver it. This information is used for internal tracking only.",
+  "What does it do, and why does it matter?": "CSMs rely on this step most. Write it for someone who wasn't on the project.",
+  "Tag it": "Tags help CSMs find this later. Capabilities and industries come from a fixed list; technologies are free text.",
+  Media: "Add at least one screenshot. A thumbnail, video, slides or HTML demo are optional.",
+  "Review & submit": "This is how the card will look in the library once it's approved.",
+};
+
 export const submissionInputClass = "w-full rounded-xl border bg-transparent px-3.5 py-2.5 text-[15px] outline-none transition-colors duration-200 border-(--glass-edge) text-(--ink) placeholder:text-(--ink-3) focus:border-(--accent)";
 
-export function SubmissionSteps({ step, onStep, disabled = false }: { step: number; onStep: (step: number) => void; disabled?: boolean }) {
+export function SubmissionSteps({ step, onStep, disabled = false, steps = SUBMISSION_STEPS }: { step: number; onStep: (step: number) => void; disabled?: boolean; steps?: readonly string[] }) {
   return <ol className="mt-6 flex flex-wrap gap-2" aria-label="Submission steps">
-    {SUBMISSION_STEPS.map((label, index) => {
+    {steps.map((label, index) => {
       const state = index === step ? "current" : index < step ? "done" : "todo";
       return <li key={label}><button type="button" disabled={disabled} onClick={() => index < step && onStep(index)} aria-current={state === "current" ? "step" : undefined}
         className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-40 ${index < step ? "cursor-pointer" : "cursor-default"}`}
@@ -37,28 +61,23 @@ export function SubmissionSteps({ step, onStep, disabled = false }: { step: numb
 }
 
 export function StepShell({ title, lede, children }: { title: string; lede?: string; children: ReactNode }) {
-  const introductions: Record<string, string> = {
-    "Before you start": "Your work will help CSMs present solutions to clients. Prepare a client-safe story before adding content.",
-    "What is it?": "The card's first impression — name it like a product, not a project code.",
-    "What does it do, and why does it matter?": "The step CSMs depend on most. Write for the person who wasn't there.",
-    "Tag it": "Tags are how a CSM finds this in eight months. Capabilities and industries are governed; technologies are open.",
-    Media: "At least one detail image is required. Add an optional thumbnail, video, one-pager or slide deck, or self-contained HTML demo.",
-    "Review & submit": "Exactly how the card will look on the shelf once the librarian approves it.",
-  };
-  const introduction = lede ?? introductions[title];
+  const cards = useContext(SectionCardsContext);
+  const introduction = lede ?? STEP_INTRODUCTIONS[title];
+  const meta = SECTION_META[title];
+  if (cards && meta) return <SectionCard icon={meta.icon} title={title} description={introduction} visibility={meta.visibility}>{children}</SectionCard>;
   return <section><h2 className="text-[20px] font-semibold">{title}</h2>{introduction && <p className="mt-1 text-[14px] text-(--ink-3)">{introduction}</p>}<div className="mt-6 flex flex-col gap-5">{children}</div></section>;
 }
 
-export function SubmissionFooter({ step, busy = false, locked = false, canSave, canContinue, canSubmit, onBack, onSave, onContinue, onSubmit }: {
-  step: number; busy?: boolean; locked?: boolean; canSave: boolean; canContinue: boolean; canSubmit: boolean;
+export function SubmissionFooter({ step, stepCount = SUBMISSION_STEPS.length, nextLabel = "Continue", busy = false, locked = false, canSave, canContinue, canSubmit, onBack, onSave, onContinue, onSubmit }: {
+  step: number; stepCount?: number; nextLabel?: string; busy?: boolean; locked?: boolean; canSave: boolean; canContinue: boolean; canSubmit: boolean;
   onBack: () => void; onSave?: () => void; onContinue: () => void; onSubmit: () => void;
 }) {
   const command = "cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40";
   return <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-(--glass-edge) pt-5">
     {step > 0 && <button type="button" disabled={busy || locked} onClick={onBack} className={`${command} border border-(--glass-edge) text-(--ink-2)`}>Back</button>}
     {onSave && <button type="button" disabled={busy || locked || !canSave} onClick={onSave} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"><Icon name="file" />{busy ? "Saving..." : "Save draft & close"}</button>}
-    <span className="ml-auto font-mono text-[10.5px] tracking-[0.12em] text-(--ink-3) uppercase">Step {step + 1} of {SUBMISSION_STEPS.length}</span>
-    {step < SUBMISSION_STEPS.length - 1 ? <button type="button" disabled={busy || locked || !canContinue} onClick={onContinue} className={`${command} bg-(--accent) text-(--on-accent)`}>Continue</button>
+    <span className="ml-auto font-mono text-[10.5px] tracking-[0.12em] text-(--ink-3) uppercase">Step {step + 1} of {stepCount}</span>
+    {step < stepCount - 1 ? <button type="button" disabled={busy || locked || !canContinue} onClick={onContinue} className={`${command} bg-(--accent) text-(--on-accent)`}>{nextLabel}</button>
       : <button type="button" disabled={busy || locked || !canSubmit} onClick={onSubmit} className={`${command} bg-(--live) text-(--ground)`}>{busy ? "Saving..." : "Submit for review"}</button>}
   </div>;
 }
@@ -77,18 +96,18 @@ export function SubmissionSuccess({ name, children, onSubmissions, onAnother }: 
   </div>;
 }
 
-export function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: ReactNode }) {
-  return <label className="block min-w-0"><span className="mb-1.5 block"><span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required && <span style={{ color: "var(--proto)" }}> *</span>}</span>{hint && <span className="mt-1 block text-[12px] text-(--ink-3)">{hint}</span>}</span>{children}</label>;
+export function Field({ label, required, hint, badge, children }: { label: string; required?: boolean; hint?: string; badge?: ReactNode; children: ReactNode }) {
+  return <label className="block min-w-0"><span className="mb-1.5 block"><span className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required && <span style={{ color: "var(--proto)" }}> *</span>}</span>{badge}</span>{hint && <span className="mt-1 block text-[12px] text-(--ink-3)">{hint}</span>}</span>{children}</label>;
 }
 
 export function SubmissionSafety({ accepted, onChange }: { accepted: boolean; onChange: (accepted: boolean) => void }) {
   return <StepShell title="Before you start">
     <ul className="list-disc space-y-4 pl-5 text-[15px]">
-      <li>Use invented or anonymized data in descriptions, screenshots, videos, documents and HTML. Remove confidential figures, names and identifying details.</li>
-      <li>Only attach material you are authorized to share. Acknowledging this does not replace librarian review.</li>
-      <li>The dedicated client field is internal only. Write a separate anonymous description for presentations, or leave both fields empty for work without a client.</li>
+      <li>Use fake or anonymized data everywhere: text, screenshots, videos, files and HTML. No confidential numbers, names or identifying details.</li>
+      <li>Only attach material you're allowed to share. A librarian still reviews everything.</li>
+      <li>Put the client's real name only in the internal client field. For presentations, write an anonymous description. No client? Leave both empty.</li>
     </ul>
-    <label className="flex cursor-pointer items-start gap-3 text-[15px]"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={accepted} onChange={event => onChange(event.target.checked)} /><span>I understand and will submit only authorized, client-safe content, with client identity confined to the internal client field.</span></label>
+    <label className="flex cursor-pointer items-start gap-3 text-[15px]"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={accepted} onChange={event => onChange(event.target.checked)} /><span>I'll only submit content I'm allowed to share and that's safe for clients, with the client's name only in the internal field.</span></label>
   </StepShell>;
 }
 
@@ -131,7 +150,7 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
     </div>
     <fieldset disabled={disabled || linkedDirty || !!editing} className="min-w-0 disabled:opacity-60"><Field label="Additional media format"><SelectPicker label="Additional media format" value={format} options={["Self-contained HTML file", "Video walkthrough only", "Client-ready one-pager / slide", ...(onLinkedAsset ? LINK_ASSET_TYPES : [])]} onChange={value => { if (!editing && !linkedDirty) onFormat(value); }} /></Field></fieldset>
     {onLinkedAsset && (linked || edited?.linkedAsset) ? <LinkedAssetEditor key={editing ?? format} type={edited?.linkedAsset?.assetType ?? format as LinkAssetType} initial={edited?.linkedAsset} disabled={disabled || attachmentDisabled || (!editing && attachments.length >= 6)} onPending={setLinkedDirty}
-      onSave={async value => { await onLinkedAsset(value, editing ?? undefined); setEditing(null); }} onCancel={() => { setEditing(null); onFormat("Self-contained HTML file"); }} /> : <Field label="Attach additional media" hint={`Optional. MP4/WebM videos up to 500 MB each; HTML and PDF/PPT/PPTX documents up to 25 MB each. Up to 6 additional files.${local ? " Local preview only." : ""}`}>
+      onSave={async value => { await onLinkedAsset(value, editing ?? undefined); setEditing(null); }} onCancel={() => { setEditing(null); onFormat("Self-contained HTML file"); }} /> : <Field label="Attach additional media" hint={`Optional. MP4/WebM videos up to 500 MB each; HTML and PDF/PPT/PPTX documents up to 25 MB each. Up to 6 additional files. The first file is shown as the main demo on the solution page.${local ? " Local preview only." : ""}`}>
       <input type="file" className="max-w-full rounded-lg text-[14px] text-(--ink-2) file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-lg file:border file:border-(--glass-edge) file:bg-(--accent) file:px-4 file:py-2.5 file:text-[14px] file:font-semibold file:text-(--on-accent) hover:file:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40 disabled:file:cursor-not-allowed" disabled={disabled || attachmentDisabled || attachments.length >= 6} accept={format === "Self-contained HTML file" ? ".html,.htm" : format === "Video walkthrough only" ? ".mp4,.webm" : ".pdf,.ppt,.pptx"} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) { if (format === "Video walkthrough only") void preparation.select(file); else onAttachment(file); } }} />
     </Field>}
     <ul className="space-y-4">{attachments.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={attachments.map(entry => entry.id)} label={item.name} group="attachments" disabled={disabled || attachmentDisabled || linkedDirty || !!editing} onReorder={onReorderAttachments} className="min-w-0 border-b border-(--glass-edge) pb-3"><div className="flex min-w-0 flex-wrap items-center gap-3"><Icon name="file" className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{item.linkedAsset.assetType}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!editing || linkedDirty} title="Edit asset" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (linkedDirty) return; setEditing(item.id); onFormat(item.linkedAsset!.assetType); }}><Icon name="file" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview attachment" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editing === item.id} title="Remove attachment" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></div></MediaReorderItem>)}</ul>
@@ -203,51 +222,118 @@ export function LinkedAssetEditor({ type, initial, disabled, onSave, onCancel, o
   </fieldset>;
 }
 
-export function IdentityFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, selectedAreas, onAreas, maxAreas = 3 }: {
+type IdentityProps<Area extends string, Status extends string, Role extends string> = {
   value: IdentityText; onText: (key: keyof IdentityText, value: string) => void;
   area?: Area; areas: { value: Area; label: string }[]; onArea?: (value: Area) => void;
   status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void;
-  /** Multi-valued mode (native N:N). When set, replaces the single-area picker. */
-  selectedAreas?: Area[]; onAreas?: (value: Area[]) => void; maxAreas?: number;
-}) {
+  role?: Role | ""; roles?: readonly Role[]; onRole?: (value: Role | "") => void;
+};
+
+/** Name, summary, area and status. \`grouped\` splits them into labelled subsections inside a section card. */
+/** Pass `selectedAreas` + `onAreas` for N:N specialization areas (up to `maxAreas`); otherwise `area` + `onArea` pick one. */
+export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "role" | "roles" | "onRole"> & { grouped?: boolean; selectedAreas?: Area[]; onAreas?: (value: Area[]) => void; maxAreas?: number }) {
   const toggleArea = (option: Area) => {
     if (!selectedAreas || !onAreas) return;
     if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));
     else if (selectedAreas.length < maxAreas) onAreas([...selectedAreas, option]);
   };
-  return <>
-    <Field label="Solution name" required hint="Give the solution a short, recognizable product name."><input className={submissionInputClass} value={value.name} onChange={event => onText("name", event.target.value)} placeholder="e.g. Ledger Reconciler" maxLength={100} /></Field>
-    <Field label="One-line summary" required hint={`Describe who it helps and what it achieves in one sentence. ${value.summary.length}/200 characters.`}><input className={submissionInputClass} value={value.summary} onChange={event => onText("summary", event.target.value)} placeholder="e.g. Helps finance teams match invoices to payments." maxLength={200} /></Field>
-    {selectedAreas && onAreas
-      ? <Field label="Specialization areas" required hint={`Choose up to ${maxAreas}. The card colour follows the first selected area in library order.`}><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={selectedAreas.includes(option.value)} onClick={() => toggleArea(option.value)}>{option.label}</Chip>)}</div></Field>
-      : <Field label="Specialization area"><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>}
-    <Field label="Status"><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
-    <Field label="Who was this developed for?" hint="Optional. Client and engagement name for internal discovery only; never included in present mode."><input className={submissionInputClass} value={value.clientContext} onChange={event => onText("clientContext", event.target.value)} placeholder="e.g. Fabrikam Logistics, FY26 pilot" maxLength={200} /></Field>
-    <Field label="How should we describe this client?" required={!!value.clientContext.trim()} hint="Client-visible context without names or identifying details. Leave empty if this work has no client."><input className={submissionInputClass} value={value.redacted} onChange={event => onText("redacted", event.target.value)} placeholder="e.g. a national logistics provider" maxLength={200} /></Field>
+  const naming = <>
+    <Field label="Solution name" required hint="A short product name people will remember."><input className={submissionInputClass} value={value.name} onChange={event => onText("name", event.target.value)} placeholder="e.g. Ledger Reconciler" maxLength={100} /></Field>
+    <Field label="One-line summary" required hint={`Who it's for and what it does for them, in one sentence. ${value.summary.length}/200 characters.`}><input className={submissionInputClass} value={value.summary} onChange={event => onText("summary", event.target.value)} placeholder="e.g. Helps finance teams match invoices to payments." maxLength={200} /></Field>
   </>;
+  const classification = <>
+    {selectedAreas && onAreas
+      ? <Field label="Specialization areas" required hint={`Choose up to ${maxAreas}. The first one you pick sets the card colour.`}><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={selectedAreas.includes(option.value)} onClick={() => toggleArea(option.value)}>{option.label}</Chip>)}</div></Field>
+      : <Field label="Specialization area"><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea(option.value)}>{option.label}</Chip>)}</div></Field>}
+    <Field label="Status"><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
+  </>;
+  if (!grouped) return <>{naming}{classification}</>;
+  return <>
+    <FormSubsection title="Name & summary"><div className="flex min-w-0 flex-col gap-5">{naming}</div></FormSubsection>
+    <FormSubsection title="Classification"><div className="flex min-w-0 flex-col gap-5">{classification}</div></FormSubsection>
+  </>;
+}
+
+/** Target role, internal client name and anonymous profile. Fields carry their own badges because their visibility differs. */
+export function ClientFields<Role extends string>({ value, onText, role, roles, onRole, framed = false }: Pick<IdentityProps<string, string, Role>, "value" | "onText" | "role" | "roles" | "onRole"> & { framed?: boolean }) {
+  const fields = <>
+    {onRole && roles && <FormSubsection title="Audience">
+      <Field label="Target client role" badge={<VisibilityBadge visibility="client" />} hint="Select the primary client role this solution is designed to support."><SelectPicker label="Target client role" value={role ?? ""} options={role ? ["", ...roles] : roles} onChange={onRole} getLabel={option => option || "No specific role"} placeholder="e.g. Chief of Staff" /></Field>
+    </FormSubsection>}
+    <FormSubsection title="Client details">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+        <Field label="Client name" badge={<VisibilityBadge visibility="internal" />} hint="Internal reference only. Enter the client or organization associated with this solution."><input className={submissionInputClass} value={value.clientContext} onChange={event => onText("clientContext", event.target.value)} placeholder="e.g. Fabrikam Logistics" maxLength={200} /></Field>
+        <Field label="Anonymous client profile" required={!!value.clientContext.trim()} badge={<VisibilityBadge visibility="client" />} hint="Used in presentations instead of the client name. Keep it brief and non-identifying."><input className={submissionInputClass} value={value.redacted} onChange={event => onText("redacted", event.target.value)} placeholder="e.g. A national logistics provider" maxLength={200} /></Field>
+      </div>
+    </FormSubsection>
+  </>;
+  if (!framed) return fields;
+  return <SectionCard level={3} icon={SECTION_META.Client.icon} title="Client" description={STEP_INTRODUCTIONS.Client}>{fields}</SectionCard>;
+}
+
+/** The single-page identity step used by the connected app: details followed by a framed Client card. */
+export function IdentityFields<Area extends string, Status extends string, Role extends string = string>({ role, roles, onRole, ...details }: IdentityProps<Area, Status, Role>) {
+  return <>
+    <SolutionDetailsFields {...details} />
+    <ClientFields value={details.value} onText={details.onText} role={role} roles={roles} onRole={onRole} framed />
+  </>;
+}
+
+export function FormSubsection({ title, children }: { title: string; children: ReactNode }) {
+  return <div className="min-w-0 border-t border-(--glass-edge) pt-5 first:border-t-0 first:pt-0"><h4 className="mb-3 font-mono text-[10.5px] tracking-[0.12em] text-(--ink-3) uppercase">{title}</h4>{children}</div>;
+}
+
+export type Visibility = "internal" | "client";
+
+export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
+  const internal = visibility === "internal";
+  const color = internal ? "var(--proto)" : "var(--accent)";
+  return <span className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9.5px] tracking-[0.08em] uppercase" style={{ color, borderColor: `color-mix(in srgb, ${color} 40%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}><Icon name={internal ? "eyeOff" : "present"} size={11} />{internal ? "Internal only" : "Shown to clients"}</span>;
+}
+
+/** A level-3 SectionCard whose icon, description and visibility come from the section metadata. */
+export function NamedSection({ title, children }: { title: string; children: ReactNode }) {
+  const meta = SECTION_META[title];
+  return <SectionCard level={3} icon={meta.icon} title={title} description={STEP_INTRODUCTIONS[title]} visibility={meta.visibility}>{children}</SectionCard>;
+}
+
+/** The bordered section pattern: icon, title with an optional section-level visibility badge, description, grouped content. */
+export function SectionCard({ level = 2, icon, title, description, visibility, children }: { level?: 2 | 3; icon: IconName; title: string; description?: string; visibility?: Visibility; children: ReactNode }) {
+  const id = useId();
+  const Heading = level === 2 ? "h2" : "h3";
+  return <section aria-labelledby={id} className="min-w-0 rounded-[20px] border border-(--glass-edge) p-5 sm:p-6" style={{ background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
+    <div className="flex items-start gap-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "color-mix(in srgb, var(--accent) 16%, transparent)", color: "var(--accent)" }}><Icon name={icon} size={16} /></span>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1"><Heading id={id} className={`${level === 2 ? "text-[20px]" : "text-[17px]"} font-semibold`}>{title}</Heading>{visibility && <VisibilityBadge visibility={visibility} />}</div>
+        {description && <p className="mt-0.5 text-[13px] text-(--ink-3)">{description}</p>}
+      </div>
+    </div>
+    <div className="mt-5 flex min-w-0 flex-col gap-5 border-t border-(--glass-edge) pt-5">{children}</div>
+  </section>;
 }
 
 export function StoryFields({ whatItDoes, businessValue, onChange, children }: { whatItDoes: string; businessValue: string; onChange: (key: "whatItDoes" | "businessValue", value: string) => void; children?: ReactNode }) {
   return <StepShell title="What does it do, and why does it matter?">
-    <Field label="What it does" hint="Describe the main actions a user takes and the results they see."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={whatItDoes} onChange={event => onChange("whatItDoes", event.target.value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
-    <Field label="Business value" hint="Explain the business problem and the benefit of solving it; include measured results only when known."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={businessValue} onChange={event => onChange("businessValue", event.target.value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
+    <Field label="What it does" hint="What a user does in it, and what they get out of it."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={whatItDoes} onChange={event => onChange("whatItDoes", event.target.value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
+    <Field label="Business value" hint="The problem it solves and why that matters. Add real numbers only if you have them."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={businessValue} onChange={event => onChange("businessValue", event.target.value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
     {children}
   </StepShell>;
 }
 
-export function SubmissionReview({ card, attachments, contributors, hours, images, safety, client, context, nextState, children }: {
-  card: ReactNode; attachments: number; contributors: string; hours: number | null; images: string; safety: string; client: string; context: string; nextState: string; children?: ReactNode;
+export function SubmissionReview({ card, attachments, contributors, hours, images, safety, client, context, role, nextState, children }: {
+  card: ReactNode; attachments: number; contributors: string; hours: number | null; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
 }) {
-  const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Total effort", hours === null ? "Incomplete" : `${hours.toLocaleString()} hours`], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ["Next state", nextState]];
+  const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Total effort", hours === null ? "Incomplete" : `${hours.toLocaleString()} hours`], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ...(role === undefined ? [] : [["Client role", role || "Not specified"]]), ["Next state", nextState]];
   return <StepShell title="Review & submit"><div className="pointer-events-none mx-auto w-full max-w-[400px]" inert>{card}</div>
     <dl className="grid gap-2 text-[14px] sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="flex min-w-0 gap-3 rounded-xl border border-(--glass-edge) px-3.5 py-2.5"><dt className="w-24 shrink-0 font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="min-w-0 flex-1 break-words text-(--ink)">{value}</dd></div>)}</dl>{children}
   </StepShell>;
 }
 
-export function ContributorEditor({ direct, children, total, onAdd, addDisabled = false }: { direct: boolean; children: ReactNode; total: number | null; onAdd: () => void; addDisabled?: boolean }) {
-  return <section aria-labelledby="contributors-heading" className="mt-2 min-w-0 border-t border-(--glass-edge) pt-5">
-    <h3 id="contributors-heading" className="text-[17px] font-semibold">Built by &amp; effort</h3>
-    <p className="mt-1 text-[13px] text-(--ink-2)">{direct ? "Enter each person's hours, including preparation and discovery." : "Estimated capacity: inclusive US business days, excluding federal holidays, multiplied by 8 hours and allocation."}</p>
+export function ContributorEditor({ direct, children, total, onAdd, addDisabled = false, bare = false }: { direct: boolean; children: ReactNode; total: number | null; onAdd: () => void; addDisabled?: boolean; bare?: boolean }) {
+  return <section aria-labelledby={bare ? undefined : "contributors-heading"} aria-label={bare ? "Contributors" : undefined} className={bare ? "min-w-0" : "mt-2 min-w-0 border-t border-(--glass-edge) pt-5"}>
+    {!bare && <h3 id="contributors-heading" className="text-[17px] font-semibold">Built by &amp; effort</h3>}
+    <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>{direct ? "Enter each person's hours, including preparation and discovery." : "Estimated capacity: inclusive US business days, excluding federal holidays, multiplied by 8 hours and allocation."}</p>
     {children}
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
       <button type="button" disabled={addDisabled} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[13px] font-semibold disabled:opacity-40" onClick={onAdd}><Icon name="plus" size={14} />Add contributor</button>
@@ -257,15 +343,16 @@ export function ContributorEditor({ direct, children, total, onAdd, addDisabled 
 }
 
 type EffortFields = { directHours: number | null; startDate: string; endDate: string; allocation: number | null };
-export function ContributorRow({ index, person, direct, value, onChange, onRemove, minDate, maxDate, result }: {
-  index: number; person: ReactNode; direct: boolean; value: EffortFields; onChange: (fields: Partial<EffortFields>) => void;
+export function ContributorRow({ index, person, role, direct, value, onChange, onRemove, minDate, maxDate, result }: {
+  index: number; person: ReactNode; role?: ReactNode; direct: boolean; value: EffortFields; onChange: (fields: Partial<EffortFields>) => void;
   onRemove?: () => void; minDate?: string; maxDate?: string; result: { error: string; hours: number; businessDays: number };
 }) {
   const id = useId();
   return <fieldset className="mt-5 min-w-0 border-b border-(--glass-edge) pb-5" aria-describedby={id}>
     <legend className="mb-3 text-[13px] font-semibold">Contributor {index + 1}</legend>
     <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-      <div className="min-w-0 sm:col-span-2">{person}</div>
+      <div className={`min-w-0 ${role ? "" : "sm:col-span-2"}`}>{person}</div>
+      {role && <div className="min-w-0">{role}</div>}
       {direct ? <Field label="Hours contributed" required><input type="number" className={submissionInputClass} min={0} step={0.01} value={value.directHours ?? ""} onChange={event => onChange({ directHours: event.target.value === "" ? null : Number(event.target.value) })} /></Field> : <>
         <Field label="Start date" required><input type="date" className={`${submissionInputClass} min-w-0`} min={minDate} max={maxDate} value={value.startDate} onChange={event => onChange({ startDate: event.target.value })} /></Field>
         <Field label="End date" required><input type="date" className={`${submissionInputClass} min-w-0`} min={value.startDate || minDate} max={maxDate} value={value.endDate} onChange={event => onChange({ endDate: event.target.value })} /></Field>

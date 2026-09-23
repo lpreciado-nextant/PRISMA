@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   AssetType,
+  ClientRole,
   DemoAsset,
   Solution,
   SolutionContributor,
@@ -8,22 +9,27 @@ import type {
   SpecializationArea,
 } from "../types";
 import { AREA_ORDER, AREAS, BUILDERS, BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID, SOLUTIONS } from "../data/solutions";
+import { CLIENT_ROLES, CONTRIBUTOR_ROLES } from "../data/catalogueMetadata";
 import { Icon } from "../components/Icon";
 import { LoadingState } from "../components/LoadingState";
+import { SectionCardsContext } from "../components/sectionCards";
 import { TagPicker } from "../components/TagPicker";
 import { SolutionCard } from "../components/SolutionCard";
 import { navigate } from "../lib/router";
 import type { AppUser } from "../lib/powerContext";
 import { calculateEffort, usesDirectHours } from "../lib/effort";
+import { MAX_AREAS, solutionAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
-import { SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, IdentityFields, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker } from "../components/SubmissionForm";
+import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, Field } from "../components/SubmissionForm";
+import { SelectPicker } from "../components/SelectPicker";
 
 const MAX_GALLERY = 6;
 
 interface Draft {
   name: string;
   summary: string;
-  area: SpecializationArea;
+  /** N:N specialization areas in pick order; the first is the primary area. */
+  areas: SpecializationArea[];
   status: SolutionStatus;
   whatItDoes: string;
   businessValue: string;
@@ -37,13 +43,14 @@ interface Draft {
   safetyAcknowledged: boolean;
   clientContext: string;
   redacted: string;
+  targetRole: ClientRole | "";
   contributors: SolutionContributor[];
 }
 
 const EMPTY_DRAFT: Draft = {
   name: "",
   summary: "",
-  area: "ai",
+  areas: ["ai"],
   status: "Working prototype",
   whatItDoes: "",
   businessValue: "",
@@ -57,6 +64,7 @@ const EMPTY_DRAFT: Draft = {
   safetyAcknowledged: false,
   clientContext: "",
   redacted: "",
+  targetRole: "",
   contributors: [],
 };
 
@@ -84,6 +92,9 @@ function loadDraft(draftKey: string): Draft {
     parsed.technologies ??= [];
     parsed.industries ??= [];
     parsed.contributors ??= [];
+    // Drafts saved before specialization areas became N:N carry a single `area`.
+    const legacyArea = (parsed as Partial<Draft> & { area?: SpecializationArea }).area;
+    if (!parsed.areas?.length) parsed.areas = legacyArea ? [legacyArea] : EMPTY_DRAFT.areas;
     parsed.contributors = parsed.contributors.map((contributor) => ({
       ...contributor, calendarId: DEFAULT_BUSINESS_CALENDAR_ID,
     }));
@@ -106,19 +117,20 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const step = activeStep ?? internalStep;
   const setStep = (next: number | ((current: number) => number)) => {
     const value = typeof next === "function" ? next(step) : next;
+    if (value !== step) window.scrollTo({ top: 0, behavior: "instant" });
     setInternalStep(value);
     onStepChange?.(value);
   };
   const [draft, setDraft] = useState<Draft>(() => {
     const saved: Draft = initialSolution ? {
       ...EMPTY_DRAFT, name: initialSolution.name === UNTITLED_SOLUTION ? "" : initialSolution.name, summary: initialSolution.summary,
-      area: initialSolution.specializationArea, status: initialSolution.status,
+      areas: solutionAreas(initialSolution), status: initialSolution.status,
       whatItDoes: initialSolution.whatItDoes, businessValue: initialSolution.businessValue,
       capabilities: initialSolution.capabilities, technologies: initialSolution.technologies,
       industries: initialSolution.industries, contributors: initialSolution.contributors,
       thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
-      redacted: initialSolution.clientContextRedacted ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
+      redacted: initialSolution.clientContextRedacted ?? "", targetRole: initialSolution.targetRole ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
     } : loadDraft(draftKey);
     if (saved.contributors.length) return saved;
     return { ...saved, contributors: [{
@@ -185,7 +197,9 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   });
   const contributorsValid = draft.contributors.length > 0 && contributionResults.every((result) => !result.error);
   const nameValid = Boolean(draft.name.trim()) && draft.name.trim() !== UNTITLED_SOLUTION && draft.name.length <= 100;
-  const basicsValid = nameValid && Boolean(draft.summary.trim()) && contributorsValid && (!draft.clientContext.trim() || Boolean(draft.redacted.trim()));
+  const detailsValid = nameValid && Boolean(draft.summary.trim()) && draft.areas.length > 0;
+  const clientValid = !draft.clientContext.trim() || Boolean(draft.redacted.trim());
+  const basicsValid = detailsValid && clientValid && contributorsValid;
   const safetyValid = draft.safetyAcknowledged;
   const mediaValid = draft.images.length > 0 && !mediaBusy;
   const capabilityValid = draft.capabilities.length === 1;
@@ -202,7 +216,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       summary: draft.summary || "The one-line summary appears here.",
       whatItDoes: draft.whatItDoes,
       businessValue: draft.businessValue,
-      specializationArea: draft.area,
+      specializationArea: draft.areas[0] ?? "ai",
+      specializationAreas: draft.areas,
       contributors: draft.contributors.map((contributor) => ({
         ...contributor, effortMode: usesDirectHours(draft.status) ? "direct" : "calendar",
       })),
@@ -212,6 +227,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       clientSafeReviewed: false,
       clientContext: draft.clientContext || undefined,
       clientContextRedacted: draft.redacted || undefined,
+      targetRole: draft.targetRole || undefined,
       thumbnail: draft.thumbnail || undefined,
       images: draft.images.map(({ id, src, caption }) => ({ id, src, caption: caption || undefined })),
       dateAdded: initialSolution?.dateAdded ?? new Date().toISOString().slice(0, 10),
@@ -288,6 +304,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       {storageError && <p role="alert" className="mt-3 text-[14px]">{storageError}</p>}
 
       <fieldset disabled={saving} className="min-w-0">
+      <SectionCardsContext.Provider value>
       <SubmissionSteps step={step} onStep={next => { if (next === 0 || safetyValid) setStep(next); }} />
 
       <div key={step} className="glass glass-lite glass-sheen animate-rise mt-5 rounded-[24px] p-6 sm:p-8">
@@ -296,9 +313,13 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         {step > 0 && !safetyValid && <p role="alert">Accept the safety requirements in Before you start to continue.</p>}
 
         {step === 1 && safetyValid && (
-          <StepShell title="What is it?" lede="The card's first impression — name it like a product, not a project code.">
-            <IdentityFields value={draft} onText={set} area={draft.area} areas={AREA_ORDER.map(value => ({ value, label: AREAS[value].name }))} onArea={value => set("area", value)} status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
-            <ContributorEditor direct={directEffort} total={contributorsValid ? totalHours : null} onAdd={() => set("contributors", [...draft.contributors, {
+          <StepShell title="What is it?">
+            <NamedSection title="Solution details">
+            <SolutionDetailsFields grouped value={draft} onText={set} area={draft.areas[0] ?? "ai"} areas={AREA_ORDER.map(value => ({ value, label: AREAS[value].name }))} onArea={value => set("areas", [value])} selectedAreas={draft.areas} onAreas={value => set("areas", value)} maxAreas={MAX_AREAS} status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
+            </NamedSection>
+            <ClientFields framed value={draft} onText={set} role={draft.targetRole} roles={CLIENT_ROLES} onRole={value => set("targetRole", value)} />
+            <NamedSection title="Built by & effort">
+            <ContributorEditor bare direct={directEffort} total={contributorsValid ? totalHours : null} onAdd={() => set("contributors", [...draft.contributors, {
               id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" }, startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID,
             }])}>
               {draft.contributors.map((contributor, index) => {
@@ -308,9 +329,11 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                   value={{ directHours: contributor.directHours ?? null, allocation: Number.isFinite(contributor.allocation) ? contributor.allocation : null, startDate: contributor.startDate, endDate: contributor.endDate }}
                   onChange={fields => updateContributor(contributor.id, { ...fields, directHours: fields.directHours === null ? undefined : fields.directHours ?? contributor.directHours, allocation: fields.allocation === null ? NaN : fields.allocation ?? contributor.allocation })}
                   onRemove={index > 0 ? () => set("contributors", draft.contributors.filter(entry => entry.id !== contributor.id)) : undefined}
+                  role={<Field label="Role" hint="Select how this person contributed to the solution."><SelectPicker label={`Contributor ${index + 1} role`} value={contributor.contributorRole ?? ""} options={contributor.contributorRole ? ["", ...CONTRIBUTOR_ROLES] : CONTRIBUTOR_ROLES} onChange={value => updateContributor(contributor.id, { contributorRole: value || undefined })} getLabel={option => option || "No role"} placeholder="e.g. Consultant" /></Field>}
                   person={<PersonPicker value={contributor.builtBy} options={builders.filter(builder => !draft.contributors.some(entry => entry.id !== contributor.id && entry.builtBy.id === builder.id))} onChange={builtBy => updateContributor(contributor.id, { builtBy })} />} />;
               })}
             </ContributorEditor>
+            </NamedSection>
           </StepShell>
         )}
 
@@ -324,7 +347,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         )}
 
         {step === 3 && safetyValid && (
-          <StepShell title="Tag it" lede="Tags are how a CSM finds this in eight months. Capabilities and industries are governed; technologies are open.">
+          <StepShell title="Tag it">
             <TagPicker label="Capability (required, choose one)" governed options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(value) => set("capabilities", value.slice(-1))} />
             {!capabilityValid && <p className="text-[13px]" style={{ color: "var(--proto)" }}>Select exactly one capability before submitting.</p>}
             <TagPicker label="Technologies" options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
@@ -364,15 +387,16 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         )}
 
         {step === 5 && safetyValid && (
-          <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.builtBy.name).join(", ")} hours={totalHours}
-            images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} nextState="Pending review (local)">
-            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Identity & effort, select one capability and add at least one detail image before submitting.</p>}
+          <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.contributorRole ? `${contributor.builtBy.name} (${contributor.contributorRole})` : contributor.builtBy.name).join(", ")} hours={totalHours}
+            images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.targetRole} nextState="Pending review (local)">
+            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete What is it? (details, client and effort), select one capability and add at least one detail image before submitting.</p>}
           </SubmissionReview>
         )}
 
-        <SubmissionFooter step={step} busy={saving || mediaBusy} canSave={nameValid} canContinue={stepValid} canSubmit={basicsValid && safetyValid && mediaValid && capabilityValid}
+        <SubmissionFooter step={step} nextLabel="Next" busy={saving || mediaBusy} canSave={nameValid} canContinue={stepValid} canSubmit={basicsValid && safetyValid && mediaValid && capabilityValid}
           onBack={() => setStep(current => current - 1)} onSave={onSaveDraft ? () => void persist(true) : undefined} onContinue={() => setStep(current => current + 1)} onSubmit={() => void persist(false)} />
       </div>
+      </SectionCardsContext.Provider>
       </fieldset>
     </div>
   );
