@@ -6,6 +6,7 @@ import { Poster } from "./Poster";
 import { navigate } from "../lib/router";
 import { initials } from "../lib/powerContext";
 import { solutionAreas } from "../lib/areas";
+import { FavoriteButton } from "./FavoriteButton";
 
 export function SolutionCard({
   solution,
@@ -16,6 +17,7 @@ export function SolutionCard({
   catalogueOnly = false,
   poster,
   contributorNames,
+  favoritable = false,
 }: {
   solution: Solution;
   present: boolean;
@@ -25,18 +27,21 @@ export function SolutionCard({
   catalogueOnly?: boolean;
   poster?: ReactNode;
   contributorNames?: string[];
+  /** Shows the favorites heart (hidden in present mode). */
+  favoritable?: boolean;
 }) {
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
-  const names = contributorNames ?? solution.contributorNames ?? solution.contributors.map(contributor => contributor.builtBy.name);
+  const names = contributorNames ?? solution.contributorNames ?? solution.contributors.filter(contributor => contributor.contributorRole !== "CSM").map(contributor => contributor.builtBy.name);
   const builderNames = names.join(", ");
   const publicationStatus = showPublicationStatus && !present
     ? solution.publicationStatus === "Draft" && solution.reviewOutcome === "Changes requested" ? "Changes requested" : solution.publicationStatus
     : undefined;
 
+  // The heart is a sibling of the card, not a child: the card itself is a button.
   return (
+    <div className="animate-rise relative grid min-w-0" style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}>
     <article
-      className="glass glass-lite glass-sheen lift animate-rise group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] [overflow-wrap:anywhere]"
-      style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}
+      className="glass glass-lite glass-sheen lift group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] [overflow-wrap:anywhere]"
       onClick={() => onOpen ? onOpen() : navigate(`/s/${solution.id}`)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -114,5 +119,7 @@ export function SolutionCard({
         </span>
       </div>
     </article>
+    {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="absolute top-3 right-3 z-10" />}
+    </div>
   );
 }

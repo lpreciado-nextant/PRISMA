@@ -13,6 +13,7 @@ export function Masthead({
   readOnly = false,
   draftOnly = false,
   reviewAvailable = !draftOnly,
+  favoriteCount,
 }: {
   user: AppUser;
   theme: Theme;
@@ -22,6 +23,8 @@ export function Masthead({
   readOnly?: boolean;
   draftOnly?: boolean;
   reviewAvailable?: boolean;
+  /** When set, shows the My favorites button (hidden in present mode). */
+  favoriteCount?: number;
 }) {
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6">
@@ -59,6 +62,9 @@ export function Masthead({
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           {!present && !readOnly && reviewAvailable && <button type="button" onClick={() => navigate("/review")} title="Review queue" aria-label="Review queue" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="shield" size={15} /><span className="hidden whitespace-nowrap @[1240px]:inline">Review queue</span></button>}
+          {!present && favoriteCount !== undefined && <button type="button" onClick={() => navigate("/favorites")} title="My favorites" aria-label={`My favorites, ${favoriteCount} saved`} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: favoriteCount ? "var(--favorite)" : "var(--ink-2)" }}>
+            <Icon name="heart" size={15} filled={favoriteCount > 0} /><span className="font-mono text-[12px]">{favoriteCount}</span><span className="hidden whitespace-nowrap @[1240px]:inline" style={{ color: "var(--ink-2)" }}>My favorites</span>
+          </button>}
           {!present && !readOnly && <button type="button" onClick={() => navigate("/my-submissions")} title={draftOnly ? "My drafts" : "My submissions"} aria-label={draftOnly ? "My drafts" : "My submissions"} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}>
             <Icon name="file" size={15} /><span className="hidden whitespace-nowrap @[1080px]:inline">{draftOnly ? "My drafts" : "My submissions"}</span>
           </button>}

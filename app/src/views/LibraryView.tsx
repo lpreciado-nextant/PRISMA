@@ -114,7 +114,7 @@ export function LibraryView({
           {results.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
               {results.map((s, i) => (
-                renderCard ? <div key={s.id} className="grid min-w-0">{renderCard(s, i)}</div> : <SolutionCard key={s.id} solution={s} present={present} index={i} catalogueOnly={catalogueOnly} />
+                renderCard ? <div key={s.id} className="grid min-w-0">{renderCard(s, i)}</div> : <SolutionCard key={s.id} solution={s} present={present} index={i} catalogueOnly={catalogueOnly} favoritable={!renderCard && !catalogueOnly} />
               ))}
             </div>
           ) : catalogueOnly && catalogue.length === 0 ? (

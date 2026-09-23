@@ -359,3 +359,11 @@ test("section cards carry one section-level visibility badge and mixed sections 
   assert.match(inCards(createElement(form.StepShell, { title: "Tag it" })), /<h2[^>]*>Tag it<\/h2>.*Shown to clients/);
   assert.doesNotMatch(render(form.StepShell, { title: "Tag it" }), /Shown to clients/);
 });
+
+test("the favorites heart sits beside the card button, never inside it, and hides in present mode", () => {
+  const solution = { id: "fav-fixture", name: "Fixture", summary: "Summary", specializationArea: "ai", status: "Working prototype", publicationStatus: "Published", contributors: [], capabilities: [], technologies: [], industries: [], assets: [] };
+  const html = render(card.SolutionCard, { solution, present: false, index: 0, favoritable: true });
+  assert.match(html, /<\/article><button[^>]*aria-pressed="false"[^>]*aria-label="Save Fixture to favorites"/);
+  assert.doesNotMatch(render(card.SolutionCard, { solution, present: true, index: 0, favoritable: true }), /favorites/);
+  assert.doesNotMatch(render(card.SolutionCard, { solution, present: false, index: 0 }), /favorites/);
+});
