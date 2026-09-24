@@ -6,7 +6,7 @@ import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linked
 import { readAll, type ReadRows } from "./catalogue.ts";
 
 export const PUBLICATIONS: Record<number, string> = { 125060000: "Published", 125060001: "Retired", 125060002: "Pending review", 125060003: "Draft" };
-export type Submission = { core: SavedDraft; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string };
+export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string };
 export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean };
 export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; hours: number | null; email?: string; effort?: Contributor }[]; totalHours: number; projects: string[]; media: MediaItem[]; libraryNotes?: string };
 export function mediaAsset(item: MediaItem, index: number): Solution["assets"][number] {
@@ -15,11 +15,13 @@ export function mediaAsset(item: MediaItem, index: number): Solution["assets"][n
 }
 export function submissionSolution(record: Submission, names: Record<string, string>): Solution {
   const core = record.core;
-  const area = names[core.areaId];
-  if (area !== "ai" && area !== "data" && area !== "ibo") throw new Error("Submission specialization unavailable.");
+  // The plugin returns areas primary first (ascending Sort Order). Drafts may have none yet.
+  const areas = record.areaIds.map(id => names[id]);
+  if (areas.some(area => area !== "ai" && area !== "data" && area !== "ibo")) throw new Error("Submission specialization unavailable.");
+  const specializationAreas = areas as Solution["specializationArea"][];
   return {
     id: core.id, name: core.name, summary: core.summary, whatItDoes: core.whatItDoes, businessValue: core.businessValue,
-    specializationArea: area, status: MATURITY_OPTIONS.find(option => option.value === core.maturity)!.label as Solution["status"], publicationStatus: PUBLICATIONS[record.publication] as Solution["publicationStatus"],
+    specializationArea: specializationAreas[0] ?? "ai", specializationAreas, status: MATURITY_OPTIONS.find(option => option.value === core.maturity)!.label as Solution["status"], publicationStatus: PUBLICATIONS[record.publication] as Solution["publicationStatus"],
     reviewOutcome: record.outcome === 125060001 ? "Changes requested" : record.outcome === 125060002 ? "Approved" : "None", reviewComments: record.comments,
     safetyAcknowledged: core.safetyAcknowledged, clientSafeReviewed: record.cleared, clientContext: core.clientContext || undefined, clientContextRedacted: core.clientContextRedacted || undefined,
     dateAdded: record.dateAdded ?? "", libraryNotes: record.libraryNotes, searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
@@ -86,7 +88,8 @@ function submission(value: unknown): Submission {
   const metadata: Pick<Submission, "owner" | "dateAdded" | "imageCount" | "attachmentCount" | "libraryNotes"> = {};
   for (const key of ["owner", "dateAdded", "libraryNotes"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "string") throw new Error("Invalid submission metadata."); metadata[key] = row[key]; }
   for (const key of ["imageCount", "attachmentCount"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "number" || !Number.isInteger(row[key]) || row[key] < 0 || row[key] > 6) throw new Error("Invalid submission media count."); metadata[key] = row[key]; }
-  return { core: snapshot(row.core), publication: row.publication, outcome: row.outcome as number, comments: row.comments, cleared: row.cleared, ...metadata };
+  if (!Array.isArray(row.areaIds) || row.areaIds.some(id => typeof id !== "string" || !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id)) || new Set(row.areaIds).size !== row.areaIds.length) throw new Error("Invalid submission areas.");
+  return { core: snapshot(row.core), areaIds: row.areaIds as string[], publication: row.publication, outcome: row.outcome as number, comments: row.comments, cleared: row.cleared, ...metadata };
 }
 export function parseSubmission(value: unknown): SubmissionDetail {
   const data = workflowData(value);

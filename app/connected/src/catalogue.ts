@@ -20,7 +20,7 @@ const SOLUTION_COLUMNS = [
   "nx_solutionid", "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes",
   "nx_businessvalue", "nx_status", "nx_publicationstatus",
   "nx_safetyacknowledged", "nx_clientsafereviewed", "nx_clientcontextredacted",
-  "nx_dateadded", "_nx_specializationarea_value", "_nx_capability_value",
+  "nx_dateadded", "_nx_capability_value",
 ];
 
 function value(row: object, key: string): unknown {
@@ -43,6 +43,21 @@ function id(row: object, key: string): string {
     throw new Error(`Dataverse returned an invalid ${key} identifier.`);
   }
   return result;
+}
+
+const AREA_KEYS: readonly string[] = ["ai", "data", "ibo"];
+
+/** Areas linked through the native N:N, primary first: lowest Sort Order, unordered rows last, ties by id. */
+export function orderedAreas(rows: object[]): SpecializationArea[] {
+  const areas = rows.map(row => {
+    const order = value(row, "nx_sortordernumber");
+    const name = text(row, "nx_specializationareaname", true);
+    if (!AREA_KEYS.includes(name)) throw new Error("A solution has an unmapped specialization area.");
+    return { id: id(row, "nx_specializationareaid"), name: name as SpecializationArea, order: typeof order === "number" ? order : Number.POSITIVE_INFINITY };
+  });
+  if (!areas.length) throw new Error("A solution has no specialization area.");
+  if (new Set(areas.map(area => area.name)).size !== areas.length) throw new Error("A solution has a duplicate specialization area.");
+  return areas.sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map(area => area.name);
 }
 
 function flag(row: object, key: string): boolean {
@@ -81,12 +96,10 @@ export async function readAll(read: ReadRows, table: CatalogueTable, options: IG
 }
 
 export async function loadCatalogue(read: ReadRows, present: boolean, signal: AbortSignal, readCredits?: (id: string, present: boolean, signal: AbortSignal) => Promise<string[]>): Promise<Solution[]> {
-  const [solutions, areas, capabilities] = await Promise.all([
+  const [solutions, capabilities] = await Promise.all([
     readAll(read, "solutions", catalogueQuery(present), signal),
-    readAll(read, "areas", { select: ["nx_specializationareaid", "nx_specializationareaname"], orderBy: ["nx_specializationareaid asc"] }, signal),
     readAll(read, "capabilities", { select: ["nx_capabilityid", "nx_capabilityname"], orderBy: ["nx_capabilityid asc"] }, signal),
   ]);
-  const areaMap = new Map(areas.map(row => [id(row, "nx_specializationareaid"), text(row, "nx_specializationareaname", true)]));
   const capabilityMap = new Map(capabilities.map(row => [id(row, "nx_capabilityid"), text(row, "nx_capabilityname", true)]));
   const catalogue: Solution[] = [];
   const controller = new AbortController();
@@ -98,14 +111,17 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
     const cleared = flag(row, "nx_clientsafereviewed");
     if (present && (!acknowledged || !cleared)) throw new Error("Dataverse returned a record outside the presentation filter.");
     const solutionId = id(row, "nx_solutionid");
-    const area = areaMap.get(id(row, "_nx_specializationarea_value"));
-    if (area !== "ai" && area !== "data" && area !== "ibo") throw new Error("A solution has an unmapped specialization area.");
     const capability = capabilityMap.get(id(row, "_nx_capability_value"));
     if (!capability) throw new Error("A solution has an unreadable capability.");
     const maturityValue = value(row, "nx_status");
     const status = typeof maturityValue === "number" ? MATURITY[maturityValue] : undefined;
     if (!status) throw new Error("A solution has an unsupported maturity choice.");
-    const [technologies, industries, contributorNames] = await Promise.all([
+    const [areas, technologies, industries, contributorNames] = await Promise.all([
+      readAll(read, "areas", {
+        select: ["nx_specializationareaid", "nx_specializationareaname", "nx_sortordernumber"],
+        filter: `nx_Solution_nx_SpecializationArea_nx_SpecializationArea/any(solution:solution/nx_solutionid eq ${solutionId})`,
+        orderBy: ["nx_specializationareaid asc"],
+      }, activeSignal),
       readAll(read, "technologies", {
         select: ["nx_technologyid", "nx_technologyname"],
         filter: `nx_Solution_nx_Technology_nx_Technology/any(solution:solution/nx_solutionid eq ${solutionId})`,
@@ -119,6 +135,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       readCredits?.(solutionId, present, activeSignal),
     ]);
     activeSignal.throwIfAborted();
+    const specializationAreas = orderedAreas(areas);
     if (contributorNames && contributorNames.some(name => typeof name !== "string" || !name.trim())) throw new Error("Invalid contributor search projection.");
     return {
       id: solutionId,
@@ -126,7 +143,8 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       summary: text(row, "nx_onelinesummary", true),
       whatItDoes: text(row, "nx_whatitdoes"),
       businessValue: text(row, "nx_businessvalue"),
-      specializationArea: area as SpecializationArea,
+      specializationArea: specializationAreas[0],
+      specializationAreas,
       status,
       publicationStatus: "Published",
       safetyAcknowledged: acknowledged,

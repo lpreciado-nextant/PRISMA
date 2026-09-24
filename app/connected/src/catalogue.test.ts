@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { catalogueQuery, loadCatalogue, readAll, type ReadRows } from "./catalogue.ts";
+import { catalogueQuery, loadCatalogue, orderedAreas, readAll, type ReadRows } from "./catalogue.ts";
 import { matchesQuery } from "../../src/lib/search.ts";
 
 const solutionId = "11111111-1111-1111-1111-111111111111";
@@ -10,7 +10,7 @@ const record = {
   nx_solutionid: solutionId, nx_solutionname: "Fixture solution", nx_onelinesummary: "Fixture summary",
   nx_status: 125060004, nx_publicationstatus: 125060000,
   nx_safetyacknowledged: true, nx_clientsafereviewed: true,
-  _nx_specializationarea_value: areaId, _nx_capability_value: capabilityId,
+  _nx_capability_value: capabilityId,
   nx_clientcontext: "Internal client", nx_clientcontextredacted: "Anonymous context",
   nx_searchkeywords: "Internal keyword", nx_reviewcomments: "Private feedback", nx_librarynote: "Private note",
 };
@@ -18,7 +18,7 @@ const signal = () => new AbortController().signal;
 function reader(overrides: object = {}): ReadRows {
   return async table => ({ success: true, data: {
     solutions: [{ ...record, ...overrides }],
-    areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "ai" }],
+    areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "ai", nx_sortordernumber: 10 }],
     capabilities: [{ nx_capabilityid: capabilityId, nx_capabilityname: "Automation" }],
     technologies: [{ nx_technologyname: "Dataverse" }],
     industries: [{ nx_industryname: "Technology" }],
@@ -31,12 +31,15 @@ test("maps live names, numeric choices, lookups and N:N tag queries", async () =
   const [result] = await loadCatalogue(async (...args) => { calls.push(args); return base(...args); }, false, signal());
   assert.equal(result.status, "Working prototype");
   assert.equal(result.specializationArea, "ai");
+  assert.deepEqual(result.specializationAreas, ["ai"]);
   assert.deepEqual(result.capabilities, ["Automation"]);
   assert.deepEqual(result.technologies, ["Dataverse"]);
   assert.equal(result.clientContext, "Internal client");
   assert.equal(result.reviewComments, undefined);
   assert.equal(result.libraryNotes, undefined);
   assert.match(calls.find(([table]) => table === "technologies")![1].filter!, /nx_Solution_nx_Technology_nx_Technology\/any/);
+  assert.match(calls.find(([table]) => table === "areas")![1].filter!, new RegExp(`nx_Solution_nx_SpecializationArea_nx_SpecializationArea/any.*${solutionId}`));
+  assert(!catalogueQuery(false).select!.includes("_nx_specializationarea_value"));
   assert.match(calls.find(([table]) => table === "industries")![1].filter!, new RegExp(solutionId));
 });
 
@@ -53,6 +56,17 @@ test("presentation filters on the server and projects no internal fields", async
   assert.equal(result.clientContextRedacted, "Anonymous context");
   assert(!JSON.stringify(result).includes("Private"));
   assert(!JSON.stringify(result).includes("Internal"));
+});
+
+test("multiple areas put the lowest sort order first and unmapped, duplicate or missing areas fail closed", () => {
+  const area = (id: string, name: string, order: number | null) => ({ nx_specializationareaid: id, nx_specializationareaname: name, nx_sortordernumber: order });
+  const data = "44444444-4444-4444-4444-444444444444";
+  const ibo = "55555555-5555-5555-5555-555555555555";
+  assert.deepEqual(orderedAreas([area(ibo, "ibo", 30), area(areaId, "ai", 10), area(data, "data", 20)]), ["ai", "data", "ibo"]);
+  assert.deepEqual(orderedAreas([area(areaId, "ai", null), area(data, "data", 20)]), ["data", "ai"]);
+  assert.throws(() => orderedAreas([]), /no specialization area/);
+  assert.throws(() => orderedAreas([area(areaId, "other", 10)]), /unmapped/);
+  assert.throws(() => orderedAreas([area(areaId, "ai", 10), area(data, "ai", 20)]), /duplicate/);
 });
 
 test("unknown choices, missing lookups and out-of-filter records fail closed", async () => {

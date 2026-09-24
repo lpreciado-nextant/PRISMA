@@ -5,7 +5,8 @@ import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { TagPicker } from "../../src/components/TagPicker";
 import { SolutionCard } from "../../src/components/SolutionCard";
 import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, IdentityFields, StoryFields, SubmissionReview } from "../../src/components/SubmissionForm";
-import type { Solution } from "../../src/types";
+import type { Solution, SpecializationArea } from "../../src/types";
+import { MAX_AREAS } from "../../src/lib/areas";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
 import { AREAS } from "../../src/data/catalogueMetadata";
 import { DraftGraphEditor } from "./DraftGraphEditor";
@@ -56,9 +57,9 @@ export function DraftsView({ draftId, owner }: { draftId?: string; owner: string
 
 function DraftEditor({ initial, references, graphReferences: initialGraphReferences, onReload, onCreated, owner }: { initial?: SubmissionDetail; references: DraftReferences; graphReferences: GraphReferences; onReload: () => void; onCreated: (id: string) => void; owner: string }) {
   const [graphReferences, setGraphReferences] = useState(initialGraphReferences);
-  const [draft, setDraft] = useState<CoreDraft>(() => coreFields(initial?.record.core ?? { ...EMPTY_DRAFT, areaId: references.areas.find(option => option.name === "ai")?.id ?? "" }));
+  const [draft, setDraft] = useState<CoreDraft>(() => coreFields(initial?.record.core ?? EMPTY_DRAFT));
   const [saved, setSaved] = useState<SavedDraft | undefined>(initial?.record.core);
-  const [graph, setGraph] = useState<DraftGraph>(() => initial?.graph.graph ?? initialContributor(initialGraphReferences, owner));
+  const [graph, setGraph] = useState<DraftGraph>(() => initial?.graph.graph ?? { ...initialContributor(initialGraphReferences, owner), areaIds: references.areas.filter(option => option.name === "ai").map(option => option.id) });
   const [baseline, setBaseline] = useState<DraftGraph>(() => initial?.graph.graph ?? emptyGraph());
   const [media, setMedia] = useState<MediaItem[]>(initial?.media ?? []);
   const [captions, setCaptions] = useState<Record<string, string>>({});
@@ -214,10 +215,12 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     if (saved) onReload();
     else navigate("/my-submissions");
   };
-  const area = references.areas.find(option => option.id === draft.areaId)?.name;
+  // References arrive in Sort Order, so the first selected area is the primary one, as in the catalogue.
+  const selectedAreas = references.areas.filter(option => graph.areaIds.includes(option.id)).map(option => option.name)
+    .filter((name): name is SpecializationArea => name === "ai" || name === "data" || name === "ibo");
   const preview: Solution = {
     id: saved?.id ?? "preview", name: draft.name, summary: draft.summary, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
-    specializationArea: area === "data" || area === "ibo" ? area : "ai", status: MATURITY_OPTIONS.find(option => option.value === draft.maturity)?.label as Solution["status"],
+    specializationArea: selectedAreas[0] ?? "ai", specializationAreas: selectedAreas, status: MATURITY_OPTIONS.find(option => option.value === draft.maturity)?.label as Solution["status"],
     publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
     contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "" }, directHours: person.directHours ?? undefined, startDate: person.startDate ?? "", endDate: person.endDate ?? "", allocation: person.allocation ?? 0, calendarId: "" })),
     dateAdded: "", searchKeywords: "", assets: [], capabilities: references.capabilities.filter(option => option.id === draft.capabilityId).map(option => option.name),
@@ -226,10 +229,10 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const busy = status === "saving" || mediaBusy;
   const locked = busy || mediaPending || status === "uncertain" || !!recovery;
   const thumbnail = media.find(item => item.kind === "thumbnail" && item.complete);
-  const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !!draft.areaId && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person));
+  const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person));
   const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !contributorEffort(person, draft.maturity).error);
-  const complete = canSave && graph.projectIds.length <= 1 && !!draft.summary.trim() && !!draft.capabilityId && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
-  const canContinue = step === 0 ? accepted : step === 1 ? canSave && !!draft.summary.trim() && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) : step === 3 ? canSave && graph.projectIds.length <= 1 && !!draft.capabilityId : step === 4 ? complete : canSave;
+  const complete = canSave && graph.areaIds.length > 0 && graph.projectIds.length <= 1 && !!draft.summary.trim() && !!draft.capabilityId && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
+  const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) : step === 3 ? canSave && graph.projectIds.length <= 1 && !!draft.capabilityId : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;
@@ -256,7 +259,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
         {step === 0 && <SubmissionSafety accepted={accepted} onChange={setAccepted} />}
         {step === 1 && <StepShell title="What is it?">
           <IdentityFields value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
-            area={draft.areaId} areas={[...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name)).map(option => ({ value: option.id, label: areaName(option.name) }))} onArea={value => change("areaId", value)}
+            selectedAreas={graph.areaIds} onAreas={areaIds => changeGraph({ ...graph, areaIds })} maxAreas={MAX_AREAS} areas={[...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name)).map(option => ({ value: option.id, label: areaName(option.name) }))}
             status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
           <DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="contributors" onChange={changeGraph} />
         </StepShell>}
@@ -267,7 +270,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
       {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-36 overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}
         contributors={preview.contributors.map(person => person.builtBy.name).join(", ")} hours={!hours.length || hours.some(value => value === null) ? null : Math.round(hours.reduce<number>((total, value) => total + (value ?? 0), 0) * 100) / 100}
         images={`${thumbnail ? "Thumbnail" : "Generated poster"} · ${media.filter(item => item.kind === "image" && item.complete).length} screenshots`} safety={draft.safetyAcknowledged ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.clientContextRedacted} nextState="Pending review">
-        <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>{!complete && <p role="alert">Complete identity, contributor effort, capability and at least one detail image before submitting.</p>}
+        <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>{!complete && <p role="alert">Complete identity, at least one specialization area, contributor effort, capability and at least one detail image before submitting.</p>}
       </SubmissionReview>}
       <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave && graph.projectIds.length <= 1} canContinue={canContinue} canSubmit={complete && !captionsDirty && draft.safetyAcknowledged && !!hours.length && hours.every(value => value !== null)}
         onBack={() => goBack(step - 1)} onSave={() => void persist("close")} onContinue={() => void persist("continue")} onSubmit={() => void persist("submit")} />

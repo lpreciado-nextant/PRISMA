@@ -15,7 +15,7 @@ namespace Prisma.Plugins
         public const string ListMessage = "nx_GetMyCoreDrafts";
         public static readonly string[] CoreColumns = {
             "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes", "nx_businessvalue",
-            "nx_specializationarea", "nx_capability", "nx_status", "nx_clientcontext", "nx_clientcontextredacted", "nx_safetyacknowledged"
+            "nx_capability", "nx_status", "nx_clientcontext", "nx_clientcontextredacted", "nx_safetyacknowledged"
         };
         private static readonly Dictionary<string, string> TextColumns = new Dictionary<string, string> {
             { "name", "nx_solutionname" }, { "summary", "nx_onelinesummary" }, { "whatItDoes", "nx_whatitdoes" },
@@ -37,7 +37,7 @@ namespace Prisma.Plugins
                 throw Invalid("Draft content must be a JSON object.");
             }
             if (values == null) throw Invalid("Draft content must be a JSON object.");
-            var allowed = new HashSet<string>(TextColumns.Keys) { "areaId", "capabilityId", "maturity", "safetyAcknowledged" };
+            var allowed = new HashSet<string>(TextColumns.Keys) { "capabilityId", "maturity", "safetyAcknowledged" };
             if (values.Keys.Any(key => !allowed.Contains(key))) throw Invalid("Draft contains unsupported or protected fields.");
             var entity = new Entity("nx_solution");
             foreach (var pair in TextColumns)
@@ -52,7 +52,6 @@ namespace Prisma.Plugins
                     throw Invalid("Enter an authored solution name.");
                 entity[pair.Value] = text.Length == 0 ? null : text;
             }
-            entity["nx_specializationarea"] = Lookup(values, "areaId", "nx_specializationarea", true);
             entity["nx_capability"] = Lookup(values, "capabilityId", "nx_capability", false);
             object maturity;
             if (!values.TryGetValue("maturity", out maturity)) maturity = 125060004;

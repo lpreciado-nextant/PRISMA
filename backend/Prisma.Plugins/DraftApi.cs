@@ -23,11 +23,8 @@ namespace Prisma.Plugins
             if (context.MessageName != DraftPolicy.SaveMessage || !context.IsInTransaction)
                 throw new InvalidPluginExecutionException("Use the transactional PRISMA draft operation.");
             var input = DraftPolicy.Parse(context.InputParameters.Contains("DraftJson") ? context.InputParameters["DraftJson"] as string : null);
-            foreach (var field in new[] { "nx_specializationarea", "nx_capability" })
-            {
-                var lookup = input.GetAttributeValue<EntityReference>(field);
-                if (lookup != null) caller.Retrieve(lookup.LogicalName, lookup.Id, new ColumnSet(false));
-            }
+            var capability = input.GetAttributeValue<EntityReference>("nx_capability");
+            if (capability != null) caller.Retrieve(capability.LogicalName, capability.Id, new ColumnSet(false));
             var identifier = context.InputParameters.Contains("SolutionId") ? (Guid)context.InputParameters["SolutionId"] : Guid.Empty;
             var expectedVersion = context.InputParameters.Contains("ExpectedRowVersion") ? context.InputParameters["ExpectedRowVersion"] as string : null;
             if (identifier == Guid.Empty)
@@ -84,7 +81,6 @@ namespace Prisma.Plugins
                 Id = record.Id.ToString(), RowVersion = record.RowVersion,
                 Name = record.GetAttributeValue<string>("nx_solutionname") ?? "",
                 Summary = record.GetAttributeValue<string>("nx_onelinesummary") ?? "",
-                AreaId = record.GetAttributeValue<EntityReference>("nx_specializationarea")?.Id.ToString() ?? "",
                 CapabilityId = record.GetAttributeValue<EntityReference>("nx_capability")?.Id.ToString() ?? "",
                 Maturity = record.GetAttributeValue<OptionSetValue>("nx_status")?.Value ?? 125060004,
                 WhatItDoes = record.GetAttributeValue<string>("nx_whatitdoes") ?? "",
@@ -111,7 +107,6 @@ namespace Prisma.Plugins
         [DataMember(Name = "rowVersion")] public string RowVersion { get; set; }
         [DataMember(Name = "name")] public string Name { get; set; }
         [DataMember(Name = "summary")] public string Summary { get; set; }
-        [DataMember(Name = "areaId")] public string AreaId { get; set; }
         [DataMember(Name = "capabilityId")] public string CapabilityId { get; set; }
         [DataMember(Name = "maturity")] public int Maturity { get; set; }
         [DataMember(Name = "whatItDoes")] public string WhatItDoes { get; set; }

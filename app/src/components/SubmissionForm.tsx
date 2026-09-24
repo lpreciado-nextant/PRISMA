@@ -203,15 +203,24 @@ export function LinkedAssetEditor({ type, initial, disabled, onSave, onCancel, o
   </fieldset>;
 }
 
-export function IdentityFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus }: {
+export function IdentityFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, selectedAreas, onAreas, maxAreas = 3 }: {
   value: IdentityText; onText: (key: keyof IdentityText, value: string) => void;
-  area: Area; areas: { value: Area; label: string }[]; onArea: (value: Area) => void;
+  area?: Area; areas: { value: Area; label: string }[]; onArea?: (value: Area) => void;
   status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void;
+  /** Multi-valued mode (native N:N). When set, replaces the single-area picker. */
+  selectedAreas?: Area[]; onAreas?: (value: Area[]) => void; maxAreas?: number;
 }) {
+  const toggleArea = (option: Area) => {
+    if (!selectedAreas || !onAreas) return;
+    if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));
+    else if (selectedAreas.length < maxAreas) onAreas([...selectedAreas, option]);
+  };
   return <>
     <Field label="Solution name" required hint="Give the solution a short, recognizable product name."><input className={submissionInputClass} value={value.name} onChange={event => onText("name", event.target.value)} placeholder="e.g. Ledger Reconciler" maxLength={100} /></Field>
     <Field label="One-line summary" required hint={`Describe who it helps and what it achieves in one sentence. ${value.summary.length}/200 characters.`}><input className={submissionInputClass} value={value.summary} onChange={event => onText("summary", event.target.value)} placeholder="e.g. Helps finance teams match invoices to payments." maxLength={200} /></Field>
-    <Field label="Specialization area"><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea(option.value)}>{option.label}</Chip>)}</div></Field>
+    {selectedAreas && onAreas
+      ? <Field label="Specialization areas" required hint={`Choose up to ${maxAreas}. The card colour follows the first selected area in library order.`}><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={selectedAreas.includes(option.value)} onClick={() => toggleArea(option.value)}>{option.label}</Chip>)}</div></Field>
+      : <Field label="Specialization area"><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>}
     <Field label="Status"><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
     <Field label="Who was this developed for?" hint="Optional. Client and engagement name for internal discovery only; never included in present mode."><input className={submissionInputClass} value={value.clientContext} onChange={event => onText("clientContext", event.target.value)} placeholder="e.g. Fabrikam Logistics, FY26 pilot" maxLength={200} /></Field>
     <Field label="How should we describe this client?" required={!!value.clientContext.trim()} hint="Client-visible context without names or identifying details. Leave empty if this work has no client."><input className={submissionInputClass} value={value.redacted} onChange={event => onText("redacted", event.target.value)} placeholder="e.g. a national logistics provider" maxLength={200} /></Field>

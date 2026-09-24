@@ -10,7 +10,6 @@ export const MATURITY_OPTIONS = [
 export interface CoreDraft {
   name: string;
   summary: string;
-  areaId: string;
   capabilityId: string;
   maturity: number;
   whatItDoes: string;
@@ -30,13 +29,13 @@ export interface DraftApi {
 }
 
 export const EMPTY_DRAFT: CoreDraft = {
-  name: "", summary: "", areaId: "", capabilityId: "", maturity: 125060004,
+  name: "", summary: "", capabilityId: "", maturity: 125060004,
   whatItDoes: "", businessValue: "", clientContext: "",
   clientContextRedacted: "", safetyAcknowledged: false,
 };
 
 const GUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
-const TEXT_FIELDS = ["name", "summary", "areaId", "capabilityId", "whatItDoes", "businessValue", "clientContext", "clientContextRedacted"] as const;
+const TEXT_FIELDS = ["name", "summary", "capabilityId", "whatItDoes", "businessValue", "clientContext", "clientContextRedacted"] as const;
 
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid draft response.");
@@ -55,7 +54,7 @@ export function snapshot(value: unknown): SavedDraft {
   }
   if (TEXT_FIELDS.some(field => typeof row[field] !== "string") || typeof row.safetyAcknowledged !== "boolean"
     || !MATURITY_OPTIONS.some(option => option.value === row.maturity)
-    || !GUID.test(row.areaId as string) || (row.capabilityId !== "" && !GUID.test(row.capabilityId as string))) {
+    || (row.capabilityId !== "" && !GUID.test(row.capabilityId as string))) {
     throw new Error("Invalid core draft fields.");
   }
   return { ...coreFields(row as unknown as CoreDraft), id: row.id, rowVersion: row.rowVersion };
@@ -63,7 +62,7 @@ export function snapshot(value: unknown): SavedDraft {
 
 export function coreFields(draft: CoreDraft): CoreDraft {
   return {
-    name: draft.name, summary: draft.summary, areaId: draft.areaId, capabilityId: draft.capabilityId,
+    name: draft.name, summary: draft.summary, capabilityId: draft.capabilityId,
     maturity: draft.maturity, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
     clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
     safetyAcknowledged: draft.safetyAcknowledged,
@@ -106,12 +105,12 @@ export async function saveDraft(api: DraftApi, draft: CoreDraft, saved: SavedDra
 
 export async function loadDraftReferences(read: ReadRows, signal: AbortSignal): Promise<DraftReferences> {
   const definitions = [
-    { table: "areas", id: "nx_specializationareaid", name: "nx_specializationareaname" },
-    { table: "capabilities", id: "nx_capabilityid", name: "nx_capabilityname" },
+    { table: "areas", id: "nx_specializationareaid", name: "nx_specializationareaname", orderBy: ["nx_sortordernumber asc", "nx_specializationareaname asc"] },
+    { table: "capabilities", id: "nx_capabilityid", name: "nx_capabilityname", orderBy: ["nx_capabilityname asc"] },
   ] as const;
   const [areas, capabilities] = await Promise.all(definitions.map(async definition => {
     const rows = await readAll(read, definition.table, {
-      select: [definition.id, definition.name], filter: "statecode eq 0", orderBy: [`${definition.name} asc`],
+      select: [definition.id, definition.name], filter: "statecode eq 0", orderBy: [...definition.orderBy],
     }, signal);
     return rows.map(item => {
       const row = record(item);

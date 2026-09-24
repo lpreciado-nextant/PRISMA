@@ -72,8 +72,8 @@ namespace Prisma.Plugins
             var name = parent.GetAttributeValue<string>("nx_solutionname");
             if (string.IsNullOrWhiteSpace(name) || name.Length > 100 || name.Equals("Untitled solution", StringComparison.OrdinalIgnoreCase)
                 || string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_onelinesummary"))
-                || parent.GetAttributeValue<EntityReference>("nx_specializationarea") == null || parent.GetAttributeValue<EntityReference>("nx_capability") == null)
-                throw MediaPolicy.Invalid("Name, summary, specialization and capability are required.");
+                || graph.Graph.AreaIds.Count == 0 || parent.GetAttributeValue<EntityReference>("nx_capability") == null)
+                throw MediaPolicy.Invalid("Name, summary, at least one specialization area and capability are required.");
             if (!parent.GetAttributeValue<bool>("nx_safetyacknowledged")) throw MediaPolicy.Invalid("Renew the safety acknowledgment before submission.");
             if (!string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_clientcontext")) && string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_clientcontextredacted")))
                 throw MediaPolicy.Invalid("Provide redacted client context.");
@@ -104,6 +104,7 @@ namespace Prisma.Plugins
     public sealed class SubmissionSummary
     {
         [DataMember(Name = "core")] public DraftSnapshot Core { get; set; }
+        [DataMember(Name = "areaIds")] public List<string> AreaIds { get; set; }
         [DataMember(Name = "publication")] public int Publication { get; set; }
         [DataMember(Name = "outcome")] public int Outcome { get; set; }
         [DataMember(Name = "comments")] public string Comments { get; set; }
@@ -218,9 +219,11 @@ namespace Prisma.Plugins
                 }
                 if (action == "submit" || action == "approve")
                 {
-                    ReviewPolicy.Complete(parent, DraftGraph.Read(server, parent), media);
-                    foreach (var field in new[] { "nx_specializationarea", "nx_capability" }) RequireActive(caller, parent.GetAttributeValue<EntityReference>(field));
-                    foreach (var person in DraftGraph.Read(server, parent).Graph.Contributors) RequireActive(caller, new EntityReference("cr6b0_consultant", Guid.Parse(person.PersonId)));
+                    var graph = DraftGraph.Read(server, parent);
+                    ReviewPolicy.Complete(parent, graph, media);
+                    RequireActive(caller, parent.GetAttributeValue<EntityReference>("nx_capability"));
+                    foreach (var area in graph.Graph.AreaIds) RequireActive(caller, new EntityReference("nx_specializationarea", Guid.Parse(area)));
+                    foreach (var person in graph.Graph.Contributors) RequireActive(caller, new EntityReference("cr6b0_consultant", Guid.Parse(person.PersonId)));
                     foreach (var item in media)
                         MediaApi.VerifyStoredMedia(server, item);
                 }
@@ -293,7 +296,7 @@ namespace Prisma.Plugins
         {
             var media = MediaApi.Sessions(server, record.Id);
             var added = record.GetAttributeValue<DateTime?>("nx_dateadded") ?? record.GetAttributeValue<DateTime?>("createdon");
-            return new SubmissionSummary { Core = DraftApi.Snapshot(record), Publication = record.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value,
+            return new SubmissionSummary { Core = DraftApi.Snapshot(record), AreaIds = DraftGraph.AreaIds(server, record.Id), Publication = record.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value,
                 Outcome = record.GetAttributeValue<OptionSetValue>("nx_reviewoutcome")?.Value ?? 125060000,
                 Comments = record.GetAttributeValue<string>("nx_reviewcomments") ?? "", Cleared = record.GetAttributeValue<bool>("nx_clientsafereviewed"),
                 Owner = record.GetAttributeValue<EntityReference>("ownerid")?.Name ?? "", DateAdded = added?.ToString("yyyy-MM-dd") ?? "",
