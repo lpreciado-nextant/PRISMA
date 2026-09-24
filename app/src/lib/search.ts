@@ -1,4 +1,5 @@
 import type { Solution, SpecializationArea } from "../types";
+import { solutionAreas } from "./areas.ts";
 
 export interface Filters {
   q: string;
@@ -56,7 +57,7 @@ export function matchesQuery(s: Solution, q: string): boolean {
 
 function matchesFacets(s: Solution, f: Filters): boolean {
   return (
-    (f.area === "all" || s.specializationArea === f.area) &&
+    (f.area === "all" || solutionAreas(s).includes(f.area)) &&
     f.capabilities.every((c) => s.capabilities.includes(c)) &&
     f.technologies.every((t) => s.technologies.includes(t)) &&
     f.industries.every((i) => s.industries.includes(i))
@@ -92,7 +93,7 @@ export function areaCounts(all: Solution[], f: Filters): Map<SpecializationArea 
   );
   const counts = new Map<SpecializationArea | "all", number>([["all", base.length]]);
   for (const s of base) {
-    counts.set(s.specializationArea, (counts.get(s.specializationArea) ?? 0) + 1);
+    for (const area of solutionAreas(s)) counts.set(area, (counts.get(area) ?? 0) + 1);
   }
   return counts;
 }

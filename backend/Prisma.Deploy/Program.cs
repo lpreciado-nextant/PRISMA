@@ -94,10 +94,7 @@ if (command == "smoke-transfer")
         var request = new OrganizationRequest(api); foreach (var value in values) request[value.Name] = value.Value;
         using var json = JsonDocument.Parse((string)client.Execute(request)["ResultJson"]); return json.RootElement.Clone();
     }
-    var areas = new QueryExpression("nx_specializationarea") { ColumnSet = new ColumnSet(false), TopCount = 1 };
-    areas.Criteria.AddCondition("nx_specializationareaname", ConditionOperator.Equal, "ai");
-    var area = client.RetrieveMultiple(areas).Entities.Single().Id;
-    var draft = Call("nx_SaveCoreDraft", ("DraftJson", JsonSerializer.Serialize(new { name = "[PRISMA TEST] Transfer acceptance", areaId = area, summary = "Disposable transfer protocol verification." })));
+    var draft = Call("nx_SaveCoreDraft", ("DraftJson", JsonSerializer.Serialize(new { name = "[PRISMA TEST] Transfer acceptance", summary = "Disposable transfer protocol verification." })));
     var id = Guid.Parse(draft.GetProperty("id").GetString()!);
     try {
         string Version() => client.Retrieve("nx_solution", id, new ColumnSet(false)).RowVersion;
@@ -730,11 +727,8 @@ static void RegisterApi(IOrganizationService service, Guid pluginType, string na
 
 static void Smoke(IOrganizationService service)
 {
-    var areas = new QueryExpression("nx_specializationarea") { ColumnSet = new ColumnSet(false), TopCount = 1 };
-    areas.Criteria.AddCondition("nx_specializationareaname", ConditionOperator.Equal, "ai");
-    var area = service.RetrieveMultiple(areas).Entities.Single().Id;
     var label = "[PRISMA TEST] Core draft " + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
-    var payload = JsonSerializer.Serialize(new { name = label, areaId = area.ToString(), summary = "Non-sensitive persistence verification." });
+    var payload = JsonSerializer.Serialize(new { name = label, summary = "Non-sensitive persistence verification." });
     var create = new OrganizationRequest("nx_SaveCoreDraft") { ["DraftJson"] = payload };
     var created = JsonDocument.Parse((string)service.Execute(create)["ResultJson"]).RootElement;
     var identifier = Guid.Parse(created.GetProperty("id").GetString()!);
@@ -841,7 +835,7 @@ static void SmokeDelete(IOrganizationService service)
     var project = Reference("cr6b0_project");
     var label = "[PRISMA TEST] Disposable delete " + Guid.NewGuid().ToString("N");
     var created = JsonDocument.Parse((string)service.Execute(new OrganizationRequest("nx_SaveCoreDraft") {
-        ["DraftJson"] = JsonSerializer.Serialize(new { name = label, areaId = area.ToString(), summary = "Non-sensitive deletion verification." })
+        ["DraftJson"] = JsonSerializer.Serialize(new { name = label, summary = "Non-sensitive deletion verification." })
     })["ResultJson"]).RootElement;
     var identifier = Guid.Parse(created.GetProperty("id").GetString()!);
     Console.WriteLine($"Created disposable deletion fixture {identifier}.");
@@ -863,7 +857,8 @@ static void SmokeDelete(IOrganizationService service)
     AssertRejected(() => service.Execute(new OrganizationRequest("nx_TransitionSubmission") { ["SolutionId"] = identifier, ["ExpectedRowVersion"] = originalVersion, ["Action"] = "technology", ["Comments"] = technologyName }), "stale technology creation");
     Call("nx_SaveDraftGraph", ("GraphJson", JsonSerializer.Serialize(new {
         contributors = new[] { new { personId = consultant.ToString(), directHours = 1m } },
-        technologyIds = new[] { technology.ToString(), createdTechnologyId.ToString() }, industryIds = Array.Empty<string>(), projectIds = new[] { project.ToString() }
+        technologyIds = new[] { technology.ToString(), createdTechnologyId.ToString() }, industryIds = Array.Empty<string>(), projectIds = new[] { project.ToString() },
+        areaIds = new[] { area.ToString() }
     })));
     var bytes = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aP1sAAAAASUVORK5CYII=");
     var started = Call("nx_BeginMediaUpload", ("Kind", "image"), ("FileName", "delete-test.png"), ("Size", bytes.Length));
@@ -925,11 +920,13 @@ static void SmokeGraph(IOrganizationService service)
     var person = Reference("cr6b0_consultant", "cr6b0_consultantid");
     var technology = Reference("nx_technology", "nx_technologyid");
     var industry = Reference("nx_industry", "nx_industryid");
+    var area = Reference("nx_specializationarea", "nx_specializationareaid");
     var read = new OrganizationRequest("nx_GetDraftGraph") { ["SolutionId"] = identifier };
     var before = JsonDocument.Parse((string)service.Execute(read)["ResultJson"]).RootElement;
     var payload = JsonSerializer.Serialize(new {
         contributors = new[] { new { personId = person.ToString(), directHours = 12.5m } },
-        technologyIds = new[] { technology.ToString() }, industryIds = new[] { industry.ToString() }, projectIds = Array.Empty<string>()
+        technologyIds = new[] { technology.ToString() }, industryIds = new[] { industry.ToString() }, projectIds = Array.Empty<string>(),
+        areaIds = new[] { area.ToString() }
     });
     var save = new OrganizationRequest("nx_SaveDraftGraph") {
         ["SolutionId"] = identifier, ["ExpectedRowVersion"] = before.GetProperty("rowVersion").GetString(), ["GraphJson"] = payload
@@ -937,7 +934,8 @@ static void SmokeGraph(IOrganizationService service)
     var after = JsonDocument.Parse((string)service.Execute(save)["ResultJson"]).RootElement;
     if (after.GetProperty("graph").GetProperty("contributors").GetArrayLength() != 1 || after.GetProperty("hours")[0].GetDecimal() != 12.5m)
         throw new InvalidOperationException("Contributor round trip failed.");
-    if (after.GetProperty("graph").GetProperty("technologyIds").GetArrayLength() != 1 || after.GetProperty("graph").GetProperty("industryIds").GetArrayLength() != 1)
+    if (after.GetProperty("graph").GetProperty("technologyIds").GetArrayLength() != 1 || after.GetProperty("graph").GetProperty("industryIds").GetArrayLength() != 1
+        || after.GetProperty("graph").GetProperty("areaIds").GetArrayLength() != 1)
         throw new InvalidOperationException("Tag round trip failed.");
     AssertRejected(() => service.Execute(save), "stale graph save");
     var child = Guid.Parse(after.GetProperty("graph").GetProperty("contributors")[0].GetProperty("id").GetString()!);

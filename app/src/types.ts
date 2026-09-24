@@ -76,7 +76,10 @@ export interface Solution {
   summary: string;
   whatItDoes: string;
   businessValue: string;
+  /** Primary area: the first tagged area. Drives the card colour, poster and viewer accent. */
   specializationArea: SpecializationArea;
+  /** Native N:N `nx_Solution_nx_SpecializationArea_nx_SpecializationArea`, in tag order. Absent rows fall back to the primary area. */
+  specializationAreas?: SpecializationArea[];
   contributors: SolutionContributor[];
   contributorNames?: string[];
   status: SolutionStatus;

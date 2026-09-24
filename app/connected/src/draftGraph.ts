@@ -60,13 +60,14 @@ export interface DraftGraph {
   technologyIds: string[];
   industryIds: string[];
   projectIds: string[];
+  areaIds: string[];
 }
 export interface GraphSnapshot { id: string; rowVersion: string; graph: DraftGraph; hours: (number | null)[] }
 export interface GraphApi {
   read: (id: string) => Promise<DraftResult>;
   save: (id: string, version: string, json: string) => Promise<DraftResult>;
 }
-export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [] });
+export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] });
 
 export function isEmptyContributor(person: Contributor): boolean {
   return !person.id && !person.personId && person.directHours === null && !person.startDate && !person.endDate && (person.allocation === null || person.allocation === 100);
@@ -125,12 +126,12 @@ export function parseGraph(result: DraftResult): GraphSnapshot {
     return { id: person.id, personId: person.personId, directHours: person.directHours as number | null, allocation: person.allocation as number | null, startDate: person.startDate as string | null, endDate: person.endDate as string | null };
   });
   if (new Set(contributors.map(person => person.personId)).size !== contributors.length) throw new Error("Duplicate contributor.");
-  return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds) }, hours: data.hours as (number | null)[] };
+  return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds) }, hours: data.hours as (number | null)[] };
 }
 export function graphPayload(graph: DraftGraph): string {
   return JSON.stringify({
     contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours, startDate: person.startDate, endDate: person.endDate, allocation: person.allocation })),
-    technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds,
+    technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds,
   });
 }
 

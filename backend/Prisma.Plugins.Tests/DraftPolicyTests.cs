@@ -7,7 +7,7 @@ namespace Prisma.Plugins.Tests
     public class DraftPolicyTests
     {
         private const string Area = "22222222-2222-2222-2222-222222222222";
-        private static string Input(string extra = "") { return "{\"name\":\"Named draft\",\"areaId\":\"" + Area + "\"" + extra + "}"; }
+        private static string Input(string extra = "") { return "{\"name\":\"Named draft\"" + extra + "}"; }
 
         [Fact]
         public void CoreStoryContractExcludesRetiredField()
@@ -19,6 +19,30 @@ namespace Prisma.Plugins.Tests
             Assert.DoesNotContain("nx_usecase", DraftPolicy.CoreColumns);
             Assert.DoesNotContain("useCase", DraftPolicy.Serialize(new DraftSnapshot()));
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"useCase\":\"Retired\"")));
+        }
+
+        [Fact]
+        public void SpecializationAreasMoveFromCoreLookupToGraph()
+        {
+            Assert.DoesNotContain("nx_specializationarea", DraftPolicy.CoreColumns);
+            Assert.False(DraftPolicy.Parse(Input()).Contains("nx_specializationarea"));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"areaId\":\"" + Area + "\"")));
+            Assert.DoesNotContain("areaId", DraftPolicy.Serialize(new DraftSnapshot()));
+            Assert.Contains("nx_Solution_nx_SpecializationArea_nx_SpecializationArea", DraftGraph.Relationships);
+        }
+
+        [Fact]
+        public void SubmissionRequiresAtLeastOneSpecializationArea()
+        {
+            var parent = new Entity("nx_solution") { ["nx_solutionname"] = "Named draft", ["nx_onelinesummary"] = "Summary",
+                ["nx_capability"] = new EntityReference("nx_capability", Guid.NewGuid()), ["nx_safetyacknowledged"] = false };
+            var graph = new DraftGraphSnapshot { Graph = new DraftGraphInput { Contributors = new System.Collections.Generic.List<ContributorInput>(),
+                TechnologyIds = new System.Collections.Generic.List<string>(), IndustryIds = new System.Collections.Generic.List<string>(),
+                ProjectIds = new System.Collections.Generic.List<string>(), AreaIds = new System.Collections.Generic.List<string>() } };
+            var media = new System.Collections.Generic.List<Entity>();
+            Assert.Contains("specialization", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
+            graph.Graph.AreaIds.Add(Area);
+            Assert.Contains("safety", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
         }
 
         [Fact]
@@ -318,13 +342,17 @@ namespace Prisma.Plugins.Tests
         [Fact]
         public void GraphParserRejectsProtectedFieldsAndAcceptsIncompleteContributors()
         {
-            var json = "{\"contributors\":[{\"personId\":\"" + Area + "\",\"directHours\":null}],\"technologyIds\":[],\"industryIds\":[],\"projectIds\":[]}";
+            var json = "{\"contributors\":[{\"personId\":\"" + Area + "\",\"directHours\":null}],\"technologyIds\":[],\"industryIds\":[],\"projectIds\":[],\"areaIds\":[\"" + Area + "\"]}";
             var graph = DraftGraph.Parse(json, 125060004);
             Assert.Single(graph.Contributors);
             Assert.Null(graph.Contributors[0].DirectHours);
             Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"directHours\":null", "\"ownerid\":\"fake\""), 125060004));
             Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"projectIds\":[]", "\"projectIds\":[],\"approval\":true"), 125060004));
             Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"technologyIds\":[]", "\"technologyIds\":[\"fake\"]"), 125060004));
+            Assert.Equal(new[] { Area }, graph.AreaIds);
+            Assert.Empty(DraftGraph.Parse(json.Replace("\"areaIds\":[\"" + Area + "\"]", "\"areaIds\":[]"), 125060004).AreaIds);
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace(",\"areaIds\":[\"" + Area + "\"]", ""), 125060004));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"areaIds\":[\"" + Area + "\"]", "\"areaIds\":[\"" + Area + "\",\"" + Area + "\"]"), 125060004));
         }
 
         [Fact]

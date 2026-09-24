@@ -21,6 +21,7 @@ namespace Prisma.Plugins
         [DataMember(Name = "technologyIds", IsRequired = true)] public List<string> TechnologyIds { get; set; }
         [DataMember(Name = "industryIds", IsRequired = true)] public List<string> IndustryIds { get; set; }
         [DataMember(Name = "projectIds", IsRequired = true)] public List<string> ProjectIds { get; set; }
+        [DataMember(Name = "areaIds", IsRequired = true)] public List<string> AreaIds { get; set; }
     }
 
     [DataContract]
@@ -37,7 +38,8 @@ namespace Prisma.Plugins
         public const string SaveMessage = "nx_SaveDraftGraph";
         public const string ReadMessage = "nx_GetDraftGraph";
         public static readonly string[] Relationships = {
-            "nx_Solution_nx_Technology_nx_Technology", "nx_Solution_nx_Industry_nx_Industry", "nx_Solution_cr6b0_Project_cr6b0_Project"
+            "nx_Solution_nx_Technology_nx_Technology", "nx_Solution_nx_Industry_nx_Industry", "nx_Solution_cr6b0_Project_cr6b0_Project",
+            "nx_Solution_nx_SpecializationArea_nx_SpecializationArea"
         };
 
         public static DraftGraphInput Parse(string json, int maturity)
@@ -50,7 +52,7 @@ namespace Prisma.Plugins
                 using (var reader = JsonReaderWriterFactory.CreateJsonReader(bytes, new XmlDictionaryReaderQuotas { MaxDepth = 12, MaxStringContentLength = 200000, MaxArrayLength = 200000 }))
                 {
                     var root = XElement.Load(reader);
-                    CheckFields(root, "contributors", "technologyIds", "industryIds", "projectIds");
+                    CheckFields(root, "contributors", "technologyIds", "industryIds", "projectIds", "areaIds");
                     var contributors = root.Element("contributors");
                     if (contributors != null)
                         foreach (var contributor in contributors.Elements()) CheckFields(contributor, "id", "personId", "directHours", "startDate", "endDate", "allocation");
@@ -66,6 +68,7 @@ namespace Prisma.Plugins
             Identifiers(input.TechnologyIds);
             Identifiers(input.IndustryIds);
             Identifiers(input.ProjectIds);
+            Identifiers(input.AreaIds);
             return input;
         }
 
@@ -100,7 +103,8 @@ namespace Prisma.Plugins
                     Contributors = contributors,
                     TechnologyIds = Links(caller, parent.Id, Relationships[0]).Select(identifier => identifier.ToString()).ToList(),
                     IndustryIds = Links(caller, parent.Id, Relationships[1]).Select(identifier => identifier.ToString()).ToList(),
-                    ProjectIds = Links(caller, parent.Id, Relationships[2]).Select(identifier => identifier.ToString()).ToList()
+                    ProjectIds = Links(caller, parent.Id, Relationships[2]).Select(identifier => identifier.ToString()).ToList(),
+                    AreaIds = AreaIds(caller, parent.Id)
                 },
                 Hours = contributors.Select(person => ContributorPolicy.Hours(person, maturity)).ToList()
             };
@@ -131,6 +135,7 @@ namespace Prisma.Plugins
             SyncLinks(caller, parent.Id, Relationships[0], "nx_technology", Identifiers(input.TechnologyIds));
             SyncLinks(caller, parent.Id, Relationships[1], "nx_industry", Identifiers(input.IndustryIds));
             SyncLinks(caller, parent.Id, Relationships[2], "cr6b0_project", Identifiers(input.ProjectIds));
+            SyncLinks(caller, parent.Id, Relationships[3], "nx_specializationarea", Identifiers(input.AreaIds));
         }
 
         private static List<Entity> Children(IOrganizationService caller, Guid parent)
@@ -143,6 +148,18 @@ namespace Prisma.Plugins
             var rows = caller.RetrieveMultiple(query).Entities.ToList();
             if (rows.Count > 100) throw Invalid("Contributor limit exceeded.");
             return rows;
+        }
+
+        /// <summary>Linked specialization areas, primary first: ascending Sort Order, then id.</summary>
+        public static List<string> AreaIds(IOrganizationService caller, Guid parent)
+        {
+            var query = new QueryExpression("nx_specializationarea") { ColumnSet = new ColumnSet(false), TopCount = 101 };
+            query.AddLink("nx_solution_nx_specializationarea", "nx_specializationareaid", "nx_specializationareaid").LinkCriteria.AddCondition("nx_solutionid", ConditionOperator.Equal, parent);
+            query.Orders.Add(new OrderExpression("nx_sortordernumber", OrderType.Ascending));
+            query.Orders.Add(new OrderExpression("nx_specializationareaid", OrderType.Ascending));
+            var rows = caller.RetrieveMultiple(query).Entities;
+            if (rows.Count > 100) throw Invalid("Related record limit exceeded.");
+            return rows.Select(row => row.Id.ToString()).ToList();
         }
 
         private static HashSet<Guid> Links(IOrganizationService caller, Guid parent, string relationship)
