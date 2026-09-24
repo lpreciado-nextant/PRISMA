@@ -146,6 +146,9 @@ test("workflow rejects mismatched versions, unknown states and internal presenta
   const published = { id: draft.id, rowVersion: draft.rowVersion, contributors: [], totalHours: 0, projects: ["Internal project"], media: [] };
   assert.throws(() => parsePublished(result(published), draft.id, true), /projection/);
   assert.deepEqual(parsePublished(result(published), draft.id, false), published);
+  const effort = { id: spare, personId: draft.id, directHours: null, startDate: "2026-09-02", endDate: "2026-11-02", allocation: 50 };
+  const credited = { ...published, contributors: [{ name: "Builder", hours: 168, email: "builder@example.com", effort }], totalHours: 168 };
+  assert.deepEqual(parsePublished(result(credited), draft.id, false).contributors[0].effort, effort);
   assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: 1 }] }), draft.id, true), /credit/);
   assert.throws(() => parsePublished(result({ ...published, projects: [], libraryNotes: "Internal" }), draft.id, true), /projection/);
   assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: null, email: "builder@example.com" }] }), draft.id, true), /credit/);

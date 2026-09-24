@@ -128,7 +128,7 @@ export function parsePublished(value: unknown, id: string, present: boolean): Pu
     if (typeof row.name !== "string" || (present ? row.hours !== null : typeof row.hours !== "number" || !Number.isFinite(row.hours) || row.hours < 0)) throw new Error("Invalid contributor credit.");
     if (present && (row.email !== undefined || row.effort !== undefined)) throw new Error("Internal contributor credit in presentation projection.");
     if (row.email !== undefined && typeof row.email !== "string") throw new Error("Invalid contributor email.");
-    const effort = row.effort === undefined ? undefined : parseGraph(wrap({ id, rowVersion: data.rowVersion, graph: { contributors: [row.effort], technologyIds: [], industryIds: [], projectIds: [] }, hours: [row.hours] })).graph.contributors[0];
+    const effort = row.effort === undefined ? undefined : parseGraph(wrap({ id, rowVersion: data.rowVersion, graph: { contributors: [row.effort], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] }, hours: [row.hours] })).graph.contributors[0];
     return { name: row.name, hours: row.hours as number | null, ...(row.email === undefined ? {} : { email: row.email }), ...(effort ? { effort } : {}) };
   });
   if (typeof data.totalHours !== "number" || !Number.isFinite(data.totalHours) || data.totalHours < 0) throw new Error("Invalid effort total.");
