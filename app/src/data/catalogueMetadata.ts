@@ -55,8 +55,18 @@ export const CLIENT_ROLE_VALUES: Record<ClientRole, number> = {
 
 export const CLIENT_ROLES = Object.keys(CLIENT_ROLE_VALUES) as ClientRole[];
 
+/** Reverse of `CLIENT_ROLE_VALUES`, for a connected app that stores the numeric choice value. */
+export const CLIENT_ROLE_BY_VALUE: Record<number, ClientRole> = Object.fromEntries(
+  Object.entries(CLIENT_ROLE_VALUES).map(([label, value]) => [value, label]),
+) as Record<number, ClientRole>;
+
 /** `nx_solutioncontributor.nx_role`. */
 export const CONTRIBUTOR_ROLE_VALUES: Record<ContributorRole, number> = { CSM: 125060000, Consultant: 125060001 };
+
+/** Reverse of `CONTRIBUTOR_ROLE_VALUES`, for a connected app that stores the numeric choice value. */
+export const CONTRIBUTOR_ROLE_BY_VALUE: Record<number, ContributorRole> = Object.fromEntries(
+  Object.entries(CONTRIBUTOR_ROLE_VALUES).map(([label, value]) => [value, label]),
+) as Record<number, ContributorRole>;
 
 export const CONTRIBUTOR_ROLES = Object.keys(CONTRIBUTOR_ROLE_VALUES) as ContributorRole[];
 

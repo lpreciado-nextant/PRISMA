@@ -5,7 +5,7 @@ import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
 import { calculateEffort } from "../lib/effort";
-import { DemoStage } from "./ViewerView";
+import { DemoStage } from "../components/DemoStage";
 import { solutionAreas } from "../lib/areas";
 import { FavoriteButton } from "../components/FavoriteButton";
 
@@ -62,16 +62,18 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false }: {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite }: {
   solution: Solution; present: boolean; favoritable?: boolean; onEdit?: () => void; onBack?: () => void;
   backLabel?: string; reviewActions?: React.ReactNode; assetBasePath?: string;
   catalogueOnly?: boolean;
   connected?: boolean;
-  effort?: { contributors: { name: string; hours: number | null; email?: string; effortMode?: "direct" | "calendar"; startDate?: string | null; endDate?: string | null; allocation?: number | null; businessDays?: number | null }[]; totalHours: number | null };
+  effort?: { contributors: { name: string; hours: number | null; email?: string; effortMode?: "direct" | "calendar"; startDate?: string | null; endDate?: string | null; allocation?: number | null; businessDays?: number | null; contributorRole?: "CSM" | "Consultant" }[]; totalHours: number | null };
   gallery?: React.ReactNode;
   poster?: React.ReactNode;
   imageCount?: number;
   onAssetOpen?: (asset: DemoAsset) => void;
+  /** Controls the favorite heart instead of the PoC's local browser-only store. */
+  favorite?: { saved: boolean; pending?: boolean; onToggle: () => void };
 }) {
   const areas = solutionAreas(solution);
   const assets = [...solution.assets].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -85,9 +87,11 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
     const calendar = BUSINESS_CALENDARS.find((entry) => entry.id === contributor.calendarId);
     return { ...contributor, calendar, ...calculateEffort(contributor, calendar) };
   });
-  // nx_role = CSM rows are listed as the solution's CSM, not as builders.
+  // nx_role = CSM rows are listed as the solution's CSM, not as builders — in both the mock and connected effort shapes.
   const csms = contributions.filter((contributor) => contributor.contributorRole === "CSM");
   const builders = contributions.filter((contributor) => contributor.contributorRole !== "CSM");
+  const effortCsms = effort?.contributors.filter((person) => person.contributorRole === "CSM") ?? [];
+  const effortBuilders = effort?.contributors.filter((person) => person.contributorRole !== "CSM") ?? [];
   const totalHours = Math.round(contributions.reduce((total, contributor) => total + contributor.hours, 0) * 100) / 100;
 
   return (
@@ -118,7 +122,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
           <div className="flex flex-wrap items-center gap-2.5">
             {areas.map((area) => <AreaTag key={area} area={area} size="md" />)}
             <StatusPill status={solution.status} />
-            {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="order-last ml-auto" />}
+            {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="order-last ml-auto" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
             {!present && !solution.clientSafeReviewed && (
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.1em] uppercase"
@@ -249,7 +253,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
             <dl className="flex flex-col gap-3 text-[14px]">
               {!present && !catalogueOnly && <Row label="Built by">
                 <ul className="space-y-1 break-words">
-                  {effort ? effort.contributors.map((person, index) => <li key={index}>{!present && person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>) : builders.map(({ id, builtBy }) => (
+                  {effort ? effortBuilders.map((person, index) => <li key={index}>{!present && person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>) : builders.map(({ id, builtBy }) => (
                     <li key={id}>
                       {present ? builtBy.name : <a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a>}
                     </li>
@@ -257,9 +261,14 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
                 </ul>
               </Row>}
               <Row label={areas.length > 1 ? "Areas" : "Area"}>{areas.map((area) => AREAS[area].name).join(" · ")}</Row>
-              {!present && csms.length > 0 && <Row label={csms.length > 1 ? "CSMs" : "CSM"}>
+              {!present && !effort && csms.length > 0 && <Row label={csms.length > 1 ? "CSMs" : "CSM"}>
                 <ul className="space-y-1 break-words">
                   {csms.map(({ id, builtBy }) => <li key={id}><a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a></li>)}
+                </ul>
+              </Row>}
+              {!present && effort && effortCsms.length > 0 && <Row label={effortCsms.length > 1 ? "CSMs" : "CSM"}>
+                <ul className="space-y-1 break-words">
+                  {effortCsms.map((person, index) => <li key={index}>{person.email ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>)}
                 </ul>
               </Row>}
               {!present && !catalogueOnly && <Row label="Total effort">{effort ? effort.totalHours === null ? "Incomplete" : `${effort.totalHours.toLocaleString()} hours` : `${totalHours.toLocaleString()} hours`}</Row>}
@@ -276,7 +285,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
           {!present && !catalogueOnly && (
             <Panel title="Contributor effort">
               <ul className="space-y-4 text-[14px]">
-                {effort ? effort.contributors.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.name}</p>{person.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : person.effortMode === "calendar" && <><p className="text-[12px]">{person.startDate || "Start date missing"} to {person.endDate || "End date missing"}</p><p>{person.allocation === null ? "Allocation missing" : `${person.allocation}% allocation`}{person.businessDays !== null && person.businessDays !== undefined ? ` · ${person.businessDays} business days` : ""}</p><p className="text-[12px] text-(--ink-3)">US federal holidays</p></>}<p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : contributions.map((contributor) => (
+                {effort ? effortBuilders.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.name}{person.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {person.contributorRole}</span>}</p>{person.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : person.effortMode === "calendar" && <><p className="text-[12px]">{person.startDate || "Start date missing"} to {person.endDate || "End date missing"}</p><p>{person.allocation === null ? "Allocation missing" : `${person.allocation}% allocation`}{person.businessDays !== null && person.businessDays !== undefined ? ` · ${person.businessDays} business days` : ""}</p><p className="text-[12px] text-(--ink-3)">US federal holidays</p></>}<p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : contributions.map((contributor) => (
                   <li key={contributor.id} className="break-words">
                     <p className="font-semibold">{contributor.builtBy.name}{contributor.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {contributor.contributorRole}</span>}</p>
                     {contributor.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : <>

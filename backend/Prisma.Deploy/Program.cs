@@ -518,6 +518,10 @@ foreach (var roleName in new[] { "PRISMA Contributor", "PRISMA CSM", "PRISMA Lib
     foreach (var table in new[] { "nx_demoasset", "nx_solutionimage" })
         foreach (var privilege in Metadata(client, table).Privileges.Where(privilege => privilege.PrivilegeType == PrivilegeType.Read))
             privileges.Add(new RolePrivilege((int)(roleName == "PRISMA Librarian" ? PrivilegeDepth.Global : PrivilegeDepth.Basic), privilege.PrivilegeId));
+    // Every role gets User depth only, including the Librarian: nobody reads another person's favorites directly.
+    foreach (var privilege in Metadata(client, "nx_solutionfavorite").Privileges)
+        if (new[] { PrivilegeType.Create, PrivilegeType.Read, PrivilegeType.Delete }.Contains(privilege.PrivilegeType))
+            privileges.Add(new RolePrivilege((int)PrivilegeDepth.Basic, privilege.PrivilegeId));
     if (roleName != "PRISMA CSM")
         foreach (var privilege in solutionMetadata.Privileges.Where(privilege => privilege.PrivilegeType == PrivilegeType.AppendTo))
             privileges.Add(new RolePrivilege((int)(roleName == "PRISMA Librarian" ? PrivilegeDepth.Global : PrivilegeDepth.Basic), privilege.PrivilegeId));
@@ -585,6 +589,10 @@ RegisterApi(client, reviewType, "nx_TransitionSubmission", "prvWritenx_Solution"
 });
 var publishedType = PluginType(client, assemblyId, "Prisma.Plugins.PublishedApi");
 RegisterApi(client, publishedType, "nx_GetPublishedDetail", "prvReadnx_Solution", new[] { ("SolutionId", 12, false), ("Present", 0, false) });
+// nx_solutionfavorite's schema name is lowercase (accepted quirk, see SchemaV2), so its generated privilege names are too.
+var favoriteType = PluginType(client, assemblyId, "Prisma.Plugins.FavoriteApi");
+RegisterApi(client, favoriteType, "nx_SetFavorite", "prvCreatenx_solutionfavorite", new[] { ("SolutionId", 12, false), ("Saved", 0, false) });
+RegisterApi(client, favoriteType, "nx_GetMyFavorites", "prvReadnx_solutionfavorite", Array.Empty<(string, int, bool)>());
 Console.WriteLine("Draft graph and media APIs/guards registered. Application roles remain unassigned. No code app was published.");
 
 static void EnsureMediaSchema(IOrganizationService service, Guid businessUnit)

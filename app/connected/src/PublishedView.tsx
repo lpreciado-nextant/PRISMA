@@ -15,7 +15,7 @@ import { MATURITY_OPTIONS } from "./drafts";
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px]";
 
-export function PublishedView({ solution, present, assetId }: { solution: Solution; present: boolean; assetId?: string }) {
+export function PublishedView({ solution, present, assetId, favorite }: { solution: Solution; present: boolean; assetId?: string; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void } }) {
   const [detail, setDetail] = useState<PublishedDetail | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -38,6 +38,7 @@ export function PublishedView({ solution, present, assetId }: { solution: Soluti
   const effort = { ...detail, contributors: detail.contributors.map(person => person.effort ? contributorCredit(person.effort, maturity, person.name, person.hours, person.email) : person) };
   const thumbnail = detail.media.find(item => item.kind === "thumbnail" && item.complete);
   return <DetailView solution={hydrated} present={present} connected effort={effort} imageCount={detail.media.filter(item => item.kind === "image").length}
+    favoritable={!!favorite} favorite={favorite}
     poster={thumbnail && <div className="h-40 overflow-hidden sm:h-52"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     gallery={<PublishedGallery media={detail.media} onOpen={item => navigate(`/s/${solution.id}/demo/${item.id}`)} />}
     reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}

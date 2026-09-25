@@ -1,5 +1,8 @@
 import { coreFields, EMPTY_DRAFT, MATURITY_OPTIONS, type CoreDraft } from "./drafts.ts";
 import { emptyGraph, type DraftGraph } from "./draftGraph.ts";
+import { CONTRIBUTOR_ROLE_VALUES } from "../../src/data/catalogueMetadata.ts";
+
+const CONTRIBUTOR_ROLE_VALUE_SET = new Set(Object.values(CONTRIBUTOR_ROLE_VALUES));
 
 const prefix = "prisma.connected.recovery:";
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -10,7 +13,7 @@ export function clearRecoveries(storage: Storage) {
 }
 export function recoveryPayload(owner: string, id: string | undefined, rowVersion: string | undefined, draft: CoreDraft, graph: DraftGraph, step: number, uncertain = false): string {
   return JSON.stringify({ version: 1, owner: owner.toLowerCase(), id: id ?? "new", rowVersion: rowVersion ?? "", draft: coreFields(draft),
-    graph: { contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours, startDate: person.startDate, endDate: person.endDate, allocation: person.allocation })), technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds }, step, uncertain });
+    graph: { contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours, startDate: person.startDate, endDate: person.endDate, allocation: person.allocation, roleValue: person.roleValue })), technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds }, step, uncertain });
 }
 export function parseRecovery(text: string, owner: string, id?: string): DraftRecovery {
   if (text.length > 200000) throw new Error("Recovery is oversized.");
@@ -27,6 +30,9 @@ export function parseRecovery(text: string, owner: string, id?: string): DraftRe
     if (!person || (person.personId !== "" && !guid.test(person.personId)) || (person.id !== null && !guid.test(person.id))) throw new Error("Invalid recovery person.");
     for (const key of ["directHours", "allocation"] as const) if (person[key] !== null && (typeof person[key] !== "number" || !Number.isFinite(person[key]) || person[key] < 0 || person[key] > (key === "allocation" ? 100 : 1e9))) throw new Error("Invalid recovery effort.");
     for (const key of ["startDate", "endDate"] as const) if (person[key] !== null && (typeof person[key] !== "string" || (person[key] !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(person[key])))) throw new Error("Invalid recovery date.");
+    // Recoveries written before contributor roles carry no roleValue; they restore with none selected.
+    if (person.roleValue === undefined) person.roleValue = null;
+    else if (person.roleValue !== null && !CONTRIBUTOR_ROLE_VALUE_SET.has(person.roleValue)) throw new Error("Invalid recovery role.");
   }
   // Recoveries written before specialization areas moved to the graph carry no areaIds; they restore with none selected.
   if (graph.areaIds === undefined) graph.areaIds = [];

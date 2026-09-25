@@ -227,11 +227,13 @@ type IdentityProps<Area extends string, Status extends string, Role extends stri
   area?: Area; areas: { value: Area; label: string }[]; onArea?: (value: Area) => void;
   status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void;
   role?: Role | ""; roles?: readonly Role[]; onRole?: (value: Role | "") => void;
+  /** Multi-valued mode (native N:N). When set, replaces the single-area picker. */
+  selectedAreas?: Area[]; onAreas?: (value: Area[]) => void; maxAreas?: number;
 };
 
 /** Name, summary, area and status. \`grouped\` splits them into labelled subsections inside a section card. */
 /** Pass `selectedAreas` + `onAreas` for N:N specialization areas (up to `maxAreas`); otherwise `area` + `onArea` pick one. */
-export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "role" | "roles" | "onRole"> & { grouped?: boolean; selectedAreas?: Area[]; onAreas?: (value: Area[]) => void; maxAreas?: number }) {
+export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "role" | "roles" | "onRole"> & { grouped?: boolean }) {
   const toggleArea = (option: Area) => {
     if (!selectedAreas || !onAreas) return;
     if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));

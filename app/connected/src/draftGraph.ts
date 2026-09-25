@@ -1,6 +1,9 @@
 import { coreFields, saveDraft, type CoreDraft, type DraftApi, type DraftResult, type SavedDraft } from "./drafts.ts";
 import { readAll, type ReadRows } from "./catalogue.ts";
 import { calculateEffort, usBusinessCalendar } from "../../src/lib/effort.ts";
+import { CONTRIBUTOR_ROLE_VALUES, CONTRIBUTOR_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata.ts";
+
+const CONTRIBUTOR_ROLE_VALUE_SET = new Set(Object.values(CONTRIBUTOR_ROLE_VALUES));
 
 const calendar = usBusinessCalendar(2020, 2035);
 export function contributorEffort(person: Contributor, maturity: number) {
@@ -22,7 +25,7 @@ export function contributorEffort(person: Contributor, maturity: number) {
 export type GraphReferences = Record<"people" | "technologies" | "industries" | "projects", { id: string; name: string; email?: string }[] | null>;
 export function initialContributor(references: GraphReferences, owner: string): DraftGraph {
   const people = references.people?.filter(person => person.email?.trim().toLowerCase() === owner.trim().toLowerCase()) ?? [];
-  return { ...emptyGraph(), contributors: people.length === 1 ? [{ id: null, personId: people[0].id, directHours: null, allocation: 100, startDate: null, endDate: null }] : [] };
+  return { ...emptyGraph(), contributors: people.length === 1 ? [{ id: null, personId: people[0].id, directHours: null, allocation: 100, startDate: null, endDate: null, roleValue: null }] : [] };
 }
 export async function loadGraphReferences(read: ReadRows, signal: AbortSignal): Promise<GraphReferences> {
   const definitions = [
@@ -54,6 +57,8 @@ export interface Contributor {
   startDate: string | null;
   endDate: string | null;
   allocation: number | null;
+  /** `nx_solutioncontributor.nx_role` numeric choice value: 125060000 CSM, 125060001 Consultant. */
+  roleValue: number | null;
 }
 export interface DraftGraph {
   contributors: Contributor[];
@@ -70,7 +75,7 @@ export interface GraphApi {
 export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] });
 
 export function isEmptyContributor(person: Contributor): boolean {
-  return !person.id && !person.personId && person.directHours === null && !person.startDate && !person.endDate && (person.allocation === null || person.allocation === 100);
+  return !person.id && !person.personId && person.directHours === null && !person.startDate && !person.endDate && (person.allocation === null || person.allocation === 100) && !person.roleValue;
 }
 
 export async function persistDraftGraph(coreApi: DraftApi, graphApi: GraphApi, draft: CoreDraft, saved: SavedDraft | undefined, graph: DraftGraph, baseline: DraftGraph, signal: AbortSignal, onConfirmed: (core: SavedDraft, graph: DraftGraph) => void) {
@@ -123,14 +128,15 @@ export function parseGraph(result: DraftResult): GraphSnapshot {
       if (number !== null && (typeof number !== "number" || !Number.isFinite(number) || number < 0)) throw new Error("Invalid effort number.");
     }
     for (const field of ["startDate", "endDate"]) if (person[field] !== null && (typeof person[field] !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(person[field] as string))) throw new Error("Invalid effort date.");
-    return { id: person.id, personId: person.personId, directHours: person.directHours as number | null, allocation: person.allocation as number | null, startDate: person.startDate as string | null, endDate: person.endDate as string | null };
+    if (person.roleValue !== null && person.roleValue !== undefined && !CONTRIBUTOR_ROLE_VALUE_SET.has(person.roleValue as number)) throw new Error("Invalid contributor role.");
+    return { id: person.id, personId: person.personId, directHours: person.directHours as number | null, allocation: person.allocation as number | null, startDate: person.startDate as string | null, endDate: person.endDate as string | null, roleValue: (person.roleValue as number | null) ?? null };
   });
   if (new Set(contributors.map(person => person.personId)).size !== contributors.length) throw new Error("Duplicate contributor.");
   return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds) }, hours: data.hours as (number | null)[] };
 }
 export function graphPayload(graph: DraftGraph): string {
   return JSON.stringify({
-    contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours, startDate: person.startDate, endDate: person.endDate, allocation: person.allocation })),
+    contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours, startDate: person.startDate, endDate: person.endDate, allocation: person.allocation, roleValue: person.roleValue })),
     technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds,
   });
 }
@@ -138,5 +144,6 @@ export function graphPayload(graph: DraftGraph): string {
 export function contributorCredit(person: Contributor, maturity: number, name: string, hours: number | null, email?: string) {
   const preview = contributorEffort(person, maturity);
   return { name, hours, email, effortMode: maturity === 125060001 || maturity === 125060004 ? "direct" as const : "calendar" as const,
-    startDate: person.startDate, endDate: person.endDate, allocation: person.allocation, businessDays: preview.error ? null : preview.businessDays };
+    startDate: person.startDate, endDate: person.endDate, allocation: person.allocation, businessDays: preview.error ? null : preview.businessDays,
+    contributorRole: person.roleValue != null ? CONTRIBUTOR_ROLE_BY_VALUE[person.roleValue] : undefined };
 }

@@ -181,10 +181,15 @@ test("both adapters consume the shared form and review surfaces", async () => {
     assert.match(poc, new RegExp(`<${component}\\b`));
     assert.match(connected, new RegExp(`<${component}\\b`));
   }
-  // The guided PoC flow uses IdentityFields' two halves as separate steps; the connected app keeps the combined step.
-  assert.match(connected, /<IdentityFields\b/);
-  assert.match(poc, /<SolutionDetailsFields\b/);
-  assert.match(poc, /<ClientFields\b/);
+  // Both flows render Solution details and Client as separate section cards on the same "What is it?" step.
+  for (const source of [poc, connected]) {
+    assert.match(source, /<SolutionDetailsFields\b/);
+    assert.match(source, /<ClientFields\b/);
+  }
+  for (const source of [poc, connected]) {
+    assert.match(source, /<NamedSection title="Solution details">/);
+    assert.match(source, /<NamedSection title="Built by & effort">/);
+  }
   for (const source of [poc, graph]) assert.match(source, /<ContributorRow\b/);
   for (const source of [poc, media]) assert.match(source, /<SubmissionMedia\b/);
   for (const source of [pocReview, connectedReview]) assert.match(source, /<ReviewPanel\b/);

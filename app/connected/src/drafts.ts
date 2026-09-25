@@ -1,4 +1,7 @@
 import { readAll, type ReadRows } from "./catalogue.ts";
+import { CLIENT_ROLE_VALUES } from "../../src/data/catalogueMetadata.ts";
+
+const CLIENT_ROLE_VALUE_SET = new Set(Object.values(CLIENT_ROLE_VALUES));
 
 export const MATURITY_OPTIONS = [
   { value: 125060001, label: "Idea / concept" },
@@ -17,6 +20,8 @@ export interface CoreDraft {
   clientContext: string;
   clientContextRedacted: string;
   safetyAcknowledged: boolean;
+  /** `nx_solution.nx_clientrole` numeric choice value. Optional, no default. */
+  clientRoleValue?: number;
 }
 
 export interface SavedDraft extends CoreDraft { id: string; rowVersion: string }
@@ -54,7 +59,8 @@ export function snapshot(value: unknown): SavedDraft {
   }
   if (TEXT_FIELDS.some(field => typeof row[field] !== "string") || typeof row.safetyAcknowledged !== "boolean"
     || !MATURITY_OPTIONS.some(option => option.value === row.maturity)
-    || (row.capabilityId !== "" && !GUID.test(row.capabilityId as string))) {
+    || (row.capabilityId !== "" && !GUID.test(row.capabilityId as string))
+    || (row.clientRoleValue !== undefined && row.clientRoleValue !== null && !CLIENT_ROLE_VALUE_SET.has(row.clientRoleValue as number))) {
     throw new Error("Invalid core draft fields.");
   }
   return { ...coreFields(row as unknown as CoreDraft), id: row.id, rowVersion: row.rowVersion };
@@ -66,6 +72,7 @@ export function coreFields(draft: CoreDraft): CoreDraft {
     maturity: draft.maturity, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
     clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
     safetyAcknowledged: draft.safetyAcknowledged,
+    ...(draft.clientRoleValue != null ? { clientRoleValue: draft.clientRoleValue } : {}),
   };
 }
 

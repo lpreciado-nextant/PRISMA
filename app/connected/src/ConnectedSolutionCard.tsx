@@ -6,7 +6,7 @@ import { loadSubmissionCardDetails, parsePublished } from "./workflow";
 import type { MediaItem } from "./media";
 import { ProtectedImage } from "./ProtectedImage";
 
-export function ConnectedSolutionCard({ solution, present, index, owned = false, onOpen }: { solution: Solution; present: boolean; index: number; owned?: boolean; onOpen?: () => void }) {
+export function ConnectedSolutionCard({ solution, present, index, owned = false, onOpen, favorite }: { solution: Solution; present: boolean; index: number; owned?: boolean; onOpen?: () => void; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void } }) {
   const container = useRef<HTMLDivElement>(null);
   const [details, setDetails] = useState<{ media: MediaItem[]; names: string[]; technologies?: string[] } | null>(null);
   const [error, setError] = useState(false);
@@ -26,7 +26,8 @@ export function ConnectedSolutionCard({ solution, present, index, owned = false,
         } else {
           const detail = parsePublished(await workflowApi.published(solution.id, present), solution.id, present);
           controller.signal.throwIfAborted();
-          setDetails({ media: detail.media, names: detail.contributors.map(person => person.name) });
+          // Present mode never exposes builder names on cards.
+          setDetails({ media: detail.media, names: present ? [] : detail.contributors.map(person => person.name) });
         }
       } catch { if (!controller.signal.aborted) setError(true); }
       finally { clearTimeout(timeout); }
@@ -38,6 +39,7 @@ export function ConnectedSolutionCard({ solution, present, index, owned = false,
   const thumbnail = details?.media.find(item => item.kind === "thumbnail" && item.complete);
   return <div ref={container} className="grid min-w-0">
     <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet", technologies: details?.technologies ?? solution.technologies }} present={present} index={index} onOpen={onOpen} showPublicationStatus={owned} catalogueOnly={!owned} contributorNames={details?.names}
+      favoritable={!owned && !present} favorite={favorite}
       poster={thumbnail && <div className="h-36 overflow-hidden"><ProtectedImage key={thumbnail.id} item={thumbnail} className="h-full w-full object-cover" /></div>} />
     {error && <p role="status" className="mt-2 text-[12px] text-(--ink-2)">Card details unavailable.</p>}
   </div>;

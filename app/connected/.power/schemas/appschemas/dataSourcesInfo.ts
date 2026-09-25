@@ -555,6 +555,56 @@ export const dataSourcesInfo = {
       }
     }
   },
+  "nx_setfavorite": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_SetFavorite": {
+        "path": "/api/data/v9.2/nx_SetFavorite",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "SolutionId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "Saved",
+            "in": "body",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "nx_getmyfavorites": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_GetMyFavorites": {
+        "path": "/api/data/v9.2/nx_GetMyFavorites",
+        "method": "POST",
+        "parameters": [],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "nx_savedraftgraph": {
     "tableId": "",
     "version": "",

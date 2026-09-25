@@ -16,10 +16,14 @@ namespace Prisma.Plugins
         [DataMember(Name = "startDate")] public string StartDate { get; set; }
         [DataMember(Name = "endDate")] public string EndDate { get; set; }
         [DataMember(Name = "allocation")] public decimal? Allocation { get; set; }
+        /// <summary>`nx_solutioncontributor.nx_role` numeric choice value: 125060000 CSM, 125060001 Consultant. Optional, no default.</summary>
+        [DataMember(Name = "roleValue")] public int? RoleValue { get; set; }
     }
 
     public static class ContributorPolicy
     {
+        public static readonly int[] RoleValues = { 125060000, 125060001 };
+
         public static bool Direct(int maturity) { return maturity == 125060001 || maturity == 125060004; }
 
         public static void Validate(IList<ContributorInput> contributors, int maturity, bool complete)
@@ -33,6 +37,7 @@ namespace Prisma.Plugins
                 if (contributor == null) throw Invalid("Invalid contributor.");
                 if (!people.Add(Identifier(contributor.PersonId))) throw Invalid("Select each contributor only once.");
                 if (!string.IsNullOrEmpty(contributor.Id) && !rows.Add(Identifier(contributor.Id))) throw Invalid("Duplicate contributor row.");
+                if (contributor.RoleValue.HasValue && !RoleValues.Contains(contributor.RoleValue.Value)) throw Invalid("Select a supported contributor role.");
                 Number(contributor.DirectHours, 1000000000m, "Direct hours");
                 Number(contributor.Allocation, 100m, "Allocation");
                 var start = Date(contributor.StartDate);
