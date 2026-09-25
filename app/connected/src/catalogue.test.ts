@@ -43,6 +43,13 @@ test("maps live names, numeric choices, lookups and N:N tag queries", async () =
   assert.match(calls.find(([table]) => table === "industries")![1].filter!, new RegExp(solutionId));
 });
 
+test("a published solution without areas still loads, like one without industries", async () => {
+  const base = reader();
+  const [result] = await loadCatalogue(async (table, options) => table === "areas" ? { success: true, data: [] } : base(table, options), false, signal());
+  assert.equal(result.name, "Fixture solution");
+  assert.deepEqual(result.specializationAreas, []);
+});
+
 test("presentation filters on the server and projects no internal fields", async () => {
   const query = catalogueQuery(true);
   assert.match(query.filter!, /nx_publicationstatus eq 125060000/);
@@ -58,13 +65,13 @@ test("presentation filters on the server and projects no internal fields", async
   assert(!JSON.stringify(result).includes("Internal"));
 });
 
-test("multiple areas put the lowest sort order first and unmapped, duplicate or missing areas fail closed", () => {
+test("multiple areas put the lowest sort order first, no areas is allowed, and unmapped or duplicate areas fail closed", () => {
   const area = (id: string, name: string, order: number | null) => ({ nx_specializationareaid: id, nx_specializationareaname: name, nx_sortordernumber: order });
   const data = "44444444-4444-4444-4444-444444444444";
   const ibo = "55555555-5555-5555-5555-555555555555";
   assert.deepEqual(orderedAreas([area(ibo, "ibo", 30), area(areaId, "ai", 10), area(data, "data", 20)]), ["ai", "data", "ibo"]);
   assert.deepEqual(orderedAreas([area(areaId, "ai", null), area(data, "data", 20)]), ["data", "ai"]);
-  assert.throws(() => orderedAreas([]), /no specialization area/);
+  assert.deepEqual(orderedAreas([]), []);
   assert.throws(() => orderedAreas([area(areaId, "other", 10)]), /unmapped/);
   assert.throws(() => orderedAreas([area(areaId, "ai", 10), area(data, "ai", 20)]), /duplicate/);
 });

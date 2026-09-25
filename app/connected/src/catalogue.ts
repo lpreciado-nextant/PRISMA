@@ -47,7 +47,7 @@ function id(row: object, key: string): string {
 
 const AREA_KEYS: readonly string[] = ["ai", "data", "ibo"];
 
-/** Areas linked through the native N:N, primary first: lowest Sort Order, unordered rows last, ties by id. */
+/** Areas linked through the native N:N, primary first: lowest Sort Order, unordered rows last, ties by id. May be empty, like industries. */
 export function orderedAreas(rows: object[]): SpecializationArea[] {
   const areas = rows.map(row => {
     const order = value(row, "nx_sortordernumber");
@@ -55,7 +55,6 @@ export function orderedAreas(rows: object[]): SpecializationArea[] {
     if (!AREA_KEYS.includes(name)) throw new Error("A solution has an unmapped specialization area.");
     return { id: id(row, "nx_specializationareaid"), name: name as SpecializationArea, order: typeof order === "number" ? order : Number.POSITIVE_INFINITY };
   });
-  if (!areas.length) throw new Error("A solution has no specialization area.");
   if (new Set(areas.map(area => area.name)).size !== areas.length) throw new Error("A solution has a duplicate specialization area.");
   return areas.sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map(area => area.name);
 }
@@ -143,7 +142,8 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       summary: text(row, "nx_onelinesummary", true),
       whatItDoes: text(row, "nx_whatitdoes"),
       businessValue: text(row, "nx_businessvalue"),
-      specializationArea: specializationAreas[0],
+      // A solution with no linked area (legacy or test data) still loads; "ai" only supplies the card colour.
+      specializationArea: specializationAreas[0] ?? "ai",
       specializationAreas,
       status,
       publicationStatus: "Published",

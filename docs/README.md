@@ -28,6 +28,7 @@ Documentation map for the PRISMA — Nextant Solution Library project. The [end-
 | | [Success metrics](delivery/success-metrics.md) | Goal-mapped metrics and targets |
 | | [Risks](delivery/risks.md) | Risk register with mitigations |
 | | [Decision log](delivery/decision-log.md) | Open questions and their resolutions |
+| | [Change log by meeting](delivery/change-log.md) | Per-meeting feedback and proposed changes, tracked from proposal to live |
 | **Operations** | [Librarian runbook](operations/librarian-runbook.md) | Review queue, publication gate, retirement, reference-data upkeep |
 | | [Content health](operations/content-health.md) | Link checks, staleness review, re-confirmation cycle |
 | **Implementation** | [Code app PoC](../app/README.md) | The look-and-feel proof of concept — current visual reference |
