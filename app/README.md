@@ -167,6 +167,8 @@ With explicit approval, `Prisma.Deploy apply` (built from `main` `86cc461`, 49 b
 
 The connected build (bundle `index-S-q4b2xM.js`, 56 connected and 25 UI tests, lint) was then pushed to the same PRISMA app ID. The first push omitted `--solution-id`, which moved the app out of `PRISMA_Dev`; pushing the same build again with `--solution-id adddc940-98ff-4b2f-9c8a-e89245c2fc33` restored it. **Always pass `--solution-id` when pushing PRISMA.** The user verified in the hosted app that PRISMA is back in `PRISMA_Dev` and that saving and removing a favorite works.
 
+A second `apply` the same day stopped `nx_GetPublishedDetail` from returning contributor credits in present mode and added the Specialization Area N:N to `PRISMA_Dev`; the user verified both. A follow-up push with `--solution-id` (bundle `index-gwvYRZUA.js`, 57 connected tests) added the "Target client role" library filter and hid My favorites on the welcome screen; the user verified both in Local Play.
+
 ### Pilot deployment (2026-09-22)
 
 **[Open connected PRISMA](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)**
