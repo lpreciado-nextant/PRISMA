@@ -1,6 +1,6 @@
 # PRISMA documentation
 
-**Status:** Living, including synchronized schema references and PRISMA_Dev environment context · **Last updated:** 2026-09-21
+**Status:** Living, including schema references, PRISMA_Dev context, proposed Azure Blob Storage transition, verified offline migration tooling and compiled infrastructure templates; no Azure deployment · **Last updated:** 2026-09-28
 
 Documentation map for the PRISMA — Nextant Solution Library project. The [end-to-end design](design/end-to-end-design.md) is the overview; each aspect below has a dedicated living document.
 
@@ -14,6 +14,8 @@ Documentation map for the PRISMA — Nextant Solution Library project. The [end-
 | | [Design system](design/design-system.md) | Palette, typography, liquid-glass surface language, motion, theming |
 | | [Accessibility](design/accessibility.md) | WCAG 2.1 AA commitments and verification checklist |
 | **Architecture** | [Technical architecture](architecture/technical-architecture.md) | Stack, system shape, integration points, search approach |
+| | [Azure Blob Storage transition plan](architecture/technical-architecture.md#azure-blob-storage-transition-plan) | Draft migration scope, security decisions, phased gates and rollback; not deployment authorization |
+| | [Infrastructure template runbook](architecture/technical-architecture.md#infrastructure-template-runbook) | Private-storage Bicep foundation, required IT inputs, local checks and undeployed cloud acceptance gates |
 | | [Security model](architecture/security-model.md) | Roles, table privileges, field-level security, present-mode enforcement |
 | | [Decision records](architecture/decisions/README.md) | ADRs — why key technical choices were made |
 | **Data model** | [Dataverse schema spec (v2)](data_model/SchemaV2.md) | Authoritative table specs with live logical names and types, relationships, contributor effort, US calendar and validation |
@@ -32,6 +34,7 @@ Documentation map for the PRISMA — Nextant Solution Library project. The [end-
 | **Operations** | [Librarian runbook](operations/librarian-runbook.md) | Review queue, publication gate, retirement, reference-data upkeep |
 | | [Content health](operations/content-health.md) | Link checks, staleness review, re-confirmation cycle |
 | **Implementation** | [Code app PoC](../app/README.md) | The look-and-feel proof of concept — current visual reference |
+| | [Offline migration dry runs](../app/README.md#offline-migration-dry-runs) | Evidence manifests, independent snapshot verification, immutable checkpoints/resume and rollback reports; no live copy or reference changes |
 
 ## Conventions
 

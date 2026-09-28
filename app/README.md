@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Shared loading states deployed; hosted submission/review loaders, fonts, logos and empty-catalogue present mode verified. Two-field story deployed and hosted save/reopen verified; retired Dataverse column deleted. Connected profile photo included in the approved publication. Welcome/Begin transition and video fallback notice deployed and hosted-verified; submission, return/revision, publication and present-mode workflow previously passed with one privileged account. Non-admin and separate-reviewer acceptance remain open.
-**Last updated:** 2026-09-22
+**Status:** All six local media-preparation items are complete: durable uploads, failure/cleanup tests, repeatable Edge acceptance, HTML/documents, offline migration verification/recovery/rollback reports, and locally compiled infrastructure templates. No live exporter, migration execution or Azure provisioning. Shared MP4 contract and Dataverse/local Blob adapters tested; production remains on Dataverse. Local scans and identities are simulated, not real malware scanning or authorization. Shared loading states deployed; hosted submission/review loaders, fonts, logos and empty-catalogue present mode verified. Two-field story deployed and hosted save/reopen verified; retired Dataverse column deleted. Connected profile photo included in the approved publication. Welcome/Begin transition and video fallback notice deployed and hosted-verified; submission, return/revision, publication and present-mode workflow previously passed with one privileged account. Non-admin and separate-reviewer acceptance remain open.
+**Last updated:** 2026-09-28
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -82,6 +82,268 @@ npm run test:ui      # shared form/media/review rendering and adapter-wiring che
 npm run build        # TypeScript + production bundle
 npm run lint
 ```
+
+## Local Blob media workbench
+
+An isolated development slice for the [proposed Blob Storage transition](../docs/architecture/technical-architecture.md#azure-blob-storage-transition-plan). It uses the real Azure Blob SDK against a local Azurite process, SQLite-backed API state and a separate React workbench. No Azure subscription, credentials, Docker, Dataverse connection or Power Apps sign-in is needed. Use Node 22.13+ (Node 24 recommended for built-in `node:sqlite`) and non-sensitive, known-safe MP4, HTML, PDF, PPT or PPTX fixtures only.
+
+From `app/`, after installing dependencies:
+
+```powershell
+npm run dev:media      # http://127.0.0.1:5180/; selects another port if occupied
+npm run test:media     # policy, lifecycle, HTTP guards, Azurite and cleanup recovery
+npm run check:media    # isolated frontend TypeScript check
+npm run lint
+```
+
+The default retained workspace is `%LOCALAPPDATA%/PRISMA/media-lab` on Windows, or `~/.local/share/PRISMA/media-lab` without `LOCALAPPDATA`. The launcher prints the exact directory and available UI port. To use a separate workspace, run `npm run dev:media -- --data-dir <local-directory>`. Keep it on a local, non-synchronized filesystem outside the repository and public app assets. Restart with the same directory to retain the catalogue; a different directory is a separate catalogue, not a migration.
+
+The launcher starts both servers on `127.0.0.1`, with an available private emulator port and a freshly generated emulator-only account key that is never sent to the browser. The storage adapter refuses non-loopback endpoints. The API requires a matching loopback Host/Origin and an explicit local request header; these guards reduce accidental browser access, but **simulated identities are not authentication**. Never publish this API or expose either server to a network.
+
+### Local workflow
+
+1. As **Builder**, create a draft, choose an attachment and Upload. This slice supports one file per draft: MP4 up to 500 MiB, or HTML/HTM, PDF, PPT or PPTX up to 25 MiB. It does not automatically compress files. The server derives MIME and limits from the filename, independently of client MIME.
+2. Pause during upload, then **Reopen** to retrieve the confirmed server version and checkpoint. The API can now be restarted at this point. Reload the lab, select the saved draft, reselect the exact original file and Resume upload. Name, size and SHA-256 must match. An ambiguous response locks writes until Reopen; confirmed blocks are not replayed. Two-hour expiry requires removal/restart and is not extended by resume or server restart.
+3. After server-side SHA-256, size and basic type checks, the completed file is **quarantined**. As its owner, choose a simulated scanner outcome and Run simulated scan. Only an explicit simulated pass enables preview/download and submission. MP4 preview uses protected 1 MiB reads and the connected streaming engine/caption extractor; unsupported streaming layouts offer explicit full-file playback. HTML uses an isolated preview; documents are download-only, never embedded in an iframe, object or PDF viewer. Download retrieves original bytes through bounded reads, with a final access check. Full-file operations still allocate the complete file in browser memory.
+4. Submit for local review. Switch to **Librarian**, select the draft, confirm the non-sensitive client-safe fixture and Publish locally. Switch to **CSM reader**, select the published item and use Present mode. The other builder cannot read a private draft.
+5. Withdraw as the owner or librarian. Subsequent published/present reads are denied; an already-open player or attachment view checks every 30 seconds and clears its source/HTML preview and disables downloading after failure. Each download also rechecks authorization; a denied download clears its busy state and stays disabled. Already-delivered bytes cannot be recalled. Removing a draft upload deletes its staged and finalized blobs.
+
+The label **Integrity verified / not malware-scanned** is intentional. Type checks are limited to MP4 `ftyp`, PDF `%PDF-`, PPT CFB/OLE magic and PPTX ZIP magic; HTML must be valid UTF-8 without null bytes. These do not validate an entire PDF, Office container or presentation, detect macros, certify codecs or scan malware. Local publication remains a workflow simulation, not production approval.
+
+HTML preview reuses the connected viewer's restrictive CSP and `sandbox="allow-scripts"`, without `allow-same-origin`, and uses `no-referrer`. Inline interaction is permitted; parent DOM, same-origin storage, fetch, external script/style resources, nested frames, objects and form submission are restricted. Data/blob images and media are permitted by the existing policy. The CSP is prepended only to the preview DOM; downloading returns the original, unchanged file. Withdrawal removes the iframe on the next failed authorization check. This preserves the existing viewer policy, not a claim that arbitrary HTML is safe outside that sandbox.
+
+### Simulated quarantine
+
+The [local scanner](scripts/local-media/scanner.mjs) is deliberately fake: its outcome is selected in the workbench and it performs no malware detection. Use only non-sensitive, known-safe fixtures. A simulated pass is not evidence that a file is safe; both the scanner heading and pass status explicitly identify the simulation.
+
+- Completion and release are separate. A completed upload starts `pending`; API range reads for every actor/mode, submission and publication require a `passed` result bound to the stored asset ID, ETag and SHA-256. Published/present catalogue access also excludes unreleased media before rendering. Owner/librarian submission metadata remains available for recovery.
+- Only the owning builder can queue a simulated scan on a Draft, using its current version and upload session. The request commits a durable job and returns immediately, still quarantined; a duplicate request cannot replace an active job. The separate [scan worker](scripts/local-media/scan-worker.mjs) claims work in a short SQLite transaction, then performs the ETag-conditional storage probe and fake scan outside the transaction. The selected draft refreshes automatically once per second while it has a job; refresh errors stop polling and require Reopen. Switching draft/identity, starting a write or leaving the page cancels its pending refresh.
+- A simulated rejection is terminal for that upload. Remove it and start a new upload to replace it. A passed verdict is also final for that upload; these controls do not provide arbitrary rescanning or revocation of a previously passed verdict. Normal withdrawal still revokes published access.
+- Jobs use a **5-second attempt deadline**, **10-second claim lease** and **three automatic attempts**, with **2-second then 4-second retry delays** (plus the worker's one-second polling interval). `Scanner unavailable`, `Scanner timeout` and storage failures remain quarantined while retrying; exhaustion persists `error` and enables a new explicitly requested job/outcome. Each claim consumes an attempt, including a crashed claim. Lease expiry permits recovery, not implicit clearance. The UI shows job-local progress and lifetime attempts separately.
+- A verdict commits only if the draft remains editable and its upload session, asset ID, ETag, digest, job ID, lease token and unexpired lease still match. Removed/replaced files, superseded claims and duplicate/late results cannot be released. No database transaction remains open while scanning. A failed verdict save retains quarantine and the running claim until lease recovery. A lost response after a committed pass is recovered by automatic refresh or Reopen, without rescanning. Missing legacy scan fields mean `pending`, never implicit clearance; invalid stored verdict/job bindings fail closed.
+- Existing completed fixtures need a simulated pass. Legacy review/published fixtures must first be withdrawn to Draft, then scanned, resubmitted and published again. Their bytes and records are not automatically deleted or relabeled. Completed quarantined/rejected uploads remain protected from expiry/orphan cleanup and can be removed explicitly by their owner in Draft.
+- The launcher starts the worker using its private IPC connection; the emulator key is not in browser state or command-line arguments. It allows three automatic worker restarts per launcher run, then logs that the launcher must be restarted. Ctrl+C stops/aborts the worker before closing SQLite and Azurite. A stopped in-flight claim remains quarantined until a restarted worker reclaims its expired lease. Start with the same `--data-dir` to recover its queued jobs; no browser needs to remain open.
+- Restart the local launcher to load API/worker changes; browser hot reload alone does not replace its server-side modules. Previously running labs retain their old API behavior until restarted. This is a single-machine development queue, not production distributed orchestration. There is still no real scanner, remote callback, malware signature update service or production quarantine container policy. A blocking native scanner would require additional process isolation; the current deadline handles asynchronous work, including a promise that ignores cancellation, but does not certify arbitrary third-party scanner execution.
+
+### Isolation and lifetime
+
+- Entry points are [local-media/main.tsx](local-media/main.tsx) and [scripts/local-media/dev.mjs](scripts/local-media/dev.mjs). They are not imported by the PoC or connected entry points and have no Power Apps deployment configuration. Existing Dataverse storage/read paths are unchanged.
+- Upload metadata, expiry, versions, final blob ETags and simulated permissions are stored in `media.sqlite` in the retained workspace. The [SQLite state adapter](scripts/local-media/state.mjs) reloads authoritative state per command and uses an immediate transaction with full synchronization; responses are returned only after commit. Failed writes roll back live state. Corrupt, missing or unsupported state fails closed rather than silently creating an empty catalogue. This local journal is not the eventual Dataverse schema.
+- Azurite bytes/metadata live in the workspace's `blob` subdirectory. The emulator worker holds an exclusive SQLite lease, preventing simultaneous launchers from opening the same files. The lease releases on process exit; a still-running owner must shut down before another launcher can use that workspace. No stale lock-file deletion is necessary.
+- Ctrl+C closes the API, drains accepted commands and asks Azurite to flush before exit; data is retained. The emulator also requests a graceful flush when its parent IPC connection disappears. API-process crash recovery with a surviving emulator and normal full shutdown/restart are tested. Forced termination of Azurite itself, filesystem corruption, power loss and machine recovery are not certified; the emulator is not production durable storage.
+- If a process exits after staging but before the SQLite checkpoint commits, resume may resend that unacknowledged block using the same deterministic block ID. Already acknowledged blocks retain their counters and are not replayed. If finalization was interrupted, Reopen and Resume with the exact file re-verifies staging and retries promotion to the same asset ID; incomplete assets remain unreadable. If completion committed but its response was lost, Reopen shows the completed asset. Finalization is recoverable through explicit retry, not an automatic startup job.
+- Staging bytes remain alongside the verified final copy until explicit removal; stopping the lab no longer deletes them. Use the workbench's Remove action for an upload. For a full reset or backup, first stop the owning launcher and handle the entire identified workspace together, not just the SQLite file. The launcher never deletes user source files or unrelated directories. Previously running temporary labs are not automatically imported; keep them running until their needed originals have been accounted for.
+- Automated tests still create and remove uniquely named temporary workspaces. There is no scheduled expired-session/orphan cleanup, real malware scanner, bulk migration tool or infrastructure deployment in this slice.
+- The pinned SDK/emulator combination is `@azure/storage-blob` 12.33.0 with Azurite 3.37.0. The locked worker uses Azurite's server factory to await flush/close explicitly; rerun the recovery tests before upgrading it. SDK 12.34.0 requested an API version the emulator rejected; do not disable API-version validation as a workaround.
+
+### Offline cleanup
+
+Stop the launcher for the intended workspace with Ctrl+C first. The [maintenance command](scripts/local-media/maintenance.mjs) refuses an active workspace and requires its existing, valid SQLite catalogue and both Blob containers. It never initializes an empty catalogue as a substitute for missing state. Do not use this command against Azure or production data.
+
+From `app/`, preview the default retained workspace:
+
+```powershell
+npm run cleanup:media
+```
+
+Review the JSON report's exact `workspace`, `expiredUploads`, `orphanBlobs`, `retainedBlobs`, `issues` and `fingerprint`. The default report does not modify application metadata or blob contents; starting/stopping Azurite still performs emulator bookkeeping and workspace locking. To delete only after reviewing an unblocked report, replace the placeholder with that report's fingerprint:
+
+```powershell
+npm run cleanup:media -- --execute --confirm "PASTE_THE_REPORT_FINGERPRINT"
+```
+
+For another workspace, append `--data-dir "C:\local\prisma-media"` to both invocations, after npm's `--` separator. Do not switch directories between reporting and execution.
+
+- Expired incomplete Draft sessions lose their staged and partially promoted bytes, then their upload metadata is cleared and draft version advanced. Completed uploads, including their retained staging copies, are protected regardless of expiry or publication state. Active upload references are also protected.
+- Unreferenced UUID-named blobs require a 24-hour age grace. Recent blobs, unknown ages and unrecognized names are retained. Missing/changed completed assets, shared references and missing active staging block all deletion; a storage listing failure is an error, never an empty inventory.
+- Execution rebuilds the report under the exclusive emulator lease and a SQLite write transaction. Any changed catalogue/inventory or changed candidate selection invalidates confirmation before deletion. References are checked again per target. Committed blobs require their observed ETag. Uncommitted blobs are rechecked against their block list, committed to an empty placeholder only if no committed object exists, then deleted with the new ETag. This relies on the offline local workspace's single writer; it is not a production distributed cleanup protocol.
+- Blob operations and SQLite are **not atomic together**. A failed/interrupted run can leave some candidates deleted or an empty placeholder while metadata rolls back. Preserve the whole workspace, resolve the error and run the report again; review its new fingerprint before retrying. Already-missing expired targets can then be cleared safely. Never reset the catalogue or delete lock files to bypass a blocked report. Back up the entire stopped workspace before destructive maintenance when fixtures must be retained.
+- Cleanup is explicit, not scheduled. It does not repair missing completed media, remove completed staging copies, scan malware, migrate data or certify emulator recovery after power loss. Tests delete only their disposable fixtures; existing user workspaces were not cleaned as part of implementation.
+
+### Shared MP4 contract
+
+The [common contract](src/lib/mediaContract.ts) defines draft media reads, digest-bound begin/checkpoint, binary blocks, finish/remove and bounded protected range reads. Versions remain opaque to callers. Unknown providers fail explicitly; neither adapter retries ambiguous writes or falls back after denial. A dispatched write failure requires reopening and reconciling the server checkpoint before continuing, including when cancellation cannot stop an already-dispatched SDK request. These client checks do not replace server authorization, digest verification or scan enforcement.
+
+- The [Dataverse adapter](connected/src/dataverseMediaAdapter.ts) wraps existing generated-service interfaces and their validated JSON/base64 decoders. [The connected data source](connected/src/dataSource.ts) exposes `videoMediaAdapter` bound only to Dataverse; existing upload/playback orchestration is unchanged. Read snapshots preserve asset/session IDs, captions, order and linked-asset metadata. Completion retains the legacy readiness policy, with integrity and scanning explicitly `unreported`, not fabricated scan clearance.
+- The [local Blob adapter](local-media/adapter.ts) wraps the lab JSON/binary HTTP protocol. [The lab client](local-media/client.ts) exposes `localAttachmentAdapter(actor)`, `uploadAttachment` and `fullAttachment`; earlier video-named exports remain aliases. Local transfers now accept HTML/PDF/PPT/PPTX as well as MP4, bind filename-derived MIME and enforce type-specific limits. Legacy MP4 snapshots may omit MIME; non-video snapshots may not. Upload completion means integrity verified but quarantined; a simulated pass reports ready, rejection remains rejected and scan errors remain quarantined. Readiness is not publication or client-safe clearance: every range still requires server authorization.
+- The shared contract retains its video interfaces and adds attachment aliases for the local extension. The Dataverse adapter's upload/resume/range pilot remains MP4-only; existing production document/HTML behavior and orchestration are unchanged. This is not a general storage switch. Image transfers through this contract, metadata writes, live migration, a production Azure adapter, Entra tokens and hosted Power Apps connectivity are not implemented here. Offline inventory/ledger tooling is described below. The only adapter provider values are `dataverse` and `local-blob`; the latter is an emulator lab, not an Azure production endpoint.
+
+The shared scenarios live in [the existing transfer tests](connected/src/mediaTransfer.test.ts), run by `npm run test:connected`. Protocol-shaped fixtures exercise both adapters through begin/resume/block/finish/removal, readiness, pinned and truncated reads, stale writes, lost acknowledgments, provider mismatch, malformed responses, denial and cancellation. Dataverse envelope failures without a reliable HTTP status remain generic failures rather than inferred permission codes.
+
+### Repeatable Edge acceptance
+
+Run the [full local Blob workflow](scripts/local-media/acceptance-edge.mjs) in installed Microsoft Edge, outside the integrated browser:
+
+```powershell
+npm run test:media:edge
+npm run test:media:edge -- --output "C:\local\prisma-edge-run-001"
+npm run test:media:attachments
+```
+
+Run from `app/` after `npm install`, using Node 22.13+ (24 recommended) and an installed Microsoft Edge. Headed Edge is the default; `--headless` is an optional automation mode, not the mode used for the acceptance evidence below. Pinned development-only dependencies are `playwright-core` 1.63.0 and `ffmpeg-static` 5.3.0. FFmpeg is downloaded at dependency installation, not served to the application. The runner generates a synthetic 16-second 640 x 360 MP4/AAC clip spanning at least three 4 MiB blocks. No private media, user browser profile, Azure credentials or Dataverse connection is used.
+
+Each run creates its own directory under the OS temporary directory, or the explicitly supplied **new** output directory (whose parent must exist). It refuses an existing output directory. A forked launcher selects an available loopback port and retains a separate SQLite/Azurite workspace. Parent-only IPC reports readiness and requests graceful shutdown, including on parent disconnect. The runner stops/restarts only its own launcher; existing labs are not reused or modified. A visible Edge window opens during the test and closes afterward.
+
+The assertions cover:
+
+- Actual UI upload with the first successful block response deliberately lost, writes locked pending Reopen, and a confirmed 4 MiB server checkpoint. Cross-owner draft access is denied.
+- Full launcher/emulator shutdown and restart, exact checkpoint preservation, file reselection and resume. The observed block sequence proves no confirmed block was replayed.
+- Completed-upload quarantine: range requests are denied, the player is absent and submission is disabled until the background simulated scan passes.
+- Submission, simulated librarian client-safety acknowledgment/publication and CSM present-mode playback through the real lab API.
+- Normal-speed playback from zero to the `ended` event, followed by forward/backward seeking with decoded nonblank pixel checks. Desktop 1280px and mobile 390px screenshots and layout checks detect overflow and missing player framing.
+- The actual browser Download action through protected HTTP ranges, saved original filename and a SHA-256 comparison of the downloaded bytes with the generated fixture.
+- Withdrawal through a separate owner page: new CSM ranges are denied, the catalogue entry disappears, and the already-open player clears its source and disables downloading within its existing 30-second authorization heartbeat.
+
+Reports record Edge/FFmpeg versions, the fixture size/hash, playback completion, download hash and any page errors. The output directory retains `report.json`, desktop/mobile/withdrawal screenshots, fixture/download files, a launcher log and the stopped lab workspace; failed runs also capture failure state/screenshots when available. Exit status is nonzero on assertion or shutdown failure. Do not treat a partial report as a pass. Keep evidence outside the repository; remove only that disposable output directory when no longer needed and after the runner has stopped.
+
+On 2026-09-28, **two consecutive fresh-workspace headed runs passed** in Edge 154.0.4258.37 with FFmpeg 6.1.1. The fixture was 9,658,436 bytes; playback ended at 15.999999 seconds at readyState 4, with no media or page error. Original and downloaded SHA-256 both equaled `8a254e5a29195f6cb6587054e2542edb019922a0b62a4814a0c7ef346985771b`. Evidence was retained under `%TEMP%/prisma-edge-acceptance-Vf0BQp/` and `%TEMP%/prisma-edge-acceptance-iFcw0e/`. All **28 local tests** also passed, including the new launcher IPC lifecycle test.
+
+The attachment command runs that same MP4 workflow followed by HTML, PDF, PPTX and PPT upload/quarantine/scan/publication, protected original download with filename/hash comparison, and owner withdrawal with reader denial. Downloads use native keyboard activation. HTML adds inline interaction, parent/storage/fetch isolation assertions, desktop/mobile captures and iframe removal after withdrawal. Documents assert that no inline viewer exists. Development-only fixture generators are `pdf-lib` 1.17.1, `pptxgenjs` 4.0.0 and `cfb` 1.2.2. PDF and PPTX are generated documents; the PPT fixture is a synthetic CFB container, not an Office-renderable presentation or Office compatibility certification. A targeted PptxGenJS `image-size` override pins 2.0.3 to avoid newly introduced high advisories.
+
+On 2026-09-28, the complete attachment command passed in headed Edge 154.0.4258.37, with evidence at `%TEMP%/prisma-edge-acceptance-6sp0tP/`. All four attachment downloads matched their originals and withdrawal denied access; there were no uncaught page errors. Expected CSP/denied-request diagnostics are retained separately in `consoleErrors`. All **31 local tests**, **65 connected tests**, local type-check, lint and both application builds passed. The connected build retains its existing chunk-size warning.
+
+This closes the repeatable short-fixture local Edge workflow and local document/HTML transfer gaps, not production acceptance. Playback is muted, so audible output is unverified. This runner does not yet cover captions, maximum-size media, hardware/device diversity, real malware scanning, Office rendering, Entra/Dataverse permissions or hosted Power Apps downloads. The npm audit still reports four moderate advisories in the existing Azurite dependency chain (`azurite`, `@azure/ms-rest-js`, `sequelize`, `uuid`); no broad or breaking dependency fix was applied.
+
+### Offline migration dry runs
+
+[The migration CLI](scripts/media-migration.mjs) inventories and reconciles **offline JSON evidence**, without contacting Dataverse, Azure or the running lab. Optional verification independently reads retained source and destination snapshot files. It does not export records, copy, transcode, scan, switch references, execute rollback or delete assets. Matching supplied digests alone is not independent byte verification or permission evidence. Report modes are `dry-run`, `byte-verification` and `rollback-report`; `canSwitch` is always false, and rollback reports also have `canRollback: false`.
+
+Run from `app/`, using Node 22.13+ (24 recommended). No emulator or credentials are needed:
+
+```powershell
+npm run migration:media -- --source "C:\local\migration\source.json"
+npm run migration:media -- --source "C:\local\migration\source.json" --destination "C:\local\migration\destination.json"
+npm run migration:media -- --source "C:\local\migration\source.json" --destination "C:\local\migration\destination.json" --record --ledger "C:\local\migration\migration.sqlite"
+npm run migration:media -- --ledger "C:\local\migration\migration.sqlite" --report <report-fingerprint>
+npm run test:migration
+```
+
+Default invocations print JSON and create no files. Only `--record` together with `--ledger` authorizes writing the selected **local evidence ledger**, not media or metadata. The ledger parent directory must already exist. Exit codes: `0` means the report completed without blocking findings (deferred/unobserved/copy-required items may remain), `2` means a valid report has planning, verification or rollback blockers, `1` means invalid arguments/input or a ledger/read failure. There is no `--execute` option.
+
+#### Manifest contract v1
+
+Each input is limited to 32 MiB and 100,000 assets. Unknown/missing fields, unsupported versions/providers, duplicate asset IDs, reused destination keys and incomplete exports fail closed. IDs use lowercase GUIDs. Versions are nonempty opaque tokens containing only letters, digits, dots, underscores, colons or hyphens, up to 256 characters. Normalize approved exports to this contract; do not pass raw Dataverse responses or invent missing evidence.
+
+Source example (synthetic evidence, not a live inventory):
+
+```json
+{
+	"schemaVersion": 1,
+	"environmentId": "11111111-1111-1111-1111-111111111111",
+	"complete": true,
+	"assets": [{
+		"assetId": "22222222-2222-2222-2222-222222222222",
+		"solutionId": "33333333-3333-3333-3333-333333333333",
+		"provider": "dataverse",
+		"version": "123:456:source",
+		"contextSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		"kind": "file",
+		"mime": "video/mp4",
+		"size": 24,
+		"sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"complete": true
+	}]
+}
+```
+
+Root `complete: true` asserts a complete, successfully paged inventory, not an empty substitute for inaccessible records. Source `complete` describes upload completion, not publication, malware scanning or client safety. Source provider must be `dataverse`; `kind` is `file` or `external-link`. Include unfinished uploads, external links and non-MP4 assets so they can be explicitly deferred. Source size, MIME and either digest may be `null` when unknown; a completed MP4 with missing size/digest/context is blocked. MP4 pilot size is 12 bytes through 500 MiB.
+
+`version` must bind the exact source file revision and relevant row versions. `contextSha256` is the SHA-256 of a deterministic canonical JSON snapshot of relevant record state and metadata, including provider/reference identity, solution/asset versions, ownership/shares, workflow/clearance state, captions, ordering and linked-asset metadata. The eventual exporter must collect that evidence consistently, use a stable projection and recursively sorted keys (with stable ordering for unordered sets), and use `null` if evidence is incomplete. This CLI compares the hash; it cannot prove the projection is complete or permissions are current.
+
+Destination example:
+
+```json
+{
+	"schemaVersion": 1,
+	"environmentId": "11111111-1111-1111-1111-111111111111",
+	"complete": true,
+	"provider": "local-blob",
+	"storeId": "33333333-3333-3333-3333-333333333333",
+	"assets": [{
+		"assetId": "22222222-2222-2222-2222-222222222222",
+		"solutionId": "33333333-3333-3333-3333-333333333333",
+		"sourceVersion": "123:456:source",
+		"contextSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		"container": "final",
+		"key": "media/22222222-2222-2222-2222-222222222222",
+		"version": "etag-1",
+		"size": 24,
+		"sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"mime": "video/mp4"
+	}]
+}
+```
+
+Destination `storeId` is a stable, non-secret logical store GUID, not a URL/account key. Its evidence-only provider can be `local-blob` or `azure-blob`; this does not register an Azure frontend adapter. Source and destination environments must match. `sourceVersion` and `contextSha256` describe the source snapshot associated with that destination object. Destination size/SHA-256 must come from independently reading the exact pinned destination version, not copying the source's declarations. Keys are opaque alphanumeric/underscore/hyphen path segments, up to 512 characters; URLs, query strings, SAS tokens and traversal segments are prohibited. Containers use Azure-compatible lowercase names. Use non-secret normalized version identifiers if raw ETags contain quotes. Changing any destination store/reference/version changes the report fingerprint.
+
+#### Findings and ledger recovery
+
+- `destination-unobserved`: no destination manifest was supplied; absence is not assumed. A complete empty destination manifest explicitly records that no destination assets were observed.
+- `copy-required`: eligible MP4 source evidence has no destination match. This is a planning result, not permission to copy.
+- `matched-evidence`: supplied source revision/context, solution, MIME, size and digest match destination evidence. Live reauthorization, fresh source-state checks, byte verification, malware scanning and hosted acceptance remain mandatory before any future switch.
+- `deferred`: unfinished uploads remain on their original provider; external links remain unchanged; other file types are outside this pilot. A destination unexpectedly attached to an unfinished upload or external link is blocked.
+- `blocked`: changed source revision/context, missing evidence, size/digest/MIME/solution mismatch, or a destination asset absent from the complete source inventory. Unreferenced destinations are reported, never deleted.
+
+The separate SQLite ledger stores immutable reports containing source/provider/version, destination store/key/version, sizes, digests, checkpoint and outcome. Fingerprints are stable across input ordering; repeating the same evidence records one report, while changed evidence appends another. Reports are retrievable by fingerprint after restart and old reports are historical evidence, never a current execution permit. Transactions use `synchronous=FULL`, a one-second lock timeout and rollback journaling. Process-exit tests cover uncommitted rollback and committed-response-loss replay without duplicates; power-loss durability is not certified.
+
+Existing empty, unrelated, future-version or corrupt databases are rejected, not initialized/reset. Preserve the whole ledger and any journal after interruption; retry the same explicit recording operation to reconcile local transaction recovery. Do not point this tool at the lab's media database. Back up while writers are stopped, use a locally controlled directory with appropriate OS permissions, and do not commit manifests/ledgers to the repository: IDs, hashes and opaque keys can still be sensitive. Fingerprints detect accidental changes, not a malicious local administrator. Validation errors do not echo input payloads or credentials.
+
+#### Independent bytes and restart recovery
+
+For a complete, approved **MP4 pilot inventory of at most 100 entries**, place independently obtained source snapshots at `<source-root>/<assetId>` and destination snapshots at `<destination-root>/<container>/<key>`. The general manifest-only planner still accepts up to 100,000 entries. Do not label a silently truncated inventory complete; establish the pilot scope before exporting it. The exporter and its authorization/version-binding proof remain unimplemented.
+
+Use separate, access-controlled local snapshot directories. Files must be ordinary files, not links or junctions; destination parent segments must be directories. Verification streams SHA-256 in 1 MiB chunks, checks declared size and file identity/timestamps, then rereads the source after reading a matched destination. Missing, changed or corrupt bytes block verification. These are local snapshot checks, not live Dataverse/Azure exact-version reads; files can change again after any report.
+
+Run from `app/`, substituting actual local paths and recorded fingerprints:
+
+```powershell
+$evidence = @("--source", "C:\local\migration\source.json", "--destination", "C:\local\migration\destination.json", "--source-root", "C:\local\migration\source-bytes", "--destination-root", "C:\local\migration\destination-bytes")
+$ledger = "C:\local\migration\migration.sqlite"
+npm run migration:media -- @evidence
+npm run migration:media -- @evidence --record --ledger $ledger
+npm run migration:media -- @evidence --record --ledger $ledger --resume "REPLACE_WITH_CHECKPOINT_FINGERPRINT"
+npm run migration:media -- @evidence --ledger $ledger --rollback-from "REPLACE_WITH_COMPLETED_BASELINE_FINGERPRINT"
+```
+
+Verification records `pending`, `source-verified`, `destination-verified`, `blocked` or `deferred` checkpoints, with `complete: true` only after the inventory finishes. `counts` describes manifest planning; `verificationCounts` describes actual byte checks. A source with no destination remains `copy-required` / `source-verified`. Deferred files are not byte-verified. Completion and exit code zero do not mean every asset is ready to migrate.
+
+With `--record`, every stage is an immutable full-report SQLite checkpoint; its fingerprint is printed to stderr, leaving stdout as the final JSON report. Preserve the ledger/journal after interruption and resume using the last recorded fingerprint. Resume requires the same plan fingerprint and **rereads all eligible bytes**, rather than trusting historical verified flags. Identical evidence deduplicates; changes append history. Full snapshots trade simplicity for storage growth, hence the 100-entry verification cap. This is verification recovery, not interrupted-copy recovery or scale certification.
+
+#### Rollback reports
+
+`--rollback-from` loads a completed byte-verification baseline and performs fresh verification using the supplied current manifests/snapshots. It reports `candidate-for-authorized-restore` only when retained source bytes and destination bytes verify and source identity/version/context plus destination store/reference/version remain unchanged. Missing bytes, changed context/references and missing baseline assets block the report. Assets not verified in the baseline are marked `retain-current-provider`; the tool never assumes Blob-native uploads can fall back to Dataverse. A verification baseline is not proof that any asset was actually switched.
+
+Rollback reporting is read-only unless `--record` is also specified, and never restores a reference. Actual rollback still needs fresh live authorization, exact-version conditional Dataverse updates, reconciliation and hosted denial checks. Retaining old bytes is not permission to serve them after an access denial.
+
+### Infrastructure templates
+
+The [Bicep foundation](../infra/media/main.bicep) and [example parameters](../infra/media/example.bicepparam) prepare private storage, separate managed identities, container-scoped roles, private endpoint/DNS integration, retention, diagnostics and alerts. They do not provision API hosting, connect Dataverse or deploy anything automatically. The example contains deliberately unusable IDs, not an approved environment. Required IT inputs, permissions and deployment gates are maintained in the [infrastructure runbook](../docs/architecture/technical-architecture.md#infrastructure-template-runbook).
+
+Install a trusted standalone Bicep CLI (verified with **0.47.16**) on PATH, or set `BICEP_BIN` to its executable. From the repository root:
+
+```powershell
+npm --prefix app run check:infra
+```
+
+This command compiles both files, checks six groups of compiled ARM properties and deletes only its own temporary outputs. It needs no Azure login, makes no deployment calls and fails if the compiler is absent or diagnostics/checks fail. Compilation is not Azure deployment validation.
+
+### Verification on 2026-09-28
+
+The offline migration slice passed **16 focused tests**, including independently streamed snapshot checks, corrupt/missing/replaced-source rejection, pilot limits, directory rejection, actual process-exit checkpoint recovery, rechecking on resume, rollback-report blockers and retained-provider handling. Earlier coverage of strict manifests, deterministic fingerprints, read-only defaults, immutable/idempotent persistence, database formats, payload redaction and tampering remains. Fixtures are disposable and synthetic. The infrastructure template and example parameters compile without diagnostics under **Bicep 0.47.16.16243**, and all **six compiled-ARM check groups** pass. Lint and editor diagnostics also passed. No live inventory, cloud byte reads, reference changes, actual rollback, Azure what-if or deployment acceptance was performed.
+
+The compatibility pass ran all **64 connected tests** and **27 local tests**, local TypeScript, lint, and both connected/PoC builds successfully. The connected build retains its chunk-size warning. Browser checks against the existing worker-enabled lab used the actual client adapter to read a 1 MiB first range and 24-byte tail with one pinned version, reject an unpublished reader, and load the 640 x 360 player to readyState 4. Adapter lifecycle tests use native-protocol fixtures, not hosted Dataverse or Azure. No new hosted acceptance, deployment or migration is implied.
+
+Twenty-seven local tests passed, including concurrent stale mutations, exact-file/expiry checks, simulated access denial, HTTP origin/host guards, SQLite write failures/corrupt state and real Azurite upload/readback/removal. Retained-workspace tests stop/restart the emulator, reject a second workspace owner and resume the saved checkpoint. Separate API workers exit after block staging, staging commit, final-blob promotion, or metadata commit; recovery retains acknowledged counters, denies reads of incomplete assets, creates one final asset and matches the original checksum. Cleanup tests exercise report immutability, expiry/grace rules, stale confirmation/publication references, missing completed assets, injected storage outages/lost deletion responses and changed ETags. Actual cleanup-process exits after the uncommitted-to-empty transition and after deletion leave metadata recoverable; a fresh report/retry completes cleanup while the published fixture remains readable byte-for-byte. CLI tests use disposable workspaces, reject active owners and missing/uninitialized databases, then report/confirm across emulator restarts. Scan tests cover the guarded HTTP endpoint, all actor/read-mode denial combinations, terminal rejection, outage retry, stale versions, forged client clearance, invalid verdict binding, storage/save failure, legacy publication and process exits before/after verdict commit. Background tests add lease fencing, duplicate verdicts, removal/replacement safety, retry/crash exhaustion, timeouts with late results, API responsiveness during a hung scan, failed verdict commits and an actual worker kill/restart with real lease expiry and byte-identical readback. The earlier 56 connected tests remain the baseline for the unchanged Dataverse path; local TypeScript and lint checks cover the workbench.
+
+Quarantine browser acceptance used a separate workspace and the same synthetic MP4 below. After upload, no player/download was rendered, submission was disabled and a direct range request returned 403. Pending state survived launcher restart. A simulated outage survived Reopen and stayed quarantined; retry/pass enabled playback and local submission/publication. CSM present playback reached readyState 4 at 640 x 360, with nonblank pixels after seeking to three seconds. A second upload's simulated rejection survived Reopen with no rescan/player/download and submission disabled. Desktop 1280px and mobile 390px screenshots/layout checks found no horizontal overflow or oversized elements. Existing running labs and production data were left intact; these checks demonstrate simulated workflow behavior, not malware detection.
+
+Background-worker browser acceptance used another separate workspace. The scan request returned a queued, unreleased job while the UI remained usable; outage retries stopped at three and a new pass enabled playback through automatic refresh without Reopen. On mobile, the worker was interrupted during a timeout attempt; the launcher restarted it, the job stayed quarantined through recovery and exhausted its three attempts, and a new pass reached readyState 4 automatically. Desktop video seeking decoded nonblank pixels; 1280px/390px screenshots and layout checks found no horizontal overflow. Older running labs were not restarted. No real scanning, Azure deployment or production data change is implied.
+
+The retained-workspace browser test uploaded the same fixture below to a 4 MiB checkpoint at version 3, stopped/restarted the actual development launcher, reopened that unchanged checkpoint, reselected the original file and resumed to completion. Playback reached readyState 4 at 640 x 360 after restart. The earlier temporary lab was left intact on its existing port; the retained lab selected the next available port.
+
+The actual workbench uploaded a generated 9,879,374-byte, eight-second, video-only MP4. A controlled browser response-loss injection committed the first 4 MiB block, then discarded its response; Reopen reported 4 MiB and Resume completed in three total confirmed blocks. Browser full-file readback matched SHA-256 `b0bf31e75e5b3dd4a6752b715218e00bca5670bae1bdc48cd0fb0c8011a2e7b7`. Local review/publication and CSM present-mode playback reached readyState 4 at 640 x 360; seeking to five seconds decoded nonblank pixels. Withdrawal denied a new read and cleared the already-open player on its heartbeat. Desktop (1280px) and mobile (390px) screenshots/layout checks found no horizontal overflow or oversized control text.
+
+Earlier continuous play-to-ended timed out in the integrated browser: playback advanced but was observed paused at approximately 5.94 seconds without a media error. The [repeatable headed Edge acceptance](#repeatable-edge-acceptance) now verifies normal-speed completion and checksum-exact browser downloads through the local Blob workflow on a separate 16-second MP4/AAC fixture. That resolves the local regular-Edge short-playback uncertainty, not the integrated-browser pause itself. Audible output, captions, maximum-size files, hosted authenticated OS downloads and a device matrix remain unverified by this lab test. Azure/Entra authentication, effective Dataverse permissions, managed identity/RBAC, private networking, hosted CSP/CORS and production performance remain future integration gates.
 
 ## Submission presentation
 

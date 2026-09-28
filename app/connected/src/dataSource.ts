@@ -32,6 +32,7 @@ import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginRes
 import { Nx_GetUploadCheckpointService } from "./generated/services/Nx_GetUploadCheckpointService";
 import { Nx_ReadVideoRangeService } from "./generated/services/Nx_ReadVideoRangeService";
 import type { TransferApi } from "./mediaTransfer";
+import { createDataverseMediaAdapter } from "./dataverseMediaAdapter";
 
 export const transferApi: TransferApi = {
   begin: (...args) => Nx_BeginResumableUploadService.nx_BeginResumableUpload(...args),
@@ -54,6 +55,8 @@ export const mediaApi: MediaApi = {
   remove: (id, version, session) => Nx_RemoveDraftMediaService.nx_RemoveDraftMedia(id, version, session),
   metadata: (id, version, json) => Nx_TransitionSubmissionService.nx_TransitionSubmission(id, version, "media", json, false),
 };
+
+export const videoMediaAdapter = createDataverseMediaAdapter(mediaApi, transferApi);
 
 export async function downloadMedia(item: MediaItem): Promise<Blob> {
   if (item.linkedAsset) throw new Error("Linked assets do not contain a downloadable file.");

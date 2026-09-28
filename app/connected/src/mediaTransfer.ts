@@ -50,8 +50,12 @@ export async function readVideoRange(api: TransferApi, id: string, assetId: stri
     raw = await Promise.race([api.range(id, assetId, mode, offset, count, version), aborted]);
     deadline.throwIfAborted();
   } finally { deadline.removeEventListener("abort", cancel); }
-  const response = raw as { success?: boolean; data?: { ResultJson?: string } };
   signal.throwIfAborted();
+  return parseVideoRange(raw, id, assetId, offset, size, count, version);
+}
+
+export function parseVideoRange(raw: unknown, id: string, assetId: string, offset: number, size: number, count: number, version?: string): { bytes: Uint8Array<ArrayBuffer>; version: string } {
+  const response = raw as { success?: boolean; data?: { ResultJson?: string } };
   if (!response?.success || typeof response.data?.ResultJson !== "string") throw new Error("Video access unavailable.");
   const result = JSON.parse(response.data.ResultJson);
   if (result.id !== id || result.assetId !== assetId || result.offset !== offset || result.size !== size || result.mime !== "video/mp4"

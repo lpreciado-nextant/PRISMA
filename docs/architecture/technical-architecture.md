@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Connected lifecycle, URL storage repair and two-field story retirement verified; broader browser and least-privilege acceptance remain open · **Last updated:** 2026-09-22
+**Status:** Living; all six local media-preparation items completed, including offline byte verification/checkpoint recovery/rollback reports and compiled private-storage infrastructure templates; local HTML/document/MP4 Edge acceptance passed; production remains on Dataverse and Azure Blob Storage transition is still proposed; hosted/browser-matrix, cloud deployment and least-privilege acceptance remain open · **Last updated:** 2026-09-28
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -142,6 +142,135 @@ Each carries an ADR — see [decision records](decisions/README.md).
 | Present mode is enforced server-side as well as client-side | [ADR-0005](decisions/adr-0005-present-mode-server-side-enforcement.md) |
 | Power Automate for notifications only — no business logic in flows | [ADR-0006](decisions/adr-0006-power-automate-notifications-only.md) |
 | Contributor-level effort derived from inclusive dates and allocation, excluding observed US federal holidays in code for 2020-2035 without calendar tables | [ADR-0007](decisions/adr-0007-contributor-effort.md) |
+
+## Azure Blob Storage transition plan
+
+**Status:** Draft proposal; not approved for implementation or deployment. **Last updated:** 2026-09-28.
+
+### Objective and scope
+
+Keep Dataverse as the authority for catalogue metadata, ownership, permissions, publication and client-safe clearance. Move uploaded file bytes to private Azure Blob Storage, preserving the search -> detail -> viewer flow and existing submission/review controls.
+
+Start with videos, then HTML/PDF/PowerPoint attachments. Keep thumbnails and gallery images in Dataverse initially; consider their migration separately against measured savings and complexity. External demo links remain unchanged. Do not migrate the mock catalogue or alter the separate PRISMA PoC.
+
+This proposal does not change the current storage policy. Approval would require updating the [end-to-end design](../design/end-to-end-design.md) first, recording an ADR superseding [ADR-0004](decisions/adr-0004-assets-in-dataverse.md), and revising the affected controls in [ADR-0009](decisions/adr-0009-mediated-media-and-publication-access.md). Provisioning, schema/security/CSP changes, remote test writes, publication and destructive cleanup each require explicit authorization.
+
+### Proposed architecture
+
+| Component | Responsibility |
+|---|---|
+| Power Apps code app | Existing submission, review and viewer experience; no secrets or server-side code in the app bundle |
+| Dataverse | Ownership, publication, client-safe flags, asset metadata, protected storage references and controlled transitions |
+| Azure media API | Authenticate callers, enforce effective Dataverse access and requested mode, coordinate uploads and serve bounded protected file ranges |
+| Private Blob Storage | Unique staged uploads and finalized, version-specific files |
+| Background worker | Integrity checks, malware scanning, migration reconciliation and retryable cleanup |
+
+The Azure API and worker are new separately hosted services, not API routes inside the code app. Select their Azure hosting plan after the hosted integration spike. Use managed identities and least-privilege access; no storage keys in the frontend, anonymous containers or permanent signed URLs. Apply [Microsoft's Blob security recommendations](https://learn.microsoft.com/en-us/azure/storage/blobs/security-recommendations), including HTTPS, disabled Shared Key access where supported, and deliberate retention/recovery settings.
+
+**Recommended read path:** an authenticated streaming API, initially retaining authorization checks for each bounded range and periodic checks while playback is buffered or paused. Resolve asset IDs to protected storage references on the server; never trust a browser-supplied blob path or caller ID. Verify target membership, file readiness/version, effective caller access and the requested submission/published/present mode. Fail closed if authorization cannot be established. An application identity's broad Dataverse access is not evidence that the end user may read an asset.
+
+**Alternative requiring explicit acceptance:** short-lived, single-blob read SAS URLs. Changing Dataverse permissions does not automatically revoke an already-issued SAS. Ordinary SAS URLs are bearer credentials, and a browser playback check does not revoke a copied URL. Agree the residual access window and revocation procedure before choosing this path; prefer user delegation SAS over account-key signing. Neither approach can recall bytes already delivered, downloaded or captured.
+
+### Phase 1: Scope and baseline
+
+- Inventory actual files, byte sizes, formats, publication states and unfinished uploads; do not use historical row counts as the migration inventory.
+- Agree Azure subscription/resource ownership, region, data residency, environment isolation, retention, recovery objectives and acceptable revocation delay.
+- Measure current upload time, playback startup, seeking, failures and Dataverse capacity use. Compare capacity savings against Blob storage, transfer, API hosting, scanning, logging and operational costs. Do not promise savings or faster playback before measurement.
+- Define performance/security acceptance targets and assign implementation, security and operational owners. Track unresolved approvals in the [decision log](../delivery/decision-log.md).
+
+**Exit gate:** agreed scope, owners, cost baseline and measurable acceptance targets.
+
+### Phase 2: Hosted integration spike
+
+- Prove a supported authentication path from the published Power Apps app to the Azure API, including token audience, tenant, caller mapping and effective Dataverse authorization. Do not extract host tokens or assume the Power Apps session token is reusable.
+- Use one approved non-sensitive video to prove upload, authenticated bounded reads, seeking and withdrawal denial with non-admin owner, CSM and reviewer accounts. Include cross-owner and draft-in-present-mode denial.
+- Verify narrowly scoped CSP/CORS requirements in the actual published host, not only Local Play. The recorded hosting policy does not allow arbitrary Azure connections; environment-wide CSP changes require approval. CORS is not authorization.
+- Choose the network path explicitly. A private container is not a private endpoint. Private-endpoint-only Blob Storage requires reachable server-side access or approved client network connectivity; direct browser uploads cannot assume that connectivity.
+
+**Exit gate / first milestone:** one Blob-backed video uploaded and played inside the published app, with least-privilege access and withdrawal tests passing. Stop and revise the transport design if supported authentication or hosting constraints block this milestone.
+
+### Phase 3: Infrastructure and compatible contracts
+
+- Provision environment-isolated storage and identities, private staging/final containers, HTTPS, monitoring and agreed soft-delete/version-retention settings through repeatable infrastructure configuration. Validate restoration, not just retention settings.
+- Add server-protected metadata for storage provider, opaque blob key and exact version, verified byte size, MIME type, SHA-256 and readiness state. Final logical names and schema changes remain subject to review. Do not store SAS tokens in asset records.
+- Introduce a storage adapter so Dataverse-backed and Blob-backed assets can coexist. Preserve asset IDs, routes, captions, order, attachment limits and external-link behavior. Unknown providers or invalid references must fail explicitly.
+- Keep old reads and uploads available until the new path passes its gates; do not remove the current Dataverse file columns at this stage.
+
+**Exit gate:** both providers satisfy the same asset contract without changing the user journey or exposing storage credentials.
+
+### Phase 4: Upload and lifecycle controls
+
+- Preserve owner-only Draft uploads, exact-version concurrency checks, resumability and approval invalidation. Reauthorize resume and finalization; never blindly replay an ambiguous write.
+- If direct uploads are chosen, issue short-lived access only to a unique staging object, with no final-container, list or delete access. Enforce declared limits at authorization and verify actual size/type server-side; a SAS alone does not enforce the product's byte-size limit. Rate-limit sessions and clean up rejected/abandoned objects.
+- Pin the uploaded version or ETag before verification; compute the destination SHA-256 and scan those exact bytes. Promote only the verified version to a server-controlled final object that the uploader cannot overwrite. Scanning failure or uncertainty must block readiness. Malware scanning does not replace librarian confidentiality review.
+- Recheck Draft state and expected version before attaching the finalized object through a controlled Dataverse transition. Advance the version and clear safety acknowledgment/clearance as required by the existing lifecycle. Submit/approve may use only ready assets.
+- Model completion as idempotent, recoverable steps: Blob and Dataverse do not share a transaction. Reconcile failed promotions, stale commits and orphaned objects. On withdrawal or deletion, deny reads through authoritative state before retrying physical cleanup; retained backup versions must not remain application-readable.
+- Preserve the restrictive HTML sandbox and network policy. Do not turn uploaded HTML into public static websites. Preserve audio, captions and original-file download behavior; transcoding is outside the migration scope.
+
+**Exit gate:** lost responses, expired uploads, stale versions, post-submission writes, failed scans and partial cross-service operations are handled safely.
+
+### Phase 5: Reversible migration
+
+- Build a read-only inventory/dry-run mode and a durable migration ledger. Record source asset/provider/version, destination key/version, verified hash/size, checkpoint and outcome without logging credentials.
+- Copy files in bounded-memory, restartable batches without transcoding. Independently verify destination SHA-256 and size; switch the protected reference only if the source identity/version and relevant record state are unchanged. Preserve existing IDs, ownership, shares, captions and ordering.
+- Pilot videos first, then expand to documents and HTML after reconciliation. Existing unfinished uploads should finish on their original provider or explicitly expire/restart; do not silently move their session state.
+- Keep original Dataverse bytes for an agreed rollback period. Rollback may restore an exact verified source reference only after current authorization checks; never use old storage as a fallback after access denial or serve an obsolete file revision.
+- Keep Blob-capable readers available for Blob-native uploads during rollback, unless those files have been explicitly copied back and verified. Turning off new Blob uploads is not a complete data rollback.
+
+**Exit gate:** every switched asset reconciles, concurrent edits are detected, and rollback has been demonstrated before expanding the batch size.
+
+### Phase 6: Cutover and retirement
+
+- Enable new Blob uploads gradually while retaining legacy reads. Validate submit/review/publish, withdrawal/retirement, present mode, cross-user denials, resume, maximum-size video, captions/audio, HTML isolation and authenticated OS downloads in the hosted browser/device matrix.
+- Benchmark the same source files and comparable networks before claiming improvements. Include sustained playback and API/Dataverse authorization load, not only time to first frame.
+- Alert on failed finalization, missing objects, orphaned uploads, access-denial anomalies and cost growth. Redact tokens and signed query strings from logs. Assign cleanup, incident-response and restore ownership.
+- After acceptance and the rollback retention window, obtain explicit approval to remove migrated Dataverse bytes. Reconcile again before deletion; keep metadata and legacy-reader compatibility until no references require them. Retention in either system can delay capacity savings.
+- Update the [schema](../data_model/SchemaV2.md), [security model](security-model.md), [demo workflow](../workflows/demo-assets.md), [roadmap](../delivery/roadmap.md) and [operations runbook](../operations/librarian-runbook.md) to reflect the accepted implementation and recovery procedure.
+
+**Exit gate:** signed-off hosted acceptance, least-privilege security evidence, reconciliation and recovery evidence before destructive cleanup.
+
+### Infrastructure template runbook
+
+**Status:** Locally compiled preparation, not deployment approval. **Last updated:** 2026-09-28.
+
+The [resource-group-scoped Bicep template](../../infra/media/main.bicep) and [example parameters](../../infra/media/example.bicepparam) define a **new environment-isolated storage foundation**. The example's region and LRS redundancy are illustrative; all placeholder IDs/names and policy choices need IT review. Never apply this template to an existing account as an incidental update. No resources, identities, roles or networking were provisioned while preparing it.
+
+| Required IT input | Review needed |
+|---|---|
+| Subscription and dedicated resource group | Environment isolation, resource ownership, policy/provider registration, deployment authorization |
+| Region, globally unique account name and redundancy SKU | Residency, availability, infrastructure-encryption support, quotas and costs |
+| Owner, cost center and recovery/log-retention periods | Operational responsibility, data classification, budget and recovery objectives |
+| Existing private endpoint subnet ID | Available IP capacity, regional compatibility, approved server-side connectivity and endpoint permissions |
+| Existing Blob private DNS zone ID | `privatelink.blob.core.windows.net`, linked VNet/resolver, zone-group permissions and DNS resolution |
+| Existing tested Monitor action group ID | Named on-call owner, notification destinations and alert tuning |
+
+The account disables public network access, anonymous blobs, Shared Key, cross-tenant replication, SFTP/NFS and local users; requires HTTPS/TLS 1.2 and infrastructure encryption; and has private `staging`, `quarantine` and `final` containers. Blob CORS is empty because the proposed path is server-mediated. This does not configure the future API's CORS or the Power Apps host's CSP.
+
+The API identity receives Blob Data Contributor **only on staging** and Blob Data Reader **only on final**. The separate worker identity receives Blob Data Contributor on each of the three containers for scanning/promotion/cleanup. Neither identity receives account-wide storage access or any Dataverse permission. Future hosting must attach the correct identity and preserve these responsibilities; finalization cannot simply run under the API identity. Worker access is privileged and must be separately protected. Versioning does not make worker-writable objects immutable.
+
+Defaults enable 30-day blob/container soft delete and change-feed retention, plus versioning. No lifecycle deletion policy is supplied: old versions can accumulate and cost money until an approved retention/cleanup policy exists. A `CanNotDelete` account lock protects control-plane deletion, **not blob deletion or overwrites**. Log Analytics uses workspace-scoped access, disables local authentication and collects Blob reads/writes/deletes with 30-day default retention. Availability and storage authorization-error alerts route to the supplied action group. These are not API/Dataverse denial, scanner, finalization, orphan or cost alerts; application telemetry, redaction, rate limits and cost budgets remain required.
+
+Local validation from the repository root is `npm --prefix app run check:infra`, using standalone Bicep on PATH or `BICEP_BIN` pointing to its executable. Bicep **0.47.16.16243** compiled the template and parameter file without diagnostics; six compiled-ARM assertion groups passed. The check uses temporary outputs and no Azure login, resource-manager validation, what-if or deployment.
+
+Before any authorized deployment, IT must inspect the rendered plan and run Azure validation/what-if against the **approved subscription, resource group and reviewed parameters**. Deployment needs resource create/update permissions in that group, role-assignment write authority at the target container scopes, and the relevant subnet/private-DNS/action-group permissions; application runtime identities must not inherit deployment privileges. Confirm policy, region/SKU support, network/DNS permissions, storage diagnostics/metric availability and lock behavior against the actual tenant. Local compilation cannot establish these.
+
+After separately authorized provisioning, verify private DNS and endpoint reachability from the chosen hosts, reject public/key/anonymous access, prove API/worker effective least privilege after RBAC propagation, exercise diagnostic delivery and action-group notifications, and restore exact retained versions in an approved test. The hosted authentication/Dataverse/CSP spike must still choose and validate API/worker hosting, real malware scanning and application monitoring before live media use. No hosting service, secret, deployment pipeline, live migration engine or production storage-policy change is included in this foundation.
+
+### Implementation boundaries
+
+**Local development progress (2026-09-28):** an isolated MP4 workbench exercises a loopback-only media API and the real Blob SDK against Azurite. SQLite persists checkpoints, expiry, versions, final references and simulated access state; the development workspace retains emulator data and rejects simultaneous owners. Upload/finalization process exits and normal full shutdown/restart pass recovery tests, without incomplete reads or duplicate final assets. Browser restart/resume also passed. An offline cleanup report plus explicit fingerprint-confirmed execution rechecks references under workspace/database locks, protects completed assets and uses conditional Blob operations; crash/retry tests preserve published bytes. Completed uploads remain quarantined until an explicit **simulated** scan pass bound to their asset ID, ETag and digest. Scan requests now enqueue durable jobs; a supervised child worker claims a lease, scans outside database transactions and commits only against the matching job/token/session/asset and unexpired lease. Five-second deadlines, three attempts, bounded backoff and lease recovery handle outages/crashes without releasing stale results. Automatic browser refresh exposes progress and exhaustion. Tests cover verdict-save failure, ignored cancellation/late results, removal/replacement, retry limits, actual worker kill/restart, byte-identical recovery and desktop/mobile acceptance. The fake scanner performs no malware detection. Details are maintained in the [quarantine/worker runbook](../../app/README.md#simulated-quarantine), [cleanup runbook](../../app/README.md#offline-cleanup) and [local acceptance evidence](../../app/README.md#local-blob-media-workbench). Identities/review remain simulated; real scanning, production distributed orchestration, scheduled cleanup, live migration execution and Azure integration are not implemented. Interrupted finalization requires explicit reopen/resume; interrupted cleanup requires a fresh report/review/retry, and emulator power-loss durability is not certified. Published apps are unchanged. This is preparation for the hosted spike, not completion of Phase 2 or a change to accepted storage/security decisions.
+
+**Compatibility preparation (2026-09-28):** a [shared MP4 contract and adapters](../../app/README.md#shared-mp4-contract) now normalize draft snapshots, digest-bound upload/resume, binary blocks, finalization/removal and protected ranges across the existing Dataverse and local lab protocols. Shared fixture tests exercise both adapters, while the lab player uses the local adapter for actual HTTP range reads. The connected factory is bound only to Dataverse; its existing upload/playback orchestration is unchanged. Unknown providers fail explicitly and access failures never trigger fallback. Completion is distinct from quarantine/readiness; Dataverse preserves its legacy policy with scan evidence unreported, and the local adapter labels simulated results explicitly. This does not implement a production Azure provider, schema discriminator, mixed-provider catalogue routing, metadata writes or hosted authentication. It prepares a testable client boundary without satisfying the Phase 2 hosted feasibility gate. See the [verification evidence](../../app/README.md#verification-on-2026-09-28).
+
+**Offline migration preparation (2026-09-28):** [inventory/reconciliation and ledger tooling](../../app/README.md#offline-migration-dry-runs) consumes strict complete source/destination evidence manifests. Default runs write nothing; explicit recording appends immutable fingerprinted reports to a separate SQLite ledger. A maximum-100-entry MP4 verification pilot independently streams source/destination snapshot bytes, checks size/SHA-256 and file changes, rereads source bytes, and durably records each stage. Resume requires the same plan and rechecks bytes. Rollback reports compare a completed baseline with fresh verified snapshots, block missing/changed evidence, and retain the current provider for nonbaseline assets. All reports have `canSwitch: false`; rollback reports also have `canRollback: false`. Sixteen synthetic tests include real process exits, checkpoint recovery, idempotency and denial cases. The live exporter, cloud exact-version reads, copy engine, copy/switch execution checkpoints, conditional reference updates and actual rollback remain unimplemented. These offline reports and the [compiled infrastructure foundation](#infrastructure-template-runbook) complete local preparation, not Phase 2/5 exit gates or permission to migrate production data.
+
+**Repeatable browser acceptance (2026-09-28):** the [headed Edge runner](../../app/README.md#repeatable-edge-acceptance) passed twice in fresh local workspaces. It generates a multi-block MP4/AAC fixture, loses a committed block response, restarts the full lab and resumes without replay, checks quarantine, publishes through simulated roles, plays to the end at normal speed, seeks with nonblank pixels, verifies a real browser download checksum and withdraws through another page while the reader player is open. The expanded attachment run also passed; current regression totals are 31 local and 65 connected tests, with local types, lint and both builds passing. This resolves the local short-fixture regular-Edge playback uncertainty, not audible output, maximum-size/device coverage or hosted authentication. Existing labs and published applications are unchanged; the Phase 2 and Phase 6 Azure/hosted gates remain open.
+
+**Local document/HTML extension (2026-09-28):** the same durable upload, quarantine and protected-range path now accepts HTML/HTM, PDF, PPT and PPTX up to 25 MiB, alongside 500 MiB MP4. MIME is derived server-side; basic file signatures and UTF-8 HTML checks are not full-format validation or malware clearance. HTML uses the connected viewer's restrictive CSP in an `allow-scripts` sandbox without same-origin access; documents remain download-only. Original bytes are preserved. Headed Edge verifies all four downloads by hash, quarantine and post-withdrawal denial, plus interactive HTML isolation and desktop/mobile preview removal. The synthetic PPT fixture proves container transfer, not Office rendering. The local adapter exposes attachment aliases; Dataverse's common-adapter write/range pilot remains MP4-only and production document/HTML behavior is unchanged. See the [local workflow and limits](../../app/README.md#local-workflow) and [acceptance evidence](../../app/README.md#repeatable-edge-acceptance). No production storage, schema, security or deployment changes are implied.
+
+The likely change surfaces are the existing [media transfer API](../../backend/Prisma.Plugins/MediaTransferApi.cs), [read/resume policy](../../backend/Prisma.Plugins/MediaTransferPolicy.cs), [media lifecycle API](../../backend/Prisma.Plugins/MediaApi.cs), [connected media contract](../../app/connected/src/media.ts) and [connected transfer adapter](../../app/connected/src/mediaTransfer.ts), plus the proposed Azure services. Keep Dataverse-controlled publication decisions authoritative; do not duplicate them as client flags or Power Automate business logic.
+
+This plan is based on repository implementation and recorded acceptance evidence, not a fresh live inventory or Azure connectivity test. No delivery estimate is committed until Phase 1 requirements and Phase 2 feasibility are resolved.
 
 ## Contributor data
 
