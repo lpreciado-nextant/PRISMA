@@ -28,6 +28,9 @@ import { Nx_GetSubmissionService } from "./generated/services/Nx_GetSubmissionSe
 import { Nx_TransitionSubmissionService } from "./generated/services/Nx_TransitionSubmissionService";
 import { Nx_GetPublishedDetailService } from "./generated/services/Nx_GetPublishedDetailService";
 import type { WorkflowApi } from "./workflow";
+import { Nx_SetFavoriteService } from "./generated/services/Nx_SetFavoriteService";
+import { Nx_GetMyFavoritesService } from "./generated/services/Nx_GetMyFavoritesService";
+import type { FavoriteApi } from "./favorites";
 import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginResumableUploadService";
 import { Nx_GetUploadCheckpointService } from "./generated/services/Nx_GetUploadCheckpointService";
 import { Nx_ReadVideoRangeService } from "./generated/services/Nx_ReadVideoRangeService";
@@ -74,6 +77,11 @@ export const graphApi: GraphApi = {
 export const draftApi: DraftApi = {
   list: (page, cookie) => Nx_GetMyCoreDraftsService.nx_GetMyCoreDrafts(page, cookie),
   save: (json, id, version) => Nx_SaveCoreDraftService.nx_SaveCoreDraft(json, id, version),
+};
+
+export const favoriteApi: FavoriteApi = {
+  list: () => Nx_GetMyFavoritesService.nx_GetMyFavorites(),
+  set: (id, saved) => Nx_SetFavoriteService.nx_SetFavorite(id, saved),
 };
 
 export async function getSignedInUser(): Promise<AppUser> {

@@ -10,17 +10,21 @@ import { navigate, replaceQuery, useRoute } from "../../src/lib/router";
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue } from "./catalogue";
-import { getSignedInUser, getUserPhoto, readRows, workflowApi } from "./dataSource";
+import { getSignedInUser, getUserPhoto, readRows, workflowApi, favoriteApi } from "./dataSource";
 import { parsePublished, workflowData } from "./workflow";
+import { loadFavorites, setFavorite } from "./favorites";
 import { DraftsView } from "./DraftsView";
 import { SubmissionsView, SubmissionView } from "./SubmissionsView";
 import { PublishedView } from "./PublishedView";
 import { ConnectedSolutionCard } from "./ConnectedSolutionCard";
+import { FavoritesView } from "./FavoritesView";
 import { clearRecoveries } from "./draftRecovery";
 import { WelcomeScreen } from "./WelcomeScreen";
 
 const PRESENT_KEY = "prisma.connected.present";
 async function readCredits(id: string, present: boolean, signal: AbortSignal) {
+  // Present mode never exposes builder names, on cards or in search.
+  if (present) return [];
   const response = await workflowApi.published(id, present);
   signal.throwIfAborted();
   return parsePublished(response, id, present).contributors.map(person => person.name);
@@ -68,6 +72,8 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [bannerVisible, setBannerVisible] = useState(true);
   const [librarian, setLibrarian] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string> | null>(null);
+  const [pendingFavorites, setPendingFavorites] = useState<Set<string>>(new Set());
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
     if (transitionComplete) main.current?.focus({ preventScroll: true });
@@ -126,6 +132,30 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [present, user.live]);
   useEffect(() => {
+    // Present mode never shows favorites (the masthead link and card hearts hide themselves).
+    if (present || !user.live) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20_000);
+    void loadFavorites(favoriteApi, controller.signal).then(ids => {
+      if (!controller.signal.aborted) setFavorites(ids);
+    }).catch(() => { if (!controller.signal.aborted) setFavorites(null); }).finally(() => window.clearTimeout(timeout));
+    return () => { controller.abort(); window.clearTimeout(timeout); };
+  }, [present, user.live]);
+  const toggleFavorite = (id: string) => {
+    if (!favorites || pendingFavorites.has(id)) return;
+    const next = !favorites.has(id);
+    setPendingFavorites(current => new Set(current).add(id));
+    setFavorites(current => { const updated = new Set(current); if (next) updated.add(id); else updated.delete(id); return updated; });
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20_000);
+    void setFavorite(favoriteApi, id, next, controller.signal).then(confirmed => {
+      setFavorites(current => { const updated = new Set(current ?? []); if (confirmed) updated.add(id); else updated.delete(id); return updated; });
+    }).catch(() => {
+      // Roll back the optimistic update; the heart returns to its prior state.
+      setFavorites(current => { const updated = new Set(current ?? []); if (next) updated.delete(id); else updated.add(id); return updated; });
+    }).finally(() => { window.clearTimeout(timeout); setPendingFavorites(current => { const updated = new Set(current); updated.delete(id); return updated; }); });
+  };
+  useEffect(() => {
     const previous = previousPath.current;
     previousPath.current = route.path;
     if (route.path !== "/" || previous === "/") return;
@@ -144,14 +174,14 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
   const solution = state.kind === "ready" && (segments.length === 2 || (segments.length === 4 && segments[2] === "demo")) && segments[0] === "s"
     ? state.catalogue.find(entry => entry.id === segments[1]) : undefined;
   useEffect(() => {
-    if (present && (section === "submit" || section === "submission" || section === "review" || route.path === "/my-submissions")) navigate("/");
+    if (present && (section === "submit" || section === "submission" || section === "review" || route.path === "/my-submissions" || route.path === "/favorites")) navigate("/");
     else if (present && state.kind === "ready" && section === "s" && !solution) navigate("/");
   }, [present, route.path, section, solution, state.kind]);
   const showBanner = present && bannerVisible;
 
   return <div className="min-h-full" style={{ "--sticky-top": showBanner ? "9.75rem" : "6rem" } as CSSProperties}>
     <Background />
-    <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} />
+    <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} favoriteCount={present ? undefined : favorites?.size} />
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
     <main key={route.path} ref={main} tabIndex={-1} className="focus-visible:outline-none">
       {state.kind === "loading" || (state.kind === "ready" && !entered) ? <WelcomeScreen authenticated={user.live} present={present} ready={state.kind === "ready"} entering={entering} onBegin={onBegin} />
@@ -160,9 +190,12 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
         : !present && route.path === "/submit" ? <DraftsView draftId={route.query.get("draft") ?? undefined} owner={user.userPrincipalName} />
         : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} />
-        : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} />
+        : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
+        : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]}
+            favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
-        : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly renderCard={(entry, index) => <ConnectedSolutionCard solution={entry} present={present} index={index} />} />}
+        : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly renderCard={(entry, index) => <ConnectedSolutionCard solution={entry} present={present} index={index}
+            favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />} />}
     </main>
   </div>;
 }

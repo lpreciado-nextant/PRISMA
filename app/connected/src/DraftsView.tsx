@@ -4,11 +4,11 @@ import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { TagPicker } from "../../src/components/TagPicker";
 import { SolutionCard } from "../../src/components/SolutionCard";
-import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, IdentityFields, StoryFields, SubmissionReview } from "../../src/components/SubmissionForm";
+import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, SolutionDetailsFields, ClientFields, StoryFields, SubmissionReview } from "../../src/components/SubmissionForm";
 import type { Solution, SpecializationArea } from "../../src/types";
 import { MAX_AREAS } from "../../src/lib/areas";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
-import { AREAS } from "../../src/data/catalogueMetadata";
+import { AREAS, CLIENT_ROLES, CLIENT_ROLE_VALUES, CLIENT_ROLE_BY_VALUE, CONTRIBUTOR_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata";
 import { DraftGraphEditor } from "./DraftGraphEditor";
 import { DraftMediaEditor } from "./DraftMediaEditor";
 import { draftApi, graphApi, mediaApi, readRows, workflowApi } from "./dataSource";
@@ -222,7 +222,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     id: saved?.id ?? "preview", name: draft.name, summary: draft.summary, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
     specializationArea: selectedAreas[0] ?? "ai", specializationAreas: selectedAreas, status: MATURITY_OPTIONS.find(option => option.value === draft.maturity)?.label as Solution["status"],
     publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
-    contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "" }, directHours: person.directHours ?? undefined, startDate: person.startDate ?? "", endDate: person.endDate ?? "", allocation: person.allocation ?? 0, calendarId: "" })),
+    clientRole: draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : undefined,
+    contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "" }, directHours: person.directHours ?? undefined, startDate: person.startDate ?? "", endDate: person.endDate ?? "", allocation: person.allocation ?? 0, calendarId: "", contributorRole: person.roleValue != null ? CONTRIBUTOR_ROLE_BY_VALUE[person.roleValue] : undefined })),
     dateAdded: "", searchKeywords: "", assets: [], capabilities: references.capabilities.filter(option => option.id === draft.capabilityId).map(option => option.name),
     technologies: (graphReferences.technologies ?? []).filter(option => graph.technologyIds.includes(option.id)).map(option => option.name), industries: (graphReferences.industries ?? []).filter(option => graph.industryIds.includes(option.id)).map(option => option.name),
   };
@@ -258,10 +259,16 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
       <fieldset disabled={locked} className="min-w-0">
         {step === 0 && <SubmissionSafety accepted={accepted} onChange={setAccepted} />}
         {step === 1 && <StepShell title="What is it?">
-          <IdentityFields value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
-            selectedAreas={graph.areaIds} onAreas={areaIds => changeGraph({ ...graph, areaIds })} maxAreas={MAX_AREAS} areas={[...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name)).map(option => ({ value: option.id, label: areaName(option.name) }))}
-            status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
-          <DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="contributors" onChange={changeGraph} />
+          <NamedSection title="Solution details">
+            <SolutionDetailsFields value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
+              selectedAreas={graph.areaIds} onAreas={areaIds => changeGraph({ ...graph, areaIds })} maxAreas={MAX_AREAS} areas={[...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name)).map(option => ({ value: option.id, label: areaName(option.name) }))}
+              status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
+          </NamedSection>
+          <ClientFields framed value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
+            role={draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : ""} roles={CLIENT_ROLES} onRole={value => change("clientRoleValue", value ? CLIENT_ROLE_VALUES[value] : undefined)} />
+          <NamedSection title="Built by & effort">
+            <DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="contributors" onChange={changeGraph} />
+          </NamedSection>
         </StepShell>}
         {step === 2 && <StoryFields whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={change} />}
         {step === 3 && <StepShell title="Tag it"><TagPicker label="Capability (required, choose one)" governed options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
