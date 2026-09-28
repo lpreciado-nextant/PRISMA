@@ -150,6 +150,8 @@ test("workflow rejects mismatched versions, unknown states and internal presenta
   const credited = { ...published, contributors: [{ name: "Builder", hours: 168, email: "builder@example.com", effort }], totalHours: 168 };
   assert.deepEqual(parsePublished(result(credited), draft.id, false).contributors[0].effort, effort);
   assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: 1 }] }), draft.id, true), /credit/);
+  // nx_GetPublishedDetail with Present sends no credits and a zero total; the app must accept that projection.
+  assert.deepEqual(parsePublished(result({ ...published, projects: [] }), draft.id, true).contributors, []);
   assert.throws(() => parsePublished(result({ ...published, projects: [], libraryNotes: "Internal" }), draft.id, true), /projection/);
   assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: null, email: "builder@example.com" }] }), draft.id, true), /credit/);
   const metadata = { ...detail.record, owner: "Owner", dateAdded: "2026-09-22", imageCount: 1, attachmentCount: 0, libraryNotes: "Internal" };

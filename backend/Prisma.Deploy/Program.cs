@@ -464,6 +464,9 @@ var assembly = new Entity("pluginassembly") {
 };
 var assemblyId = Save(client, assembly, existingAssembly);
 AddComponent(client, assemblyId, 91);
+// The Specialization Area N:N was created in Default only; add it so exporting PRISMA_Dev carries it.
+var areaRelationship = ((RetrieveRelationshipResponse)client.Execute(new RetrieveRelationshipRequest { Name = "nx_Solution_nx_SpecializationArea_nx_SpecializationArea" })).RelationshipMetadata;
+AddComponent(client, areaRelationship.MetadataId!.Value, 10);
 var apiType = PluginType(client, assemblyId, "Prisma.Plugins.DraftApi");
 var guardType = PluginType(client, assemblyId, "Prisma.Plugins.SolutionWriteGuard");
 foreach (var message in new[] { "Create", "Update", "Delete", "Assign", "SetState" }) RegisterGuard(client, guardType, message);
