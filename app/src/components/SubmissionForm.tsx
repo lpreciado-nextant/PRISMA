@@ -227,11 +227,13 @@ type IdentityProps<Area extends string, Status extends string, Role extends stri
   area?: Area; areas: { value: Area; label: string }[]; onArea?: (value: Area) => void;
   status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void;
   role?: Role | ""; roles?: readonly Role[]; onRole?: (value: Role | "") => void;
+  /** Multi-valued mode (native N:N). When set, replaces the single-area picker. */
+  selectedAreas?: Area[]; onAreas?: (value: Area[]) => void; maxAreas?: number;
 };
 
 /** Name, summary, area and status. \`grouped\` splits them into labelled subsections inside a section card. */
 /** Pass `selectedAreas` + `onAreas` for N:N specialization areas (up to `maxAreas`); otherwise `area` + `onArea` pick one. */
-export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "role" | "roles" | "onRole"> & { grouped?: boolean; selectedAreas?: Area[]; onAreas?: (value: Area[]) => void; maxAreas?: number }) {
+export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "role" | "roles" | "onRole"> & { grouped?: boolean }) {
   const toggleArea = (option: Area) => {
     if (!selectedAreas || !onAreas) return;
     if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));
@@ -244,7 +246,7 @@ export function SolutionDetailsFields<Area extends string, Status extends string
   const classification = <>
     {selectedAreas && onAreas
       ? <Field label="Specialization areas" required hint={`Choose up to ${maxAreas}. The first one you pick sets the card colour.`}><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={selectedAreas.includes(option.value)} onClick={() => toggleArea(option.value)}>{option.label}</Chip>)}</div></Field>
-      : <Field label="Specialization area"><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea(option.value)}>{option.label}</Chip>)}</div></Field>}
+      : <Field label="Specialization area"><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>}
     <Field label="Status"><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
   </>;
   if (!grouped) return <>{naming}{classification}</>;

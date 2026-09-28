@@ -5,7 +5,7 @@ import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
 import { calculateEffort } from "../lib/effort";
-import { DemoStage } from "./ViewerView";
+import { DemoStage } from "../components/DemoStage";
 import { solutionAreas } from "../lib/areas";
 
 type Behaviour = {
