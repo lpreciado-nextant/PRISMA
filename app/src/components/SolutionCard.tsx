@@ -18,6 +18,7 @@ export function SolutionCard({
   poster,
   contributorNames,
   favoritable = false,
+  favorite,
 }: {
   solution: Solution;
   present: boolean;
@@ -29,9 +30,12 @@ export function SolutionCard({
   contributorNames?: string[];
   /** Shows the favorites heart (hidden in present mode). */
   favoritable?: boolean;
+  /** Controls the favorite heart instead of the PoC's local browser-only store. */
+  favorite?: { saved: boolean; pending?: boolean; onToggle: () => void };
 }) {
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
-  const names = contributorNames ?? solution.contributorNames ?? solution.contributors.filter(contributor => contributor.contributorRole !== "CSM").map(contributor => contributor.builtBy.name);
+  // Present mode never shows builder names, regardless of what the caller passed.
+  const names = present ? [] : contributorNames ?? solution.contributorNames ?? solution.contributors.filter(contributor => contributor.contributorRole !== "CSM").map(contributor => contributor.builtBy.name);
   const builderNames = names.join(", ");
   const publicationStatus = showPublicationStatus && !present
     ? solution.publicationStatus === "Draft" && solution.reviewOutcome === "Changes requested" ? "Changes requested" : solution.publicationStatus
@@ -119,7 +123,7 @@ export function SolutionCard({
         </span>
       </div>
     </article>
-    {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="absolute top-3 right-3 z-10" />}
+    {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="absolute top-3 right-3 z-10" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
     </div>
   );
 }
