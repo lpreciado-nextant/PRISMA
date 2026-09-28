@@ -55,7 +55,7 @@ namespace Prisma.Plugins
                     CheckFields(root, "contributors", "technologyIds", "industryIds", "projectIds", "areaIds");
                     var contributors = root.Element("contributors");
                     if (contributors != null)
-                        foreach (var contributor in contributors.Elements()) CheckFields(contributor, "id", "personId", "directHours", "startDate", "endDate", "allocation");
+                        foreach (var contributor in contributors.Elements()) CheckFields(contributor, "id", "personId", "directHours", "startDate", "endDate", "allocation", "roleValue");
                 }
                 using (var stream = new MemoryStream(bytes)) input = (DraftGraphInput)new DataContractJsonSerializer(typeof(DraftGraphInput)).ReadObject(stream);
             }
@@ -94,7 +94,8 @@ namespace Prisma.Plugins
                 DirectHours = row.Contains("nx_directhours") ? (decimal?)row["nx_directhours"] : null,
                 Allocation = row.Contains("nx_allocationpercent") ? (decimal?)row["nx_allocationpercent"] : null,
                 StartDate = row.Contains("nx_startdate") ? ((DateTime)row["nx_startdate"]).ToString("yyyy-MM-dd") : null,
-                EndDate = row.Contains("nx_enddate") ? ((DateTime)row["nx_enddate"]).ToString("yyyy-MM-dd") : null
+                EndDate = row.Contains("nx_enddate") ? ((DateTime)row["nx_enddate"]).ToString("yyyy-MM-dd") : null,
+                RoleValue = row.GetAttributeValue<OptionSetValue>("nx_role")?.Value
             }).ToList();
             var maturity = parent.GetAttributeValue<OptionSetValue>("nx_status").Value;
             return new DraftGraphSnapshot {
@@ -126,7 +127,8 @@ namespace Prisma.Plugins
                     ["nx_solution"] = parent.ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId),
                     ["nx_effortmode"] = new OptionSetValue(ContributorPolicy.Direct(maturity) ? 125060000 : 125060001),
                     ["nx_directhours"] = person.DirectHours, ["nx_allocationpercent"] = person.Allocation,
-                    ["nx_startdate"] = ContributorPolicy.Date(person.StartDate), ["nx_enddate"] = ContributorPolicy.Date(person.EndDate)
+                    ["nx_startdate"] = ContributorPolicy.Date(person.StartDate), ["nx_enddate"] = ContributorPolicy.Date(person.EndDate),
+                    ["nx_role"] = person.RoleValue.HasValue ? new OptionSetValue(person.RoleValue.Value) : null
                 };
                 if (identifier == Guid.Empty) caller.Create(row);
                 else { caller.Update(row); retained.Add(identifier); }
@@ -141,7 +143,7 @@ namespace Prisma.Plugins
         private static List<Entity> Children(IOrganizationService caller, Guid parent)
         {
             var query = new QueryExpression("nx_solutioncontributor") {
-                ColumnSet = new ColumnSet("nx_builtby", "nx_directhours", "nx_startdate", "nx_enddate", "nx_allocationpercent"), TopCount = 101
+                ColumnSet = new ColumnSet("nx_builtby", "nx_directhours", "nx_startdate", "nx_enddate", "nx_allocationpercent", "nx_role"), TopCount = 101
             };
             query.Criteria.AddCondition("nx_solution", ConditionOperator.Equal, parent);
             query.Orders.Add(new OrderExpression("nx_solutioncontributorid", OrderType.Ascending));
