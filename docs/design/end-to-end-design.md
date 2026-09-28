@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
 **Status:** Agreed two-field story design; wizard resume, selectable MP4 captions and same-account video acceptance verified; production-host and least-privilege gates remain open
-**Last updated:** 2026-09-22
+**Last updated:** 2026-09-28
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
@@ -159,7 +159,7 @@ flowchart LR
 
 **Browse** is the alternative for CSMs who don't yet know what they're looking for: three specialization-area tabs, each with a short framing note and a visual card grid. Cards carry a thumbnail, name, one-liner, specialization colour coding, status badge, and a capability badge — enough to triage without clicking.
 
-**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths), total calculated effort hours, the client/context it came from, tags, and the asset list. Per-person dates, allocation, and effort breakdown are internal-only and omitted in present mode, alongside library notes and internal client identity. Present mode uses only the authored anonymous context, builder names and aggregate hours. Direct hours are reported effort; calendar-mode hours are capacity-based, not elapsed deployment time or a timesheet — and client-demo hours carry a warning that production delivery may take longer.
+**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths), total calculated effort hours, the client/context it came from, tags, and the asset list. Per-person dates, allocation, and effort breakdown are internal-only and omitted in present mode, alongside library notes and internal client identity. Present mode uses only the authored anonymous context: builder names, CSM rows, total effort and estimated cost are internal-only too, removed from the catalogue before render and never shown on cards or detail. Direct hours are reported effort; calendar-mode hours are capacity-based, not elapsed deployment time or a timesheet — and client-demo hours carry a warning that production delivery may take longer.
 
 ### 3.3 Demo assets
 
