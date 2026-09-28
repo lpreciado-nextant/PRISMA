@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role and favorites wired in source, not deployed · **Last updated:** 2026-09-28
+**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28 · **Last updated:** 2026-09-28
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `SpecializationArea`, `Industry` and `Technology` are **native N:N**, while `Capability` is a single-valued lookup. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
 
@@ -8,7 +8,7 @@ This is the current, agreed model. It replaces [nextant-solution-library-dataver
 1. `nx_specializationarea` moved from a 1:N lookup to a **native N:N** with `nx_solution` (`nx_Solution_nx_SpecializationArea_nx_SpecializationArea`). The `nx_solution.nx_specializationarea` lookup column has been **deleted**. See [Known divergences](#known-divergences-from-this-document): no values were carried over, and the plugins still reference the deleted column.
 2. `nx_solution.nx_clientrole` (**Client Role**) added, a local choice.
 3. `nx_solutioncontributor.nx_role` (**Role**: CSM · Consultant) added, a local choice.
-4. New table **`nx_solutionfavorite`**: per-person favorite Solutions, linked to `nx_solution` and `cr6b0_consultant`. It is UserOwned. The connected app uses it in source through two Custom APIs, not yet deployed. See [its section](#nx_solutionfavorite--per-person-favorites).
+4. New table **`nx_solutionfavorite`**: per-person favorite Solutions, linked to `nx_solution` and `cr6b0_consultant`. It is UserOwned. The connected app uses it through two Custom APIs, deployed 2026-09-28. See [its section](#nx_solutionfavorite--per-person-favorites).
 
 **Changed in the previous round (2026-09-21):**
 1. `nx_capability` moved from native N:N to a **1:N** relationship — each `nx_solution` now carries a single `Capability` lookup, same shape as `SpecializationArea`.
@@ -270,7 +270,7 @@ The reusable offering — the unit of value shown to a CSM.
 | Capability | `nx_capability` | LookupType → `nx_capability` | At submit/publication | Single-valued; optional column metadata for Draft, exactly one governed value at submit/publication |
 | Client / Context | `nx_clientcontext` | StringType | No | Freeform for now; revisit as a lookup if reporting by client is needed later. **Internal-only** — never rendered in present mode |
 | Client Context (Redacted) | `nx_clientcontextredacted` | StringType | Conditional | The only context shown in present mode; required at submission when Client / Context is populated. Never infer or scrub names automatically. |
-| Client Role | `nx_clientrole` | PicklistType (local) | No | Added 2026-09-23. Client stakeholder roles, from Chief of Staff and C-suite to Other; values under [Choice values](#choice-values). No default. Read and written by connected drafts (`clientRoleValue`, in source, not deployed); not yet returned by the published catalogue |
+| Client Role | `nx_clientrole` | PicklistType (local) | No | Added 2026-09-23. Client stakeholder roles, from Chief of Staff and C-suite to Other; values under [Choice values](#choice-values). No default. Read and written by connected drafts (`clientRoleValue`, deployed 2026-09-28); not yet returned by the published catalogue |
 | Status | `nx_status` | PicklistType (global) | Yes | Idea / concept · Working prototype · Client demo · Live in production · Retired |
 | Publication Status | `nx_publicationstatus` | PicklistType (global) | Yes | Default Draft. Draft · Pending review · Published · Retired. Protected; controlled transition handler writes after caller authorization; only Librarian may request publication |
 | Review Outcome | `nx_reviewoutcome` | PicklistType (local) | Yes | Default None. None · Changes requested · Approved. Latest librarian decision; preserved on contributor edits/resubmission, not proof of current approval. Protected write; readable by owner/authorized editors and Librarian, not CSM |
@@ -351,7 +351,7 @@ Calendar-mode hours represent capacity; Direct-mode hours represent reported eff
 
 ### `nx_solutionfavorite` — per-person favorites
 
-Created 2026-09-23 in the maker portal. It backs the connected app's "My favorites" view and the heart on cards and detail: each person saves the solutions they like and sees their own list. As of 2026-09-28 this is **in source, not deployed**: the `FavoriteApi` plugin (`nx_SetFavorite`, `nx_GetMyFavorites`) and its role privileges still need a build and deploy, and the connected app's service stubs must be regenerated once the Custom APIs exist. One row per person per saved Solution. The table is **UserOwned**, and `ownerid` is the signed-in account that created the row. With user-level (Basic) privileges, that makes each person's list private. `nx_user` records *which consultant* saved the solution; `ownerid` controls *who can read* the row.
+Created 2026-09-23 in the maker portal. It backs the connected app's "My favorites" view and the heart on cards and detail: each person saves the solutions they like and sees their own list. Deployed 2026-09-28: the `FavoriteApi` plugin (`nx_SetFavorite`, `nx_GetMyFavorites`) and its role privileges, plus the republished PRISMA app. Saving and removing a favorite was verified in the hosted app by the user. The two favorite service files were hand-authored before the APIs existed; they match the generated shape exactly, so they were not regenerated. One row per person per saved Solution. The table is **UserOwned**, and `ownerid` is the signed-in account that created the row. With user-level (Basic) privileges, that makes each person's list private. `nx_user` records *which consultant* saved the solution; `ownerid` controls *who can read* the row.
 
 | Column | Logical name | Type | Required | Notes |
 |---|---|---|---|---|
@@ -369,7 +369,7 @@ Alternate key `nx_SolutionUser` (`nx_solutionuser`) = `nx_solution` + `nx_user`,
 | `nx_solutionfavorite_Solution_nx_solution` | **Cascade** (Archive: Cascade) | NoCascade | Deleting a Solution removes its favorites. This is the table's single parental relationship. Sharing must **not** cascade: approval shares a Solution with Published Readers, and a cascading share would expose every person's favorites of it |
 | `nx_solutionfavorite_User_cr6b0_consultant` | RemoveLink | NoCascade | Dataverse allows only one parental relationship per table, and any Delete = Cascade makes a relationship parental, so this one can't cascade. Restrict is avoided because it would block deletions in the source consultant table. If a consultant is deleted, their favorites keep an empty `nx_user`; readers ignore such rows, and cleanup is a later job |
 
-**Behavior (in source, not deployed):**
+**Behavior (deployed 2026-09-28):**
 
 - The signed-in account maps to its consultant by `cr6b0_email`, resolved server-side from the execution context. An account with no unique active consultant row can't save favorites.
 - Saving creates a row and un-saving deletes it. Rows are never updated. The alternate key keeps one row per person per Solution.
@@ -530,19 +530,19 @@ Reviewed and accepted, not defects:
 - Column lengths in Dataverse are largely 850 (text) and 4000 (multiline); the design lengths above were not applied and are not enforced at the column level.
 - Required levels do not match the Required column above — notably `nx_capability` is `ApplicationRequired` in Dataverse while drafts may leave it empty. `ApplicationRequired` is not enforced on SDK writes, so the draft plugin is unaffected; a model-driven form would be.
 - `cr6b0_consultant` and `cr6b0_project` carry many columns of their own beyond the ones documented above, and `cr6b0_consultant.cr6b0_specializationarea` points to a **different** table of that name, outside this solution. Both are treated as independent, pre-existing tables; the sections above list their identifiers, person links and the columns PRISMA reads, not their full column sets.
-- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` and `nx_solutioncontributor.nx_role` are read and written by connected drafts in source (2026-09-28), not yet deployed.
+- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` and `nx_solutioncontributor.nx_role` are read and written by connected drafts (deployed 2026-09-28).
 
 **Open after the 2026-09-23 changes (these are defects, not accepted divergences):**
 
-- **The deployed plugins and the published connected app still use the deleted `nx_solution.nx_specializationarea` lookup.** The source code has moved to the N:N but is **not yet deployed**: areas are now part of the draft graph (`nx_SaveDraftGraph` / `nx_GetDraftGraph` `areaIds`), not of `nx_SaveCoreDraft`. Graph reads, submission summaries and the catalogue return areas primary first (ascending `nx_sortordernumber`). Submit and approval require at least one active area. The editor allows up to 3 (the PoC assumption, still open). Until the plugins are redeployed and the connected app is republished, together, the live app's Library load, draft list/save/reopen, submit and approval keep failing. The generated `solutions` schema still lists the deleted column. It must be regenerated as a whole: a PAC 2.12.2 attempt stopped partway on the custom-API schemas and was reverted.
+- **The N:N Specialization Area plugins are deployed (2026-09-28).** Areas are part of the draft graph (`nx_SaveDraftGraph` / `nx_GetDraftGraph` `areaIds`), not of `nx_SaveCoreDraft`. Graph reads, submission summaries and the catalogue return areas primary first (ascending `nx_sortordernumber`). Submit and approval require at least one active area. The editor allows up to 3 (the PoC assumption, still open). The plugins and the connected app were deployed together; draft save, submit and approval with areas were not individually re-verified in this pass. The generated `solutions` schema still lists the deleted column. It must be regenerated as a whole: a PAC 2.12.2 attempt stopped partway on the custom-API schemas and was reverted.
 - **Test data only, no backfill needed.** The lookup was deleted without carrying its values to the N:N, so on 2026-09-23 the existing solutions have no linked areas. Every row in `PRISMA_Dev` is fake test data that can be deleted and recreated, so no migration is planned. Real data will be entered only after the app reads and writes the N:N.
 - **The N:N relationship is not in `PRISMA_Dev`** (it only appears in Default). Add it before exporting or moving the solution.
 - **`nx_solutionfavorite` naming and metadata, accepted:**
   - The person lookup is named `nx_user` ("User") even though it targets `cr6b0_consultant`.
   - The schema name is lowercase (`nx_solutionfavorite`).
   - `nx_name` is optional (length 850).
-- **`nx_solutionfavorite` security and enforcement are in source only.** Until `FavoriteApi` and the updated roles are deployed, the table isn't in any PRISMA role and nothing binds `nx_user` to the caller. The connected app hides the heart when the favorites list doesn't load.
-- **`nx_role` is read and written in source, not deployed.** The contributor editor has a role selector, `ContributorInput` carries `roleValue`, and `DraftGraph.cs` selects, returns and writes `nx_role`. CSM rows are listed separately from builders on the detail page. Until the plugins are redeployed, the live app still ignores the column: a role set in the maker portal survives an app save of a retained row but is lost when a person is removed and re-added.
+- **`nx_solutionfavorite` is only written through `nx_SetFavorite`.** Roles have User-depth Read only; the plugin binds `nx_user` to the caller. The connected app hides the heart when the favorites list doesn't load, for example for an account without a PRISMA role or without a matching active consultant.
+- **`nx_role` is read and written by the app (deployed 2026-09-28).** The contributor editor has a role selector, `ContributorInput` carries `roleValue`, and `DraftGraph.cs` selects, returns and writes `nx_role`. CSM rows are listed separately from builders on the detail page. Contributor rows saved before the deployment keep a null role until edited.
 
 ---
 
@@ -590,7 +590,7 @@ Reviewed and accepted, not defects:
 
 Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. Publication Status, Client Safe Reviewed, Review Outcome, Review Comments and Library Notes have the field permissions and controlled-write rules in the [security model](../architecture/security-model.md). Review fields and notes are excluded from the CSM/presentation projection. `cr6b0_project`'s own security model lives with the existing table, not here.
 
-`nx_solutionfavorite` (**in source, not deployed**): Contributor, CSM and Librarian get **Read at User depth only**, with no Create, Write, Delete, Append, Assign or Share. Rows are created and deleted only through `nx_SetFavorite`, and both favorite Custom APIs require `prvReadnx_solutionfavorite`. Each person sees only their own favorites. Nobody, including the Librarian, reads other people's rows directly; aggregate counts go through a server-side operation.
+`nx_solutionfavorite` (**deployed 2026-09-28**): Contributor, CSM and Librarian get **Read at User depth only**, with no Create, Write, Delete, Append, Assign or Share. Rows are created and deleted only through `nx_SetFavorite`, and both favorite Custom APIs require `prvReadnx_solutionfavorite`. Each person sees only their own favorites. Nobody, including the Librarian, reads other people's rows directly; aggregate counts go through a server-side operation.
 
 `nx_solutioncontributor`: Contributor create/read/write/delete only where they can manage the parent Solution; CSM read only for published parents; Librarian full access. Present mode omits all contributor data: per-person dates and allocations, builder names, CSM rows and total effort. Present mode is not a security boundary for the bundled mock data.
 

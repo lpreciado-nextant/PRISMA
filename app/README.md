@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
 **Status:** Shared loading states deployed; hosted submission/review loaders, fonts, logos and empty-catalogue present mode verified. Two-field story deployed and hosted save/reopen verified; retired Dataverse column deleted. Connected profile photo included in the approved publication. Welcome/Begin transition and video fallback notice deployed and hosted-verified; submission, return/revision, publication and present-mode workflow previously passed with one privileged account. Non-admin and separate-reviewer acceptance remain open.
-**Last updated:** 2026-09-22
+**Last updated:** 2026-09-28
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -160,6 +160,12 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+### Roles and favorites deployment (2026-09-28)
+
+With explicit approval, `Prisma.Deploy apply` (built from `main` `86cc461`, 49 backend tests passing) deployed the updated plug-in assembly to **Nextant Pulse**: N:N Specialization Area drafts, `nx_clientrole` and contributor `nx_role`, and the new `nx_SetFavorite` / `nx_GetMyFavorites` Custom APIs with User-depth Read on `nx_solutionfavorite` for the three PRISMA roles. No users or teams were assigned.
+
+The connected build (bundle `index-S-q4b2xM.js`, 56 connected and 25 UI tests, lint) was then pushed to the same PRISMA app ID. The first push omitted `--solution-id`, which moved the app out of `PRISMA_Dev`; pushing the same build again with `--solution-id adddc940-98ff-4b2f-9c8a-e89245c2fc33` restored it. **Always pass `--solution-id` when pushing PRISMA.** The user verified in the hosted app that PRISMA is back in `PRISMA_Dev` and that saving and removing a favorite works.
 
 ### Pilot deployment (2026-09-22)
 
