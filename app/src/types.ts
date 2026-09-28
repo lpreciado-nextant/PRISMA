@@ -13,6 +13,23 @@ export type SolutionStatus =
   | "Live in production"
   | "Retired";
 
+/** `nx_solution.nx_clientrole` local choice labels (live 2026-09-23). Values are in CLIENT_ROLE_VALUES. */
+export type ClientRole =
+  | "Chief of Staff"
+  | "Chief Executive Officer (CEO)"
+  | "Chief Information Officer (CIO)"
+  | "Chief Operating Officer (COO)"
+  | "Chief Financial Officer (CFO)"
+  | "Enterprise Architect"
+  | "Solution Architect"
+  | "Product Owner"
+  | "Project Manager"
+  | "Business Unit Leader"
+  | "Operation Manager"
+  | "IT Manager"
+  | "Director"
+  | "Other";
+
 export type PublicationStatus = "Draft" | "Pending review" | "Published" | "Retired";
 
 export interface BusinessCalendar {
@@ -23,9 +40,14 @@ export interface BusinessCalendar {
   holidays: string[];
 }
 
+/** `nx_solutioncontributor.nx_role` local choice: 125060000 CSM · 125060001 Consultant. */
+export type ContributorRole = "CSM" | "Consultant";
+
 export interface SolutionContributor {
   id: string;
   builtBy: { id: string; name: string; email: string };
+  /** `nx_role` — CSM or Consultant. Optional, no default. Internal only, like the rest of the contributor row. */
+  contributorRole?: ContributorRole;
   effortMode?: "direct" | "calendar";
   directHours?: number;
   startDate: string;
@@ -82,6 +104,10 @@ export interface Solution {
   specializationAreas?: SpecializationArea[];
   contributors: SolutionContributor[];
   contributorNames?: string[];
+  /** Proposed `nx_estimatedcost` (Currency, USD). Internal only; stripped in present mode. */
+  estimatedCost?: number;
+  /** `nx_clientrole` — the primary client role this solution supports. Optional, no default. Client-safe. */
+  clientRole?: ClientRole;
   status: SolutionStatus;
   publicationStatus: PublicationStatus;
   reviewOutcome?: "None" | "Changes requested" | "Approved";

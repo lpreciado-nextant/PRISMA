@@ -5,6 +5,9 @@ import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
 import { calculateEffort } from "../lib/effort";
+import { DemoStage } from "../components/DemoStage";
+import { solutionAreas } from "../lib/areas";
+import { FavoriteButton } from "../components/FavoriteButton";
 
 type Behaviour = {
   label: string;
@@ -59,24 +62,36 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster }: {
-  solution: Solution; present: boolean; onEdit?: () => void; onBack?: () => void;
+export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite }: {
+  solution: Solution; present: boolean; favoritable?: boolean; onEdit?: () => void; onBack?: () => void;
   backLabel?: string; reviewActions?: React.ReactNode; assetBasePath?: string;
   catalogueOnly?: boolean;
   connected?: boolean;
-  effort?: { contributors: { name: string; hours: number | null; email?: string; effortMode?: "direct" | "calendar"; startDate?: string | null; endDate?: string | null; allocation?: number | null; businessDays?: number | null }[]; totalHours: number | null };
+  effort?: { contributors: { name: string; hours: number | null; email?: string; effortMode?: "direct" | "calendar"; startDate?: string | null; endDate?: string | null; allocation?: number | null; businessDays?: number | null; contributorRole?: "CSM" | "Consultant" }[]; totalHours: number | null };
   gallery?: React.ReactNode;
   poster?: React.ReactNode;
   imageCount?: number;
   onAssetOpen?: (asset: DemoAsset) => void;
+  /** Controls the favorite heart instead of the PoC's local browser-only store. */
+  favorite?: { saved: boolean; pending?: boolean; onToggle: () => void };
 }) {
-  const area = AREAS[solution.specializationArea];
+  const areas = solutionAreas(solution);
   const assets = [...solution.assets].sort((a, b) => a.sortOrder - b.sortOrder);
+  // The first asset in sort order is the main demo, shown above the fold; the list below holds the rest.
+  // Connected mode (onAssetOpen) loads asset content on demand, so it keeps every asset in the list.
+  const mainDemo = catalogueOnly || onAssetOpen ? undefined : assets[0];
+  const inlineDemo = mainDemo && behaviourFor(mainDemo).mode === "viewer" ? mainDemo : undefined;
+  const otherAssets = mainDemo ? assets.slice(1) : assets;
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
   const contributions = solution.contributors.map((contributor) => {
     const calendar = BUSINESS_CALENDARS.find((entry) => entry.id === contributor.calendarId);
     return { ...contributor, calendar, ...calculateEffort(contributor, calendar) };
   });
+  // nx_role = CSM rows are listed as the solution's CSM, not as builders — in both the mock and connected effort shapes.
+  const csms = contributions.filter((contributor) => contributor.contributorRole === "CSM");
+  const builders = contributions.filter((contributor) => contributor.contributorRole !== "CSM");
+  const effortCsms = effort?.contributors.filter((person) => person.contributorRole === "CSM") ?? [];
+  const effortBuilders = effort?.contributors.filter((person) => person.contributorRole !== "CSM") ?? [];
   const totalHours = Math.round(contributions.reduce((total, contributor) => total + contributor.hours, 0) * 100) / 100;
 
   return (
@@ -105,8 +120,9 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
         />}
         <div className="p-6 sm:p-8">
           <div className="flex flex-wrap items-center gap-2.5">
-            <AreaTag area={solution.specializationArea} size="md" />
+            {areas.map((area) => <AreaTag key={area} area={area} size="md" />)}
             <StatusPill status={solution.status} />
+            {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="order-last ml-auto" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
             {!present && !solution.clientSafeReviewed && (
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.1em] uppercase"
@@ -137,16 +153,46 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
         </div>
       </section>
 
+      <div className="mt-6">
+        <Panel title="What it does">
+          <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.whatItDoes}</p>
+        </Panel>
+      </div>
+
+      {inlineDemo ? (
+        <section aria-label={`${inlineDemo.name} — main demo`} className="glass glass-lite glass-sheen mt-6 overflow-hidden rounded-[20px]">
+          <div className="flex flex-wrap items-center gap-3 px-5 py-3" style={{ borderBottom: "1px solid var(--glass-edge)" }}>
+            <h2 className="eyebrow min-w-0 flex-1 break-words">Main demo · {inlineDemo.name}</h2>
+            <button
+              type="button"
+              onClick={() => navigate(`${assetBasePath ?? `/s/${solution.id}`}/demo/${inlineDemo.id}`)}
+              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[12.5px] font-semibold"
+              style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}
+            >
+              Full screen
+              <Icon name="external" size={13} />
+            </button>
+          </div>
+          <div className="h-[min(70dvh,720px)] min-h-[360px]">
+            <DemoStage solution={solution} asset={inlineDemo} />
+          </div>
+        </section>
+      ) : mainDemo && (
+        <div className="mt-6">
+          <Panel title="Main demo">
+            <ul><AssetRow solution={solution} asset={mainDemo} basePath={assetBasePath} onOpen={onAssetOpen} /></ul>
+          </Panel>
+        </div>
+      )}
+
+      <div className="mt-6">
+        <Panel title="Why it matters">
+          <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.businessValue}</p>
+        </Panel>
+      </div>
+
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
-          <Panel title="What it does">
-            <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.whatItDoes}</p>
-          </Panel>
-          <Panel title="Why it matters">
-            <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.businessValue}</p>
-          </Panel>
-
-
           {(gallery || (solution.images && solution.images.length > 0)) && (
             <Panel title={`Screenshots · ${imageCount ?? solution.images?.length ?? 0}`}>
               {gallery ?? <div className="grid gap-3 sm:grid-cols-2">
@@ -164,9 +210,9 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
             </Panel>
           )}
 
-          {!catalogueOnly && <Panel title="Demo assets">
+          {!catalogueOnly && otherAssets.length > 0 && <Panel title={mainDemo ? "More demo assets" : "Demo assets"}>
             <ul className="flex flex-col gap-3">
-              {assets.map((asset) => (
+              {otherAssets.map((asset) => (
                 <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} onOpen={onAssetOpen} />
               ))}
             </ul>
@@ -205,21 +251,33 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
 
           <Panel title="At a glance">
             <dl className="flex flex-col gap-3 text-[14px]">
-              {!catalogueOnly && <Row label="Built by">
+              {!present && !catalogueOnly && <Row label="Built by">
                 <ul className="space-y-1 break-words">
-                  {effort ? effort.contributors.map((person, index) => <li key={index}>{!present && person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>) : contributions.map(({ id, builtBy }) => (
+                  {effort ? effortBuilders.map((person, index) => <li key={index}>{!present && person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>) : builders.map(({ id, builtBy }) => (
                     <li key={id}>
                       {present ? builtBy.name : <a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a>}
                     </li>
                   ))}
                 </ul>
               </Row>}
-              <Row label="Area">{area.name}</Row>
-              {!catalogueOnly && <Row label="Total effort">{effort ? effort.totalHours === null ? "Incomplete" : `${effort.totalHours.toLocaleString()} hours` : `${totalHours.toLocaleString()} hours`}</Row>}
-              {!catalogueOnly && solution.status === "Client demo" && <Row label="Effort scope">Demo effort only; production delivery may take longer.</Row>}
+              <Row label={areas.length > 1 ? "Areas" : "Area"}>{areas.map((area) => AREAS[area].name).join(" · ")}</Row>
+              {!present && !effort && csms.length > 0 && <Row label={csms.length > 1 ? "CSMs" : "CSM"}>
+                <ul className="space-y-1 break-words">
+                  {csms.map(({ id, builtBy }) => <li key={id}><a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a></li>)}
+                </ul>
+              </Row>}
+              {!present && effort && effortCsms.length > 0 && <Row label={effortCsms.length > 1 ? "CSMs" : "CSM"}>
+                <ul className="space-y-1 break-words">
+                  {effortCsms.map((person, index) => <li key={index}>{person.email ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>)}
+                </ul>
+              </Row>}
+              {!present && !catalogueOnly && <Row label="Total effort">{effort ? effort.totalHours === null ? "Incomplete" : `${effort.totalHours.toLocaleString()} hours` : `${totalHours.toLocaleString()} hours`}</Row>}
+              {!present && !catalogueOnly && solution.status === "Client demo" && <Row label="Effort scope">Demo effort only; production delivery may take longer.</Row>}
+              {!present && solution.estimatedCost !== undefined && <Row label="Est. cost">{solution.estimatedCost.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</Row>}
               {clientLine && <Row label="Context">{clientLine}</Row>}
               {!present && <Row label="Client review">{solution.clientSafeReviewed ? "Cleared" : "Required"}</Row>}
               {!present && solution.dateAdded && <Row label="Added">{solution.dateAdded}</Row>}
+              {solution.clientRole && <Row label="Client role">{solution.clientRole}</Row>}
               <Row label="Industries">{solution.industries.join(" · ")}</Row>
             </dl>
           </Panel>
@@ -227,9 +285,9 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
           {!present && !catalogueOnly && (
             <Panel title="Contributor effort">
               <ul className="space-y-4 text-[14px]">
-                {effort ? effort.contributors.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.name}</p>{person.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : person.effortMode === "calendar" && <><p className="text-[12px]">{person.startDate || "Start date missing"} to {person.endDate || "End date missing"}</p><p>{person.allocation === null ? "Allocation missing" : `${person.allocation}% allocation`}{person.businessDays !== null && person.businessDays !== undefined ? ` · ${person.businessDays} business days` : ""}</p><p className="text-[12px] text-(--ink-3)">US federal holidays</p></>}<p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : contributions.map((contributor) => (
+                {effort ? effortBuilders.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.name}{person.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {person.contributorRole}</span>}</p>{person.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : person.effortMode === "calendar" && <><p className="text-[12px]">{person.startDate || "Start date missing"} to {person.endDate || "End date missing"}</p><p>{person.allocation === null ? "Allocation missing" : `${person.allocation}% allocation`}{person.businessDays !== null && person.businessDays !== undefined ? ` · ${person.businessDays} business days` : ""}</p><p className="text-[12px] text-(--ink-3)">US federal holidays</p></>}<p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : contributions.map((contributor) => (
                   <li key={contributor.id} className="break-words">
-                    <p className="font-semibold">{contributor.builtBy.name}</p>
+                    <p className="font-semibold">{contributor.builtBy.name}{contributor.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {contributor.contributorRole}</span>}</p>
                     {contributor.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : <>
                       <p className="text-[12px]">{contributor.startDate} to {contributor.endDate}</p>
                       <p>{contributor.allocation}% allocation · {contributor.businessDays} business days</p>

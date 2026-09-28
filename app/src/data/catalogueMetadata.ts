@@ -1,4 +1,4 @@
-import type { AreaMeta, BusinessCalendar, SpecializationArea } from "../types";
+import type { AreaMeta, BusinessCalendar, ClientRole, ContributorRole, SpecializationArea } from "../types";
 
 export const DEFAULT_BUSINESS_CALENDAR_ID = "us-federal-2026";
 
@@ -31,5 +31,43 @@ export const AREAS: Record<SpecializationArea, AreaMeta> = {
     cssVar: "var(--sa-ibo)",
   },
 };
+
+/**
+ * `nx_clientrole` in live display order. Values are not ordinal (COO/CFO sit after CIO), so map by value, never
+ * by position. The live "Director" label has a trailing space; compare values, not labels.
+ */
+export const CLIENT_ROLE_VALUES: Record<ClientRole, number> = {
+  "Chief of Staff": 125060000,
+  "Chief Executive Officer (CEO)": 125060001,
+  "Chief Information Officer (CIO)": 125060002,
+  "Chief Operating Officer (COO)": 125060008,
+  "Chief Financial Officer (CFO)": 125060009,
+  "Enterprise Architect": 125060003,
+  "Solution Architect": 125060004,
+  "Product Owner": 125060005,
+  "Project Manager": 125060006,
+  "Business Unit Leader": 125060007,
+  "Operation Manager": 125060010,
+  "IT Manager": 125060011,
+  Director: 125060012,
+  Other: 125060013,
+};
+
+export const CLIENT_ROLES = Object.keys(CLIENT_ROLE_VALUES) as ClientRole[];
+
+/** Reverse of `CLIENT_ROLE_VALUES`, for a connected app that stores the numeric choice value. */
+export const CLIENT_ROLE_BY_VALUE: Record<number, ClientRole> = Object.fromEntries(
+  Object.entries(CLIENT_ROLE_VALUES).map(([label, value]) => [value, label]),
+) as Record<number, ClientRole>;
+
+/** `nx_solutioncontributor.nx_role`. */
+export const CONTRIBUTOR_ROLE_VALUES: Record<ContributorRole, number> = { CSM: 125060000, Consultant: 125060001 };
+
+/** Reverse of `CONTRIBUTOR_ROLE_VALUES`, for a connected app that stores the numeric choice value. */
+export const CONTRIBUTOR_ROLE_BY_VALUE: Record<number, ContributorRole> = Object.fromEntries(
+  Object.entries(CONTRIBUTOR_ROLE_VALUES).map(([label, value]) => [value, label]),
+) as Record<number, ContributorRole>;
+
+export const CONTRIBUTOR_ROLES = Object.keys(CONTRIBUTOR_ROLE_VALUES) as ContributorRole[];
 
 export const AREA_ORDER: SpecializationArea[] = ["ai", "data", "ibo"];

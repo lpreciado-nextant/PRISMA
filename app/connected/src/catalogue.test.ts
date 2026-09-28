@@ -43,6 +43,19 @@ test("maps live names, numeric choices, lookups and N:N tag queries", async () =
   assert.match(calls.find(([table]) => table === "industries")![1].filter!, new RegExp(solutionId));
 });
 
+test("reads nx_clientrole so the Target client role facet can filter PRISMA", async () => {
+  const { filterSolutions, EMPTY_FILTERS } = await import("../../src/lib/search.ts");
+  assert(catalogueQuery(false).select!.includes("nx_clientrole"));
+  assert(catalogueQuery(true).select!.includes("nx_clientrole"));
+  const [tagged] = await loadCatalogue(reader({ nx_clientrole: 125060009 }), false, signal());
+  assert.equal(tagged.clientRole, "Chief Financial Officer (CFO)");
+  assert.deepEqual(filterSolutions([tagged], { ...EMPTY_FILTERS, roles: ["Chief Financial Officer (CFO)"] }), [tagged]);
+  assert.deepEqual(filterSolutions([tagged], { ...EMPTY_FILTERS, roles: ["Chief of Staff"] }), []);
+  const [untagged] = await loadCatalogue(reader({ nx_clientrole: null }), false, signal());
+  assert.equal(untagged.clientRole, undefined);
+  await assert.rejects(loadCatalogue(reader({ nx_clientrole: 999 }), false, signal()), /client role/);
+});
+
 test("a published solution without areas still loads, like one without industries", async () => {
   const base = reader();
   const [result] = await loadCatalogue(async (table, options) => table === "areas" ? { success: true, data: [] } : base(table, options), false, signal());

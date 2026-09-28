@@ -53,15 +53,17 @@ namespace Prisma.Plugins
             var graph = DraftGraph.Read(caller, parent);
             var credits = new List<PublishedCredit>();
             var totalHours = 0m;
-            foreach (var person in graph.Graph.Contributors)
-            {
-                var consultant = caller.Retrieve("cr6b0_consultant", Guid.Parse(person.PersonId), present ? new ColumnSet("cr6b0_consultantname") : new ColumnSet("cr6b0_consultantname", "cr6b0_email"));
-                var hours = ContributorPolicy.Hours(person, parent.GetAttributeValue<OptionSetValue>("nx_status").Value);
-                if (!hours.HasValue) throw MediaPolicy.Invalid("Published contributor effort is incomplete.");
-                totalHours += hours.Value;
-                credits.Add(new PublishedCredit { Name = consultant.GetAttributeValue<string>("cr6b0_consultantname") ?? "Consultant", Hours = present ? null : hours,
-                    Email = present ? null : consultant.GetAttributeValue<string>("cr6b0_email"), Effort = present ? null : person });
-            }
+            // Present mode is client-facing: no builder names, CSM rows or effort leave the server.
+            if (!present)
+                foreach (var person in graph.Graph.Contributors)
+                {
+                    var consultant = caller.Retrieve("cr6b0_consultant", Guid.Parse(person.PersonId), new ColumnSet("cr6b0_consultantname", "cr6b0_email"));
+                    var hours = ContributorPolicy.Hours(person, parent.GetAttributeValue<OptionSetValue>("nx_status").Value);
+                    if (!hours.HasValue) throw MediaPolicy.Invalid("Published contributor effort is incomplete.");
+                    totalHours += hours.Value;
+                    credits.Add(new PublishedCredit { Name = consultant.GetAttributeValue<string>("cr6b0_consultantname") ?? "Consultant", Hours = hours,
+                        Email = consultant.GetAttributeValue<string>("cr6b0_email"), Effort = person });
+                }
             var projects = new List<string>();
             if (!present)
                 foreach (var project in graph.Graph.ProjectIds)

@@ -1,4 +1,5 @@
-import type { Solution, SolutionStatus, SpecializationArea } from "../../src/types.ts";
+import type { ClientRole, Solution, SolutionStatus, SpecializationArea } from "../../src/types.ts";
+import { CLIENT_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata.ts";
 import type { IGetAllOptions } from "./generated/models/CommonModels.ts";
 
 export type CatalogueTable = "solutions" | "areas" | "capabilities" | "technologies" | "industries" | "people" | "projects";
@@ -20,7 +21,7 @@ const SOLUTION_COLUMNS = [
   "nx_solutionid", "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes",
   "nx_businessvalue", "nx_status", "nx_publicationstatus",
   "nx_safetyacknowledged", "nx_clientsafereviewed", "nx_clientcontextredacted",
-  "nx_dateadded", "_nx_capability_value",
+  "nx_dateadded", "_nx_capability_value", "nx_clientrole",
 ];
 
 function value(row: object, key: string): unknown {
@@ -57,6 +58,15 @@ export function orderedAreas(rows: object[]): SpecializationArea[] {
   });
   if (new Set(areas.map(area => area.name)).size !== areas.length) throw new Error("A solution has a duplicate specialization area.");
   return areas.sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map(area => area.name);
+}
+
+/** `nx_clientrole` is optional; an unknown choice value means the app is out of date with Dataverse. */
+function clientRole(row: object): ClientRole | undefined {
+  const result = value(row, "nx_clientrole");
+  if (result === undefined || result === null) return undefined;
+  const role = typeof result === "number" ? CLIENT_ROLE_BY_VALUE[result] : undefined;
+  if (!role) throw new Error("A solution has an unsupported client role choice.");
+  return role;
 }
 
 function flag(row: object, key: string): boolean {
@@ -156,6 +166,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       capabilities: [capability],
       technologies: technologies.map(tag => text(tag, "nx_technologyname", true)),
       industries: industries.map(tag => text(tag, "nx_industryname", true)),
+      clientRole: clientRole(row),
       contributors: [],
       ...(contributorNames ? { contributorNames } : {}),
       assets: [],

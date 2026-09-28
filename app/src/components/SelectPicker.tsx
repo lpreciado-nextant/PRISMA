@@ -1,8 +1,10 @@
 import { useId, useState } from "react";
 import { Icon } from "./Icon";
 
-export function SelectPicker<Value extends string>({ label, value, options, onChange, getLabel = (option) => option }: {
+export function SelectPicker<Value extends string>({ label, value, options, onChange, getLabel = (option) => option, placeholder }: {
   label: string;
+  /** Shown greyed out, like an input placeholder, while no value is chosen. */
+  placeholder?: string;
   value: Value;
   options: readonly Value[];
   onChange: (value: Value) => void;
@@ -60,7 +62,7 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
           }
         }}
       >
-        <span className="min-w-0 break-words">{getLabel(value)}</span>
+        {!value && placeholder ? <span className="min-w-0 break-words text-(--ink-3)">{placeholder}</span> : <span className="min-w-0 break-words">{getLabel(value)}</span>}
         <Icon name="chevronDown" className="shrink-0" />
       </button>
       {open && (

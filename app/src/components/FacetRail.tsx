@@ -7,6 +7,7 @@ const GROUPS: { key: FacetKey; label: string }[] = [
   { key: "capabilities", label: "Capability" },
   { key: "technologies", label: "Technology" },
   { key: "industries", label: "Industry" },
+  { key: "roles", label: "Target client role" },
 ];
 
 const COLLAPSED_LIMIT = 6;
@@ -29,7 +30,7 @@ export function FacetRail({
   };
 
   const anyActive =
-    filters.capabilities.length + filters.technologies.length + filters.industries.length > 0;
+    filters.capabilities.length + filters.technologies.length + filters.industries.length + filters.roles.length > 0;
 
   return (
     <aside
@@ -43,7 +44,7 @@ export function FacetRail({
           <button
             type="button"
             onClick={() =>
-              onChange({ ...filters, capabilities: [], technologies: [], industries: [] })
+              onChange({ ...filters, capabilities: [], technologies: [], industries: [], roles: [] })
             }
             className="ml-auto cursor-pointer text-[12px] font-semibold"
             style={{ color: "var(--accent)" }}

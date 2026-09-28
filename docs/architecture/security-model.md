@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Controlled lifecycle and approved code-app CSP configuration verified; effective non-admin acceptance pending · **Last updated:** 2026-09-22
+**Status:** Controlled lifecycle and approved code-app CSP configuration verified; effective non-admin acceptance pending · **Last updated:** 2026-09-28
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -116,6 +116,6 @@ User-approved tab recovery stores bounded unsaved text and selections in identit
 | Dedicated redacted client-context field (`Client Context (Redacted)`) — no runtime string-scrubbing | Schema + [present mode](../workflows/present-mode.md) |
 | User-supplied HTML rendered in a sandboxed iframe, restrictive policy, no same-origin access to the host app | Asset viewer |
 | Librarian review of uploaded HTML files | [Librarian runbook](../operations/librarian-runbook.md) |
-| Per-person dates, allocation, and effort breakdown omitted in present mode; names and total effort may remain | Detail view; not a security boundary for bundled mock data |
+| Per-person dates, allocation, effort breakdown, builder names, CSM rows, total effort and estimated cost omitted in present mode | Cards and detail view; not a security boundary for bundled mock data. Connected: since 2026-09-28, `nx_GetPublishedDetail` with `Present` returns no contributor credits and a zero effort total |
 
 Client identity is always internal, regardless of maturity. Anonymous context is authored separately and required when the internal client field is populated. This does not scrub names from descriptions or attachments; their confidentiality must be checked before approval.
