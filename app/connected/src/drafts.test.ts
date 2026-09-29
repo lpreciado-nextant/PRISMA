@@ -525,22 +525,22 @@ test("4 MiB negotiation rejects unsupported capabilities and never replays uncer
   assert.equal(getLastUploadTiming()!.blocks, 0);
 });
 
-for (const blockSize of [2097152, 4194304]) test(`negotiated upload sends ${blockSize} byte blocks and preserves attachments and timing`, async () => {
+for (const blockSize of [2097152, 4194304, 8388608]) test(`negotiated upload sends ${blockSize} byte blocks and preserves attachments and timing`, async () => {
   const item = { id: spare, sessionId: spare, kind: "attachment", name: "sample.mp4", mime: "video/mp4", size: blockSize + 3, received: 0, nextBlock: 0, complete: false };
   const existing = { ...item, id: draft.id, sessionId: draft.id, name: "existing.mp4", complete: true };
   const state = { id: draft.id, rowVersion: "2", sessionId: item.sessionId, blockSize, uploadProtocol: 2, media: [existing, item] };
   const lengths: number[] = [];
   const api: MediaApi = {
     read: async () => result(state), remove: async () => result(state), metadata: async () => result(state),
-    begin: async (_id, version, kind) => { assert.equal(version, "1"); assert.equal(kind, blockSize === 4194304 ? "attachment:v3" : "attachment:v2"); return result(state); },
+    begin: async (_id, version, kind) => { assert.equal(version, "1"); assert.equal(kind, blockSize === 8388608 ? "attachment:v4" : blockSize === 4194304 ? "attachment:v3" : "attachment:v2"); return result(state); },
     block: async (id, version, sessionId, index, content) => {
       assert.equal(version, String(index + 2)); lengths.push(atob(content).length);
-      return result({ id, sessionId, rowVersion: String(index + 3), blockSize, uploadProgress: true, nextBlock: index + 1, received: Math.min((index + 1) * blockSize, item.size) });
+      return result({ id, sessionId, rowVersion: String(index + 3), blockSize, uploadProgress: true, nextBlock: index + 1, received: Math.min((index + 1) * blockSize, item.size), serverMs: 10, hashMs: 2, storageMs: 5 });
     },
     finish: async (_id, version) => { assert.equal(version, "4"); return result({ ...state, rowVersion: "5", media: [existing, { ...item, received: item.size, nextBlock: 2, complete: true }] }); },
   };
   const progress: number[] = [];
-  const uploaded = await uploadMedia(api, { id: draft.id, rowVersion: "1", uploadProtocol: 2, ...(blockSize === 4194304 ? { maxBlockSize: 4194304 as const } : {}) }, new File([new Uint8Array(item.size)], item.name), "attachment", signal(), snapshot => {
+  const uploaded = await uploadMedia(api, { id: draft.id, rowVersion: "1", uploadProtocol: 2, ...(blockSize >= 4194304 ? { maxBlockSize: 4194304 as const } : {}), ...(blockSize === 8388608 ? { blobBlockSize: 8388608 as const } : {}) }, new File([new Uint8Array(item.size)], item.name), "attachment", signal(), snapshot => {
     assert.equal(snapshot.media.length, 2); progress.push(snapshot.media[1].received);
   });
   assert.deepEqual(lengths, [blockSize, 3]);
@@ -552,5 +552,27 @@ for (const blockSize of [2097152, 4194304]) test(`negotiated upload sends ${bloc
   assert.equal(timing.blockSize, blockSize);
   assert.equal(timing.blocks, 2);
   assert.equal(timing.bytes, item.size);
+  assert.deepEqual([timing.serverMs, timing.hashMs, timing.storageMs], [20, 4, 10]);
   assert.ok(timing.totalMs >= timing.beginMs + timing.encodingMs + timing.requestsMs + timing.finishMs);
+});
+
+test("8 MiB requests accept the server's 4 MiB Dataverse fallback but reject other sizes", async () => {
+  const item = { id: spare, sessionId: spare, kind: "attachment", name: "deck.pdf", mime: "application/pdf", size: 5, received: 0, nextBlock: 0, complete: false };
+  const state = { id: draft.id, rowVersion: "2", sessionId: item.sessionId, uploadProtocol: 2, media: [item] };
+  assert.equal(parseMedia(result({ ...state, blockSize: 4194304, blobBlockSize: 8388608 })).blobBlockSize, 8388608);
+  assert.throws(() => parseMedia(result({ ...state, blockSize: 4194304, blobBlockSize: 16777216 })));
+  assert.throws(() => parseMedia(result({ ...state, uploadProtocol: undefined, blockSize: 524288, blobBlockSize: 8388608 })));
+  const kinds: string[] = [];
+  const api = (blockSize: number): MediaApi => ({
+    read: async () => result({ ...state, blockSize }), remove: async () => result({ ...state, blockSize }), metadata: async () => result({ ...state, blockSize }),
+    begin: async (_id, _version, kind) => { kinds.push(kind); return result({ ...state, blockSize }); },
+    block: async (id, _version, sessionId) => result({ id, sessionId, rowVersion: "3", blockSize, uploadProgress: true, nextBlock: 1, received: 5 }),
+    finish: async () => result({ ...state, blockSize, rowVersion: "4", media: [{ ...item, received: 5, nextBlock: 1, complete: true }] }),
+  });
+  const initial = { id: draft.id, rowVersion: "1", uploadProtocol: 2 as const, maxBlockSize: 4194304 as const, blobBlockSize: 8388608 as const };
+  const file = new File(["12345"], item.name);
+  assert.equal((await uploadMedia(api(4194304), initial, file, "attachment", signal(), () => {})).media[0].complete, true);
+  await assert.rejects(uploadMedia(api(2097152), initial, file, "attachment", signal(), () => {}), /not negotiated/);
+  await uploadMedia(api(4194304), initial, new File(["12345"], "shot.png"), "image", signal(), () => {}).catch(() => {});
+  assert.deepEqual(kinds, ["attachment:v4", "attachment:v4", "image:v3"]);
 });

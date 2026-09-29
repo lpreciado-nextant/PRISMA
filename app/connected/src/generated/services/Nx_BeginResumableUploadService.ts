@@ -18,10 +18,11 @@ export class Nx_BeginResumableUploadService {
    * @param FileName type: `String`
    * @param Size type: `Int32`
    * @param Sha256 type: `String`
+   * @param BlockSize type: `Int32`
    */
-  public static async nx_BeginResumableUpload(SolutionId: string, ExpectedRowVersion: string, FileName: string, Size: number, Sha256: string): Promise<IOperationResult<Record<string, unknown>>> {
-    const params: { SolutionId: string, ExpectedRowVersion: string, FileName: string, Size: number, Sha256: string } = { SolutionId, ExpectedRowVersion, FileName, Size, Sha256 };
-    const result = await Nx_BeginResumableUploadService.client.executeAsync<{ SolutionId: string, ExpectedRowVersion: string, FileName: string, Size: number, Sha256: string }, Record<string, unknown>>(
+  public static async nx_BeginResumableUpload(SolutionId: string, ExpectedRowVersion: string, FileName: string, Size: number, Sha256: string, BlockSize?: number): Promise<IOperationResult<Record<string, unknown>>> {
+    const params: { SolutionId: string, ExpectedRowVersion: string, FileName: string, Size: number, Sha256: string, BlockSize?: number } = { SolutionId, ExpectedRowVersion, FileName, Size, Sha256, BlockSize };
+    const result = await Nx_BeginResumableUploadService.client.executeAsync<{ SolutionId: string, ExpectedRowVersion: string, FileName: string, Size: number, Sha256: string, BlockSize?: number }, Record<string, unknown>>(
       {
         dataverseRequest: {
           action: 'customapi',

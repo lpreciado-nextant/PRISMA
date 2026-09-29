@@ -110,6 +110,24 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
+        public void BlobUploadsNegotiateEightMiBBlocksAndReportServerTiming()
+        {
+            Assert.Equal(8388608, MediaPolicy.RequestedBlockSize("attachment:v4"));
+            var session = new Entity("nx_uploadsession") { ["nx_name"] = MediaPolicy.BlobSessionPrefix + Guid.NewGuid().ToString("N") };
+            Assert.Equal(8388608, MediaPolicy.SessionBlockSize(session));
+            var block = Convert.ToBase64String(new byte[8388608]);
+            Assert.Equal(8388608, MediaPolicy.Block(block, 0, 0, 8388609, 0, 8388608).Length);
+            Assert.Single(MediaPolicy.Block("AA==", 1, 1, 8388609, 8388608, 8388608));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block(block, 0, 0, 8388609, 0, 4194304));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block("AA==", 1, 1, 8388609, 4194304, 8388608));
+            Assert.Contains("\"blobBlockSize\":8388608", DraftPolicy.Serialize(new MediaResult()));
+            var json = DraftPolicy.Serialize(new MediaProgress { Id = Area, RowVersion = "1", SessionId = Area, BlockSize = 8388608, Received = 8388608, NextBlock = 1, ServerMs = 900, HashMs = 40, StorageMs = 300 });
+            Assert.Contains("\"serverMs\":900", json);
+            Assert.Contains("\"hashMs\":40", json);
+            Assert.Contains("\"storageMs\":300", json);
+        }
+
+        [Fact]
         public void OptimizedUploadsKeepLegacySessionsAndValidateBlockBoundaries()
         {
             var session = new Entity("nx_uploadsession");

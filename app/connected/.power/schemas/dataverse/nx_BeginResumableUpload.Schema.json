@@ -56,6 +56,14 @@
                 "type": "string",
                 "x-ms-dataverse-type": "StringType",
                 "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "BlockSize",
+                "in": "body",
+                "required": false,
+                "type": "number",
+                "x-ms-dataverse-type": "IntegerType",
+                "x-ms-csdl-type": "Edm.Int32"
               }
             ],
             "responses": {

@@ -1,6 +1,6 @@
 # ADR-0010 — Uploaded attachments in Azure Blob through Dataverse plug-ins
 
-**Status:** Accepted for the pilot; code and templates implemented and tested locally; nothing deployed. Supersedes [ADR-0004](adr-0004-assets-in-dataverse.md) for newly uploaded videos, HTML, PDF and PowerPoint files only.
+**Status:** Accepted for the pilot; deployed with uploads enabled. The 8 MiB Blob block size and server timing (below) are deployed in the plug-in and the published app. Supersedes [ADR-0004](adr-0004-assets-in-dataverse.md) for newly uploaded videos, HTML, PDF and PowerPoint files only.
 **Date:** 2026-09-29
 **Last updated:** 2026-09-29
 
@@ -15,6 +15,7 @@ Large videos consume Dataverse file capacity. The user decided on 2026-09-29 to 
 - **Network:** the storage account keeps a public endpoint because Dataverse plug-ins egress from shared platform addresses, but accepts Entra authorization only (Shared Key, anonymous access and cross-tenant replication disabled). Private networking would require a Managed Environment and Power Platform VNet support and was not chosen.
 - **Records:** the storage marker, server-generated blob name, committed ETag and incremental hash state live on private `nx_uploadsession`, which no application role can read. `nx_demoasset` and the client contract gain no storage reference; media snapshots expose only `storage: "blob"`.
 - **Integrity:** each block is hashed as it arrives with a serializable SHA-256 state. Finalization compares the digest with the declared resumable digest, commits the block list only if the blob does not already exist, and verifies committed size. Reads are pinned to the committed ETag.
+- **Block size (plug-in deployed 2026-09-29):** responses additionally advertise `blobBlockSize: 8388608`. Clients that see it request `attachment:v4` (or send the optional `BlockSize` 8388608 to `nx_BeginResumableUpload`). The server creates a `PRISMA upload v4 ` session with 8 MiB blocks only when the file goes to Blob, otherwise it keeps 4 MiB, the Dataverse file-block limit. Older clients never see v4. Block replies also report `serverMs`, `hashMs` and `storageMs` (numbers only) so measurements can split the time spent inside the plug-in from the time spent outside it.
 - **Deletion:** removing a session never deletes bytes inside the Dataverse transaction. An asynchronous post-delete step deletes the blob after commit, conditional on its ETag. Soft delete retains deleted blobs for the configured period.
 - **Malware scanning:** not included. Files are labelled integrity-verified but not malware-scanned; librarian review is unchanged.
 - **Rollback:** setting `nx_MediaBlobUploads` to `no` returns new uploads to Dataverse; Blob-backed files stay readable through the same APIs.

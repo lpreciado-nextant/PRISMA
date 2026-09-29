@@ -101,7 +101,10 @@ namespace Prisma.Plugins.Tests
             Assert.Equal(first.GetAttributeValue<string>("nx_hashstate"), session.GetAttributeValue<string>("nx_hashstate"));
             Apply(session, BlobMedia.Stage(store, session, 1, bytes.Skip(128).Take(128).ToArray()));
             Assert.Throws<InvalidPluginExecutionException>(() => BlobMedia.Commit(store, session));
-            Apply(session, BlobMedia.Stage(store, session, 2, bytes.Skip(256).ToArray()));
+            var hashing = new System.Diagnostics.Stopwatch();
+            var storing = new System.Diagnostics.Stopwatch();
+            Apply(session, BlobMedia.Stage(store, session, 2, bytes.Skip(256).ToArray(), hashing, storing));
+            Assert.False(hashing.IsRunning || storing.IsRunning);
             Assert.Equal(Sha(bytes), session.GetAttributeValue<string>("nx_hashstate"));
             var commit = BlobMedia.Commit(store, session);
             Assert.True(commit.GetAttributeValue<bool>("nx_complete"));
@@ -207,6 +210,26 @@ namespace Prisma.Plugins.Tests
                 Assert.Throws<InvalidPluginExecutionException>(() => client.Properties(bad));
             Assert.Equal(count, handler.Requests.Count);
             Assert.Equal(1, tokens);
+        }
+
+        [Fact]
+        public void StorageTokenIsReusedUntilShortlyBeforeExpiryAndNeverCachedWithoutOne()
+        {
+            string Jwt(DateTime expires) => "e30." + Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"aud\":\"https://storage.azure.com\",\"exp\":" + (long)(expires - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds + "}")).TrimEnd('=').Replace('+', '-').Replace('/', '_') + ".sig";
+            var now = new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
+            Assert.Equal(now.AddHours(1), StorageToken.Expiry(Jwt(now.AddHours(1))));
+            Assert.Null(StorageToken.Expiry("opaque"));
+            var calls = 0;
+            StorageToken.Clear();
+            var first = StorageToken.Get(() => { calls++; return Jwt(now.AddHours(1)); }, now);
+            Assert.Equal(first, StorageToken.Get(() => { calls++; return "other"; }, now.AddMinutes(29)));
+            Assert.Equal(1, calls);
+            StorageToken.Get(() => { calls++; return Jwt(now.AddMinutes(50)); }, now.AddMinutes(30));
+            Assert.Equal(2, calls);
+            StorageToken.Get(() => { calls++; return "opaque"; }, now.AddMinutes(46));
+            StorageToken.Get(() => { calls++; return "opaque"; }, now.AddMinutes(46));
+            Assert.Equal(4, calls);
+            StorageToken.Clear();
         }
 
         private static HttpResponseMessage Error(HttpStatusCode status, string code)

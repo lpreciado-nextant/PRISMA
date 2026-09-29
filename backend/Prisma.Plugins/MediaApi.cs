@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -123,6 +124,7 @@ namespace Prisma.Plugins
         [DataMember(Name = "media")] public MediaSnapshot[] Media { get; set; }
         [DataMember(Name = "uploadProtocol")] public int UploadProtocol { get; set; } = 2;
         [DataMember(Name = "maxBlockSize")] public int MaxBlockSize { get; set; } = MediaPolicy.LargeBlockSize;
+        [DataMember(Name = "blobBlockSize")] public int BlobBlockSize { get; set; } = MediaPolicy.BlobBlockSize;
     }
 
     [DataContract]
@@ -135,6 +137,9 @@ namespace Prisma.Plugins
         [DataMember(Name = "blockSize")] public int BlockSize { get; set; }
         [DataMember(Name = "received")] public int Received { get; set; }
         [DataMember(Name = "nextBlock")] public int NextBlock { get; set; }
+        [DataMember(Name = "serverMs")] public long ServerMs { get; set; }
+        [DataMember(Name = "hashMs")] public long HashMs { get; set; }
+        [DataMember(Name = "storageMs")] public long StorageMs { get; set; }
     }
 
     public static class MediaPolicy
@@ -144,12 +149,19 @@ namespace Prisma.Plugins
         public const string OptimizedSessionPrefix = "PRISMA upload v2 ";
         public const int LargeBlockSize = 4194304;
         public const string LargeSessionPrefix = "PRISMA upload v3 ";
+        public const int BlobBlockSize = 8388608;
+        public const string BlobSessionPrefix = "PRISMA upload v4 ";
         public static int SessionBlockSize(Entity session)
         {
             var name = session.GetAttributeValue<string>("nx_name") ?? "";
-            return name.StartsWith(LargeSessionPrefix, StringComparison.Ordinal) ? LargeBlockSize : name.StartsWith(OptimizedSessionPrefix, StringComparison.Ordinal) ? OptimizedBlockSize : BlockSize;
+            return name.StartsWith(BlobSessionPrefix, StringComparison.Ordinal) ? BlobBlockSize : name.StartsWith(LargeSessionPrefix, StringComparison.Ordinal) ? LargeBlockSize
+                : name.StartsWith(OptimizedSessionPrefix, StringComparison.Ordinal) ? OptimizedBlockSize : BlockSize;
         }
-        public static int RequestedBlockSize(string kind) { return (kind ?? "").EndsWith(":v3", StringComparison.Ordinal) ? LargeBlockSize : (kind ?? "").EndsWith(":v2", StringComparison.Ordinal) ? OptimizedBlockSize : BlockSize; }
+        public static int RequestedBlockSize(string kind)
+        {
+            kind = kind ?? "";
+            return kind.EndsWith(":v4", StringComparison.Ordinal) ? BlobBlockSize : kind.EndsWith(":v3", StringComparison.Ordinal) ? LargeBlockSize : kind.EndsWith(":v2", StringComparison.Ordinal) ? OptimizedBlockSize : BlockSize;
+        }
         public static readonly string[] Writes = { "nx_BeginMediaUpload", "nx_UploadMediaBlock", "nx_FinishMediaUpload", "nx_RemoveDraftMedia" };
         public static string Table(string kind) { return kind == "attachment" ? "nx_demoasset" : "nx_solutionimage"; }
         public static string Column(string kind) { return kind == "attachment" ? "nx_filemedia" : "nx_imagefile"; }
@@ -199,7 +211,7 @@ namespace Prisma.Plugins
 
         public static byte[] Block(string content, int index, int next, int total, int received, int blockSize = BlockSize)
         {
-            if ((blockSize != BlockSize && blockSize != OptimizedBlockSize && blockSize != LargeBlockSize) || index < 0 || received < 0 || received >= total || (long)index * blockSize != received
+            if ((blockSize != BlockSize && blockSize != OptimizedBlockSize && blockSize != LargeBlockSize && blockSize != BlobBlockSize) || index < 0 || received < 0 || received >= total || (long)index * blockSize != received
                 || index != next || content == null || content.Length > ((blockSize + 2) / 3) * 4) throw Invalid("Invalid or out-of-order upload block.");
             byte[] bytes;
             try { bytes = Convert.FromBase64String(content); }
@@ -219,6 +231,7 @@ namespace Prisma.Plugins
 
         public void Execute(IServiceProvider serviceProvider)
         {
+            var clock = Stopwatch.StartNew();
             var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
             var read = context.MessageName == "nx_GetDraftMedia";
             if (!read && !MediaPolicy.Writes.Contains(context.MessageName)) throw MediaPolicy.Invalid("Unknown or retired media operation.");
@@ -238,12 +251,10 @@ namespace Prisma.Plugins
             Guid? sessionId = null;
             var blockSize = MediaPolicy.BlockSize;
             Entity progressed = null;
+            var hashing = new Stopwatch();
+            var storing = new Stopwatch();
             var storage = new MediaStorage(serviceProvider, server);
-            if (context.MessageName == "nx_BeginMediaUpload")
-            {
-                blockSize = MediaPolicy.RequestedBlockSize(context.InputParameters["Kind"] as string);
-                sessionId = Begin(server, parent, context, storage);
-            }
+            if (context.MessageName == "nx_BeginMediaUpload") sessionId = Begin(server, parent, context, storage, out blockSize);
             else if (!read)
             {
                 sessionId = (Guid)context.InputParameters["SessionId"];
@@ -260,14 +271,15 @@ namespace Prisma.Plugins
                 else
                 {
                     if (session.GetAttributeValue<bool>("nx_complete") || session.GetAttributeValue<DateTime>("nx_expires") <= DateTime.UtcNow) throw MediaPolicy.Invalid("Upload is complete or expired. Reopen the draft.");
-                    if (context.MessageName == "nx_UploadMediaBlock") { Upload(server, session, context, storage); progressed = session; }
+                    if (context.MessageName == "nx_UploadMediaBlock") { Upload(server, session, context, storage, hashing, storing); progressed = session; }
                     else Finish(server, session, context.InitiatingUserId, storage);
                 }
             }
             var latest = caller.Retrieve("nx_solution", identifier, new ColumnSet(false));
             if (progressed != null && blockSize != MediaPolicy.BlockSize)
             {
-                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaProgress { Id = identifier.ToString(), RowVersion = latest.RowVersion, SessionId = sessionId.ToString(), BlockSize = blockSize, Received = progressed.GetAttributeValue<int>("nx_received"), NextBlock = progressed.GetAttributeValue<int>("nx_nextblock") });
+                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaProgress { Id = identifier.ToString(), RowVersion = latest.RowVersion, SessionId = sessionId.ToString(), BlockSize = blockSize, Received = progressed.GetAttributeValue<int>("nx_received"), NextBlock = progressed.GetAttributeValue<int>("nx_nextblock"),
+                    ServerMs = clock.ElapsedMilliseconds, HashMs = hashing.ElapsedMilliseconds, StorageMs = storing.ElapsedMilliseconds });
                 return;
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult {
@@ -276,10 +288,10 @@ namespace Prisma.Plugins
             });
         }
 
-        internal static Guid Begin(IOrganizationService server, Entity parent, IPluginExecutionContext context, MediaStorage storage, string suppliedKind = null)
+        internal static Guid Begin(IOrganizationService server, Entity parent, IPluginExecutionContext context, MediaStorage storage, out int blockSize, string suppliedKind = null)
         {
             var kind = suppliedKind ?? context.InputParameters["Kind"] as string;
-            var blockSize = MediaPolicy.RequestedBlockSize(kind);
+            blockSize = MediaPolicy.RequestedBlockSize(kind);
             if (blockSize != MediaPolicy.BlockSize) kind = kind.Substring(0, kind.Length - 3);
             var name = context.InputParameters["FileName"] as string;
             var size = (int)context.InputParameters["Size"];
@@ -289,6 +301,8 @@ namespace Prisma.Plugins
                 throw MediaPolicy.Invalid("At most one thumbnail, six images and six attachments are allowed.");
             if (sessions.Any(row => !row.GetAttributeValue<bool>("nx_complete"))) throw MediaPolicy.Invalid("Remove the unfinished upload before starting another.");
             var blob = BlobMedia.Eligible(kind, mime) && storage.UploadsToBlob;
+            // Dataverse file blocks are capped at 4 MiB, so 8 MiB blocks apply only to Blob sessions.
+            if (blockSize == MediaPolicy.BlobBlockSize && !blob) blockSize = MediaPolicy.LargeBlockSize;
             if (!blob)
             {
                 var column = ((RetrieveAttributeResponse)server.Execute(new RetrieveAttributeRequest { EntityLogicalName = MediaPolicy.Table(kind), LogicalName = MediaPolicy.Column(kind) })).AttributeMetadata;
@@ -304,7 +318,7 @@ namespace Prisma.Plugins
             if (kind == "attachment") target["nx_assettype"] = new OptionSetValue(mime == "text/html" ? 125060000 : mime.StartsWith("video/", StringComparison.Ordinal) ? 125060001 : 125060002);
             target.Id = server.Create(target);
             var session = new Entity("nx_uploadsession") {
-                ["nx_name"] = (blockSize == MediaPolicy.LargeBlockSize ? MediaPolicy.LargeSessionPrefix : blockSize == MediaPolicy.OptimizedBlockSize ? MediaPolicy.OptimizedSessionPrefix : "PRISMA upload ") + target.Id.ToString("N"), ["nx_parentid"] = parent.Id.ToString("D"),
+                ["nx_name"] = (blockSize == MediaPolicy.BlobBlockSize ? MediaPolicy.BlobSessionPrefix : blockSize == MediaPolicy.LargeBlockSize ? MediaPolicy.LargeSessionPrefix : blockSize == MediaPolicy.OptimizedBlockSize ? MediaPolicy.OptimizedSessionPrefix : "PRISMA upload ") + target.Id.ToString("N"), ["nx_parentid"] = parent.Id.ToString("D"),
                 ["nx_callerid"] = context.InitiatingUserId.ToString("D"), ["nx_targetid"] = target.Id.ToString("D"),
                 ["nx_kind"] = kind, ["nx_filename"] = name, ["nx_mime"] = mime,
                 ["nx_bytes"] = size, ["nx_received"] = 0, ["nx_nextblock"] = 0, ["nx_expires"] = DateTime.UtcNow.AddHours(2), ["nx_complete"] = false
@@ -360,19 +374,21 @@ namespace Prisma.Plugins
             server.Execute(new GrantAccessRequest { Target = target.ToEntityReference(), PrincipalAccess = new PrincipalAccess { Principal = new EntityReference("systemuser", caller), AccessMask = AccessRights.ReadAccess } });
         }
 
-        private static void Upload(IOrganizationService server, Entity session, IPluginExecutionContext context, MediaStorage storage)
+        private static void Upload(IOrganizationService server, Entity session, IPluginExecutionContext context, MediaStorage storage, Stopwatch hashing, Stopwatch storing)
         {
             var index = (int)context.InputParameters["BlockIndex"];
             var received = session.GetAttributeValue<int>("nx_received");
             var bytes = MediaPolicy.Block(context.InputParameters["Content"] as string, index, session.GetAttributeValue<int>("nx_nextblock"), session.GetAttributeValue<int>("nx_bytes"), received, MediaPolicy.SessionBlockSize(session));
             if (BlobMedia.IsBlob(session))
             {
-                var update = BlobMedia.Stage(storage.Store, session, index, bytes);
+                var update = BlobMedia.Stage(storage.Store, session, index, bytes, hashing, storing);
                 server.Update(update);
                 foreach (var attribute in update.Attributes) session[attribute.Key] = attribute.Value;
                 return;
             }
+            storing.Start();
             server.Execute(new UploadBlockRequest { FileContinuationToken = session.GetAttributeValue<string>("nx_token"), BlockId = MediaPolicy.BlockId(session.Id, index), BlockData = bytes });
+            storing.Stop();
             server.Update(new Entity("nx_uploadsession", session.Id) { ["nx_received"] = received + bytes.Length, ["nx_nextblock"] = index + 1 });
             session["nx_received"] = received + bytes.Length;
             session["nx_nextblock"] = index + 1;

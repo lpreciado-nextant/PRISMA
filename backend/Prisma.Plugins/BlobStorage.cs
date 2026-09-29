@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -90,12 +91,49 @@ namespace Prisma.Plugins
                 if (Configuration.Container == null) throw MediaPolicy.Invalid("Media storage is not configured.");
                 var identity = (IManagedIdentityService)services.GetService(typeof(IManagedIdentityService));
                 if (identity == null) throw MediaPolicy.Invalid("Media storage identity is unavailable.");
-                return store = new BlobRestClient(Configuration.Container, () =>
+                return store = new BlobRestClient(Configuration.Container, () => StorageToken.Get(() =>
                 {
                     try { return identity.AcquireToken(new[] { Scope }); }
                     catch (Exception error) { throw new InvalidPluginExecutionException("Media storage identity is unavailable.", error); }
-                });
+                }, DateTime.UtcNow));
             }
+        }
+    }
+
+    // Sandbox workers reuse the assembly across executions; acquiring a token for every upload block cost about a second.
+    public static class StorageToken
+    {
+        private static readonly object Gate = new object();
+        private static string cached;
+        private static DateTime refreshAt;
+
+        public static string Get(Func<string> acquire, DateTime now)
+        {
+            lock (Gate)
+            {
+                if (cached != null && now < refreshAt) return cached;
+                var token = acquire();
+                var expires = Expiry(token);
+                cached = expires.HasValue ? token : null;
+                if (expires.HasValue) refreshAt = new[] { expires.Value.AddMinutes(-5), now.AddMinutes(30) }.Min();
+                return token;
+            }
+        }
+
+        public static void Clear() { lock (Gate) cached = null; }
+
+        public static DateTime? Expiry(string token)
+        {
+            var parts = (token ?? "").Split('.');
+            if (parts.Length != 3) return null;
+            try
+            {
+                var payload = parts[1].Replace('-', '+').Replace('_', '/');
+                payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                var match = Regex.Match(Encoding.UTF8.GetString(Convert.FromBase64String(payload)), "\"exp\"\\s*:\\s*(\\d{9,11})");
+                return match.Success ? new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(long.Parse(match.Groups[1].Value)) : (DateTime?)null;
+            }
+            catch (FormatException) { return null; }
         }
     }
 
@@ -117,17 +155,21 @@ namespace Prisma.Plugins
             return name;
         }
 
-        public static Entity Stage(IBlobStore store, Entity session, int index, byte[] bytes)
+        public static Entity Stage(IBlobStore store, Entity session, int index, byte[] bytes, Stopwatch hashing = null, Stopwatch storing = null)
         {
             var total = session.GetAttributeValue<int>("nx_bytes");
             var received = session.GetAttributeValue<int>("nx_received");
+            hashing?.Start();
             var state = Sha256State.Parse(session.GetAttributeValue<string>("nx_hashstate"));
             if (state.Length != received) throw MediaPolicy.Invalid("Upload integrity state does not match the checkpoint. Reopen the draft.");
             string hash;
             if (received + bytes.Length == total) hash = state.Finish(bytes);
             else { state.Append(bytes); hash = state.Serialize(); }
+            hashing?.Stop();
             // Re-staging an unacknowledged index replaces the same block ID, so a rolled-back checkpoint is safe to retry.
+            storing?.Start();
             store.Stage(Name(session), MediaPolicy.BlockId(session.Id, index), bytes);
+            storing?.Stop();
             return new Entity("nx_uploadsession", session.Id) { ["nx_received"] = received + bytes.Length, ["nx_nextblock"] = index + 1, ["nx_hashstate"] = hash };
         }
 
@@ -173,6 +215,7 @@ namespace Prisma.Plugins
     {
         private const string ApiVersion = "2023-11-03";
         private static readonly Regex BlobName = new Regex("\\A[0-9a-f]{32}/[0-9a-f]{32}/[0-9a-f]{32}\\z");
+        private static readonly HttpClient Shared = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
         private readonly string container;
         private readonly Lazy<string> token;
         private readonly HttpClient http;
@@ -182,9 +225,12 @@ namespace Prisma.Plugins
             this.container = container.AbsoluteUri.TrimEnd('/');
             this.token = new Lazy<string>(token);
             ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
-            http = handler == null ? new HttpClient() : new HttpClient(handler);
-            http.Timeout = TimeSpan.FromSeconds(30);
-            http.DefaultRequestHeaders.ConnectionClose = true;
+            if (handler != null) { http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) }; return; }
+            // Kept-alive connections close after 15 s idle, before network devices silently drop them (Microsoft's KeepAlive caveat for plug-ins).
+            var point = ServicePointManager.FindServicePoint(container);
+            point.MaxIdleTime = 15000;
+            point.ConnectionLeaseTimeout = 60000;
+            http = Shared;
         }
 
         public void Stage(string name, string blockId, byte[] bytes)
@@ -259,7 +305,12 @@ namespace Prisma.Plugins
             request.Headers.Add("x-ms-version", ApiVersion);
             request.Headers.Add("x-ms-date", DateTime.UtcNow.ToString("R"));
             configure?.Invoke(request);
-            try { return http.SendAsync(request).GetAwaiter().GetResult(); }
+            try
+            {
+                var response = http.SendAsync(request).GetAwaiter().GetResult();
+                if (response.StatusCode == HttpStatusCode.Unauthorized) StorageToken.Clear();
+                return response;
+            }
             catch (Exception error) when (error is HttpRequestException || error is TaskCanceledException) { throw MediaPolicy.Invalid("Media storage is unreachable. Reopen before retrying."); }
             finally { request.Dispose(); }
         }

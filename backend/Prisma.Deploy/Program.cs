@@ -169,7 +169,7 @@ if (command == "media-transfer")
     client.Update(new Entity("pluginassembly", existing.Id) { ["content"] = Convert.ToBase64String(File.ReadAllBytes(path)) });
     var transferType = PluginType(client, existing.Id, "Prisma.Plugins.MediaTransferApi");
     RegisterApi(client, transferType, "nx_BeginResumableUpload", "prvWritenx_Solution", new[] {
-        ("SolutionId", 12, false), ("ExpectedRowVersion", 10, false), ("FileName", 10, false), ("Size", 7, false), ("Sha256", 10, false) });
+        ("SolutionId", 12, false), ("ExpectedRowVersion", 10, false), ("FileName", 10, false), ("Size", 7, false), ("Sha256", 10, false), ("BlockSize", 7, true) });
     RegisterApi(client, transferType, "nx_GetUploadCheckpoint", "prvReadnx_Solution", new[] {
         ("SolutionId", 12, false), ("ExpectedRowVersion", 10, false), ("SessionId", 12, false), ("FileName", 10, false), ("Size", 7, false), ("Sha256", 10, false) });
     RegisterApi(client, transferType, "nx_ReadVideoRange", "prvReadnx_Solution", new[] {
@@ -1051,7 +1051,7 @@ static void BlobPlugin(IOrganizationService service, string[] options)
     if (assembly.Id != Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba")) throw new InvalidOperationException("Unexpected assembly target.");
     if (!((RetrieveEntityResponse)service.Execute(new RetrieveEntityRequest { LogicalName = "nx_uploadsession", EntityFilters = EntityFilters.Attributes })).EntityMetadata.Attributes.Any(attribute => attribute.LogicalName == "nx_hashstate"))
         throw new InvalidOperationException("Run blob-schema first; the updated plug-in reads the new session columns.");
-    Console.WriteLine("Plan: update the existing assembly; register asynchronous post-delete nx_uploadsession step PRISMA.Media.BlobDeletion with a 'session' pre-image. No roles, APIs or apps change.");
+    Console.WriteLine("Plan: update the existing assembly; register asynchronous post-delete nx_uploadsession step PRISMA.Media.BlobDeletion with a 'session' pre-image; add optional Int32 parameter nx_BeginResumableUpload.BlockSize if missing. No roles or apps change.");
     if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
     var path = Path.GetFullPath(options[1]);
     var signer = SigningCertificate(path);
@@ -1076,6 +1076,8 @@ static void BlobPlugin(IOrganizationService service, string[] options)
         ["sdkmessageprocessingstepid"] = new EntityReference("sdkmessageprocessingstep", step), ["imagetype"] = new OptionSetValue(0), ["entityalias"] = "session", ["name"] = "session",
         ["messagepropertyname"] = "Target", ["attributes"] = "nx_storage,nx_blobname,nx_blobetag,nx_complete,nx_parentid,nx_targetid"
     }, service.RetrieveMultiple(images).Entities.SingleOrDefault());
+    RegisterApi(service, PluginType(service, assembly.Id, "Prisma.Plugins.MediaTransferApi"), "nx_BeginResumableUpload", "prvWritenx_Solution", new[] {
+        ("SolutionId", 12, false), ("ExpectedRowVersion", 10, false), ("FileName", 10, false), ("Size", 7, false), ("Sha256", 10, false), ("BlockSize", 7, true) });
     Console.WriteLine("Blob-capable assembly and post-commit deletion step registered. Uploads remain governed by nx_MediaBlobUploads.");
 }
 
@@ -1134,7 +1136,9 @@ static void SetBlobConfig(IOrganizationService service, string[] options)
 
 static void SmokeBlob(IOrganizationService service, string[] options)
 {
-    if (options.Length != 1) throw new ArgumentException("Use smoke-blob <non-sensitive .pdf|.html|.mp4 up to 60 MiB>. Creates and deletes one labelled test draft.");
+    if (options.Length is < 1 or > 2 || (options.Length == 2 && options[1] != "v3" && options[1] != "v4")) throw new ArgumentException("Use smoke-blob <non-sensitive .pdf|.html|.mp4 up to 60 MiB> [v3|v4]. Creates and deletes one labelled test draft.");
+    var protocol = options.Length == 2 ? options[1] : "v3";
+    var blockSize = protocol == "v4" ? 8388608 : 4194304;
     var file = new FileInfo(options[0]);
     if (!new[] { ".pdf", ".html", ".mp4" }.Contains(file.Extension.ToLowerInvariant()) || file.Length == 0 || file.Length > 60 * 1024 * 1024) throw new ArgumentException("Use a non-empty PDF, HTML or MP4 fixture up to 60 MiB.");
     var bytes = File.ReadAllBytes(file.FullName);
@@ -1157,17 +1161,25 @@ static void SmokeBlob(IOrganizationService service, string[] options)
     }
     try
     {
-        var started = Call("nx_BeginMediaUpload", ("Kind", "attachment:v3"), ("FileName", file.Name), ("Size", bytes.Length));
+        var started = Call("nx_BeginMediaUpload", ("Kind", "attachment:" + protocol), ("FileName", file.Name), ("Size", bytes.Length));
         var session = Guid.Parse(started.GetProperty("sessionId").GetString()!);
         var record = started.GetProperty("media").EnumerateArray().Single(item => item.GetProperty("sessionId").GetString() == session.ToString());
         if (!record.TryGetProperty("storage", out var storage) || storage.GetString() != "blob") throw new InvalidOperationException("Upload did not select Blob storage; check nx_MediaBlobUploads.");
+        if (started.GetProperty("blockSize").GetInt32() != blockSize) throw new InvalidOperationException($"Server did not negotiate {blockSize}-byte blocks.");
         var asset = Guid.Parse(record.GetProperty("id").GetString()!);
-        for (var index = 0; index * 4194304 < bytes.Length; index++)
+        var upload = System.Diagnostics.Stopwatch.StartNew();
+        long serverMs = 0, hashMs = 0, storageMs = 0;
+        var blocks = 0;
+        for (var index = 0; index * blockSize < bytes.Length; index++, blocks++)
         {
-            var block = bytes.AsSpan(index * 4194304, Math.Min(4194304, bytes.Length - index * 4194304)).ToArray();
-            Call("nx_UploadMediaBlock", ("SessionId", session), ("BlockIndex", index), ("Content", Convert.ToBase64String(block)));
+            var block = bytes.AsSpan(index * blockSize, Math.Min(blockSize, bytes.Length - index * blockSize)).ToArray();
+            var progress = Call("nx_UploadMediaBlock", ("SessionId", session), ("BlockIndex", index), ("Content", Convert.ToBase64String(block)));
+            long Reported(string name) => progress.TryGetProperty(name, out var value) ? value.GetInt64() : 0;
+            serverMs += Reported("serverMs"); hashMs += Reported("hashMs"); storageMs += Reported("storageMs");
         }
+        var blocksMs = upload.ElapsedMilliseconds;
         Call("nx_FinishMediaUpload", ("SessionId", session));
+        Console.WriteLine($"TIMING {protocol} {bytes.Length} bytes, {blocks} blocks: blocks {blocksMs} ms (plug-in {serverMs} ms = hash {hashMs} + storage {storageMs} + Dataverse {serverMs - hashMs - storageMs}; outside plug-in {blocksMs - serverMs} ms), finish {upload.ElapsedMilliseconds - blocksMs} ms, {bytes.Length / 1048576.0 / (upload.ElapsedMilliseconds / 1000.0):F2} MiB/s.");
         AssertRejected(() => service.Update(new Entity("nx_uploadsession", session) { ["nx_blobname"] = "forged" }), "direct Blob reference change");
         string? rangeVersion = null;
         using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);

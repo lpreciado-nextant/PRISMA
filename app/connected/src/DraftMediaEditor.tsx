@@ -104,7 +104,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       next = remove ? await mediaRequest(mediaApi.remove(saved.id, version, remove.sessionId), controller.signal)
         : videoTransfer
           ? await transferVideo(mediaApi, transferApi, next, file!, controller.signal, setState, setHashing, resume?.sessionId, () => { started = true; })
-        : await uploadMedia(mediaApi, { id: saved.id, rowVersion: version, uploadProtocol: next.uploadProtocol, maxBlockSize: next.maxBlockSize }, file!, kind, controller.signal, setState);
+        : await uploadMedia(mediaApi, { id: saved.id, rowVersion: version, uploadProtocol: next.uploadProtocol, maxBlockSize: next.maxBlockSize, blobBlockSize: next.blobBlockSize }, file!, kind, controller.signal, setState);
       if (next.id !== saved.id || next.rowVersion === version) throw new Error("Unconfirmed media update.");
       setState(next);
       setPreview(null);
