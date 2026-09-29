@@ -7,6 +7,9 @@ namespace Prisma.Plugins
     public static class MediaTransferPolicy
     {
         public const int ReadBlockSize = 1024 * 1024;
+        // Dataverse file downloads are limited to 4 MiB blocks; Blob ranges are not.
+        public const int FileReadBlockSize = 4 * 1024 * 1024;
+        public const int BlobReadBlockSize = 8 * 1024 * 1024;
         public static string Digest(string value)
         {
             if (value == null || !Regex.IsMatch(value, "\\A[0-9a-f]{64}\\z")) throw MediaPolicy.Invalid("A lowercase SHA-256 digest is required.");
@@ -43,9 +46,9 @@ namespace Prisma.Plugins
             else if (mode != "submission" || (!librarian && (owner?.LogicalName != "systemuser" || owner.Id != caller))) throw MediaPolicy.Invalid("Submission video access denied.");
         }
 
-        public static int ReadLength(int offset, int count, int size)
+        public static int ReadLength(int offset, int count, int size, int max = ReadBlockSize)
         {
-            if (size <= 0 || offset < 0 || offset >= size || count <= 0 || count > ReadBlockSize) throw MediaPolicy.Invalid("Invalid video range.");
+            if (size <= 0 || offset < 0 || offset >= size || count <= 0 || count > max) throw MediaPolicy.Invalid("Invalid video range.");
             return Math.Min(count, size - offset);
         }
     }

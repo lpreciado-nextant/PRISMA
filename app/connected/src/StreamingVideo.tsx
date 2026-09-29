@@ -25,9 +25,9 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
     if (!controller || controller.signal.aborted || downloading) return;
     setDownloading(true);
     try {
-      const check = await readVideoRange(transferApi, solutionId, item.id, mode, 0, item.size, controller.signal);
+      const check = await readVideoRange(transferApi, solutionId, item.id, mode, 0, item.size, controller.signal, undefined, undefined, 1);
       const blob = await downloadMedia(item, { solutionId, mode, signal: controller.signal });
-      await readVideoRange(transferApi, solutionId, item.id, mode, 0, item.size, controller.signal, check.version);
+      await readVideoRange(transferApi, solutionId, item.id, mode, 0, item.size, controller.signal, check.version, undefined, 1);
       controller.signal.throwIfAborted();
       const url = URL.createObjectURL(blob); downloads.current.push(url);
       const anchor = document.createElement("a"); anchor.href = url; anchor.download = item.name;
@@ -45,9 +45,11 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
     const captionUrls: string[] = [];
     const captionElements: HTMLTrackElement[] = [];
     const clearCaptions = () => { captionElements.splice(0).forEach(track => track.remove()); captionUrls.splice(0).forEach(url => URL.revokeObjectURL(url)); };
-    const read = async (offset: number, signal: AbortSignal) => {
-      const result = await readVideoRange(transferApi, solutionId, item.id, mode, offset, item.size, AbortSignal.any([signal, AbortSignal.timeout(60_000)]), version);
-      version = result.version; return result.bytes;
+    let maxRead = 1024 * 1024;
+    // Access checks read one byte; warm streaming reads up to 4 MiB to keep appends and seeks responsive.
+    const read = async (offset: number, signal: AbortSignal, warm = false, length = warm ? Math.min(maxRead, 4 * 1024 * 1024) : 1024 * 1024) => {
+      const result = await readVideoRange(transferApi, solutionId, item.id, mode, offset, item.size, AbortSignal.any([signal, AbortSignal.timeout(60_000)]), version, undefined, length);
+      version = result.version; maxRead = result.maxRead; return result.bytes;
     };
     const fail = (fullVideoReason = "") => {
       controller.abort(); element.pause(); element.removeAttribute("src"); element.load();
@@ -59,16 +61,16 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
     const heartbeat = setInterval(() => {
       if (!version || checking || controller.signal.aborted) return;
       checking = true;
-      void read(0, controller.signal).catch(() => { if (!controller.signal.aborted) fail(); }).finally(() => { checking = false; });
+      void read(0, controller.signal, false, 1).catch(() => { if (!controller.signal.aborted) fail(); }).finally(() => { checking = false; });
     }, 30_000);
     const loaded = () => setLoading(false);
     const decodeError = () => { if (!controller.signal.aborted) fail(); };
     element.addEventListener("loadeddata", loaded); element.addEventListener("error", decodeError);
     void (async () => {
       if (full) {
-        await read(0, controller.signal);
+        await read(0, controller.signal, false, 1);
         const blob = await downloadMedia(item, { solutionId, mode, signal: controller.signal });
-        await read(0, controller.signal);
+        await read(0, controller.signal, false, 1);
         controller.signal.throwIfAborted();
         try {
           const { extractMp4Captions, captionsVtt } = await import("./mp4Captions");

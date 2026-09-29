@@ -424,6 +424,16 @@ namespace Prisma.Plugins
             return rows;
         }
 
+        public static Entity Session(IOrganizationService server, Guid parent, Guid target)
+        {
+            var query = new QueryExpression("nx_uploadsession") { ColumnSet = SessionColumns, TopCount = 2 };
+            query.Criteria.AddCondition("nx_parentid", ConditionOperator.Equal, parent.ToString("D"));
+            query.Criteria.AddCondition("nx_targetid", ConditionOperator.Equal, target.ToString("D"));
+            var rows = server.RetrieveMultiple(query).Entities;
+            if (rows.Count > 1) throw MediaPolicy.Invalid("Unexpected media count.");
+            return rows.SingleOrDefault();
+        }
+
         public static MediaSnapshot[] Snapshots(IOrganizationService service, Guid parent)
         {
             return Sessions(service, parent).Select(row => Snapshot(service, row)).OrderBy(item => item.SortOrder).ThenBy(item => item.Id).ToArray();

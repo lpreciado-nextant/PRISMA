@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fileDigest, transferVideo, readVideoRange, readAttachment, type TransferApi } from "./mediaTransfer.ts";
+import { fileDigest, transferVideo, readVideoRange, readAttachment, parseVideoRange, type TransferApi } from "./mediaTransfer.ts";
 import { parseMedia, type MediaApi, type MediaState } from "./media.ts";
 import { bufferedAhead, FullVideoRequiredError, validateStreamingLayout } from "./videoStream.ts";
 import { captionsVtt, decodeCaption } from "./mp4Captions.ts";
@@ -117,6 +117,32 @@ test("Blob-backed attachments assemble bounded ranges pinned to the first versio
   let first = true;
   const changing: TransferApi = { ...api, range: async (...args) => { served = first ? version : "123:457:" + "b".repeat(32); first = false; return range(...args); } };
   await assert.rejects(readAttachment(changing, id, { id: asset, size, mime: "application/pdf" }, "published", signal()), /Unconfirmed/);
+});
+test("advertised larger reads run concurrently, stay pinned and assemble in order", async () => {
+  const maxRead = 4 * 1024 * 1024;
+  const size = 1024 * 1024 + 3 * maxRead + 7;
+  const bytes = Uint8Array.from({ length: size }, (_value, index) => index % 253);
+  const version = "123:456:" + "c".repeat(32);
+  const calls: { offset: number; count: number; version?: string }[] = [];
+  let active = 0, peak = 0, failAt = -1;
+  const forbidden = async () => { throw new Error("Unexpected operation"); };
+  const range = async (_id: string, _asset: string, _mode: string, offset: number, count: number, expected?: string) => {
+    calls.push({ offset, count, version: expected }); active++; peak = Math.max(peak, active);
+    await new Promise(resolve => setTimeout(resolve, offset ? 20 - (offset / maxRead) * 4 : 0));
+    active--;
+    if (offset === failAt) throw new Error("Access revoked");
+    return wrap({ id, assetId: asset, version, offset, size, mime: "video/mp4", maxRead, content: Buffer.from(bytes.subarray(offset, offset + count)).toString("base64") });
+  };
+  const api: TransferApi = { begin: forbidden, checkpoint: forbidden, range };
+  const blob = await readAttachment(api, id, { id: asset, size, mime: "video/mp4" }, "submission", signal());
+  assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+  assert.deepEqual(calls[0], { offset: 0, count: 1024 * 1024, version: undefined });
+  assert.ok(calls.slice(1).every(call => call.version === version && call.count <= maxRead));
+  assert.equal(calls.length, 5);
+  assert.ok(peak > 1);
+  calls.length = 0; failAt = 1024 * 1024 + maxRead;
+  await assert.rejects(readAttachment(api, id, { id: asset, size, mime: "video/mp4" }, "submission", signal()), /revoked/);
+  assert.throws(() => parseVideoRange(wrap({ id, assetId: asset, version, offset: 0, size: 3, mime: "video/mp4", maxRead: 3, content: btoa("abc") }), id, asset, 0, 3, 3), /Unconfirmed/);
 });
 test("storage marker is accepted only for uploaded attachments", () => {
   const item = { id: asset, sessionId: asset, kind: "attachment", name: "deck.pdf", mime: "application/pdf", size: 3, received: 3, nextBlock: 1, complete: true, storage: "blob" };

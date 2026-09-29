@@ -21,12 +21,15 @@ namespace Prisma.Plugins
         [DataMember(Name = "offset")] public int Offset { get; set; }
         [DataMember(Name = "content")] public string Content { get; set; }
         [DataMember(Name = "mime")] public string Mime { get; set; }
+        [DataMember(Name = "maxRead")] public int MaxRead { get; set; }
+        [DataMember(Name = "serverMs")] public long ServerMs { get; set; }
     }
 
     public sealed class MediaTransferApi : IPlugin
     {
         public void Execute(IServiceProvider serviceProvider)
         {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
             var factory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             var caller = factory.CreateOrganizationService(context.InitiatingUserId);
@@ -38,10 +41,11 @@ namespace Prisma.Plugins
                 var mode = context.InputParameters["Mode"] as string;
                 var columns = new ColumnSet("ownerid", "statecode", "nx_publicationstatus", "nx_clientsafereviewed", "nx_safetyacknowledged");
                 var parent = caller.Retrieve("nx_solution", id, columns);
-                var librarian = mode == "submission" && ReviewApi.IsLibrarian(server, context.InitiatingUserId);
+                var owner = parent.GetAttributeValue<EntityReference>("ownerid");
+                var librarian = mode == "submission" && (owner?.LogicalName != "systemuser" || owner.Id != context.InitiatingUserId) && ReviewApi.IsLibrarian(server, context.InitiatingUserId);
                 MediaTransferPolicy.ReadAccess(parent, context.InitiatingUserId, librarian, mode);
                 var assetId = (Guid)context.InputParameters["AssetId"];
-                var session = MediaApi.Sessions(server, id).SingleOrDefault(row => row.GetAttributeValue<string>("nx_targetid") == assetId.ToString("D"));
+                var session = MediaApi.Session(server, id, assetId);
                 if (session == null || !session.GetAttributeValue<bool>("nx_complete") || session.GetAttributeValue<string>("nx_kind") != "attachment"
                     || !BlobMedia.Eligible("attachment", session.GetAttributeValue<string>("nx_mime") ?? LinkedAssetPolicy.Mime)) throw MediaPolicy.Invalid("Completed attachment is unavailable.");
                 var target = caller.Retrieve("nx_demoasset", assetId, new ColumnSet("nx_solution"));
@@ -51,9 +55,11 @@ namespace Prisma.Plugins
                 if (!string.IsNullOrEmpty(expected) && expected != version) throw MediaPolicy.Invalid("Video access or version changed. Reopen the viewer.");
                 var size = session.GetAttributeValue<int>("nx_bytes");
                 var offset = (int)context.InputParameters["Offset"];
-                var count = MediaTransferPolicy.ReadLength(offset, (int)context.InputParameters["Count"], size);
+                var blob = BlobMedia.IsBlob(session);
+                var maxRead = blob ? MediaTransferPolicy.BlobReadBlockSize : MediaTransferPolicy.FileReadBlockSize;
+                var count = MediaTransferPolicy.ReadLength(offset, (int)context.InputParameters["Count"], size, maxRead);
                 byte[] data;
-                if (BlobMedia.IsBlob(session)) data = BlobMedia.Read(storage.Store, session, offset, count);
+                if (blob) data = BlobMedia.Read(storage.Store, session, offset, count);
                 else
                 {
                     var download = (InitializeFileBlocksDownloadResponse)caller.Execute(new InitializeFileBlocksDownloadRequest { Target = target.ToEntityReference(), FileAttributeName = "nx_filemedia" });
@@ -66,7 +72,7 @@ namespace Prisma.Plugins
                 var latestTarget = caller.Retrieve("nx_demoasset", assetId, new ColumnSet(false));
                 if (latest.RowVersion != parent.RowVersion || latestTarget.RowVersion != target.RowVersion) throw MediaPolicy.Invalid("Video changed during read.");
                 context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new VideoRange { Id = id.ToString("D"), AssetId = assetId.ToString("D"), Version = version,
-                    Offset = offset, Size = size, Mime = session.GetAttributeValue<string>("nx_mime"), Content = Convert.ToBase64String(data) });
+                    Offset = offset, Size = size, Mime = session.GetAttributeValue<string>("nx_mime"), Content = Convert.ToBase64String(data), MaxRead = maxRead, ServerMs = clock.ElapsedMilliseconds });
                 return;
             }
             if (!context.IsInTransaction) throw MediaPolicy.Invalid("A media transaction is required.");

@@ -88,6 +88,9 @@ namespace Prisma.Plugins.Tests
             Assert.Equal(10, MediaTransferPolicy.ReadLength(90, 100, 100));
             Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.ReadLength(0, MediaTransferPolicy.ReadBlockSize + 1, 5000000));
             Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.ReadLength(100, 1, 100));
+            Assert.Equal(MediaTransferPolicy.BlobReadBlockSize, MediaTransferPolicy.ReadLength(0, MediaTransferPolicy.BlobReadBlockSize, 50000000, MediaTransferPolicy.BlobReadBlockSize));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaTransferPolicy.ReadLength(0, MediaTransferPolicy.FileReadBlockSize + 1, 50000000, MediaTransferPolicy.FileReadBlockSize));
+            Assert.Contains("\"maxRead\":8388608", DraftPolicy.Serialize(new VideoRange { MaxRead = MediaTransferPolicy.BlobReadBlockSize }));
         }
 
         [Fact]

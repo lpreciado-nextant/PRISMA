@@ -1184,12 +1184,19 @@ static void SmokeBlob(IOrganizationService service, string[] options)
         string? rangeVersion = null;
         using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
         var timer = System.Diagnostics.Stopwatch.StartNew();
-        for (var offset = 0; offset < bytes.Length; offset += 1048576)
+        var readSize = 1048576;
+        long readServerMs = 0;
+        for (var offset = 0; offset < bytes.Length;)
         {
-            var range = Call("nx_ReadVideoRange", ("AssetId", asset), ("Mode", "submission"), ("Offset", offset), ("Count", 1048576), ("Version", rangeVersion ?? ""));
+            var range = Call("nx_ReadVideoRange", ("AssetId", asset), ("Mode", "submission"), ("Offset", offset), ("Count", readSize), ("Version", rangeVersion ?? ""));
             rangeVersion ??= range.GetProperty("version").GetString();
-            hash.AppendData(Convert.FromBase64String(range.GetProperty("content").GetString()!));
+            var data = Convert.FromBase64String(range.GetProperty("content").GetString()!);
+            hash.AppendData(data);
+            offset += data.Length;
+            if (range.TryGetProperty("serverMs", out var readMs)) readServerMs += readMs.GetInt64();
+            if (range.TryGetProperty("maxRead", out var maxRead)) readSize = maxRead.GetInt32();
         }
+        Console.WriteLine($"READ {readSize}-byte ranges: plug-in {readServerMs} ms of {timer.ElapsedMilliseconds} ms.");
         if (Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant() != digest) throw new InvalidOperationException("Blob range checksum mismatch.");
         AssertRejected(() => Call("nx_ReadVideoRange", ("AssetId", asset), ("Mode", "present"), ("Offset", 0), ("Count", 1)), "draft present read");
         AssertRejected(() => Call("nx_ReadVideoRange", ("AssetId", asset), ("Mode", "submission"), ("Offset", 0), ("Count", 1), ("Version", "stale")), "stale range version");

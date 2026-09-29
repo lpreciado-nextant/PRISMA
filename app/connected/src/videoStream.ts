@@ -7,7 +7,7 @@ export function validateStreamingLayout(info: { tracks: readonly { type?: string
   if (info.isFragmented) throw new FullVideoRequiredError("This MP4 needs to load in full before playback.");
 }
 
-export type VideoRead = (offset: number, signal: AbortSignal) => Promise<Uint8Array<ArrayBuffer>>;
+export type VideoRead = (offset: number, signal: AbortSignal, warm: boolean) => Promise<Uint8Array<ArrayBuffer>>;
 export function bufferedAhead(ranges: { start: (index: number) => number; end: (index: number) => number; length: number }, time: number): number {
   const current = Array.from({ length: ranges.length }, (_, index) => [ranges.start(index), ranges.end(index)])
     .find(([start, end]) => time + 0.1 >= start && time < end);
@@ -26,6 +26,12 @@ export async function streamVideo(video: HTMLVideoElement, size: number, read: V
   let offset = 0;
   let seekTo: number | null = null;
   let parsedBytes = 0;
+  let pending: { at: number; bytes: Promise<Uint8Array<ArrayBuffer>> } | null = null;
+  const fetchAt = (at: number) => {
+    const prefetched = pending?.at === at ? pending.bytes : null;
+    pending = null;
+    return prefetched ?? read(at, signal, ready);
+  };
   const wait = (target: EventTarget, event: string) => new Promise<void>((resolve, reject) => {
     const done = () => { cleanup(); resolve(); };
     const failed = () => { cleanup(); reject(new Error("Video operation failed.")); };
@@ -94,13 +100,19 @@ export async function streamVideo(video: HTMLVideoElement, size: number, read: V
         });
         continue;
       }
-      const bytes = await read(offset, signal);
+      const bytes = await fetchAt(offset);
       signal.throwIfAborted();
-      if (!bytes.length || bytes.length > 1024 * 1024 || offset + bytes.length > size) throw new Error("Invalid video chunk.");
+      if (!bytes.length || bytes.length > 8 * 1024 * 1024 || offset + bytes.length > size) throw new Error("Invalid video chunk.");
       const data = bytes.buffer as MP4BoxBuffer; data.fileStart = offset;
       const next = parser.appendBuffer(data);
       if (!ready) { parsedBytes += bytes.length; if (parsedBytes > 16 * 1024 * 1024) throw new Error("MP4 metadata exceeds the streaming limit."); }
       offset = next ?? offset + bytes.length;
+      // Request the next range while this one is appended; a seek discards it.
+      if (ready && offset < size && bufferedAhead(video.buffered, video.currentTime) < 25) {
+        const prefetch = read(offset, signal, true);
+        prefetch.catch(() => {});
+        pending = { at: offset, bytes: prefetch };
+      }
     }
   } finally {
     parser.stop();

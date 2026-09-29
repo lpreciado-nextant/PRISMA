@@ -273,7 +273,7 @@ namespace Prisma.Plugins
 
         public byte[] Read(string name, long offset, int count, string etag)
         {
-            if (offset < 0 || count <= 0 || count > MediaTransferPolicy.ReadBlockSize) throw MediaPolicy.Invalid("Invalid media range.");
+            if (offset < 0 || count <= 0 || count > MediaTransferPolicy.BlobReadBlockSize) throw MediaPolicy.Invalid("Invalid media range.");
             using (var response = Send(HttpMethod.Get, name, "", null, request =>
             {
                 request.Headers.IfMatch.Add(EntityTagHeaderValue.Parse(etag));
