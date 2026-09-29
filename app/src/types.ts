@@ -121,6 +121,8 @@ export interface Solution {
   /** Additional screenshots shown on the detail page (`nx_solutionimage`, 1:N). */
   images?: SolutionImage[];
   dateAdded: string;
+  /** System `createdon` (ISO). Drives "Newest/Oldest first"; the PoC mock falls back to `dateAdded`. */
+  createdOn?: string;
   libraryNotes?: string;
   searchKeywords: string;
   /** Native N:N tags — `nx_capability` / `nx_technology` / `nx_industry`. */

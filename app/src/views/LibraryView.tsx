@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { Solution } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
 import { activeChips, areaCounts, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
@@ -6,6 +6,25 @@ import { Chip } from "../components/Badges";
 import { FacetRail } from "../components/FacetRail";
 import { Icon } from "../components/Icon";
 import { SolutionCard } from "../components/SolutionCard";
+import { SolutionRow } from "../components/SolutionRow";
+import { SelectPicker } from "../components/SelectPicker";
+import { SORT_LABELS, SORT_ORDERS, sortSolutions, type SortOrder } from "../lib/sort";
+import { solutionAreas } from "../lib/areas";
+
+type LibraryLayout = "grid" | "list";
+const SORT_KEY = "prisma.library.sort";
+const LAYOUT_KEY = "prisma.library.layout";
+
+/** Sort and layout are per-viewer conveniences, kept for the session so they survive opening a solution. */
+function remembered<Value extends string>(key: string, allowed: readonly Value[], fallback: Value): Value {
+  try {
+    const value = sessionStorage.getItem(key);
+    return allowed.includes(value as Value) ? value as Value : fallback;
+  } catch { return fallback; }
+}
+function remember(key: string, value: string) {
+  try { sessionStorage.setItem(key, value); } catch { void 0; }
+}
 
 const ALL_AREAS_NOTE =
   "Everything Nextant has built and can show, across all three Specialization Areas.";
@@ -17,6 +36,7 @@ export function LibraryView({
   present,
   catalogueOnly = false,
   renderCard,
+  renderRow,
   featured,
 }: {
   catalogue: Solution[];
@@ -25,40 +45,64 @@ export function LibraryView({
   present: boolean;
   catalogueOnly?: boolean;
   renderCard?: (solution: Solution, index: number) => ReactNode;
+  /** List-view row, when the caller renders its own cards (the connected app's protected thumbnails). */
+  renderRow?: (solution: Solution, index: number) => ReactNode;
   /** A shelf above the grid (the Top 10). Shown only on the unfiltered library, never in present mode. */
   featured?: ReactNode;
 }) {
-  const results = useMemo(() => filterSolutions(catalogue, filters), [catalogue, filters]);
+  const [sort, setSort] = useState<SortOrder>(() => remembered(SORT_KEY, SORT_ORDERS, "newest"));
+  const [layout, setLayout] = useState<LibraryLayout>(() => remembered(LAYOUT_KEY, ["grid", "list"] as const, "grid"));
+  // Sorting and layout apply to All solutions only; the Top 3 keeps its own ranking.
+  const results = useMemo(() => sortSolutions(filterSolutions(catalogue, filters), sort), [catalogue, filters, sort]);
   const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
   const chips = activeChips(filters);
+  // Live proof under the hero line, from the catalogue this person can see.
+  const stats = useMemo(() => {
+    const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
+    return [
+      plural(catalogue.length, "solution", "solutions"),
+      plural(new Set(catalogue.flatMap((solution) => solutionAreas(solution))).size, "specialization area", "specialization areas"),
+      plural(new Set(catalogue.flatMap((solution) => solution.technologies)).size, "technology", "technologies"),
+    ];
+  }, [catalogue]);
   // Searching or filtering goes straight to results: the shelf must not push the grid down.
   const showFeatured = !!featured && !present && !filters.q.trim() && filters.area === "all" && chips.length === 0;
 
   return (
     <div className="mx-auto w-full max-w-[1340px] px-4 pb-24 sm:px-6">
       {!present && (
-        <section className="animate-rise pt-14 pb-2">
-          <div className="flex items-center gap-3">
-            <span className="eyebrow">Nextant · Solution Library</span>
+        <section className="animate-rise grid gap-x-12 gap-y-2 pt-12 pb-2 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-start">
+          {/* Eyebrow on its own row, so the description aligns with the wordmark itself. */}
+          <span className="eyebrow lg:col-span-2">Nextant · Solution Library</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-[0.12em] text-[clamp(3.6rem,9vw,7.25rem)]">
+              <img
+                src="./prisma-mark-v2.svg"
+                alt=""
+                aria-hidden="true"
+                className="h-[0.86em] w-auto shrink-0 translate-y-[0.05em] select-none"
+              />
+              <h1 className="prisma-wordmark pr-[0.06em] text-[1em]" aria-label="PRISMA">
+                PRISMA
+              </h1>
+            </div>
           </div>
-          <div className="mt-2 flex items-center gap-[0.12em] text-[clamp(4rem,11vw,8.5rem)]">
-            <img
-              src="./prisma-mark-v2.svg"
-              alt=""
-              aria-hidden="true"
-              className="h-[0.86em] w-auto shrink-0 translate-y-[0.05em] select-none"
-            />
-            <h1 className="prisma-wordmark pr-[0.06em] text-[1em]" aria-label="PRISMA">
-              PRISMA
-            </h1>
+          <div className="mt-4 min-w-0 lg:mt-[0.35rem] lg:border-l lg:border-(--glass-edge) lg:pl-10">
+            <p className="max-w-[46ch] text-[clamp(17px,1.6vw,20px)] leading-relaxed" style={{ color: "var(--ink-2)" }}>
+              Nextant's solutions across AI, Data and Operations, with demos ready for your next
+              client conversation.
+            </p>
+            {catalogue.length > 0 && (
+              <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.14em] uppercase" style={{ color: "var(--ink-3)" }}>
+                {stats.map((stat, index) => (
+                  <span key={stat} className="inline-flex items-center gap-3">
+                    {index > 0 && <span aria-hidden="true">·</span>}
+                    {stat}
+                  </span>
+                ))}
+              </p>
+            )}
           </div>
-          <p
-            className="mt-4 max-w-[54ch] text-[clamp(17px,1.6vw,20px)]"
-            style={{ color: "var(--ink-2)" }}
-          >
-            Everything we've built, ready to show. Search the library, open the demo, and be on a
-            client's screen in under two minutes.
-          </p>
         </section>
       )}
 
@@ -117,13 +161,51 @@ export function LibraryView({
         {/* Present mode drops the filter rail — minimal chrome per design §3.4. */}
         {!present && <FacetRail all={catalogue} filters={filters} onChange={onFilters} />}
 
-        <div>
-          {results.length > 0 ? (
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-              {results.map((s, i) => (
-                renderCard ? <div key={s.id} className="grid min-w-0">{renderCard(s, i)}</div> : <SolutionCard key={s.id} solution={s} present={present} index={i} catalogueOnly={catalogueOnly} favoritable={!renderCard && !catalogueOnly} />
-              ))}
+        <div className="min-w-0">
+          {!present && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+              <h2 className="text-[clamp(1.35rem,2vw,1.6rem)] leading-none font-bold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>All solutions</h2>
+              <div className="flex items-center gap-2">
+                <SelectPicker
+                  compact
+                  label="Sort solutions"
+                  value={sort}
+                  options={SORT_ORDERS}
+                  getLabel={(order) => SORT_LABELS[order]}
+                  getButtonLabel={(order) => `Sort by: ${order === "newest" ? "Newest" : "Oldest"}`}
+                  onChange={(order) => { setSort(order); remember(SORT_KEY, order); }}
+                />
+                <div className="view-toggle" role="group" aria-label="Layout">
+                  {(["grid", "list"] as const).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={layout === option}
+                      aria-label={option === "grid" ? "Grid view" : "List view"}
+                      title={option === "grid" ? "Grid view" : "List view"}
+                      onClick={() => { setLayout(option); remember(LAYOUT_KEY, option); }}
+                    >
+                      <Icon name={option} size={15} />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+          )}
+          {results.length > 0 ? (
+            layout === "list" && !present ? (
+              <div className="flex flex-col gap-2.5">
+                {results.map((s, i) => (
+                  renderRow ? <div key={s.id} className="min-w-0">{renderRow(s, i)}</div> : <SolutionRow key={s.id} solution={s} present={present} index={i} favoritable={!catalogueOnly} />
+                ))}
+              </div>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                {results.map((s, i) => (
+                  renderCard ? <div key={s.id} className="grid min-w-0">{renderCard(s, i)}</div> : <SolutionCard key={s.id} solution={s} present={present} index={i} catalogueOnly={catalogueOnly} favoritable={!renderCard && !catalogueOnly} />
+                ))}
+              </div>
+            )
           ) : catalogueOnly && catalogue.length === 0 ? (
             <div className="px-6 py-16 text-center" role="status">
               <h2 className="text-[22px] font-semibold">{present ? "No solutions cleared for presentation" : "No published solutions"}</h2>

@@ -7,6 +7,7 @@ import { PresentBanner } from "../../src/components/PresentBanner";
 import { Icon } from "../../src/components/Icon";
 import { LibraryView } from "../../src/views/LibraryView";
 import { TopTenRow } from "../../src/components/TopTenRow";
+import { SolutionRow } from "../../src/components/SolutionRow";
 import { navigate, replaceQuery, useRoute } from "../../src/lib/router";
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
@@ -231,7 +232,10 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
         : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly
-            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} renderPoster={solution => <PublishedThumbnail solution={solution} />} /> : undefined}
+            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} renderPoster={solution => <PublishedThumbnail solution={solution} />}
+              favorite={favorites ? solution => ({ saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) }) : undefined} /> : undefined}
+            renderRow={(entry, index) => <SolutionRow solution={entry} present={present} index={index} poster={<PublishedThumbnail solution={entry} />}
+              favoritable={!!favorites} favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />}
             renderCard={(entry, index) => <ConnectedSolutionCard solution={entry} present={present} index={index}
             favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />} />}
     </main>

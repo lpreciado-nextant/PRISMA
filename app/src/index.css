@@ -73,6 +73,9 @@
   --prism-3: #a98fe0;
   --prism-4: #5fa7d6;
   --prism-5: #4fbfab;
+  /* Top 3 numerals: pastel purple to pastel blue, from the PRISMA mark. */
+  --rank-from: #c4b3f2;
+  --rank-to: #8cc4ea;
 
   /* glass */
   --glass-bg: rgba(255, 255, 255, 0.028);
@@ -114,6 +117,8 @@
   --prism-3: #6a52b8;
   --prism-4: #2f79a8;
   --prism-5: #0b6157;
+  --rank-from: #b39ff0;
+  --rank-to: #7fb8e2;
 
   --glass-bg: rgba(255, 255, 255, 0.32);
   --glass-bg-2: rgba(255, 255, 255, 0.48);
@@ -323,12 +328,24 @@
     color: transparent;
   }
 
-  /* Text filled with the PRISMA mark gradient; never runs through the ink colour. */
-  .prism-text {
-    background: linear-gradient(100deg, var(--prism-1) 0%, var(--prism-2) 30%, var(--prism-3) 55%, var(--prism-4) 78%, var(--prism-5) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  /* PRISMA spelled out under the wordmark; the initials carry the brand lavender. */
+  .prisma-acronym {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.15rem 0;
+    font-family: var(--font-display);
+    font-size: clamp(14px, 1.15vw, 16px);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--ink-2);
+  }
+  .prisma-acronym b {
+    font-weight: 800;
+    color: var(--sa-ibo);
+  }
+  .prisma-acronym-dot {
+    padding-inline: 0.55rem;
+    color: var(--ink-3);
   }
 
   /* ---- Section panels ---------------------------------------------- */
@@ -349,14 +366,14 @@
       var(--glass-shadow);
     padding: clamp(18px, 2.4vw, 30px);
   }
-  /* Light theme: a pale steel-blue sheet, so white tiles and white screenshots
-     don't dissolve into a white panel. The dark theme keeps its dark glass. */
+  /* Light theme: only a faint blue/lavender tint; the white Top 3 cards carry
+     the contrast with their own border and shadow. Dark keeps its dark glass. */
   [data-theme="light"] .section-panel--featured {
-    border-color: color-mix(in srgb, var(--accent) 22%, white);
+    border-color: color-mix(in srgb, var(--sa-ibo) 14%, white);
     background: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--accent) 14%, white) 0%,
-      color-mix(in srgb, var(--accent) 9%, white) 100%
+      color-mix(in srgb, var(--accent) 5%, white) 0%,
+      color-mix(in srgb, var(--sa-ibo) 4%, white) 100%
     );
   }
   /* A faint accent bloom in the corner marks the featured region. */
@@ -374,135 +391,152 @@
     position: relative;
   }
 
-  /* ---- Top 10 shelf ------------------------------------------------- */
-  /* Horizontal, snap-scrolling row. The edge mask fades tiles into the
-     aurora instead of clipping them; padding keeps focus rings unmasked. */
+  /* ---- Top 3 shelf ------------------------------------------------- */
+  /* Horizontal, snap-scrolling carousel. The edge mask fades cards into the
+     panel instead of clipping them; padding keeps focus rings unmasked. */
+  .top-shelf {
+    padding-block: clamp(16px, 2vw, 22px) clamp(8px, 1.2vw, 12px);
+  }
   .top-ten-track {
     display: flex;
-    gap: 1.1rem;
+    gap: 1.25rem;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
     scroll-padding-inline: 6px;
-    padding: 18px 6px 26px;
+    padding: 14px 6px 18px;
     margin-inline: -6px;
     scrollbar-width: none;
-    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 56px), transparent 100%);
-    mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 56px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 40px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 40px), transparent 100%);
   }
   .top-ten-track::-webkit-scrollbar {
     display: none;
   }
+  /* display: flex above would otherwise override the hidden attribute. */
+  .top-ten-track[hidden] {
+    display: none;
+  }
+  .top-shelf:has(.top-ten-track[hidden]) {
+    padding-bottom: clamp(16px, 2vw, 22px);
+  }
 
-  .top-ten-item {
-    --rank-inset: 2.45rem;
+  .top-card-item {
+    --rank-inset: 3.2rem;
     position: relative;
     display: flex;
     flex-shrink: 0;
-    align-items: flex-end;
+    align-items: center;
     scroll-snap-align: start;
     padding-left: var(--rank-inset);
   }
-  .top-ten-item[data-wide] {
-    --rank-inset: 3.85rem;
+  .top-card-item[data-wide] {
+    --rank-inset: 5rem;
   }
 
-  /* The oversized numeral sits behind the tile's left edge, Netflix-style:
-     an accent-tinted outline with a fill that fades toward the base. */
+  /* The large numeral sits behind the card's left edge so number and card read
+     as one composition: a pastel purple-to-blue gradient from the PRISMA mark,
+     strong enough to read but softer than the titles. */
   .top-rank {
     position: absolute;
-    left: 0;
-    bottom: -0.1em;
+    left: -0.04em;
+    top: 50%;
     z-index: 0;
     font-family: var(--font-display);
-    font-size: 5.25rem;
-    font-weight: 800;
-    line-height: 0.8;
-    letter-spacing: -0.09em;
+    font-size: 8.25rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.07em;
     color: transparent;
-    -webkit-text-stroke: 1.5px color-mix(in srgb, var(--rank-accent) 78%, var(--ink) 8%);
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--rank-accent) 42%, transparent) 0%,
-      color-mix(in srgb, var(--rank-accent) 6%, transparent) 82%
-    );
+    background: linear-gradient(170deg, var(--rank-from) 15%, var(--rank-to) 85%);
     -webkit-background-clip: text;
     background-clip: text;
+    transform: translateY(-52%);
     pointer-events: none;
     user-select: none;
     transition: transform 0.55s var(--ease-spring);
   }
-  /* The podium takes the PRISMA mark gradient. */
-  .top-rank[data-podium] {
-    -webkit-text-stroke: 1.5px color-mix(in srgb, var(--prism-3) 45%, transparent);
-    background: linear-gradient(165deg, var(--prism-1) 0%, var(--prism-2) 35%, var(--prism-3) 60%, var(--prism-4) 85%, var(--prism-5) 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-  }
-  .top-ten-item:hover .top-rank,
-  .top-ten-item:focus-within .top-rank {
-    transform: translateX(-4px) scale(1.04);
+  .top-card-item:hover .top-rank,
+  .top-card-item:focus-within .top-rank {
+    transform: translate(-4px, -52%) scale(1.03);
   }
 
-  /* Collapsed shelf: the podium as compact glass pills with a gradient
-     numeral and a hairline gradient border (masked to the edge only). */
-  .top-pill {
-    display: inline-flex;
-    max-width: 22rem;
-    align-items: center;
-    gap: 0.75rem;
-    border-color: transparent;
-    border-radius: 999px;
-    padding: 0.45rem 1.15rem 0.45rem 0.95rem;
-    font-family: var(--font-display);
-    font-size: 14.5px;
-    font-weight: 600;
-    color: var(--ink);
-    cursor: pointer;
-  }
-  .top-pill::after {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(100deg, var(--prism-1), var(--prism-3) 55%, var(--prism-5));
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0.55;
-    pointer-events: none;
-    transition: opacity 0.4s var(--ease-sheet);
-  }
-  .top-pill:hover::after,
-  .top-pill:focus-visible::after {
-    opacity: 1;
-  }
-  .top-pill-rank {
-    flex-shrink: 0;
-    border-right: 1px solid var(--glass-edge);
-    padding-right: 0.75rem;
-    font-size: 1.45rem;
-    font-weight: 800;
-    line-height: 1;
-    letter-spacing: -0.05em;
-  }
-
-  /* The image always has an edge: a hairline under it, and in the light
-     theme an inner ring, so a white screenshot never merges into the tile. */
-  .top-ten-poster {
-    display: block;
-    height: 128px;
+  /* Identical horizontal cards: a squarer 4:3 crop of the thumbnail on the left
+     (centred), category, title, summary and heart on the right. */
+  .top-card {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    width: min(370px, calc(100vw - 7rem));
+    height: 116px;
     overflow: hidden;
+    border-radius: 18px;
+    border: 1px solid var(--glass-edge);
+    background: color-mix(in srgb, var(--ground-2) 80%, transparent);
+    box-shadow: inset 0 1px 0 0 var(--glass-edge-hi), var(--glass-shadow);
+    text-align: left;
+  }
+  [data-theme="light"] .top-card {
+    border-color: color-mix(in srgb, var(--sa-ibo) 14%, #e4e9f0);
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(13, 30, 45, 0.05), 0 10px 26px -14px rgba(13, 30, 45, 0.22);
+  }
+  .top-card-image {
+    display: block;
+    height: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border-right: 1px solid var(--glass-edge);
+  }
+  [data-theme="light"] .top-card-image {
+    border-right-color: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  .top-card-body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.65rem 0.8rem 0.65rem 0.85rem;
+  }
+  @media (max-width: 640px) {
+    .top-card {
+      grid-template-columns: minmax(0, 1fr);
+      width: min(280px, calc(100vw - 6.5rem));
+      height: auto;
+    }
+    .top-card-image {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 9;
+      border-right: 0;
+      border-bottom: 1px solid var(--glass-edge);
+    }
+  }
+
+  .top-view-all {
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--sa-ibo);
+    cursor: pointer;
+    transition: background 0.25s var(--ease-sheet);
+  }
+  .top-view-all:hover {
+    background: color-mix(in srgb, var(--sa-ibo) 10%, transparent);
+  }
+
+  /* Catalogue images always have an edge: a hairline under them, and in the
+     light theme an inner ring, so a white screenshot never merges into the card. */
+  .card-poster {
     border-bottom: 1px solid var(--glass-edge);
   }
-  [data-theme="light"] .top-ten-poster,
   [data-theme="light"] .card-poster {
     border-bottom-color: color-mix(in srgb, var(--accent) 16%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 6%, transparent);
-  }
-  .card-poster {
-    border-bottom: 1px solid var(--glass-edge);
   }
   /* Light theme: catalogue cards take a pale steel-blue sheet (no panel sits
      behind them), so a white screenshot stands off the card and the page. */
@@ -518,17 +552,67 @@
     background: color-mix(in srgb, var(--accent) 14%, white);
   }
 
-  .top-ten-tile {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    width: 232px;
-    height: 264px;
-    overflow: hidden;
-    border-radius: 20px;
-    text-align: left;
+  /* ---- Library toolbar (sort, grid/list) ---------------------------- */
+  /* Secondary controls: smaller than the search bar, no strong shadow, no new
+     colours. Light: white with a lavender-grey edge. Dark: the navy surface. */
+  .toolbar-control,
+  .view-toggle {
+    border: 1px solid color-mix(in srgb, var(--sa-ibo) 22%, var(--glass-edge));
+    background: color-mix(in srgb, white 88%, transparent);
+    color: var(--ink-2);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent);
+    transition: background 0.25s var(--ease-sheet), border-color 0.25s var(--ease-sheet);
+  }
+  .toolbar-control:hover {
+    background: color-mix(in srgb, var(--sa-ibo) 7%, white);
+  }
+  .toolbar-control:focus-visible,
+  .toolbar-control[aria-expanded="true"] {
+    border-color: color-mix(in srgb, var(--sa-ibo) 55%, transparent);
+  }
+  .view-toggle {
+    display: inline-flex;
+    height: 2.25rem;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 10px;
+  }
+  .view-toggle > button {
+    display: grid;
+    width: 1.9rem;
+    place-items: center;
+    border-radius: 7px;
+    color: color-mix(in srgb, var(--ink-3) 90%, transparent);
     cursor: pointer;
+    transition: background 0.25s var(--ease-sheet), color 0.25s var(--ease-sheet);
+  }
+  .view-toggle > button:hover {
+    background: color-mix(in srgb, var(--sa-ibo) 9%, transparent);
+  }
+  .view-toggle > button[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--sa-ibo) 15%, color-mix(in srgb, var(--accent) 6%, white));
+    color: var(--sa-ibo);
+  }
+  :root:not([data-theme="light"]) .toolbar-control,
+  :root:not([data-theme="light"]) .view-toggle,
+  [data-theme="dark"] .toolbar-control,
+  [data-theme="dark"] .view-toggle {
+    border-color: color-mix(in srgb, var(--accent) 16%, var(--ground-2));
+    background: color-mix(in srgb, var(--ground-2) 92%, transparent);
+    box-shadow: none;
+  }
+  :root:not([data-theme="light"]) .toolbar-control:hover,
+  [data-theme="dark"] .toolbar-control:hover {
+    background: color-mix(in srgb, var(--sa-ibo) 9%, var(--ground-2));
+  }
+  :root:not([data-theme="light"]) .view-toggle > button:hover,
+  [data-theme="dark"] .view-toggle > button:hover {
+    background: color-mix(in srgb, var(--sa-ibo) 10%, transparent);
+  }
+  :root:not([data-theme="light"]) .view-toggle > button[aria-pressed="true"],
+  [data-theme="dark"] .view-toggle > button[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--sa-ibo) 20%, var(--ground-2));
+    color: color-mix(in srgb, var(--sa-ibo) 80%, white);
   }
 
   /* ---- Screenshot lightbox ------------------------------------------ */

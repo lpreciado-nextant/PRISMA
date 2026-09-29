@@ -21,7 +21,7 @@ const SOLUTION_COLUMNS = [
   "nx_solutionid", "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes",
   "nx_businessvalue", "nx_status", "nx_publicationstatus",
   "nx_safetyacknowledged", "nx_clientsafereviewed", "nx_clientcontextredacted",
-  "nx_dateadded", "_nx_capability_value", "nx_clientrole",
+  "nx_dateadded", "_nx_capability_value", "nx_clientrole", "createdon",
 ];
 
 function value(row: object, key: string): unknown {
@@ -163,6 +163,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       clientContextRedacted: text(row, "nx_clientcontextredacted") || undefined,
       searchKeywords: present ? "" : text(row, "nx_searchkeywords"),
       dateAdded: text(row, "nx_dateadded").slice(0, 10),
+      createdOn: text(row, "createdon") || undefined,
       capabilities: [capability],
       technologies: technologies.map(tag => text(tag, "nx_technologyname", true)),
       industries: industries.map(tag => text(tag, "nx_industryname", true)),

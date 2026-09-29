@@ -1,37 +1,46 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Solution } from "../types";
-import { AREAS } from "../data/catalogueMetadata";
 import { solutionAreas } from "../lib/areas";
 import { navigate } from "../lib/router";
 import { AreaTag } from "./Badges";
+import { FavoriteButton } from "./FavoriteButton";
 import { Icon } from "./Icon";
 import { Poster } from "./Poster";
 
 const OPEN_KEY = "prisma.top10.open";
+const HIDDEN_KEY = "prisma.top10.hidden";
+const PODIUM = 3;
 
-function readOpen(): boolean {
-  try { return localStorage.getItem(OPEN_KEY) === "true"; } catch { return false; }
+function readFlag(key: string): boolean {
+  try { return localStorage.getItem(key) === "true"; } catch { return false; }
+}
+function writeFlag(key: string, value: boolean) {
+  try { localStorage.setItem(key, String(value)); } catch { void 0; }
 }
 
-function accentOf(solution: Solution): string {
-  return AREAS[solutionAreas(solution)[0] ?? solution.specializationArea].cssVar;
-}
+type Favorite = { saved: boolean; pending?: boolean; onToggle: () => void };
 
 /**
- * "Top 10" shelf: the team's most-saved solutions, best first. Collapsed, it shows
- * the podium as compact pills; open, a horizontal row with rank numerals behind
- * each glass tile. Order comes from the caller; this component never sees how
- * many times a solution was saved. The open state is a per-viewer convenience.
+ * "Most saved by the team" ranking, Netflix Top 10 style: horizontal cards (the
+ * whole 16:9 thumbnail left, category, title, summary and heart right) with a
+ * large gradient rank numeral behind each one. Shows the top three; "View all"
+ * reveals the rest of the ranking in the same carousel. Order comes from the
+ * caller; this component never sees how many times a solution was saved.
  */
-export function TopTenRow({ solutions, renderPoster, onOpen }: {
+export function TopTenRow({ solutions, renderPoster, onOpen, favorite }: {
   solutions: Solution[];
   /** Replaces the generated poster, e.g. with a protected Dataverse thumbnail. */
   renderPoster?: (solution: Solution) => ReactNode;
   onOpen?: (solution: Solution) => void;
+  /** Heart state for a solution; omit to hide the heart (for example when favorites didn't load). */
+  favorite?: (solution: Solution) => Favorite | undefined;
 }) {
-  const [open, setOpen] = useState(readOpen);
+  const [open, setOpen] = useState(() => readFlag(OPEN_KEY));
+  // Hidden folds the shelf down to its heading; both states are per-viewer conveniences.
+  const [hidden, setHidden] = useState(() => readFlag(HIDDEN_KEY));
   const track = useRef<HTMLOListElement>(null);
   const [edges, setEdges] = useState({ start: true, end: true });
+  const shown = open ? solutions : solutions.slice(0, PODIUM);
 
   useEffect(() => {
     const element = track.current;
@@ -45,15 +54,12 @@ export function TopTenRow({ solutions, renderPoster, onOpen }: {
     const observer = new ResizeObserver(update);
     observer.observe(element);
     return () => { element.removeEventListener("scroll", update); observer.disconnect(); };
-  }, [solutions.length, open]);
+  }, [shown.length, hidden]);
 
   if (solutions.length === 0) return null;
 
-  const toggle = () => {
-    const next = !open;
-    setOpen(next);
-    try { localStorage.setItem(OPEN_KEY, String(next)); } catch { void 0; }
-  };
+  const toggle = () => { setOpen(!open); writeFlag(OPEN_KEY, !open); };
+  const toggleHidden = () => { setHidden(!hidden); writeFlag(HIDDEN_KEY, !hidden); };
   const openSolution = (solution: Solution) => onOpen ? onOpen(solution) : navigate(`/s/${solution.id}`);
   const page = (direction: 1 | -1) => {
     const element = track.current;
@@ -61,88 +67,60 @@ export function TopTenRow({ solutions, renderPoster, onOpen }: {
     const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     element.scrollBy({ left: direction * element.clientWidth * 0.85, behavior: smooth ? "smooth" : "auto" });
   };
-  const podium = solutions.slice(0, 3);
-  const rest = solutions.length - podium.length;
 
   return (
-    <section aria-labelledby="top-ten-title" className="section-panel section-panel--featured animate-rise">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+    <section aria-labelledby="top-ten-title" className="section-panel section-panel--featured top-shelf animate-rise">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
           <p className="eyebrow">Most saved by the team</p>
-          {/* Solid lavender: the tone the PRISMA wordmark gradient reaches at its final "A". */}
-          <h2 id="top-ten-title" className="mt-1.5 text-[clamp(2rem,3.4vw,2.75rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.045em", color: "var(--sa-ibo)" }}>
-            Top {solutions.length}
+          <h2 id="top-ten-title" className="mt-1 text-[clamp(1.45rem,2.2vw,1.85rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em", color: "var(--sa-ibo)" }}>
+            Top {shown.length} solutions
           </h2>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {open && <>
+          {!hidden && solutions.length > PODIUM && (
+            <button type="button" onClick={toggle} aria-expanded={open} aria-controls="top-ten-shelf" className="top-view-all">
+              {open ? `Show top ${PODIUM}` : "View all"}
+            </button>
+          )}
+          {!hidden && <>
             <ShelfButton label="Previous solutions" icon="chevronLeft" disabled={edges.start} onClick={() => page(-1)} />
             <ShelfButton label="More solutions" icon="chevronRight" disabled={edges.end} onClick={() => page(1)} />
           </>}
-          <button
-            type="button"
-            onClick={toggle}
-            aria-expanded={open}
-            aria-controls="top-ten-shelf"
-            className="glass inline-flex h-10 cursor-pointer items-center gap-2 rounded-full px-4 text-[13px] font-semibold"
-            style={{ fontFamily: "var(--font-display)", color: "var(--ink-2)" }}
-          >
-            {open ? "Hide" : "Show all"}
-            <span className={`inline-grid transition-transform duration-300 ${open ? "rotate-180" : ""}`}><Icon name="chevronDown" size={15} /></span>
+          <button type="button" onClick={toggleHidden} aria-expanded={!hidden} aria-controls="top-ten-shelf" className="top-view-all inline-flex items-center gap-1" style={{ color: "var(--ink-2)" }}>
+            {hidden ? "Show" : "Hide"}
+            <span className={`inline-grid transition-transform duration-300 ${hidden ? "" : "rotate-180"}`}><Icon name="chevronDown" size={14} /></span>
           </button>
         </div>
       </div>
 
-      <div id="top-ten-shelf">
-        {open ? (
-          <ol ref={track} className="top-ten-track mt-2" aria-label="Top solutions, most saved first">
-            {solutions.map((solution, index) => {
-              const rank = index + 1;
-              const area = solutionAreas(solution)[0] ?? solution.specializationArea;
-              return (
-                <li
-                  key={solution.id}
-                  className="top-ten-item animate-rise"
-                  data-wide={rank >= 10 ? "" : undefined}
-                  style={{ "--rank-accent": accentOf(solution), animationDelay: `${Math.min(index, 9) * 45}ms` } as CSSProperties}
-                >
-                  <span className="top-rank" data-podium={rank <= 3 ? "" : undefined} aria-hidden="true">{rank}</span>
-                  <button type="button" onClick={() => openSolution(solution)} className="top-ten-tile glass glass-lite glass-sheen lift group">
-                    <span className="sr-only">Number {rank}: </span>
-                    <span className="top-ten-poster">
-                      {renderPoster?.(solution) ?? <Poster id={solution.id} name={solution.name} area={area} src={solution.thumbnail} className="h-full w-full" />}
-                    </span>
-                    <span className="flex flex-1 flex-col gap-2 p-4">
-                      <span className="flex flex-wrap gap-1.5">{solutionAreas(solution).map((tag) => <AreaTag key={tag} area={tag} size="xs" short />)}</span>
-                      <span className="line-clamp-2 text-[16.5px] leading-snug font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{solution.name}</span>
-                      <span className="line-clamp-2 text-[13px] leading-snug" style={{ color: "var(--ink-3)" }}>{solution.summary}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        ) : (
-          <ol className="mt-4 flex flex-wrap items-center gap-2.5" aria-label="Top three solutions">
-            {podium.map((solution, index) => (
-              <li key={solution.id} className="min-w-0 animate-rise" style={{ "--rank-accent": accentOf(solution), animationDelay: `${index * 45}ms` } as CSSProperties}>
-                <button type="button" onClick={() => openSolution(solution)} className="top-pill glass glass-lite lift">
-                  <span className="top-pill-rank prism-text" aria-hidden="true">{index + 1}</span>
-                  <span className="sr-only">Number {index + 1}: </span>
-                  <span className="truncate">{solution.name}</span>
-                </button>
-              </li>
-            ))}
-            {rest > 0 && (
-              <li>
-                <button type="button" onClick={toggle} className="cursor-pointer px-2 font-mono text-[11.5px] tracking-[0.08em] uppercase" style={{ color: "var(--ink-3)" }}>
-                  +{rest} more
-                </button>
-              </li>
-            )}
-          </ol>
-        )}
-      </div>
+      <ol id="top-ten-shelf" ref={track} hidden={hidden} className="top-ten-track mt-1" aria-label="Most saved solutions, best first">
+        {shown.map((solution, index) => {
+          const rank = index + 1;
+          const area = solutionAreas(solution)[0] ?? solution.specializationArea;
+          const heart = favorite?.(solution);
+          return (
+            <li key={solution.id} className="top-card-item animate-rise" data-wide={rank >= 10 ? "" : undefined} style={{ animationDelay: `${Math.min(index, 9) * 45}ms` } as CSSProperties}>
+              <span className="top-rank" aria-hidden="true">{rank}</span>
+              <div className="top-card lift group">
+                {/* The whole card opens the solution; the heart sits above this stretched button. */}
+                <button type="button" onClick={() => openSolution(solution)} className="absolute inset-0 z-[1] cursor-pointer rounded-[inherit]" aria-label={`Number ${rank}: ${solution.name} — ${solution.summary}`} />
+                <span className="top-card-image">
+                  {renderPoster?.(solution) ?? <Poster id={solution.id} name={solution.name} area={area} src={solution.thumbnail} className="h-full w-full" />}
+                </span>
+                <span className="top-card-body">
+                  <span className="flex min-w-0 items-start justify-between gap-2">
+                    <AreaTag area={area} size="xs" />
+                    {heart && <FavoriteButton id={solution.id} name={solution.name} className="relative z-[2] -mt-1 -mr-1 h-8 w-8" saved={heart.saved} pending={heart.pending} onToggle={heart.onToggle} />}
+                  </span>
+                  <span className="line-clamp-1 text-[15px] leading-snug font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{solution.name}</span>
+                  <span className="line-clamp-2 text-[12.5px] leading-snug" style={{ color: "var(--ink-2)" }}>{solution.summary}</span>
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
     </section>
   );
 }
@@ -155,9 +133,9 @@ function ShelfButton({ label, icon, disabled, onClick }: { label: string; icon: 
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="glass grid h-10 w-10 cursor-pointer place-items-center rounded-full transition-opacity disabled:cursor-default disabled:opacity-35"
+      className="glass grid h-9 w-9 cursor-pointer place-items-center rounded-full transition-opacity disabled:cursor-default disabled:opacity-35"
     >
-      <Icon name={icon} size={16} />
+      <Icon name={icon} size={15} />
     </button>
   );
 }
