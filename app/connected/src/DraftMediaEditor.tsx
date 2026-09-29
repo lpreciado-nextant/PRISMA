@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
+import { ImageFramer } from "../../src/components/ImageFramer";
 import { LocalVideoPreview, VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
 import { ProtectedImage } from "./ProtectedImage";
 import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/components/SubmissionForm";
@@ -27,6 +28,8 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   const [linkedPending, setLinkedPending] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [preview, setPreview] = useState<MediaItem | null>(null);
+  // The card thumbnail is framed to 16:9 before it is uploaded.
+  const [framing, setFraming] = useState<File | null>(null);
   const [localVideo, setLocalVideo] = useState<File | null>(null);
   const [removeTarget, setRemoveTarget] = useState<MediaItem | null>(null);
   const [format, setFormat] = useState<AssetType>("Self-contained HTML file");
@@ -167,7 +170,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
       thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
-      thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => void mutate(files.slice(0, 1), "thumbnail")} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:10 reads best" />}
+      thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => files[0] && setFraming(files[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · you frame it next" />}
       images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}
       imageUpload={<ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once" />}
@@ -182,6 +185,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     {uploadFile && <PreparedFileDownload file={uploadFile} />}
     {!busy && !uncertain && !blocked && state?.media.filter(item => !item.complete && item.mime.startsWith("video/")).map(item => <label key={item.sessionId} className="block text-[14px]">Resume {item.name}<input type="file" accept=".mp4,.webm" className="mt-2 block max-w-full" disabled={disabled} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) { setUploadFile(file); void mutate([file], "attachment", undefined, item); } }} /></label>)}
     {localVideo && !uncertain && !blocked && <LocalVideoPreview file={localVideo} onClose={() => setLocalVideo(null)} />}
+    {framing && <ImageFramer source={framing} name={framing.name} onCancel={() => setFraming(null)} onConfirm={file => { setFraming(null); void mutate([file], "thumbnail"); }} />}
     {preview && <MediaPreview key={preview.id} item={preview} solutionId={saved.id} mode="submission" onClose={() => setPreview(null)} />}
     {removeTarget && <ConfirmDialog title="Remove attachment?" confirmLabel="Remove attachment" onCancel={() => setRemoveTarget(null)} onConfirm={() => { setRemoveTarget(null); void mutate([], removeTarget.kind, removeTarget); }}><p className="mb-3 font-semibold text-(--ink)">{removeTarget.name}</p><p>This file will be removed from the saved draft.</p></ConfirmDialog>}
     </SubmissionMedia>

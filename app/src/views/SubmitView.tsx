@@ -22,6 +22,7 @@ import { MAX_AREAS, solutionAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
 import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, Field } from "../components/SubmissionForm";
 import { SelectPicker } from "../components/SelectPicker";
+import { ImageFramer } from "../components/ImageFramer";
 
 const MAX_GALLERY = 6;
 
@@ -147,6 +148,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   });
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  // The card thumbnail is framed to 16:9 before it is kept.
+  const [framing, setFraming] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState(() => initialSolution?.id ?? crypto.randomUUID());
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -274,6 +277,12 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
   return (
     <div className="mx-auto w-full max-w-[980px] px-4 pt-8 pb-24 sm:px-6">
+      {framing && <ImageFramer source={framing} name="thumbnail" onCancel={() => setFraming(null)} onConfirm={file => {
+        const reader = new FileReader();
+        reader.onload = () => { if (typeof reader.result === "string") set("thumbnail", reader.result); setFraming(null); };
+        reader.onerror = () => setFraming(null);
+        reader.readAsDataURL(file);
+      }} />}
       <button
         type="button"
         onClick={() => navigate("/")}
@@ -365,7 +374,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             onReorderImages={ids => set("images", ids.map(id => draft.images.find(image => image.id === id)!))}
             onReorderAttachments={ids => set("assets", ids.map((id, sortOrder) => ({ ...draft.assets.find(asset => asset.id === id)!, sortOrder })))}
             thumbnail={draft.thumbnail ? <img src={draft.thumbnail} alt="Thumbnail preview" className="h-full w-full object-cover" /> : undefined} onRemoveThumbnail={() => set("thumbnail", "")}
-            thumbnailUpload={<UploadZone onBusyChange={imageBusyChanged} onFiles={sources => sources[0] && set("thumbnail", sources[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:10 reads best" />}
+            thumbnailUpload={<UploadZone onBusyChange={imageBusyChanged} onFiles={sources => sources[0] && setFraming(sources[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · you frame it next" />}
             images={draft.images.map(image => ({ id: image.id, caption: image.caption, preview: <img src={image.src} alt="" className="h-full w-full object-cover" /> }))}
             onCaption={(id, caption) => set("images", draft.images.map(image => image.id === id ? { ...image, caption } : image))} onRemoveImage={id => set("images", draft.images.filter(image => image.id !== id))}
             imageUpload={<UploadZone multiple onBusyChange={imageBusyChanged} onFiles={sources => setDraft(current => ({ ...current, images: [...current.images, ...sources.slice(0, MAX_GALLERY - current.images.length).map(src => ({ id: crypto.randomUUID(), src, caption: "" }))] }))} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once" />}
