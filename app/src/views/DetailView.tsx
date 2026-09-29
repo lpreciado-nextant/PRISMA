@@ -112,19 +112,24 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
       {reviewActions}
       {catalogueOnly && <p className="mt-4 text-[14px]" role="status" style={{ color: "var(--ink-2)" }}>Contributor details, media and delivery history are not loaded.</p>}
 
-      <section className="glass glass-lite glass-sheen mt-4 overflow-hidden rounded-[26px]">
-        {poster ?? <Poster
-          id={solution.id}
-          name={solution.name}
-          area={solution.specializationArea}
-          src={solution.thumbnail}
-          className="h-40 sm:h-52"
-        />}
+      {/* Title and summary beside the whole 16:9 thumbnail (the frame chosen at submission); stacked on small screens. */}
+      <section className="glass glass-lite glass-sheen mt-4 grid overflow-hidden rounded-[26px] lg:grid-cols-[minmax(0,1fr)_minmax(0,44%)] lg:items-center">
+        <div className="p-4 pb-0 lg:order-last lg:p-6 lg:pl-0">
+          <div className="aspect-[16/9] overflow-hidden rounded-[18px]" style={{ boxShadow: "0 0 0 1px var(--glass-edge), 0 22px 50px -28px rgba(0, 0, 0, 0.6)" }}>
+            {poster ?? <Poster
+              id={solution.id}
+              name={solution.name}
+              area={solution.specializationArea}
+              src={solution.thumbnail}
+              className="h-full w-full"
+            />}
+          </div>
+        </div>
         <div className="p-6 sm:p-8">
+          {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="mb-4" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
           <div className="flex flex-wrap items-center gap-2.5">
             {areas.map((area) => <AreaTag key={area} area={area} size="md" />)}
             <StatusPill status={solution.status} />
-            {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="order-last ml-auto" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
             {!present && !solution.clientSafeReviewed && (
               <span
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 font-mono text-[10px] tracking-[0.1em] uppercase"
