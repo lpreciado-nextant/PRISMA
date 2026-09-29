@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Solution } from "../../src/types";
 import type { AppUser } from "../../src/lib/powerContext";
 import { Background } from "../../src/components/Background";
@@ -6,17 +6,18 @@ import { Masthead } from "../../src/components/Masthead";
 import { PresentBanner } from "../../src/components/PresentBanner";
 import { Icon } from "../../src/components/Icon";
 import { LibraryView } from "../../src/views/LibraryView";
+import { TopTenRow } from "../../src/components/TopTenRow";
 import { navigate, replaceQuery, useRoute } from "../../src/lib/router";
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue } from "./catalogue";
 import { getSignedInUser, getUserPhoto, readRows, workflowApi, favoriteApi } from "./dataSource";
 import { parsePublished, workflowData } from "./workflow";
-import { loadFavorites, setFavorite } from "./favorites";
+import { loadFavorites, loadTopFavorites, setFavorite } from "./favorites";
 import { DraftsView } from "./DraftsView";
 import { SubmissionsView, SubmissionView } from "./SubmissionsView";
 import { PublishedView } from "./PublishedView";
-import { ConnectedSolutionCard } from "./ConnectedSolutionCard";
+import { ConnectedSolutionCard, PublishedThumbnail } from "./ConnectedSolutionCard";
 import { FavoritesView } from "./FavoritesView";
 import { clearRecoveries } from "./draftRecovery";
 import { WelcomeScreen } from "./WelcomeScreen";
@@ -74,6 +75,8 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
   const [librarian, setLibrarian] = useState(false);
   const [favorites, setFavorites] = useState<Set<string> | null>(null);
   const [pendingFavorites, setPendingFavorites] = useState<Set<string>>(new Set());
+  const [topIds, setTopIds] = useState<string[]>([]);
+  const [topVersion, setTopVersion] = useState(0);
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
     if (transitionComplete) main.current?.focus({ preventScroll: true });
@@ -141,6 +144,22 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     }).catch(() => { if (!controller.signal.aborted) setFavorites(null); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [present, user.live]);
+  useEffect(() => {
+    // The Top 10 is internal team signal: never loaded in present mode. A failed read just hides the shelf.
+    if (present || !user.live) return;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20_000);
+    void loadTopFavorites(favoriteApi, controller.signal).then(ids => {
+      if (!controller.signal.aborted) setTopIds(ids);
+    }).catch(() => { if (!controller.signal.aborted) setTopIds([]); }).finally(() => window.clearTimeout(timeout));
+    return () => { controller.abort(); window.clearTimeout(timeout); };
+  }, [present, user.live, topVersion]);
+  const topSolutions = useMemo(() => {
+    if (present || state.kind !== "ready") return [];
+    const byId = new Map(state.catalogue.map(solution => [solution.id.toLowerCase(), solution]));
+    // Only solutions this person can see in the catalogue, in the server's rank order.
+    return topIds.flatMap(id => byId.get(id) ?? []);
+  }, [present, state, topIds]);
   const toggleFavorite = (id: string) => {
     if (!favorites || pendingFavorites.has(id)) return;
     const next = !favorites.has(id);
@@ -150,6 +169,7 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     const timeout = window.setTimeout(() => controller.abort(), 20_000);
     void setFavorite(favoriteApi, id, next, controller.signal).then(confirmed => {
       setFavorites(current => { const updated = new Set(current ?? []); if (confirmed) updated.add(id); else updated.delete(id); return updated; });
+      setTopVersion(version => version + 1);
     }).catch(() => {
       // Roll back the optimistic update; the heart returns to its prior state.
       setFavorites(current => { const updated = new Set(current ?? []); if (next) updated.delete(id); else updated.add(id); return updated; });
@@ -194,7 +214,9 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
         : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
-        : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly renderCard={(entry, index) => <ConnectedSolutionCard solution={entry} present={present} index={index}
+        : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly
+            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} renderPoster={solution => <PublishedThumbnail solution={solution} />} /> : undefined}
+            renderCard={(entry, index) => <ConnectedSolutionCard solution={entry} present={present} index={index}
             favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />} />}
     </main>
   </div>;

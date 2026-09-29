@@ -29,6 +29,7 @@ import { Nx_TransitionSubmissionService } from "./generated/services/Nx_Transiti
 import { Nx_GetPublishedDetailService } from "./generated/services/Nx_GetPublishedDetailService";
 import type { WorkflowApi } from "./workflow";
 import { Nx_SetFavoriteService } from "./generated/services/Nx_SetFavoriteService";
+import { Nx_GetTopFavoritesService } from "./generated/services/Nx_GetTopFavoritesService";
 import { Nx_GetMyFavoritesService } from "./generated/services/Nx_GetMyFavoritesService";
 import type { FavoriteApi } from "./favorites";
 import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginResumableUploadService";
@@ -91,6 +92,7 @@ export const draftApi: DraftApi = {
 export const favoriteApi: FavoriteApi = {
   list: () => Nx_GetMyFavoritesService.nx_GetMyFavorites(),
   set: (id, saved) => Nx_SetFavoriteService.nx_SetFavorite(id, saved),
+  top: () => Nx_GetTopFavoritesService.nx_GetTopFavorites(),
 };
 
 export async function getSignedInUser(): Promise<AppUser> {

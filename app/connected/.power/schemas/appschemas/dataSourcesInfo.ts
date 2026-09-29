@@ -605,6 +605,24 @@ export const dataSourcesInfo = {
       }
     }
   },
+  "nx_gettopfavorites": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_GetTopFavorites": {
+        "path": "/api/data/v9.2/nx_GetTopFavorites",
+        "method": "POST",
+        "parameters": [],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "nx_savedraftgraph": {
     "tableId": "",
     "version": "",

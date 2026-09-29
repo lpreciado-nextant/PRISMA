@@ -5,6 +5,7 @@ import { workflowApi, readRows } from "./dataSource";
 import { loadSubmissionCardDetails, parsePublished } from "./workflow";
 import type { MediaItem } from "./media";
 import { ProtectedImage } from "./ProtectedImage";
+import { Poster } from "../../src/components/Poster";
 
 export function ConnectedSolutionCard({ solution, present, index, owned = false, onOpen, favorite }: { solution: Solution; present: boolean; index: number; owned?: boolean; onOpen?: () => void; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void } }) {
   const container = useRef<HTMLDivElement>(null);
@@ -43,4 +44,26 @@ export function ConnectedSolutionCard({ solution, present, index, owned = false,
       poster={thumbnail && <div className="h-36 overflow-hidden"><ProtectedImage key={thumbnail.id} item={thumbnail} className="h-full w-full object-cover" /></div>} />
     {error && <p role="status" className="mt-2 text-[12px] text-(--ink-2)">Card details unavailable.</p>}
   </div>;
+}
+/** Protected published thumbnail for a Top 10 tile; the generated poster stands in until it loads or when there is none. */
+export function PublishedThumbnail({ solution }: { solution: Solution }) {
+  const container = useRef<HTMLSpanElement>(null);
+  const [thumbnail, setThumbnail] = useState<MediaItem | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const load = () => {
+      timeout = setTimeout(() => controller.abort(), 20_000);
+      void workflowApi.published(solution.id, false).then(result => {
+        const detail = parsePublished(result, solution.id, false);
+        if (!controller.signal.aborted) setThumbnail(detail.media.find(item => item.kind === "thumbnail" && item.complete) ?? null);
+      }).catch(() => undefined).finally(() => clearTimeout(timeout));
+    };
+    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) { observer.disconnect(); load(); } }, { rootMargin: "100px" });
+    if (container.current) observer.observe(container.current);
+    return () => { controller.abort(); clearTimeout(timeout); observer.disconnect(); };
+  }, [solution.id]);
+  return <span ref={container} className="block h-full w-full">
+    {thumbnail ? <ProtectedImage key={thumbnail.id} item={thumbnail} className="h-full w-full object-cover" /> : <Poster id={solution.id} name={solution.name} area={solution.specializationArea} className="h-full w-full" />}
+  </span>;
 }

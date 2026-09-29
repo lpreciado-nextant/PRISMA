@@ -9,6 +9,7 @@ const PATHS = {
   close: "M18 6 6 18M6 6l12 12",
   chevronDown: "m6 9 6 6 6-6",
   chevronLeft: "m15 18-6-6 6-6",
+  chevronRight: "m9 18 6-6-6-6",
   external: "M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6",
   play: "M8 5.5v13l11-6.5-11-6.5Z",
   download: "M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 18.5V20a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5",

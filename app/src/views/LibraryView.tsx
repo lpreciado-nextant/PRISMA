@@ -17,6 +17,7 @@ export function LibraryView({
   present,
   catalogueOnly = false,
   renderCard,
+  featured,
 }: {
   catalogue: Solution[];
   filters: Filters;
@@ -24,10 +25,14 @@ export function LibraryView({
   present: boolean;
   catalogueOnly?: boolean;
   renderCard?: (solution: Solution, index: number) => ReactNode;
+  /** A shelf above the grid (the Top 10). Shown only on the unfiltered library, never in present mode. */
+  featured?: ReactNode;
 }) {
   const results = useMemo(() => filterSolutions(catalogue, filters), [catalogue, filters]);
   const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
   const chips = activeChips(filters);
+  // Searching or filtering goes straight to results: the shelf must not push the grid down.
+  const showFeatured = !!featured && !present && !filters.q.trim() && filters.area === "all" && chips.length === 0;
 
   return (
     <div className="mx-auto w-full max-w-[1340px] px-4 pb-24 sm:px-6">
@@ -105,6 +110,8 @@ export function LibraryView({
           </div>
         )}
       </section>
+
+      {showFeatured && <div className="mt-10">{featured}</div>}
 
       <div className={`mt-8 grid gap-6 ${present ? "" : "lg:grid-cols-[250px_minmax(0,1fr)]"}`}>
         {/* Present mode drops the filter rail — minimal chrome per design §3.4. */}
