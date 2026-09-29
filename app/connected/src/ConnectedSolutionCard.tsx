@@ -41,7 +41,7 @@ export function ConnectedSolutionCard({ solution, present, index, owned = false,
   return <div ref={container} className="grid min-w-0">
     <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet", technologies: details?.technologies ?? solution.technologies }} present={present} index={index} onOpen={onOpen} showPublicationStatus={owned} catalogueOnly={!owned} contributorNames={details?.names}
       favoritable={!owned && !present && !!favorite} favorite={favorite}
-      poster={thumbnail && <div className="h-36 overflow-hidden"><ProtectedImage key={thumbnail.id} item={thumbnail} className="h-full w-full object-cover" /></div>} />
+      poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage key={thumbnail.id} item={thumbnail} className="h-full w-full object-cover" /></div>} />
     {error && <p role="status" className="mt-2 text-[12px] text-(--ink-2)">Card details unavailable.</p>}
   </div>;
 }

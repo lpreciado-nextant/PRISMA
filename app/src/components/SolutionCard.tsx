@@ -58,31 +58,32 @@ export function SolutionCard({
       role="button"
       aria-label={`${solution.name} — ${solution.summary}${publicationStatus ? ` — ${publicationStatus}` : ""}`}
     >
-      <div className="relative">
+      {/* 16:9 keeps the image generous and every card the same height; callers' posters fill it. */}
+      <div className="relative aspect-[16/9] overflow-hidden">
         {poster ?? <Poster
           id={solution.id}
           name={solution.name}
           area={solution.specializationArea}
           src={solution.thumbnail}
-          className="h-36"
+          className="h-full w-full"
         />}
         <div className="absolute top-3 left-3">
           <StatusPill status={solution.status} />
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 p-5">
-        <div className="flex flex-wrap gap-1.5">{solutionAreas(solution).map((area) => <AreaTag key={area} area={area} />)}</div>
+      <div className="flex flex-1 flex-col gap-2 px-5 pt-4 pb-4">
+        <div className="flex flex-wrap gap-1.5">{solutionAreas(solution).map((area) => <AreaTag key={area} area={area} size="xs" />)}</div>
 
-        <h3 className="text-[19px] leading-snug font-semibold" style={{ color: "var(--ink)" }}>
+        <h3 className="text-[18px] leading-snug font-semibold" style={{ color: "var(--ink)" }}>
           {solution.name}
         </h3>
 
-        <p className="text-[14.5px] leading-relaxed" style={{ color: "var(--ink-2)" }}>
+        <p className="line-clamp-2 text-[14px] leading-snug" style={{ color: "var(--ink-2)" }}>
           {solution.summary}
         </p>
 
-        <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+        <div className="mt-auto flex flex-wrap gap-1.5 pt-1.5">
           {solution.capabilities.slice(0, 2).map((c) => (
             <Chip key={c}>{c}</Chip>
           ))}
@@ -94,7 +95,7 @@ export function SolutionCard({
       </div>
 
       <div
-        className="flex items-center justify-between gap-3 px-5 py-3.5"
+        className="flex items-center justify-between gap-3 px-5 py-3"
         style={{
           borderTop: "1px solid var(--glass-edge)",
           background: "color-mix(in srgb, var(--ink) 4%, transparent)",
