@@ -1,5 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { LocalBlobStore } from "./storage.mjs";
+import { openBlobStore } from "./storage.mjs";
 import { SqliteMediaState } from "./state.mjs";
 import { claimNextScan, runScanOnce, settleScan } from "./scanner.mjs";
 
@@ -12,7 +12,7 @@ process.once("message", async options => {
   try {
     if (lifetime.signal.aborted) return;
     state = new SqliteMediaState(options.path, { existingOnly: true });
-    const store = new LocalBlobStore(options.endpoint, options.account, options.key);
+    const store = openBlobStore(options.storage);
     const repository = {
       claimScan: () => state.transaction(drafts => claimNextScan(drafts, Date.now())),
       settleScan: (claim, status, failure) => state.transaction(drafts => settleScan(drafts, claim, status, Date.now(), failure)),

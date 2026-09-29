@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { fork } from "node:child_process";
 import { once } from "node:events";
@@ -9,10 +9,47 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { SqliteMediaState } from "./state.mjs";
 import { startEmulator } from "./emulator.mjs";
-import { LocalBlobStore } from "./storage.mjs";
+import { AzureBlobStore, LocalBlobStore, azureEndpoint } from "./storage.mjs";
 import { LocalMediaService } from "./service.mjs";
 import { BLOCK_SIZE, RANGE_SIZE } from "./policy.mjs";
 import { runScanOnce } from "./scanner.mjs";
+
+async function roundTrip(store) {
+  const service = new LocalMediaService(store);
+  const bytes = Buffer.alloc(BLOCK_SIZE + 123, 42);
+  bytes.writeUInt32BE(24, 0); bytes.write("ftypisom", 4, "ascii");
+  const file = { name: "roundtrip.mp4", size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+  let state = await service.execute("builder", "create");
+  state = await service.execute("builder", "begin", { ...state, ...file });
+  await service.execute("builder", "block", { ...state, session: state.upload.id, index: 0, bytes: bytes.subarray(0, BLOCK_SIZE) });
+  state = await service.execute("builder", "read", { id: state.id, mode: "submission" });
+  state = await service.execute("builder", "checkpoint", { ...state, ...file, session: state.upload.id });
+  assert.equal(state.upload.received, BLOCK_SIZE);
+  state = await service.execute("builder", "block", { ...state, session: state.upload.id, index: 1, bytes: bytes.subarray(BLOCK_SIZE) });
+  state = await service.execute("builder", "finish", { ...state, session: state.upload.id });
+  await assert.rejects(service.execute("builder", "range", { id: state.id, assetId: state.upload.assetId, mode: "submission", offset: 0, count: 12 }), /quarantined/);
+  state = await service.execute("builder", "scan", { ...state, session: state.upload.id, outcome: "pass" });
+  await runScanOnce(service, store);
+  state = await service.execute("builder", "read", { id: state.id, mode: "submission" });
+  const downloaded = [];
+  for (let offset = 0; offset < file.size; offset += RANGE_SIZE) {
+    const response = await service.execute("builder", "range", { id: state.id, assetId: state.upload.assetId, mode: "submission", offset, count: RANGE_SIZE });
+    downloaded.push(Buffer.from(response.bytes));
+  }
+  assert.equal(createHash("sha256").update(Buffer.concat(downloaded)).digest("hex"), file.sha256);
+  state = await service.execute("builder", "submit", state);
+  state = await service.execute("librarian", "publish", { ...state, safe: true });
+  const range = { id: state.id, assetId: state.upload.assetId, mode: "present", offset: BLOCK_SIZE, count: RANGE_SIZE };
+  const tail = await service.execute("reader", "range", range);
+  assert.equal(tail.bytes.length, 123);
+  state = await service.execute("librarian", "withdraw", state);
+  await assert.rejects(service.execute("reader", "range", range), /unavailable/);
+  const ids = { session: state.upload.id, asset: state.upload.assetId };
+  assert.deepEqual((await store.inventory()).map(blob => `${blob.container}/${blob.name}`).sort(), [`assets/${ids.asset}`, `staging/${ids.session}`]);
+  await service.execute("builder", "remove", { ...state, session: ids.session });
+  assert.equal(await store.blob("assets", ids.asset).exists(), false);
+  assert.equal(await store.blob("staging", ids.session).exists(), false);
+}
 
 test("Azurite round-trip: checkpoint, SHA verification, range seeking, revocation and cleanup", { timeout: 120_000 }, async () => {
   const emulator = await startEmulator();
@@ -20,40 +57,29 @@ test("Azurite round-trip: checkpoint, SHA verification, range seeking, revocatio
     assert.throws(() => new LocalBlobStore("https://example.blob.core.windows.net", "unused", "unused"), /loopback/);
     const store = new LocalBlobStore(emulator.endpoint, emulator.account, emulator.key);
     await store.initialize();
-    const service = new LocalMediaService(store);
-    const bytes = Buffer.alloc(BLOCK_SIZE + 123, 42);
-    bytes.writeUInt32BE(24, 0); bytes.write("ftypisom", 4, "ascii");
-    const file = { name: "roundtrip.mp4", size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
-    let state = await service.execute("builder", "create");
-    state = await service.execute("builder", "begin", { ...state, ...file });
-    await service.execute("builder", "block", { ...state, session: state.upload.id, index: 0, bytes: bytes.subarray(0, BLOCK_SIZE) });
-    state = await service.execute("builder", "read", { id: state.id, mode: "submission" });
-    state = await service.execute("builder", "checkpoint", { ...state, ...file, session: state.upload.id });
-    assert.equal(state.upload.received, BLOCK_SIZE);
-    state = await service.execute("builder", "block", { ...state, session: state.upload.id, index: 1, bytes: bytes.subarray(BLOCK_SIZE) });
-    state = await service.execute("builder", "finish", { ...state, session: state.upload.id });
-    await assert.rejects(service.execute("builder", "range", { id: state.id, assetId: state.upload.assetId, mode: "submission", offset: 0, count: 12 }), /quarantined/);
-    state = await service.execute("builder", "scan", { ...state, session: state.upload.id, outcome: "pass" });
-    await runScanOnce(service, store);
-    state = await service.execute("builder", "read", { id: state.id, mode: "submission" });
-    const downloaded = [];
-    for (let offset = 0; offset < file.size; offset += RANGE_SIZE) {
-      const response = await service.execute("builder", "range", { id: state.id, assetId: state.upload.assetId, mode: "submission", offset, count: RANGE_SIZE });
-      downloaded.push(Buffer.from(response.bytes));
-    }
-    assert.equal(createHash("sha256").update(Buffer.concat(downloaded)).digest("hex"), file.sha256);
-    state = await service.execute("builder", "submit", state);
-    state = await service.execute("librarian", "publish", { ...state, safe: true });
-    const range = { id: state.id, assetId: state.upload.assetId, mode: "present", offset: BLOCK_SIZE, count: RANGE_SIZE };
-    const tail = await service.execute("reader", "range", range);
-    assert.equal(tail.bytes.length, 123);
-    state = await service.execute("librarian", "withdraw", state);
-    await assert.rejects(service.execute("reader", "range", range), /unavailable/);
-    const ids = { session: state.upload.id, asset: state.upload.assetId };
-    await service.execute("builder", "remove", { ...state, session: ids.session });
-    assert.equal(await store.assets.getBlobClient(ids.asset).exists(), false);
-    assert.equal(await store.staging.getBlobClient(ids.session).exists(), false);
+    await roundTrip(store);
   } finally { await emulator.stop(); }
+});
+
+test("Azure store accepts only plain account endpoints and workspace prefixes", () => {
+  const credential = { getToken: async () => null };
+  const prefix = `lab-${randomUUID()}/`;
+  assert.equal(azureEndpoint("https://stprismalab01.blob.core.windows.net"), "https://stprismalab01.blob.core.windows.net/");
+  for (const endpoint of ["http://stprismalab01.blob.core.windows.net/", "https://stprismalab01.blob.core.windows.net/?sv=2024", "https://user:pw@stprismalab01.blob.core.windows.net/",
+    "https://stprismalab01.blob.core.windows.net/staging", "https://stprismalab01.blob.core.windows.net.evil.test/", "http://127.0.0.1:10000/prismalocal"]) {
+    assert.throws(() => new AzureBlobStore(endpoint, prefix, credential), /https:\/\/<account>/);
+  }
+  for (const bad of ["", "lab-x/", "../", `lab-${randomUUID()}`]) assert.throws(() => new AzureBlobStore("https://stprismalab01.blob.core.windows.net/", bad, credential), /prefix/);
+  const store = new AzureBlobStore("https://stprismalab01.blob.core.windows.net/", prefix, credential);
+  assert.equal(store.blob("assets", "a").name, `${prefix}a`);
+});
+
+test("real Azure lab round-trip under an isolated prefix", {
+  skip: !process.env.PRISMA_LAB_AZURE_ENDPOINT && "set PRISMA_LAB_AZURE_ENDPOINT (and az login) to run against the lab account", timeout: 300_000,
+}, async () => {
+  const store = new AzureBlobStore(process.env.PRISMA_LAB_AZURE_ENDPOINT, `lab-${randomUUID()}/`);
+  await store.initialize();
+  await roundTrip(store);
 });
 
 test("retained workspace resumes after full shutdown and rejects a second emulator owner", { timeout: 120_000 }, async () => {
@@ -186,7 +212,7 @@ test("scan worker process restart reclaims a crashed lease and commits a bound p
     draft = await service.execute("builder", "block", { ...draft, session: draft.upload.id, index: 0, bytes });
     draft = await service.execute("builder", "finish", { ...draft, session: draft.upload.id });
     draft = await service.execute("builder", "scan", { ...draft, session: draft.upload.id, outcome: "pass" });
-    const options = { path, endpoint: emulator.endpoint, account: emulator.account, key: emulator.key };
+    const options = { path, storage: { kind: "azurite", endpoint: emulator.endpoint, account: emulator.account, key: emulator.key } };
     child = fork(new URL("./scan-worker.mjs", import.meta.url), [], { silent: true });
     const claimed = waitMessage(child, "claimed"); child.send(options); await claimed;
     assert.equal((await service.execute("builder", "read", { id: draft.id, mode: "submission" })).upload.released, false);

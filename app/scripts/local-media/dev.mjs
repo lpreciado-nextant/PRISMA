@@ -1,20 +1,31 @@
 import { fileURLToPath } from "node:url";
 import { createServer } from "vite";
 import react from "@vitejs/plugin-react";
-import { homedir } from "node:os";
+import { parseArgs } from "node:util";
 import { join, resolve } from "node:path";
 import { startEmulator } from "./emulator.mjs";
-import { LocalBlobStore } from "./storage.mjs";
+import { openBlobStore } from "./storage.mjs";
 import { LocalMediaService } from "./service.mjs";
 import { mediaHandler } from "./http.mjs";
 import { SqliteMediaState } from "./state.mjs";
+import { bindAzureWorkspace, defaultWorkspace, lockWorkspace, readAzureBinding } from "./workspace.mjs";
 import { fork } from "node:child_process";
 import { once } from "node:events";
 
-const args = process.argv.slice(2);
-if (args.length && (args.length !== 2 || args[0] !== "--data-dir")) throw new Error("Usage: npm run dev:media -- [--data-dir <local-directory>]");
-const directory = args.length ? resolve(args[1]) : join(process.env.LOCALAPPDATA ?? join(homedir(), ".local", "share"), "PRISMA", "media-lab");
-const emulator = await startEmulator({ directory: join(directory, "blob") });
+const { values } = parseArgs({ options: { "data-dir": { type: "string" }, "azure-endpoint": { type: "string" } }, strict: true });
+const azure = values["azure-endpoint"];
+const directory = values["data-dir"] ? resolve(values["data-dir"]) : defaultWorkspace(Boolean(azure));
+let emulator;
+let unlock;
+let storageConfig;
+if (azure) {
+  storageConfig = await bindAzureWorkspace(directory, azure);
+  unlock = lockWorkspace(directory);
+} else {
+  if (await readAzureBinding(directory)) throw new Error("This workspace is bound to Azure Blob Storage. Pass --azure-endpoint or choose another --data-dir.");
+  emulator = await startEmulator({ directory: join(directory, "blob") });
+  storageConfig = { kind: "azurite", endpoint: emulator.endpoint, account: emulator.account, key: emulator.key };
+}
 let server;
 let state;
 let service;
@@ -33,7 +44,7 @@ const startWorker = () => {
     if (!closing && workerRestarts++ < 3) workerRestart = setTimeout(startWorker, 1000);
     else if (!closing) console.error("Scan worker restart limit reached. Jobs remain quarantined; restart the launcher.");
   });
-  child.send({ path: join(directory, "media.sqlite"), endpoint: emulator.endpoint, account: emulator.account, key: emulator.key });
+  child.send({ path: join(directory, "media.sqlite"), storage: storageConfig });
 };
 const stop = async () => {
   if (closing) return;
@@ -49,10 +60,11 @@ const stop = async () => {
   await server?.close();
   await service?.queue;
   state?.close();
-  await emulator.stop();
+  await emulator?.stop();
+  unlock?.();
 };
 try {
-  const storage = new LocalBlobStore(emulator.endpoint, emulator.account, emulator.key);
+  const storage = openBlobStore(storageConfig);
   await storage.initialize();
   state = new SqliteMediaState(join(directory, "media.sqlite"));
   service = new LocalMediaService(storage, Date.now, state);
@@ -65,7 +77,9 @@ try {
   });
   await server.listen();
   startWorker();
-  console.log("PRISMA local media only. Simulated identities; no Dataverse or Azure access.");
+  console.log(azure
+    ? `PRISMA media lab. Simulated identities; Blob bytes in ${storageConfig.endpoint} under ${storageConfig.prefix} as your Azure CLI identity; no Dataverse access.`
+    : "PRISMA local media only. Simulated identities; no Dataverse or Azure access.");
   console.log(`Retained local workspace: ${directory}`);
   console.log("Ctrl+C flushes and stops both servers. Restart with the same data directory, Reopen, and reselect the exact file to resume.");
   server.printUrls();

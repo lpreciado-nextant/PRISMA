@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** All six local media-preparation items are complete: durable uploads, failure/cleanup tests, repeatable Edge acceptance, HTML/documents, offline migration verification/recovery/rollback reports, and locally compiled infrastructure templates. No live exporter, migration execution or Azure provisioning. Shared MP4 contract and Dataverse/local Blob adapters tested; production remains on Dataverse. Local scans and identities are simulated, not real malware scanning or authorization. Shared loading states deployed; hosted submission/review loaders, fonts, logos and empty-catalogue present mode verified. Two-field story deployed and hosted save/reopen verified; retired Dataverse column deleted. Connected profile photo included in the approved publication. Welcome/Begin transition and video fallback notice deployed and hosted-verified; submission, return/revision, publication and present-mode workflow previously passed with one privileged account. Non-admin and separate-reviewer acceptance remain open.
-**Last updated:** 2026-09-28
+**Status:** All six local media-preparation items are complete: durable uploads, failure/cleanup tests, repeatable Edge acceptance, HTML/documents, offline migration verification/recovery/rollback reports, and locally compiled infrastructure templates. No live exporter or migration execution. A development-only [Azure lab storage account](#azure-lab-storage) now backs the workbench on request; no production Azure foundation is provisioned. Shared MP4 contract and Dataverse/local Blob adapters tested; production remains on Dataverse. Local scans and identities are simulated, not real malware scanning or authorization. Shared loading states deployed; hosted submission/review loaders, fonts, logos and empty-catalogue present mode verified. Two-field story deployed and hosted save/reopen verified; retired Dataverse column deleted. Connected profile photo included in the approved publication. Welcome/Begin transition and video fallback notice deployed and hosted-verified; submission, return/revision, publication and present-mode workflow previously passed with one privileged account. Non-admin and separate-reviewer acceptance remain open.
+**Last updated:** 2026-09-29
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -85,7 +85,7 @@ npm run lint
 
 ## Local Blob media workbench
 
-An isolated development slice for the [proposed Blob Storage transition](../docs/architecture/technical-architecture.md#azure-blob-storage-transition-plan). It uses the real Azure Blob SDK against a local Azurite process, SQLite-backed API state and a separate React workbench. No Azure subscription, credentials, Docker, Dataverse connection or Power Apps sign-in is needed. Use Node 22.13+ (Node 24 recommended for built-in `node:sqlite`) and non-sensitive, known-safe MP4, HTML, PDF, PPT or PPTX fixtures only.
+An isolated development slice for the [proposed Blob Storage transition](../docs/architecture/technical-architecture.md#azure-blob-storage-transition-plan). It uses the real Azure Blob SDK against a local Azurite process by default, or against the [Azure lab storage account](#azure-lab-storage), with SQLite-backed API state and a separate React workbench. The default Azurite mode needs no Azure subscription, credentials, Docker, Dataverse connection or Power Apps sign-in. Use Node 22.13+ (Node 24 recommended for built-in `node:sqlite`) and non-sensitive, known-safe MP4, HTML, PDF, PPT or PPTX fixtures only.
 
 From `app/`, after installing dependencies:
 
@@ -326,6 +326,46 @@ npm --prefix app run check:infra
 ```
 
 This command compiles both files, checks six groups of compiled ARM properties and deletes only its own temporary outputs. It needs no Azure login, makes no deployment calls and fails if the compiler is absent or diagnostics/checks fail. Compilation is not Azure deployment validation.
+
+The same command also compiles the separate [dev lab template](../infra/media/lab.bicep) and checks that it stays Entra-only, IP allow-listed and limited to container-scoped developer roles.
+
+### Azure lab storage
+
+**Status:** Deployed 2026-09-29 for development only; not the production foundation and not Phase 2 hosted integration.
+
+The workbench can keep its loopback API, SQLite journal, simulated identities and scan worker on the developer machine while storing bytes in real Azure Blob Storage. It targets the Microsoft Azure Sponsorship (Laboratorios) subscription `f997a88d-a154-449c-8e29-5518ffe24c02`, resource group `RG-Prisma-Media-DEV` (East US). Only first-party Azure Storage and RBAC are used; nothing from Marketplace, no support plan, VNet, private endpoint, Log Analytics, Defender, compute or Key Vault. Sponsorship credits do not cover Marketplace or third-party products, so do not add them here.
+
+| Setting | Value |
+|---|---|
+| Account | `stprismalabiwguqp7gvh`, StorageV2 Standard_LRS Hot, endpoint `https://stprismalabiwguqp7gvh.blob.core.windows.net/` |
+| Containers | Private `staging` and `assets`, matching the local adapter (not the production `staging`/`quarantine`/`final` layout) |
+| Authentication | Entra ID only: Shared Key, anonymous blobs, local users and SFTP disabled; TLS 1.2+ HTTPS |
+| Network | Public endpoint with firewall `Deny` by default, `bypass: None`, and only the listed developer IPs allowed |
+| Access | **Storage Blob Data Contributor** per developer on each of the two containers only; no account-wide data role or keys |
+| Recovery | 7-day blob and container soft delete; no versioning, change feed, lifecycle deletion or lock |
+
+Run it from `app/` after `az login` (the lab uses `AzureCliCredential`; no keys or SAS are stored):
+
+```powershell
+npm run dev:media -- --azure-endpoint https://stprismalabiwguqp7gvh.blob.core.windows.net/
+npm run cleanup:media -- --azure          # report-only; --execute --confirm <fingerprint> as for Azurite
+npm run test:media:attachments -- --headless --azure-endpoint https://stprismalabiwguqp7gvh.blob.core.windows.net/
+$env:PRISMA_LAB_AZURE_ENDPOINT = 'https://stprismalabiwguqp7gvh.blob.core.windows.net/'; npm run test:media
+```
+
+The default Azure workspace is `%LOCALAPPDATA%/PRISMA/media-lab-azure`. On first use the launcher writes `azure-storage.json`, binding the workspace to one account and a random `lab-<uuid>/` blob prefix. A workspace never switches between Azurite and Azure: the launcher refuses Azurite state in an Azure workspace and vice versa. Each workspace, test run and developer sees only its own prefix, so cleanup reports cannot delete another workspace's blobs. Azure workspaces use the same exclusive `workspace-lock.sqlite` lease as Azurite. The Azure opt-in test and Edge runner use fresh prefixes; their withdrawn synthetic fixtures remain until cleaned with the evidence workspace or soft-delete expiry.
+
+Blob operations make one attempt, as locally, so ambiguous writes still require Reopen instead of silent retry. Finalization still streams staging bytes through the developer machine into `assets`, so large files incur download and upload time and internet egress. When your public IP changes, requests fail with an authorization error until the firewall list is updated. To add a developer or IP, redeploy with comma-separated values from the repository root (requires Owner on the resource group):
+
+```powershell
+$env:PRISMA_LAB_ALLOWED_IPS = '<ip1>,<ip2>'; $env:PRISMA_LAB_PRINCIPAL_IDS = '<objectId1>,<objectId2>'; $env:PRISMA_LAB_OWNER = '<owner-upn>'
+bicep build infra/media/lab.bicep --outfile $env:TEMP/lab.json; bicep build-params infra/media/lab.bicepparam --outfile $env:TEMP/lab.parameters.json
+az deployment group what-if --subscription f997a88d-a154-449c-8e29-5518ffe24c02 -g RG-Prisma-Media-DEV -n prisma-media-lab --template-file $env:TEMP/lab.json --parameters "@$env:TEMP/lab.parameters.json"
+```
+
+Replace `what-if` with `create` after reviewing the changes. Omitting a current developer removes nothing already assigned: incremental deployments do not delete role assignments.
+
+**Verification on 2026-09-29:** what-if showed six creates and no changes/deletes; deployment succeeded. The real Azure round trip (checkpoint, resume, SHA-256 finalization, simulated scan, 1 MiB range reads, publish/withdraw denial, prefixed inventory and removal) passed. The headless Edge acceptance with attachments passed all 12 steps against Azure, including lost-response Reopen, full lab restart/resume, present playback/seeking, checksum-exact downloads, HTML isolation and withdrawal. Shared Key requests returned `KeyBasedAuthenticationNotPermitted` and anonymous listing was rejected. All 34 default local tests, the infrastructure checks and lint pass. Access from a non-allow-listed IP was not tested. This is development evidence for real Blob behavior, not Entra/Dataverse authorization, hosted CSP/CORS, managed identities, private networking, real scanning or production performance.
 
 ### Verification on 2026-09-28
 

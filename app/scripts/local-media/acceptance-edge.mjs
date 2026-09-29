@@ -13,17 +13,18 @@ import { PDFDocument } from "pdf-lib";
 import PptxGenJS from "pptxgenjs";
 import CFB from "cfb";
 
-const { values } = parseArgs({ strict: true, options: { output: { type: "string" }, headless: { type: "boolean" }, attachments: { type: "boolean" }, help: { type: "boolean" } } });
+const { values } = parseArgs({ strict: true, options: { output: { type: "string" }, headless: { type: "boolean" }, attachments: { type: "boolean" }, "azure-endpoint": { type: "string" }, help: { type: "boolean" } } });
 if (values.help) {
-  console.log("Usage: npm run test:media:edge -- [--output <new-directory>] [--headless] [--attachments]");
-  console.log("Runs installed Microsoft Edge (headed by default), synthetic media and an isolated Azurite lab. No cloud access. Retains local evidence.");
+  console.log("Usage: npm run test:media:edge -- [--output <new-directory>] [--headless] [--attachments] [--azure-endpoint <https://account.blob.core.windows.net>]");
+  console.log("Runs installed Microsoft Edge (headed by default), synthetic media and an isolated lab: Azurite by default, or the Azure lab account (az login) under a fresh prefix. Retains local evidence.");
   process.exit(0);
 }
+const azure = values["azure-endpoint"];
 const directory = values.output ? resolve(values.output) : await mkdtemp(join(tmpdir(), "prisma-edge-acceptance-"));
 if (values.output) await mkdir(directory);
 const log = createWriteStream(join(directory, "lab.log"), { flags: "wx" });
-const report = { ok: false, mode: values.headless ? "headless-edge" : "headed-edge", steps: [],
-  scope: "Synthetic fixtures and simulated actors only. Not Entra/Dataverse authorization, audible output, maximum-size acceptance or Azure integration." };
+const report = { ok: false, mode: values.headless ? "headless-edge" : "headed-edge", storage: azure ? "azure-lab" : "azurite", steps: [],
+  scope: "Synthetic fixtures and simulated actors only. Not Entra/Dataverse authorization, audible output, maximum-size acceptance or hosted Azure integration." };
 let browser;
 let context;
 let page;
@@ -33,7 +34,7 @@ const hash = bytes => createHash("sha256").update(bytes).digest("hex");
 const step = name => { report.steps.push(name); console.log(`PASS ${name}`); };
 
 async function startLab() {
-  child = fork(new URL("./dev.mjs", import.meta.url), ["--data-dir", join(directory, "workspace")], { stdio: ["ignore", "pipe", "pipe", "ipc"] });
+  child = fork(new URL("./dev.mjs", import.meta.url), ["--data-dir", join(directory, "workspace"), ...(azure ? ["--azure-endpoint", azure] : [])], { stdio: ["ignore", "pipe", "pipe", "ipc"] });
   child.stdout.on("data", chunk => log.write(chunk));
   child.stderr.on("data", chunk => log.write(chunk));
   const current = child;

@@ -9,9 +9,9 @@ const compiler = process.env.BICEP_BIN || "bicep";
 const directory = mkdtempSync(join(tmpdir(), "prisma-infra-check-"));
 const source = fileURLToPath(new URL("../../infra/media/", import.meta.url));
 
-function compile(command, name, output) {
+function compile(command, name, output, env = {}) {
   const path = join(directory, output);
-  const result = spawnSync(compiler, [command, join(source, name), "--outfile", path], { encoding: "utf8", timeout: 60_000, maxBuffer: 5 * 1024 * 1024 });
+  const result = spawnSync(compiler, [command, join(source, name), "--outfile", path], { encoding: "utf8", timeout: 60_000, maxBuffer: 5 * 1024 * 1024, env: { ...process.env, ...env } });
   assert.equal(result.status, 0, result.error?.message || result.stderr || "Bicep failed; install it or set BICEP_BIN to its executable.");
   assert.equal(result.stderr.trim(), "", "Resolve Bicep diagnostics before acceptance.");
   return JSON.parse(readFileSync(path, "utf8"));
@@ -105,6 +105,32 @@ try {
   assert.deepEqual(Object.keys(template.outputs).sort(), ["storageAccountResourceId", "blobEndpoint", "apiIdentityResourceId", "apiIdentityClientId", "workerIdentityResourceId", "workerIdentityClientId", "logWorkspaceResourceId", "privateEndpointResourceId"].sort());
   assert.doesNotMatch(JSON.stringify(template.outputs), /listKeys|listAccountSas|listServiceSas/i);
   console.log("PASS non-secret outputs; local validation only, no Azure deployment");
+
+  const lab = compile("build", "lab.bicep", "lab.json");
+  const labParameters = compile("build-params", "lab.bicepparam", "lab.parameters.json",
+    { PRISMA_LAB_ALLOWED_IPS: "203.0.113.10", PRISMA_LAB_PRINCIPAL_IDS: "00000000-0000-0000-0000-000000000001", PRISMA_LAB_OWNER: "check" });
+  assert.deepEqual(Object.keys(labParameters.parameters).sort(), ["allowedIpAddresses", "developerPrincipalIds", "owner"]);
+  assert.deepEqual(lab.resources.map(resource => resource.type), ["Microsoft.Storage/storageAccounts", "Microsoft.Storage/storageAccounts/blobServices",
+    "Microsoft.Storage/storageAccounts/blobServices/containers", "Microsoft.Authorization/roleAssignments"], "Review additions to the dev lab.");
+  const labStorage = lab.resources[0].properties;
+  for (const name of ["allowBlobPublicAccess", "allowSharedKeyAccess", "allowCrossTenantReplication", "isHnsEnabled", "isLocalUserEnabled", "isSftpEnabled", "isNfsV3Enabled"]) assert.equal(labStorage[name], false, name);
+  assert.equal(labStorage.minimumTlsVersion, "TLS1_2");
+  assert.equal(labStorage.supportsHttpsTrafficOnly, true);
+  assert.equal(labStorage.defaultToOAuthAuthentication, true);
+  assert.equal(labStorage.networkAcls.defaultAction, "Deny");
+  assert.equal(labStorage.networkAcls.bypass, "None");
+  assert.deepEqual(labStorage.networkAcls.virtualNetworkRules, []);
+  assert.deepEqual(labStorage.networkAcls.copy[0].input, { value: "[parameters('allowedIpAddresses')[copyIndex('ipRules')]]", action: "Allow" });
+  assert.deepEqual(lab.variables.containerNames, ["staging", "assets"]);
+  assert.deepEqual(lab.resources[2].properties, { publicAccess: "None" });
+  assert.deepEqual(lab.resources[1].properties.cors, { corsRules: [] });
+  const labRole = lab.resources[3];
+  assert.match(labRole.scope, /^\[resourceId\('Microsoft\.Storage\/storageAccounts\/blobServices\/containers'/);
+  assert.equal(labRole.properties.principalType, "User");
+  assert.equal(labRole.properties.roleDefinitionId, "[variables('blobContributor')]");
+  assert.equal(lab.variables.blobContributor, template.variables.blobContributor);
+  assert.doesNotMatch(JSON.stringify(lab.outputs), /listKeys|listAccountSas|listServiceSas/i);
+  console.log("PASS dev lab: Entra-only, IP allow-listed, container-scoped developer roles (not the production foundation)");
 } finally {
   rmSync(directory, { recursive: true, force: true });
 }

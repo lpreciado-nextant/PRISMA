@@ -42,6 +42,7 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@azure/identity": "4.13.3",
     "@azure/storage-blob": "12.33.0",
     "@eslint/js": "^9.39.1",
     "@microsoft/power-apps-cli": "1.0.2",
