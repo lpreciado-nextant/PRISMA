@@ -1131,14 +1131,14 @@ static void SetBlobConfig(IOrganizationService service, string[] options)
         if (change.Current == null) service.Create(new Entity("environmentvariablevalue") { ["environmentvariabledefinitionid"] = new EntityReference("environmentvariabledefinition", change.Definition), ["value"] = change.Value });
         else service.Update(new Entity("environmentvariablevalue", change.Current.Id) { ["value"] = change.Value });
     }
-    Console.WriteLine("Blob media configuration updated. Existing files keep their original storage; setting uploads to no is the rollback for new uploads.");
+    Console.WriteLine("Blob media configuration updated; running plug-ins pick it up within 60 seconds. Existing files keep their original storage; setting uploads to no is the rollback for new uploads.");
 }
 
 static void SmokeBlob(IOrganizationService service, string[] options)
 {
-    if (options.Length is < 1 or > 2 || (options.Length == 2 && options[1] != "v3" && options[1] != "v4")) throw new ArgumentException("Use smoke-blob <non-sensitive .pdf|.html|.mp4 up to 60 MiB> [v3|v4]. Creates and deletes one labelled test draft.");
+    if (options.Length is < 1 or > 2 || (options.Length == 2 && options[1] is not ("v3" or "v4" or "v5"))) throw new ArgumentException("Use smoke-blob <non-sensitive .pdf|.html|.mp4 up to 60 MiB> [v3|v4|v5]. Creates and deletes one labelled test draft.");
     var protocol = options.Length == 2 ? options[1] : "v3";
-    var blockSize = protocol == "v4" ? 8388608 : 4194304;
+    var blockSize = protocol == "v5" ? 16777216 : protocol == "v4" ? 8388608 : 4194304;
     var file = new FileInfo(options[0]);
     if (!new[] { ".pdf", ".html", ".mp4" }.Contains(file.Extension.ToLowerInvariant()) || file.Length == 0 || file.Length > 60 * 1024 * 1024) throw new ArgumentException("Use a non-empty PDF, HTML or MP4 fixture up to 60 MiB.");
     var bytes = File.ReadAllBytes(file.FullName);

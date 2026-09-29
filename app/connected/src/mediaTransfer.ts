@@ -3,7 +3,7 @@ import { mediaRequest, uploadMedia, type MediaApi, type MediaState } from "./med
 
 export type PlaybackMode = "submission" | "published" | "present";
 export type TransferApi = {
-  begin: (id: string, version: string, name: string, size: number, sha256: string, blockSize?: 8388608) => Promise<unknown>;
+  begin: (id: string, version: string, name: string, size: number, sha256: string, blockSize?: 8388608 | 16777216) => Promise<unknown>;
   checkpoint: (id: string, version: string, session: string, name: string, size: number, sha256: string) => Promise<unknown>;
   range: (id: string, assetId: string, mode: PlaybackMode, offset: number, count: number, version?: string) => Promise<unknown>;
 };
@@ -26,7 +26,7 @@ export async function transferVideo(api: MediaApi, transfer: TransferApi, initia
     block: (...args) => { onWrite(); return api.block(...args); },
     finish: (...args) => { onWrite(); return api.finish(...args); },
   };
-  if (!session) return uploadMedia({ ...tracked, begin: (id, version, kind, name, size) => { onWrite(); return transfer.begin(id, version, name, size, sha256, kind.endsWith(":v4") ? 8388608 : undefined); } },
+  if (!session) return uploadMedia({ ...tracked, begin: (id, version, kind, name, size) => { onWrite(); return transfer.begin(id, version, name, size, sha256, kind.endsWith(":v5") ? 16777216 : kind.endsWith(":v4") ? 8388608 : undefined); } },
     { ...initial, uploadProtocol: 2, maxBlockSize: 4194304 }, file, "attachment", signal, progress);
   const checkpoint = await mediaRequest(transfer.checkpoint(initial.id, initial.rowVersion, session, file.name, file.size, sha256), signal);
   if (checkpoint.sessionId !== session) throw new Error("Mismatched resume session.");

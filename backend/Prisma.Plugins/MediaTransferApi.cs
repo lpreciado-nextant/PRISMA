@@ -84,11 +84,12 @@ namespace Prisma.Plugins
             if (context.MessageName == "nx_BeginResumableUpload")
             {
                 var requested = context.InputParameters.Contains("BlockSize") ? context.InputParameters["BlockSize"] as int? ?? 0 : 0;
-                if (requested != 0 && requested != MediaPolicy.LargeBlockSize && requested != MediaPolicy.BlobBlockSize) throw MediaPolicy.Invalid("Unsupported upload block size.");
+                if (requested != 0 && requested != MediaPolicy.LargeBlockSize && requested != MediaPolicy.BlobBlockSize && requested != MediaPolicy.MaxBlobBlockSize) throw MediaPolicy.Invalid("Unsupported upload block size.");
                 server.Execute(new UpdateRequest { Target = new Entity("nx_solution", id) { RowVersion = draft.RowVersion,
                     ["nx_clientsafereviewed"] = false, ["nx_safetyacknowledged"] = false }, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
                 int blockSize;
-                var createdSession = MediaApi.Begin(server, draft, context, storage, out blockSize, requested == MediaPolicy.BlobBlockSize ? "attachment:v4" : "attachment:v3");
+                var createdSession = MediaApi.Begin(server, draft, context, storage, out blockSize,
+                    requested == MediaPolicy.MaxBlobBlockSize ? "attachment:v5" : requested == MediaPolicy.BlobBlockSize ? "attachment:v4" : "attachment:v3");
                 server.Update(new Entity("nx_uploadsession", createdSession) { ["nx_sha256"] = digest });
                 context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult { Id = id.ToString("D"),
                     RowVersion = caller.Retrieve("nx_solution", id, new ColumnSet(false)).RowVersion, SessionId = createdSession.ToString("D"),

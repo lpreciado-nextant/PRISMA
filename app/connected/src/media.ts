@@ -12,10 +12,10 @@ export async function imageDataUrl(blob: Blob, signal?: AbortSignal): Promise<st
 
 export type MediaKind = "image" | "attachment" | "thumbnail";
 export type MediaItem = { id: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput; storage?: "blob" };
-export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[]; uploadProtocol?: 2; maxBlockSize?: 4194304; blobBlockSize?: 8388608 };
+export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[]; uploadProtocol?: 2; maxBlockSize?: 4194304; blobBlockSize?: 8388608; maxBlobBlockSize?: 16777216 };
 export type MediaApi = {
   read: (id: string) => Promise<unknown>;
-  begin: (id: string, version: string, kind: MediaKind | `${MediaKind}:v2` | `${MediaKind}:v3` | `${MediaKind}:v4`, name: string, size: number) => Promise<unknown>;
+  begin: (id: string, version: string, kind: MediaKind | `${MediaKind}:v2` | `${MediaKind}:v3` | `${MediaKind}:v4` | `${MediaKind}:v5`, name: string, size: number) => Promise<unknown>;
   block: (id: string, version: string, session: string, index: number, content: string) => Promise<unknown>;
   finish: (id: string, version: string, session: string) => Promise<unknown>;
   remove: (id: string, version: string, session: string) => Promise<unknown>;
@@ -31,9 +31,10 @@ export function parseMedia(response: unknown): MediaState {
   const state = object(JSON.parse(data.ResultJson));
   if (typeof state.id !== "string" || !guid.test(state.id) || typeof state.rowVersion !== "string" || !/^\d+$/.test(state.rowVersion)) throw new Error("Invalid media identity/version.");
   if (state.sessionId !== null && (typeof state.sessionId !== "string" || !guid.test(state.sessionId))) throw new Error("Invalid upload session.");
-  if (![524288, 2097152, 4194304, 8388608].includes(state.blockSize as number) || (state.uploadProtocol !== undefined && state.uploadProtocol !== 2)
+  if (![524288, 2097152, 4194304, 8388608, 16777216].includes(state.blockSize as number) || (state.uploadProtocol !== undefined && state.uploadProtocol !== 2)
     || (state.maxBlockSize !== undefined && (state.maxBlockSize !== 4194304 || state.uploadProtocol !== 2))
-    || (state.blobBlockSize !== undefined && (state.blobBlockSize !== 8388608 || state.uploadProtocol !== 2)) || !Array.isArray(state.media) || state.media.length > 13) throw new Error("Invalid media limits.");
+    || (state.blobBlockSize !== undefined && (state.blobBlockSize !== 8388608 || state.uploadProtocol !== 2))
+    || (state.maxBlobBlockSize !== undefined && (state.maxBlobBlockSize !== 16777216 || state.uploadProtocol !== 2)) || !Array.isArray(state.media) || state.media.length > 13) throw new Error("Invalid media limits.");
   const media = state.media.map(value => {
     const item = object(value);
     if (typeof item.id !== "string" || !guid.test(item.id) || typeof item.sessionId !== "string" || !guid.test(item.sessionId)
@@ -52,7 +53,7 @@ export function parseMedia(response: unknown): MediaState {
     return item as MediaItem;
   });
   if (new Set(media.map(item => item.id)).size !== media.length) throw new Error("Duplicate media record.");
-  return { id: state.id, rowVersion: state.rowVersion, sessionId: state.sessionId, blockSize: state.blockSize as number, media, ...(state.uploadProtocol === 2 ? { uploadProtocol: 2 as const } : {}), ...(state.maxBlockSize === 4194304 ? { maxBlockSize: 4194304 as const } : {}), ...(state.blobBlockSize === 8388608 ? { blobBlockSize: 8388608 as const } : {}) };
+  return { id: state.id, rowVersion: state.rowVersion, sessionId: state.sessionId, blockSize: state.blockSize as number, media, ...(state.uploadProtocol === 2 ? { uploadProtocol: 2 as const } : {}), ...(state.maxBlockSize === 4194304 ? { maxBlockSize: 4194304 as const } : {}), ...(state.blobBlockSize === 8388608 ? { blobBlockSize: 8388608 as const } : {}), ...(state.maxBlobBlockSize === 16777216 ? { maxBlobBlockSize: 16777216 as const } : {}) };
 }
 
 export function parseUploadProgress(response: unknown, previous: MediaState): MediaState {
@@ -121,7 +122,7 @@ function addServerTiming(timing: UploadTiming, response: unknown) {
   for (const field of ["serverMs", "hashMs", "storageMs"] as const) if (integer(value[field])) timing[field] += value[field];
 }
 
-export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersion: string; uploadProtocol?: 2; maxBlockSize?: 4194304; blobBlockSize?: 8388608 }, file: File, kind: MediaKind, signal: AbortSignal, progress: (state: MediaState) => void, resume?: MediaState): Promise<MediaState> {
+export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersion: string; uploadProtocol?: 2; maxBlockSize?: 4194304; blobBlockSize?: 8388608; maxBlobBlockSize?: 16777216 }, file: File, kind: MediaKind, signal: AbortSignal, progress: (state: MediaState) => void, resume?: MediaState): Promise<MediaState> {
   const started = performance.now();
   const timing: UploadTiming = { bytes: file.size, blockSize: 0, blocks: 0, beginMs: 0, encodingMs: 0, requestsMs: 0, finishMs: 0, totalMs: 0, complete: false, serverMs: 0, hashMs: 0, storageMs: 0 };
   lastUploadTiming = null;
@@ -132,6 +133,7 @@ export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersi
   try {
     signal.throwIfAborted();
     const negotiatedKind = initial.uploadProtocol !== 2 ? kind
+      : kind === "attachment" && initial.maxBlobBlockSize === 16777216 ? `${kind}:v5` as const
       : kind === "attachment" && initial.blobBlockSize === 8388608 ? `${kind}:v4` as const
       : initial.maxBlockSize === 4194304 ? `${kind}:v3` as const : `${kind}:v2` as const;
     let state = resume ?? await timed("beginMs", () => mediaRequest(api.begin(initial.id, initial.rowVersion, negotiatedKind, file.name, file.size), signal));
@@ -141,14 +143,14 @@ export async function uploadMedia(api: MediaApi, initial: { id: string; rowVersi
     };
     if (!session) throw new Error("Missing upload session.");
     const blockSize = state.blockSize;
-    // A v4 request keeps 4 MiB blocks when the server stores the file in Dataverse.
-    const expectedBlockSizes = resume ? [resume.blockSize] : negotiatedKind.endsWith(":v4") ? [8388608, 4194304]
+    // Blob-sized requests (v4/v5) keep 4 MiB blocks when the server stores the file in Dataverse.
+    const expectedBlockSizes = resume ? [resume.blockSize] : negotiatedKind.endsWith(":v5") ? [16777216, 4194304] : negotiatedKind.endsWith(":v4") ? [8388608, 4194304]
       : [negotiatedKind.endsWith(":v3") ? 4194304 : negotiatedKind.endsWith(":v2") ? 2097152 : 524288];
     if (!expectedBlockSizes.includes(blockSize)) throw new Error("Upload block size was not negotiated.");
     timing.blockSize = blockSize;
     const active = state.media.find(item => item.sessionId === session);
     if (!active || active.complete || active.kind !== kind || active.name !== file.name || active.size !== file.size
-      || ![524288, 2097152, 4194304, 8388608].includes(blockSize) || active.nextBlock !== Math.ceil(active.received / blockSize)
+      || ![524288, 2097152, 4194304, 8388608, 16777216].includes(blockSize) || active.nextBlock !== Math.ceil(active.received / blockSize)
       || active.received !== Math.min(active.nextBlock * blockSize, file.size)) throw new Error("Invalid upload checkpoint.");
     if (resume) {
       if (state.id !== initial.id || state.rowVersion !== initial.rowVersion) throw new Error("Stale upload checkpoint.");

@@ -125,6 +125,7 @@ namespace Prisma.Plugins
         [DataMember(Name = "uploadProtocol")] public int UploadProtocol { get; set; } = 2;
         [DataMember(Name = "maxBlockSize")] public int MaxBlockSize { get; set; } = MediaPolicy.LargeBlockSize;
         [DataMember(Name = "blobBlockSize")] public int BlobBlockSize { get; set; } = MediaPolicy.BlobBlockSize;
+        [DataMember(Name = "maxBlobBlockSize")] public int MaxBlobBlockSize { get; set; } = MediaPolicy.MaxBlobBlockSize;
     }
 
     [DataContract]
@@ -151,16 +152,19 @@ namespace Prisma.Plugins
         public const string LargeSessionPrefix = "PRISMA upload v3 ";
         public const int BlobBlockSize = 8388608;
         public const string BlobSessionPrefix = "PRISMA upload v4 ";
+        public const int MaxBlobBlockSize = 16777216;
+        public const string MaxBlobSessionPrefix = "PRISMA upload v5 ";
         public static int SessionBlockSize(Entity session)
         {
             var name = session.GetAttributeValue<string>("nx_name") ?? "";
-            return name.StartsWith(BlobSessionPrefix, StringComparison.Ordinal) ? BlobBlockSize : name.StartsWith(LargeSessionPrefix, StringComparison.Ordinal) ? LargeBlockSize
-                : name.StartsWith(OptimizedSessionPrefix, StringComparison.Ordinal) ? OptimizedBlockSize : BlockSize;
+            return name.StartsWith(MaxBlobSessionPrefix, StringComparison.Ordinal) ? MaxBlobBlockSize : name.StartsWith(BlobSessionPrefix, StringComparison.Ordinal) ? BlobBlockSize
+                : name.StartsWith(LargeSessionPrefix, StringComparison.Ordinal) ? LargeBlockSize : name.StartsWith(OptimizedSessionPrefix, StringComparison.Ordinal) ? OptimizedBlockSize : BlockSize;
         }
         public static int RequestedBlockSize(string kind)
         {
             kind = kind ?? "";
-            return kind.EndsWith(":v4", StringComparison.Ordinal) ? BlobBlockSize : kind.EndsWith(":v3", StringComparison.Ordinal) ? LargeBlockSize : kind.EndsWith(":v2", StringComparison.Ordinal) ? OptimizedBlockSize : BlockSize;
+            return kind.EndsWith(":v5", StringComparison.Ordinal) ? MaxBlobBlockSize : kind.EndsWith(":v4", StringComparison.Ordinal) ? BlobBlockSize
+                : kind.EndsWith(":v3", StringComparison.Ordinal) ? LargeBlockSize : kind.EndsWith(":v2", StringComparison.Ordinal) ? OptimizedBlockSize : BlockSize;
         }
         public static readonly string[] Writes = { "nx_BeginMediaUpload", "nx_UploadMediaBlock", "nx_FinishMediaUpload", "nx_RemoveDraftMedia" };
         public static string Table(string kind) { return kind == "attachment" ? "nx_demoasset" : "nx_solutionimage"; }
@@ -211,7 +215,7 @@ namespace Prisma.Plugins
 
         public static byte[] Block(string content, int index, int next, int total, int received, int blockSize = BlockSize)
         {
-            if ((blockSize != BlockSize && blockSize != OptimizedBlockSize && blockSize != LargeBlockSize && blockSize != BlobBlockSize) || index < 0 || received < 0 || received >= total || (long)index * blockSize != received
+            if ((blockSize != BlockSize && blockSize != OptimizedBlockSize && blockSize != LargeBlockSize && blockSize != BlobBlockSize && blockSize != MaxBlobBlockSize) || index < 0 || received < 0 || received >= total || (long)index * blockSize != received
                 || index != next || content == null || content.Length > ((blockSize + 2) / 3) * 4) throw Invalid("Invalid or out-of-order upload block.");
             byte[] bytes;
             try { bytes = Convert.FromBase64String(content); }
@@ -302,7 +306,7 @@ namespace Prisma.Plugins
             if (sessions.Any(row => !row.GetAttributeValue<bool>("nx_complete"))) throw MediaPolicy.Invalid("Remove the unfinished upload before starting another.");
             var blob = BlobMedia.Eligible(kind, mime) && storage.UploadsToBlob;
             // Dataverse file blocks are capped at 4 MiB, so 8 MiB blocks apply only to Blob sessions.
-            if (blockSize == MediaPolicy.BlobBlockSize && !blob) blockSize = MediaPolicy.LargeBlockSize;
+            if ((blockSize == MediaPolicy.BlobBlockSize || blockSize == MediaPolicy.MaxBlobBlockSize) && !blob) blockSize = MediaPolicy.LargeBlockSize;
             if (!blob)
             {
                 var column = ((RetrieveAttributeResponse)server.Execute(new RetrieveAttributeRequest { EntityLogicalName = MediaPolicy.Table(kind), LogicalName = MediaPolicy.Column(kind) })).AttributeMetadata;
@@ -318,7 +322,7 @@ namespace Prisma.Plugins
             if (kind == "attachment") target["nx_assettype"] = new OptionSetValue(mime == "text/html" ? 125060000 : mime.StartsWith("video/", StringComparison.Ordinal) ? 125060001 : 125060002);
             target.Id = server.Create(target);
             var session = new Entity("nx_uploadsession") {
-                ["nx_name"] = (blockSize == MediaPolicy.BlobBlockSize ? MediaPolicy.BlobSessionPrefix : blockSize == MediaPolicy.LargeBlockSize ? MediaPolicy.LargeSessionPrefix : blockSize == MediaPolicy.OptimizedBlockSize ? MediaPolicy.OptimizedSessionPrefix : "PRISMA upload ") + target.Id.ToString("N"), ["nx_parentid"] = parent.Id.ToString("D"),
+                ["nx_name"] = (blockSize == MediaPolicy.MaxBlobBlockSize ? MediaPolicy.MaxBlobSessionPrefix : blockSize == MediaPolicy.BlobBlockSize ? MediaPolicy.BlobSessionPrefix : blockSize == MediaPolicy.LargeBlockSize ? MediaPolicy.LargeSessionPrefix : blockSize == MediaPolicy.OptimizedBlockSize ? MediaPolicy.OptimizedSessionPrefix : "PRISMA upload ") + target.Id.ToString("N"), ["nx_parentid"] = parent.Id.ToString("D"),
                 ["nx_callerid"] = context.InitiatingUserId.ToString("D"), ["nx_targetid"] = target.Id.ToString("D"),
                 ["nx_kind"] = kind, ["nx_filename"] = name, ["nx_mime"] = mime,
                 ["nx_bytes"] = size, ["nx_received"] = 0, ["nx_nextblock"] = 0, ["nx_expires"] = DateTime.UtcNow.AddHours(2), ["nx_complete"] = false

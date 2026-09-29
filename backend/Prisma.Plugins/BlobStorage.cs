@@ -48,7 +48,27 @@ namespace Prisma.Plugins
             return new BlobConfiguration { Container = container == null ? null : new Uri(container), Uploads = enabled };
         }
 
-        public static BlobConfiguration Read(IOrganizationService server)
+        public static BlobConfiguration Read(IOrganizationService server) { return Cached(() => Load(server), DateTime.UtcNow); }
+
+        private static readonly object Gate = new object();
+        private static BlobConfiguration cached;
+        private static DateTime cachedUntil;
+
+        // Every upload block and range read needs this; a setting change (including rollback) applies within a minute.
+        public static BlobConfiguration Cached(Func<BlobConfiguration> load, DateTime now)
+        {
+            lock (Gate)
+            {
+                if (cached != null && now < cachedUntil) return cached;
+                cached = load();
+                cachedUntil = now.AddSeconds(60);
+                return cached;
+            }
+        }
+
+        public static void ClearCache() { lock (Gate) cached = null; }
+
+        private static BlobConfiguration Load(IOrganizationService server)
         {
             var query = new QueryExpression("environmentvariabledefinition") { ColumnSet = new ColumnSet("schemaname", "defaultvalue") };
             query.Criteria.AddCondition("schemaname", ConditionOperator.In, ContainerVariable, UploadsVariable);

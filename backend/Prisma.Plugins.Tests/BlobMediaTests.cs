@@ -213,6 +213,20 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
+        public void StorageConfigurationIsReusedForAMinuteAndFailuresAreNotCached()
+        {
+            var now = new DateTime(2026, 9, 29, 12, 0, 0, DateTimeKind.Utc);
+            var loads = 0;
+            BlobConfiguration.ClearCache();
+            Assert.Throws<InvalidPluginExecutionException>(() => BlobConfiguration.Cached(() => { loads++; return BlobConfiguration.Parse(null, "yes"); }, now));
+            var first = BlobConfiguration.Cached(() => { loads++; return BlobConfiguration.Parse("https://stprismamedia01.blob.core.windows.net/media", "yes"); }, now);
+            Assert.Same(first, BlobConfiguration.Cached(() => { loads++; return BlobConfiguration.Parse(null, "no"); }, now.AddSeconds(59)));
+            Assert.False(BlobConfiguration.Cached(() => { loads++; return BlobConfiguration.Parse(null, "no"); }, now.AddSeconds(60)).Uploads);
+            Assert.Equal(3, loads);
+            BlobConfiguration.ClearCache();
+        }
+
+        [Fact]
         public void StorageTokenIsReusedUntilShortlyBeforeExpiryAndNeverCachedWithoutOne()
         {
             string Jwt(DateTime expires) => "e30." + Convert.ToBase64String(Encoding.UTF8.GetBytes("{\"aud\":\"https://storage.azure.com\",\"exp\":" + (long)(expires - new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc)).TotalSeconds + "}")).TrimEnd('=').Replace('+', '-').Replace('/', '_') + ".sig";

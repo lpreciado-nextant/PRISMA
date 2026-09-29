@@ -131,6 +131,21 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
+        public void BlobUploadsNegotiateSixteenMiBBlocks()
+        {
+            Assert.Equal(16777216, MediaPolicy.RequestedBlockSize("attachment:v5"));
+            var session = new Entity("nx_uploadsession") { ["nx_name"] = MediaPolicy.MaxBlobSessionPrefix + Guid.NewGuid().ToString("N") };
+            Assert.Equal(16777216, MediaPolicy.SessionBlockSize(session));
+            var block = Convert.ToBase64String(new byte[16777216]);
+            Assert.Equal(16777216, MediaPolicy.Block(block, 0, 0, 16777217, 0, 16777216).Length);
+            Assert.Single(MediaPolicy.Block("AA==", 1, 1, 16777217, 16777216, 16777216));
+            Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.Block(block, 0, 0, 16777217, 0, 8388608));
+            var json = DraftPolicy.Serialize(new MediaResult());
+            Assert.Contains("\"maxBlobBlockSize\":16777216", json);
+            Assert.Contains("\"blobBlockSize\":8388608", json);
+        }
+
+        [Fact]
         public void OptimizedUploadsKeepLegacySessionsAndValidateBlockBoundaries()
         {
             var session = new Entity("nx_uploadsession");
