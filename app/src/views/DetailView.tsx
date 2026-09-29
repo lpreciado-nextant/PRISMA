@@ -23,7 +23,7 @@ function behaviourFor(asset: DemoAsset): Behaviour {
       label: "Open demo",
       icon: "play",
       mode: "viewer",
-      note: "Rendered in a sandboxed frame from the Dataverse File column.",
+      note: "Rendered in a sandboxed frame from protected PRISMA storage.",
     },
     "Hosted web app (URL)": asset.allowsEmbedding
       ? { label: "Open demo", icon: "play", mode: "viewer", note: "Embedded live over the network." }

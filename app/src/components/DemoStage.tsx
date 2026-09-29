@@ -75,7 +75,7 @@ function VideoStage({ name }: { name: string }) {
           {name} — walkthrough
         </p>
         <p className="mt-1 font-mono text-[10.5px] tracking-[0.12em] uppercase" style={{ color: "var(--ink-3)" }}>
-          Video streams from the Dataverse File column
+          Video streams from protected PRISMA storage
         </p>
       </div>
       <div
