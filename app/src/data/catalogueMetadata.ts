@@ -21,7 +21,7 @@ export const AREAS: Record<SpecializationArea, AreaMeta> = {
     cssVar: "var(--sa-ai)",
   },
   data: {
-    id: "data", name: "Data Solutions", short: "Data",
+    id: "data", name: "Data Solutions", short: "DS",
     note: "Data platforms, models and reporting — the work that makes the numbers trustworthy before anything is built on them.",
     cssVar: "var(--sa-data)",
   },

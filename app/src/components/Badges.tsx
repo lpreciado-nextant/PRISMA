@@ -27,13 +27,15 @@ export function StatusPill({ status }: { status: SolutionStatus }) {
   );
 }
 
-export function AreaTag({ area, size = "sm" }: { area: SpecializationArea; size?: "sm" | "md" }) {
+/** `short` shows the area initials (AI, DS, IBO) where space is tight; the full name stays in the tooltip and for screen readers. */
+export function AreaTag({ area, size = "sm", short = false }: { area: SpecializationArea; size?: "xs" | "sm" | "md"; short?: boolean }) {
   const meta = AREAS[area];
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full border font-semibold ${
-        size === "md" ? "px-3.5 py-1.5 text-[13px]" : "px-2.5 py-1 text-[11.5px]"
+      className={`inline-flex items-center rounded-full border font-semibold ${
+        size === "md" ? "gap-2 px-3.5 py-1.5 text-[13px]" : size === "xs" ? "gap-1.5 px-2 py-0.5 text-[10.5px]" : "gap-2 px-2.5 py-1 text-[11.5px]"
       }`}
+      title={short ? meta.name : undefined}
       style={{
         fontFamily: "var(--font-display)",
         color: meta.cssVar,
@@ -41,8 +43,8 @@ export function AreaTag({ area, size = "sm" }: { area: SpecializationArea; size?
         background: `color-mix(in srgb, ${meta.cssVar} 11%, transparent)`,
       }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.cssVar }} />
-      {meta.name}
+      <span className={`${size === "xs" ? "h-1 w-1" : "h-1.5 w-1.5"} rounded-full`} style={{ background: meta.cssVar }} />
+      {short ? <><span aria-hidden="true">{meta.short}</span><span className="sr-only">{meta.name}</span></> : meta.name}
     </span>
   );
 }

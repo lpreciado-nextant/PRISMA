@@ -67,6 +67,13 @@
   --idea: #9bb0bf;
   --favorite: #b4a5ec;
 
+  /* PRISMA mark gradient: gold, mauve, lavender, blue, teal */
+  --prism-1: #eec173;
+  --prism-2: #c08fb4;
+  --prism-3: #a98fe0;
+  --prism-4: #5fa7d6;
+  --prism-5: #4fbfab;
+
   /* glass */
   --glass-bg: rgba(255, 255, 255, 0.028);
   --glass-bg-2: rgba(255, 255, 255, 0.05);
@@ -100,6 +107,13 @@
   --proto: #7c5408;
   --idea: #5b6b77;
   --favorite: #45357a;
+
+  /* Deeper stops keep gradient headings at 3:1 on the light ground. */
+  --prism-1: #a86a12;
+  --prism-2: #92519f;
+  --prism-3: #6a52b8;
+  --prism-4: #2f79a8;
+  --prism-5: #0b6157;
 
   --glass-bg: rgba(255, 255, 255, 0.32);
   --glass-bg-2: rgba(255, 255, 255, 0.48);
@@ -309,6 +323,47 @@
     color: transparent;
   }
 
+  /* Text filled with the PRISMA mark gradient; never runs through the ink colour. */
+  .prism-text {
+    background: linear-gradient(100deg, var(--prism-1) 0%, var(--prism-2) 30%, var(--prism-3) 55%, var(--prism-4) 78%, var(--prism-5) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ---- Section panels ---------------------------------------------- */
+  /* Sets a page region apart (the Top 10). A tinted, bordered sheet with no
+     backdrop-filter of its own: the glass tiles inside keep the refraction,
+     and the panel stays cheap to scroll. */
+  .section-panel {
+    position: relative;
+    border-radius: 28px;
+    border: 1px solid var(--glass-edge);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--glass-bg-2) 75%, transparent) 0%,
+      color-mix(in srgb, var(--glass-bg) 55%, transparent) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-edge-hi),
+      var(--glass-shadow);
+    padding: clamp(18px, 2.4vw, 30px);
+  }
+  /* A faint accent bloom in the corner marks the featured region. */
+  .section-panel--featured::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(55% 90% at 0% 0%, color-mix(in srgb, var(--prism-1) 13%, transparent), transparent 70%),
+      radial-gradient(45% 80% at 100% 100%, color-mix(in srgb, var(--prism-5) 11%, transparent), transparent 70%);
+  }
+  .section-panel > * {
+    position: relative;
+  }
+
   /* ---- Top 10 shelf ------------------------------------------------- */
   /* Horizontal, snap-scrolling row. The edge mask fades tiles into the
      aurora instead of clipping them; padding keeps focus rings unmasked. */
@@ -330,7 +385,7 @@
   }
 
   .top-ten-item {
-    --rank-inset: 4.6rem;
+    --rank-inset: 2.45rem;
     position: relative;
     display: flex;
     flex-shrink: 0;
@@ -339,7 +394,7 @@
     padding-left: var(--rank-inset);
   }
   .top-ten-item[data-wide] {
-    --rank-inset: 7.4rem;
+    --rank-inset: 3.85rem;
   }
 
   /* The oversized numeral sits behind the tile's left edge, Netflix-style:
@@ -350,12 +405,12 @@
     bottom: -0.1em;
     z-index: 0;
     font-family: var(--font-display);
-    font-size: 10.5rem;
+    font-size: 5.25rem;
     font-weight: 800;
     line-height: 0.8;
     letter-spacing: -0.09em;
     color: transparent;
-    -webkit-text-stroke: 2px color-mix(in srgb, var(--rank-accent) 78%, var(--ink) 8%);
+    -webkit-text-stroke: 1.5px color-mix(in srgb, var(--rank-accent) 78%, var(--ink) 8%);
     background: linear-gradient(
       180deg,
       color-mix(in srgb, var(--rank-accent) 42%, transparent) 0%,
@@ -367,16 +422,60 @@
     user-select: none;
     transition: transform 0.55s var(--ease-spring);
   }
-  /* The podium borrows the PRISMA wordmark gradient. */
+  /* The podium takes the PRISMA mark gradient. */
   .top-rank[data-podium] {
-    -webkit-text-stroke: 2px color-mix(in srgb, var(--ink) 22%, transparent);
-    background: linear-gradient(170deg, var(--accent) 0%, var(--sa-ibo) 52%, var(--sa-data) 100%);
+    -webkit-text-stroke: 1.5px color-mix(in srgb, var(--prism-3) 45%, transparent);
+    background: linear-gradient(165deg, var(--prism-1) 0%, var(--prism-2) 35%, var(--prism-3) 60%, var(--prism-4) 85%, var(--prism-5) 100%);
     -webkit-background-clip: text;
     background-clip: text;
   }
   .top-ten-item:hover .top-rank,
   .top-ten-item:focus-within .top-rank {
-    transform: translateX(-6px) scale(1.04);
+    transform: translateX(-4px) scale(1.04);
+  }
+
+  /* Collapsed shelf: the podium as compact glass pills with a gradient
+     numeral and a hairline gradient border (masked to the edge only). */
+  .top-pill {
+    display: inline-flex;
+    max-width: 22rem;
+    align-items: center;
+    gap: 0.75rem;
+    border-color: transparent;
+    border-radius: 999px;
+    padding: 0.45rem 1.15rem 0.45rem 0.95rem;
+    font-family: var(--font-display);
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .top-pill::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(100deg, var(--prism-1), var(--prism-3) 55%, var(--prism-5));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.55;
+    pointer-events: none;
+    transition: opacity 0.4s var(--ease-sheet);
+  }
+  .top-pill:hover::after,
+  .top-pill:focus-visible::after {
+    opacity: 1;
+  }
+  .top-pill-rank {
+    flex-shrink: 0;
+    border-right: 1px solid var(--glass-edge);
+    padding-right: 0.75rem;
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.05em;
   }
 
   .top-ten-tile {
@@ -384,8 +483,8 @@
     z-index: 1;
     display: flex;
     flex-direction: column;
-    width: 236px;
-    height: 272px;
+    width: 232px;
+    height: 264px;
     overflow: hidden;
     border-radius: 20px;
     text-align: left;

@@ -64,6 +64,8 @@ export default function ConnectedApp() {
   </>;
 }
 
+const TOP_RETRY_DELAYS = [2_000, 5_000, 10_000];
+
 function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRetry, entered, entering, onBegin, transitionComplete }: {
   present: boolean; onTogglePresent: () => void; theme: "light" | "dark";
   onToggleTheme: () => void; onRetry: () => void;
@@ -147,12 +149,23 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
   useEffect(() => {
     // The Top 10 is internal team signal: never loaded in present mode. A failed read just hides the shelf.
     if (present || !user.live) return;
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 20_000);
-    void loadTopFavorites(favoriteApi, controller.signal).then(ids => {
-      if (!controller.signal.aborted) setTopIds(ids);
-    }).catch(() => { if (!controller.signal.aborted) setTopIds([]); }).finally(() => window.clearTimeout(timeout));
-    return () => { controller.abort(); window.clearTimeout(timeout); };
+    let cancelled = false;
+    let timer: number | undefined;
+    let current: AbortController | undefined;
+    // A transient network or host failure (or a slow reply) retries a few times before the shelf gives up.
+    const attempt = (retry: number) => {
+      const controller = current = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 20_000);
+      void loadTopFavorites(favoriteApi, controller.signal).then(ids => {
+        if (!cancelled) setTopIds(ids);
+      }).catch(() => {
+        if (cancelled) return;
+        if (retry < TOP_RETRY_DELAYS.length) timer = window.setTimeout(() => attempt(retry + 1), TOP_RETRY_DELAYS[retry]);
+        else setTopIds([]);
+      }).finally(() => window.clearTimeout(timeout));
+    };
+    attempt(0);
+    return () => { cancelled = true; current?.abort(); window.clearTimeout(timer); };
   }, [present, user.live, topVersion]);
   const topSolutions = useMemo(() => {
     if (present || state.kind !== "ready") return [];
@@ -183,7 +196,10 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     setState({ kind: "loading" });
     const timeout = window.setTimeout(() => { controller.abort(); setState({ kind: "error" }); }, 20_000);
     void loadCatalogue(readRows, present, controller.signal, readCredits).then(catalogue => {
-      if (!controller.signal.aborted) setState({ kind: "ready", catalogue });
+      if (controller.signal.aborted) return;
+      setState({ kind: "ready", catalogue });
+      // The ranking may have moved while this person was elsewhere (their own saves, or other people's).
+      setTopVersion(version => version + 1);
     }).catch(() => { if (!controller.signal.aborted) setState({ kind: "error" }); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [route.path, present]);
