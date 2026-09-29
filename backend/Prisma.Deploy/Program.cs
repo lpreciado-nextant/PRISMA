@@ -12,7 +12,7 @@ const string organizationUrl = "https://nextantpulse.crm.dynamics.com";
 const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
-if (!new[] { "inspect", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
+if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
     "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
@@ -20,6 +20,23 @@ var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "inspect-favorites")
+{
+    // Read-only: what the Top 10 API returns, and every favorite row the signed-in account can read.
+    var top = client.Execute(new OrganizationRequest("nx_GetTopFavorites"));
+    Console.WriteLine($"nx_GetTopFavorites: {top.Results["ResultJson"]}");
+    var favorites = new QueryExpression("nx_solutionfavorite") { ColumnSet = new ColumnSet("nx_solution", "nx_user", "createdon") };
+    var parent = favorites.AddLink("nx_solution", "nx_solution", "nx_solutionid", JoinOperator.LeftOuter);
+    parent.EntityAlias = "s";
+    parent.Columns = new ColumnSet("nx_solutionname", "nx_publicationstatus", "statecode");
+    foreach (var row in client.RetrieveMultiple(favorites).Entities)
+    {
+        string Aliased(string name) => row.GetAttributeValue<AliasedValue>("s." + name)?.Value switch { OptionSetValue option => option.Value.ToString(), null => "(none)", var value => value.ToString()! };
+        Console.WriteLine($"{row.GetAttributeValue<EntityReference>("nx_solution")?.Id} | {Aliased("nx_solutionname")} | publication {Aliased("nx_publicationstatus")} | state {Aliased("statecode")} | user {(row.Contains("nx_user") ? "set" : "EMPTY")} | {row.GetAttributeValue<DateTime>("createdon"):u}");
+    }
+    Console.WriteLine("Read-only inspection. No changes made.");
+    return;
+}
 if (command == "remove-story-field")
 {
     if (args.Length > 2 || (args.Length == 2 && args[1] != "--execute")) throw new ArgumentException("Use remove-story-field [--execute]; preview is read-only.");
