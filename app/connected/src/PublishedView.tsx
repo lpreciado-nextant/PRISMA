@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Lightbox } from "../../src/components/Lightbox";
 import type { Solution } from "../../src/types";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
@@ -40,15 +41,24 @@ export function PublishedView({ solution, present, assetId, favorite }: { soluti
   return <DetailView solution={hydrated} present={present} connected effort={effort} imageCount={detail.media.filter(item => item.kind === "image").length}
     favoritable={!!favorite} favorite={favorite}
     poster={thumbnail && <div className="h-40 overflow-hidden sm:h-52"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
-    gallery={<PublishedGallery media={detail.media} onOpen={item => navigate(`/s/${solution.id}/demo/${item.id}`)} />}
+    gallery={<PublishedGallery media={detail.media} />}
     reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
     onAssetOpen={asset => void mediaAction.open(detail.media.find(item => item.id === asset.id))} />;
 }
 
-export function PublishedGallery({ media, onOpen }: { media: MediaItem[]; onOpen: (item: MediaItem) => void }) {
-  return <div className="grid gap-3 sm:grid-cols-2">{media.filter(item => item.kind === "image" && item.complete).map(item => <PublishedImage key={item.id} item={item} onOpen={() => onOpen(item)} />)}</div>;
+export function PublishedGallery({ media }: { media: MediaItem[] }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const images = media.filter(item => item.kind === "image" && item.complete);
+  return <>
+    <div className="grid gap-3 sm:grid-cols-2">{images.map((item, index) => <PublishedImage key={item.id} item={item} onOpen={() => setOpen(index)} />)}</div>
+    {open !== null && <Lightbox start={open} onClose={() => setOpen(null)} items={images.map(item => ({
+      id: item.id, caption: item.caption, label: item.name,
+      content: <ProtectedImage item={item} className="max-h-full max-w-full object-contain" />,
+      thumb: <ProtectedImage item={item} className="h-full w-full object-cover" />,
+    }))} />}
+  </>;
 }
 
 function PublishedImage({ item, onOpen }: { item: MediaItem; onOpen: () => void }) {
-  return <GalleryFigure caption={item.caption}><button className="relative block aspect-[16/10] w-full cursor-pointer overflow-hidden" onClick={onOpen} aria-label={`Open ${item.name}`}><ProtectedImage item={item} className="h-full w-full object-cover" /></button></GalleryFigure>;
+  return <GalleryFigure caption={item.caption}><button className="group relative block aspect-[16/10] w-full cursor-zoom-in overflow-hidden" onClick={onOpen} aria-label={`View ${item.caption || item.name} larger`}><ProtectedImage item={item} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" /></button></GalleryFigure>;
 }

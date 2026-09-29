@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { AssetType, DemoAsset, Solution } from "../types";
 import { AREAS, BUSINESS_CALENDARS } from "../data/catalogueMetadata";
 import { AreaTag, Chip, StatusPill } from "../components/Badges";
@@ -8,6 +9,7 @@ import { calculateEffort } from "../lib/effort";
 import { DemoStage } from "../components/DemoStage";
 import { solutionAreas } from "../lib/areas";
 import { FavoriteButton } from "../components/FavoriteButton";
+import { Lightbox } from "../components/Lightbox";
 
 type Behaviour = {
   label: string;
@@ -195,18 +197,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
         <div className="flex flex-col gap-6">
           {(gallery || (solution.images && solution.images.length > 0)) && (
             <Panel title={`Screenshots · ${imageCount ?? solution.images?.length ?? 0}`}>
-              {gallery ?? <div className="grid gap-3 sm:grid-cols-2">
-                {solution.images?.map((img) => (
-                  <GalleryFigure key={img.id} caption={img.caption}>
-                    <img
-                      src={img.src}
-                      alt={img.caption ?? `${solution.name} screenshot`}
-                      loading="lazy"
-                      className="aspect-[16/10] w-full object-cover"
-                    />
-                  </GalleryFigure>
-                ))}
-              </div>}
+              {gallery ?? <ImageGallery solution={solution} />}
             </Panel>
           )}
 
@@ -347,6 +338,29 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
       </div>
     </div>
   );
+}
+
+/** The PoC's bundled screenshots; the connected app passes its protected gallery instead. */
+function ImageGallery({ solution }: { solution: Solution }) {
+  const [open, setOpen] = useState<number | null>(null);
+  const images = solution.images ?? [];
+  const alt = (caption?: string) => caption ?? `${solution.name} screenshot`;
+  return <>
+    <div className="grid gap-3 sm:grid-cols-2">
+      {images.map((img, index) => (
+        <GalleryFigure key={img.id} caption={img.caption}>
+          <button type="button" onClick={() => setOpen(index)} aria-label={`View ${alt(img.caption)} larger`} className="group block w-full cursor-zoom-in overflow-hidden">
+            <img src={img.src} alt={alt(img.caption)} loading="lazy" className="aspect-[16/10] w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+          </button>
+        </GalleryFigure>
+      ))}
+    </div>
+    {open !== null && <Lightbox start={open} onClose={() => setOpen(null)} items={images.map((img) => ({
+      id: img.id, caption: img.caption, label: alt(img.caption),
+      content: <img src={img.src} alt={alt(img.caption)} className="max-h-full max-w-full object-contain" />,
+      thumb: <img src={img.src} alt="" />,
+    }))} />}
+  </>;
 }
 
 export function GalleryFigure({ caption, children }: { caption?: string; children: React.ReactNode }) {
