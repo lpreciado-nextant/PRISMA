@@ -45,7 +45,7 @@ export function SolutionCard({
   return (
     <div className="animate-rise relative grid min-w-0" style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}>
     <article
-      className="glass glass-lite glass-sheen lift group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] [overflow-wrap:anywhere]"
+      className="solution-card glass glass-lite glass-sheen lift group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] [overflow-wrap:anywhere]"
       onClick={() => onOpen ? onOpen() : navigate(`/s/${solution.id}`)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -59,7 +59,7 @@ export function SolutionCard({
       aria-label={`${solution.name} — ${solution.summary}${publicationStatus ? ` — ${publicationStatus}` : ""}`}
     >
       {/* 16:9 keeps the image generous and every card the same height; callers' posters fill it. */}
-      <div className="relative aspect-[16/9] overflow-hidden">
+      <div className="card-poster relative aspect-[16/9] overflow-hidden">
         {poster ?? <Poster
           id={solution.id}
           name={solution.name}

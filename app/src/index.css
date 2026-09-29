@@ -349,6 +349,16 @@
       var(--glass-shadow);
     padding: clamp(18px, 2.4vw, 30px);
   }
+  /* Light theme: a pale steel-blue sheet, so white tiles and white screenshots
+     don't dissolve into a white panel. The dark theme keeps its dark glass. */
+  [data-theme="light"] .section-panel--featured {
+    border-color: color-mix(in srgb, var(--accent) 22%, white);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 14%, white) 0%,
+      color-mix(in srgb, var(--accent) 9%, white) 100%
+    );
+  }
   /* A faint accent bloom in the corner marks the featured region. */
   .section-panel--featured::before {
     content: "";
@@ -476,6 +486,36 @@
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.05em;
+  }
+
+  /* The image always has an edge: a hairline under it, and in the light
+     theme an inner ring, so a white screenshot never merges into the tile. */
+  .top-ten-poster {
+    display: block;
+    height: 128px;
+    overflow: hidden;
+    border-bottom: 1px solid var(--glass-edge);
+  }
+  [data-theme="light"] .top-ten-poster,
+  [data-theme="light"] .card-poster {
+    border-bottom-color: color-mix(in srgb, var(--accent) 16%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  .card-poster {
+    border-bottom: 1px solid var(--glass-edge);
+  }
+  /* Light theme: catalogue cards take a pale steel-blue sheet (no panel sits
+     behind them), so a white screenshot stands off the card and the page. */
+  [data-theme="light"] .solution-card {
+    border-color: color-mix(in srgb, var(--accent) 20%, white);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--accent) 11%, white) 0%,
+      color-mix(in srgb, var(--accent) 8%, white) 100%
+    );
+  }
+  [data-theme="light"] .solution-card.lift:hover {
+    background: color-mix(in srgb, var(--accent) 14%, white);
   }
 
   .top-ten-tile {

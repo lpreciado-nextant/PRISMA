@@ -109,11 +109,11 @@ export function TopTenRow({ solutions, renderPoster, onOpen }: {
                   <span className="top-rank" data-podium={rank <= 3 ? "" : undefined} aria-hidden="true">{rank}</span>
                   <button type="button" onClick={() => openSolution(solution)} className="top-ten-tile glass glass-lite glass-sheen lift group">
                     <span className="sr-only">Number {rank}: </span>
-                    <span className="block h-[128px] overflow-hidden">
+                    <span className="top-ten-poster">
                       {renderPoster?.(solution) ?? <Poster id={solution.id} name={solution.name} area={area} src={solution.thumbnail} className="h-full w-full" />}
                     </span>
                     <span className="flex flex-1 flex-col gap-2 p-4">
-                      <span className="flex flex-wrap gap-1.5">{solutionAreas(solution).map((tag) => <AreaTag key={tag} area={tag} short />)}</span>
+                      <span className="flex flex-wrap gap-1.5">{solutionAreas(solution).map((tag) => <AreaTag key={tag} area={tag} size="xs" short />)}</span>
                       <span className="line-clamp-2 text-[16.5px] leading-snug font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{solution.name}</span>
                       <span className="line-clamp-2 text-[13px] leading-snug" style={{ color: "var(--ink-3)" }}>{solution.summary}</span>
                     </span>
