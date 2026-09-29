@@ -1,6 +1,6 @@
 # Decision log — open questions
 
-**Status:** Living; pilot assignments and privileged functional lifecycle verified; cross-account, least-privilege and remaining acceptance open · **Last updated:** 2026-09-22
+**Status:** Living; pilot assignments and privileged functional lifecycle verified; Blob pilot transport decided (Q14); cross-account, least-privilege and remaining acceptance open · **Last updated:** 2026-09-29
 **Source:** [End-to-end design §11](../design/end-to-end-design.md#11-open-questions)
 
 Open questions live here until they resolve. Resolutions with lasting technical consequences become an [ADR](../architecture/decisions/README.md); the rest are recorded inline and reflected in the relevant doc.
@@ -20,6 +20,7 @@ Open questions live here until they resolve. Resolutions with lasting technical 
 | Q11 | What is the production deletion policy and cleanup behavior for published/owned solutions? | Product + Platform owner | Open | PoC permits owner deletion in any state; live child links use RemoveLink on delete and NoCascade on share/assign. Do not inherit the local simulation as production policy. |
 | Q12 | Private upload sessions and non-member media owner team? | Platform owner | Approved and deployed | One organization-owned protocol table and empty Media Custodian owner team; server-held tokens and read-only contributor media. ADR-0009. |
 | Q13 | Publication audience? | Platform owner | Approved pilot membership applied | PRISMA Published Readers has the CSM read role; Mauricio was added with explicit user approval. Approval grants row shares and withdrawal/retirement revokes them, but his retained System Administrator access prevents a least-privilege revocation test. Media Custodian remains empty. |
+| Q14 | How do new attachment bytes reach Azure Blob using the sponsorship subscription? | Platform owner + sponsorship subscription owner | Decided 2026-09-29; deployment approvals and sponsorship cap/end date open | User chose plug-in transport with Power Platform managed identity, a public Entra-only endpoint, videos/HTML/PDF/PPT(X) only, existing Dataverse files kept permanently and no malware scanning. [ADR-0010](../architecture/decisions/adr-0010-attachments-in-blob-through-plugins.md). Signing-certificate choice for general release is open. |
 
 ## Resolved
 

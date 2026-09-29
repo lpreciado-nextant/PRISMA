@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28 · **Last updated:** 2026-09-28
+**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; Blob pilot session columns and environment variables specified, not deployed · **Last updated:** 2026-09-29
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `SpecializationArea`, `Industry` and `Technology` are **native N:N**, while `Capability` is a single-valued lookup. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
 
@@ -31,9 +31,15 @@ Approved and deployed on 2026-09-22 under [ADR-0009](../architecture/decisions/a
 | `nx_filename`, `nx_mime` | Text 200 / 120 | Validated file metadata |
 | `nx_token` | Multiline text 10000 | Private continuation token, cleared on finalization; never returned |
 | `nx_sha256` | Text 64, optional | Lowercase digest of exact upload bytes for new resumable sessions; legacy sessions remain null and cannot resume |
+| `nx_storage` | Text 20, optional (not deployed) | `blob` for [ADR-0010](../architecture/decisions/adr-0010-attachments-in-blob-through-plugins.md) uploads; null means Dataverse File/Image storage |
+| `nx_blobname` | Text 100, optional (not deployed) | Server-generated `{solution}/{asset}/{session}` (32-hex GUIDs); never supplied by or returned to clients |
+| `nx_blobetag` | Text 100, optional (not deployed) | Committed blob version; every read and deletion is conditional on it |
+| `nx_hashstate` | Text 100, optional (not deployed) | Serialized SHA-256 state while uploading, the finished digest after the last block, cleared on finalization |
 | `nx_bytes`, `nx_received`, `nx_nextblock` | Whole number, 0-524288000 | Declared bytes, received bytes, sequential next block |
 | `nx_expires` | Time-zone-independent date/time | UTC two-hour unfinished-upload deadline |
 | `nx_complete` | Boolean, default false | Finalized file validated and shared read-only |
+
+The Blob pilot adds two `PRISMA_Dev` environment variables, also not yet deployed: `nx_MediaBlobContainerUrl` (Text; `https://<account>.blob.core.windows.net/<container>`) and `nx_MediaBlobUploads` (Yes/No, default No). They select storage for new attachment uploads only; `nx_demoasset` and client-visible schemas are unchanged.
 
 Gallery/attachment rows are owned by the empty Media Custodian team. Finalized rows are shared read-only with the owner; approval shares them and their Solution/contributors with Published Readers. Removal is mediated while Draft. Existing reference tables, Consultant and Project remain UserOwned and unchanged; organization ownership below was an earlier design assumption, not a migration instruction. Full deployed roles are in the [security model](../architecture/security-model.md).
 

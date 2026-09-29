@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { downloadMedia } from "./dataSource";
+import { downloadMedia, type MediaAccess } from "./dataSource";
 import type { MediaItem } from "./media";
 
-export function useMediaAction(onPreview: (item: MediaItem) => void) {
+export function useMediaAction(onPreview: (item: MediaItem) => void, access: Omit<MediaAccess, "signal">) {
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -32,7 +32,7 @@ export function useMediaAction(onPreview: (item: MediaItem) => void) {
     setDownloading(true);
     setMessage(`Downloading ${item.name}...`);
     try {
-      const blob = await downloadMedia(item);
+      const blob = await downloadMedia(item, { ...access, signal: controller.signal });
       controller.signal.throwIfAborted();
       const url = URL.createObjectURL(blob);
       urls.current.push(url);

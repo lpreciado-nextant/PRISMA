@@ -31,6 +31,7 @@ namespace Prisma.Plugins
         [DataMember(Name = "caption")] public string Caption { get; set; }
         [DataMember(Name = "sortOrder")] public int SortOrder { get; set; }
         [DataMember(Name = "linkedAsset", EmitDefaultValue = false)] public LinkedAssetInput LinkedAsset { get; set; }
+        [DataMember(Name = "storage", EmitDefaultValue = false)] public string Storage { get; set; }
     }
 
     [DataContract]
@@ -213,7 +214,8 @@ namespace Prisma.Plugins
 
     public sealed class MediaApi : IPlugin
     {
-        private static readonly ColumnSet SessionColumns = new ColumnSet("nx_name", "nx_parentid", "nx_callerid", "nx_targetid", "nx_kind", "nx_filename", "nx_mime", "nx_token", "nx_bytes", "nx_received", "nx_nextblock", "nx_expires", "nx_complete");
+        private static readonly ColumnSet SessionColumns = new ColumnSet("nx_name", "nx_parentid", "nx_callerid", "nx_targetid", "nx_kind", "nx_filename", "nx_mime", "nx_token", "nx_bytes", "nx_received", "nx_nextblock", "nx_expires", "nx_complete",
+            "nx_sha256", "nx_storage", "nx_blobname", "nx_blobetag", "nx_hashstate");
 
         public void Execute(IServiceProvider serviceProvider)
         {
@@ -236,10 +238,11 @@ namespace Prisma.Plugins
             Guid? sessionId = null;
             var blockSize = MediaPolicy.BlockSize;
             Entity progressed = null;
+            var storage = new MediaStorage(serviceProvider, server);
             if (context.MessageName == "nx_BeginMediaUpload")
             {
                 blockSize = MediaPolicy.RequestedBlockSize(context.InputParameters["Kind"] as string);
-                sessionId = Begin(server, parent, context);
+                sessionId = Begin(server, parent, context, storage);
             }
             else if (!read)
             {
@@ -257,8 +260,8 @@ namespace Prisma.Plugins
                 else
                 {
                     if (session.GetAttributeValue<bool>("nx_complete") || session.GetAttributeValue<DateTime>("nx_expires") <= DateTime.UtcNow) throw MediaPolicy.Invalid("Upload is complete or expired. Reopen the draft.");
-                    if (context.MessageName == "nx_UploadMediaBlock") { Upload(server, session, context); progressed = session; }
-                    else Finish(server, session, context.InitiatingUserId);
+                    if (context.MessageName == "nx_UploadMediaBlock") { Upload(server, session, context, storage); progressed = session; }
+                    else Finish(server, session, context.InitiatingUserId, storage);
                 }
             }
             var latest = caller.Retrieve("nx_solution", identifier, new ColumnSet(false));
@@ -273,7 +276,7 @@ namespace Prisma.Plugins
             });
         }
 
-        internal static Guid Begin(IOrganizationService server, Entity parent, IPluginExecutionContext context, string suppliedKind = null)
+        internal static Guid Begin(IOrganizationService server, Entity parent, IPluginExecutionContext context, MediaStorage storage, string suppliedKind = null)
         {
             var kind = suppliedKind ?? context.InputParameters["Kind"] as string;
             var blockSize = MediaPolicy.RequestedBlockSize(kind);
@@ -285,9 +288,13 @@ namespace Prisma.Plugins
             if (sessions.Count(row => row.GetAttributeValue<string>("nx_kind") == kind && row.GetAttributeValue<bool>("nx_complete")) >= (kind == "thumbnail" ? 1 : 6))
                 throw MediaPolicy.Invalid("At most one thumbnail, six images and six attachments are allowed.");
             if (sessions.Any(row => !row.GetAttributeValue<bool>("nx_complete"))) throw MediaPolicy.Invalid("Remove the unfinished upload before starting another.");
-            var column = ((RetrieveAttributeResponse)server.Execute(new RetrieveAttributeRequest { EntityLogicalName = MediaPolicy.Table(kind), LogicalName = MediaPolicy.Column(kind) })).AttributeMetadata;
-            var limit = column is FileAttributeMetadata file ? file.MaxSizeInKB : ((ImageAttributeMetadata)column).MaxSizeInKB;
-            if (!limit.HasValue || size > (long)limit.Value * 1024) throw MediaPolicy.Invalid("File exceeds the Dataverse column limit.");
+            var blob = BlobMedia.Eligible(kind, mime) && storage.UploadsToBlob;
+            if (!blob)
+            {
+                var column = ((RetrieveAttributeResponse)server.Execute(new RetrieveAttributeRequest { EntityLogicalName = MediaPolicy.Table(kind), LogicalName = MediaPolicy.Column(kind) })).AttributeMetadata;
+                var limit = column is FileAttributeMetadata file ? file.MaxSizeInKB : ((ImageAttributeMetadata)column).MaxSizeInKB;
+                if (!limit.HasValue || size > (long)limit.Value * 1024) throw MediaPolicy.Invalid("File exceeds the Dataverse column limit.");
+            }
             var team = Custodian(server);
             var target = new Entity(MediaPolicy.Table(kind)) {
                 ["ownerid"] = team, ["nx_solution"] = parent.ToEntityReference(),
@@ -296,13 +303,21 @@ namespace Prisma.Plugins
             };
             if (kind == "attachment") target["nx_assettype"] = new OptionSetValue(mime == "text/html" ? 125060000 : mime.StartsWith("video/", StringComparison.Ordinal) ? 125060001 : 125060002);
             target.Id = server.Create(target);
-            var upload = (InitializeFileBlocksUploadResponse)server.Execute(new InitializeFileBlocksUploadRequest { Target = target.ToEntityReference(), FileAttributeName = MediaPolicy.Column(kind), FileName = name });
-            return server.Create(new Entity("nx_uploadsession") {
+            var session = new Entity("nx_uploadsession") {
                 ["nx_name"] = (blockSize == MediaPolicy.LargeBlockSize ? MediaPolicy.LargeSessionPrefix : blockSize == MediaPolicy.OptimizedBlockSize ? MediaPolicy.OptimizedSessionPrefix : "PRISMA upload ") + target.Id.ToString("N"), ["nx_parentid"] = parent.Id.ToString("D"),
                 ["nx_callerid"] = context.InitiatingUserId.ToString("D"), ["nx_targetid"] = target.Id.ToString("D"),
-                ["nx_kind"] = kind, ["nx_filename"] = name, ["nx_mime"] = mime, ["nx_token"] = upload.FileContinuationToken,
+                ["nx_kind"] = kind, ["nx_filename"] = name, ["nx_mime"] = mime,
                 ["nx_bytes"] = size, ["nx_received"] = 0, ["nx_nextblock"] = 0, ["nx_expires"] = DateTime.UtcNow.AddHours(2), ["nx_complete"] = false
-            });
+            };
+            if (blob)
+            {
+                session.Id = Guid.NewGuid();
+                session["nx_storage"] = BlobMedia.Storage;
+                session["nx_blobname"] = BlobMedia.Name(parent.Id, target.Id, session.Id);
+                session["nx_hashstate"] = Sha256State.Start().Serialize();
+            }
+            else session["nx_token"] = ((InitializeFileBlocksUploadResponse)server.Execute(new InitializeFileBlocksUploadRequest { Target = target.ToEntityReference(), FileAttributeName = MediaPolicy.Column(kind), FileName = name })).FileContinuationToken;
+            return server.Create(session);
         }
 
         private static EntityReference Custodian(IOrganizationService server)
@@ -345,22 +360,35 @@ namespace Prisma.Plugins
             server.Execute(new GrantAccessRequest { Target = target.ToEntityReference(), PrincipalAccess = new PrincipalAccess { Principal = new EntityReference("systemuser", caller), AccessMask = AccessRights.ReadAccess } });
         }
 
-        private static void Upload(IOrganizationService server, Entity session, IPluginExecutionContext context)
+        private static void Upload(IOrganizationService server, Entity session, IPluginExecutionContext context, MediaStorage storage)
         {
             var index = (int)context.InputParameters["BlockIndex"];
             var received = session.GetAttributeValue<int>("nx_received");
             var bytes = MediaPolicy.Block(context.InputParameters["Content"] as string, index, session.GetAttributeValue<int>("nx_nextblock"), session.GetAttributeValue<int>("nx_bytes"), received, MediaPolicy.SessionBlockSize(session));
+            if (BlobMedia.IsBlob(session))
+            {
+                var update = BlobMedia.Stage(storage.Store, session, index, bytes);
+                server.Update(update);
+                foreach (var attribute in update.Attributes) session[attribute.Key] = attribute.Value;
+                return;
+            }
             server.Execute(new UploadBlockRequest { FileContinuationToken = session.GetAttributeValue<string>("nx_token"), BlockId = MediaPolicy.BlockId(session.Id, index), BlockData = bytes });
             server.Update(new Entity("nx_uploadsession", session.Id) { ["nx_received"] = received + bytes.Length, ["nx_nextblock"] = index + 1 });
             session["nx_received"] = received + bytes.Length;
             session["nx_nextblock"] = index + 1;
         }
 
-        private static void Finish(IOrganizationService server, Entity session, Guid caller)
+        private static void Finish(IOrganizationService server, Entity session, Guid caller, MediaStorage storage)
         {
             if (session.GetAttributeValue<int>("nx_received") != session.GetAttributeValue<int>("nx_bytes")) throw MediaPolicy.Invalid("Upload is incomplete.");
             var kind = session.GetAttributeValue<string>("nx_kind");
             var target = new EntityReference(MediaPolicy.Table(kind), Guid.Parse(session.GetAttributeValue<string>("nx_targetid")));
+            if (BlobMedia.IsBlob(session))
+            {
+                server.Update(BlobMedia.Commit(storage.Store, session));
+                server.Execute(new GrantAccessRequest { Target = target, PrincipalAccess = new PrincipalAccess { Principal = new EntityReference("systemuser", caller), AccessMask = AccessRights.ReadAccess } });
+                return;
+            }
             var commit = (CommitFileBlocksUploadResponse)server.Execute(new CommitFileBlocksUploadRequest {
                 FileContinuationToken = session.GetAttributeValue<string>("nx_token"), FileName = session.GetAttributeValue<string>("nx_filename"), MimeType = session.GetAttributeValue<string>("nx_mime"),
                 BlockList = Enumerable.Range(0, session.GetAttributeValue<int>("nx_nextblock")).Select(index => MediaPolicy.BlockId(session.Id, index)).ToArray()
@@ -385,7 +413,7 @@ namespace Prisma.Plugins
             return Sessions(service, parent).Select(row => Snapshot(service, row)).OrderBy(item => item.SortOrder).ThenBy(item => item.Id).ToArray();
         }
 
-        public static void VerifyStoredMedia(IOrganizationService service, Entity session)
+        public static void VerifyStoredMedia(IOrganizationService service, Entity session, MediaStorage storage = null)
         {
             var kind = session.GetAttributeValue<string>("nx_kind");
             if (session.GetAttributeValue<string>("nx_mime") == LinkedAssetPolicy.Mime)
@@ -394,6 +422,12 @@ namespace Prisma.Plugins
                     || session.GetAttributeValue<int>("nx_received") != 0 || session.GetAttributeValue<int>("nx_nextblock") != 0)
                     throw MediaPolicy.Invalid("Invalid linked asset lifecycle record.");
                 Snapshot(service, session);
+                return;
+            }
+            if (BlobMedia.IsBlob(session))
+            {
+                if (storage == null) throw MediaPolicy.Invalid("Media storage is unavailable.");
+                BlobMedia.Verify(storage.Store, session);
                 return;
             }
             var target = new EntityReference(MediaPolicy.Table(kind), Guid.Parse(session.GetAttributeValue<string>("nx_targetid")));
@@ -412,6 +446,7 @@ namespace Prisma.Plugins
                 Size = row.GetAttributeValue<int>("nx_bytes"), Received = row.GetAttributeValue<int>("nx_received"),
                 NextBlock = row.GetAttributeValue<int>("nx_nextblock"), Complete = row.GetAttributeValue<bool>("nx_complete"),
                 Caption = target.GetAttributeValue<string>("nx_caption") ?? "", SortOrder = Math.Min(12, target.GetAttributeValue<int>("nx_sortorder")),
+                Storage = BlobMedia.IsBlob(row) ? BlobMedia.Storage : null,
                 LinkedAsset = linked ? LinkedAssetPolicy.Validate(new LinkedAssetInput { Name = row.GetAttributeValue<string>("nx_filename"), AssetType = LinkedAssetPolicy.Type(target.GetAttributeValue<OptionSetValue>("nx_assettype").Value), ExternalUrl = target.GetAttributeValue<string>("nx_externalurl") ?? "", AllowsEmbedding = target.GetAttributeValue<bool>("nx_allowsembedding"), EmbedHint = target.GetAttributeValue<string>("nx_embedhint") ?? "" }) : null
             };
         }

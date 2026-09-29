@@ -34,7 +34,7 @@ import type { FavoriteApi } from "./favorites";
 import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginResumableUploadService";
 import { Nx_GetUploadCheckpointService } from "./generated/services/Nx_GetUploadCheckpointService";
 import { Nx_ReadVideoRangeService } from "./generated/services/Nx_ReadVideoRangeService";
-import type { TransferApi } from "./mediaTransfer";
+import { readAttachment, type PlaybackMode, type TransferApi } from "./mediaTransfer";
 import { createDataverseMediaAdapter } from "./dataverseMediaAdapter";
 
 export const transferApi: TransferApi = {
@@ -61,9 +61,15 @@ export const mediaApi: MediaApi = {
 
 export const videoMediaAdapter = createDataverseMediaAdapter(mediaApi, transferApi);
 
-export async function downloadMedia(item: MediaItem): Promise<Blob> {
+export type MediaAccess = { solutionId: string; mode: PlaybackMode; signal?: AbortSignal };
+
+export async function downloadMedia(item: MediaItem, access?: MediaAccess): Promise<Blob> {
   if (item.linkedAsset) throw new Error("Linked assets do not contain a downloadable file.");
   if (!item.complete) throw new Error("Media is not finalized.");
+  if (item.storage === "blob") {
+    if (!access) throw new Error("Protected media access context is required.");
+    return readAttachment(transferApi, access.solutionId, item, access.mode, access.signal ?? new AbortController().signal);
+  }
   const client = getClient(dataSourcesInfo);
   const result = item.kind !== "attachment"
     ? await client.downloadImageFromRecord("nx_solutionimages", item.id, "nx_imagefile", true)

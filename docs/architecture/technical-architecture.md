@@ -147,6 +147,25 @@ Each carries an ADR — see [decision records](decisions/README.md).
 
 **Status:** Draft proposal; not approved for implementation or production deployment. A development-only lab storage account was deployed on 2026-09-29. **Last updated:** 2026-09-29.
 
+### Blob storage pilot through plug-ins
+
+**Status:** Decided 2026-09-29 ([ADR-0010](decisions/adr-0010-attachments-in-blob-through-plugins.md)); code, templates and tooling implemented and tested locally; nothing deployed. For the pilot this replaces the separately hosted Azure API and worker proposed below.
+
+The media plug-ins store new video/HTML/PDF/PowerPoint uploads in private Blob Storage through a Power Platform managed identity, so the app contract, CSP and authorization path are unchanged. Implementation: [BlobStorage.cs](../../backend/Prisma.Plugins/BlobStorage.cs) (Entra-only REST client, configuration, lifecycle and post-commit deletion), [Sha256State.cs](../../backend/Prisma.Plugins/Sha256State.cs), provider dispatch in [MediaApi.cs](../../backend/Prisma.Plugins/MediaApi.cs) and [MediaTransferApi.cs](../../backend/Prisma.Plugins/MediaTransferApi.cs), and range-based Blob attachment reads in the [connected app](../../app/connected/src/mediaTransfer.ts). `nx_ReadVideoRange` now serves every uploaded attachment type from either store; Dataverse-backed downloads keep their existing SDK path. Infrastructure is [pilot.bicep](../../infra/media/pilot.bicep): Entra-only Standard_LRS account, private `media` container, `id-prisma-media-plugin` with container-scoped Blob Data Contributor, optional federated credential, 30-day soft delete, audit logs, `CanNotDelete` lock and optional budget.
+
+Deployment order, each step separately approved (all `Prisma.Deploy` commands preview unless `--execute`):
+
+1. Confirm the sponsorship cap, end date and payer ([R9](../delivery/risks.md)).
+2. Build and Authenticode-sign `Prisma.Plugins.dll` (self-signed only for pilot/test). `plugin-subject <signed.dll> [--self-signed]` prints the federated subject.
+3. What-if, then deploy `pilot.bicep` with `PRISMA_PILOT_OWNER` and `PRISMA_PILOT_PLUGIN_SUBJECT` (plus optional budget variables).
+4. `blob-schema --execute`: four private session columns and two environment variables; uploads stay off. The updated assembly reads these columns, so it cannot be pushed first.
+5. `blob-plugin --execute <signed.dll>`: assembly update and asynchronous `PRISMA.Media.BlobDeletion` step with its pre-image.
+6. `bind-managed-identity --execute <client-id>`: version 2 managed identity record bound to the assembly.
+7. `set-blob-config --execute <container-url> no`, then `smoke-blob` after switching to `yes`; confirm the deletion system job.
+8. Publish the connected app (range-based Blob reads), then hosted acceptance.
+
+Local verification on 2026-09-29: 56 backend tests (including SHA-256 equivalence across serialized blocks, rolled-back checkpoint retry, digest mismatch, adopted commits, ETag-pinned reads/deletes and REST request construction), 68 connected tests, connected build and lint, and compiled pilot-template checks. Read-only previews confirmed the Nextant Pulse metadata for the new columns, environment variables and managed identity binding. No live managed-identity token, Blob write from Dataverse, hosted run or non-admin test has occurred.
+
 ### Objective and scope
 
 Keep Dataverse as the authority for catalogue metadata, ownership, permissions, publication and client-safe clearance. Move uploaded file bytes to private Azure Blob Storage, preserving the search -> detail -> viewer flow and existing submission/review controls.

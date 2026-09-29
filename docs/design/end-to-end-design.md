@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Agreed two-field story design; wizard resume, selectable MP4 captions and same-account video acceptance verified; production-host and least-privilege gates remain open
-**Last updated:** 2026-09-28
+**Status:** Agreed two-field story design; wizard resume, selectable MP4 captions and same-account video acceptance verified; Blob pilot for new attachments approved (ADR-0010), not deployed; production-host and least-privilege gates remain open
+**Last updated:** 2026-09-29
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
@@ -167,7 +167,7 @@ The connected Media step supports images, videos, one-pagers/slides and self-con
 
 | Asset type | In-app behaviour | Fallback |
 |---|---|---|
-| Self-contained HTML file | Render in the full-screen viewer directly from the Dataverse File column | Download the file |
+| Self-contained HTML file | Render in the full-screen viewer from the protected file (Dataverse File column, or private Blob for new uploads when enabled) | Download the file |
 | Hosted web app (URL) | Embed in the viewer if `Allows Embedding`; otherwise open in a new tab immediately | Pop-out, with the `Embed Hint` shown |
 | Power Apps / Power BI | Deep-link out in a new tab (embedding is unreliable and auth-stalls inside frames) | Video walkthrough if one exists |
 | Video walkthrough | Play inline in the viewer | Download |
@@ -304,7 +304,7 @@ flowchart TB
 **Existing environment context:** The Power Platform solution `PRISMA_Dev` exists in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`, not Nextant Pulse Prod). This is distinct from the **PRISMA PoC** code app and does not imply that planned Dataverse components are implemented. See [environment and solution details](../architecture/technical-architecture.md#environment-and-solution).
 
 - **Dataverse is the single source of truth.** No separate search index in v1 (see §7.3).
-- **Assets live in Dataverse File and Image columns.** No external blob storage, no separate hosting to provision. This is what makes self-contained HTML demos viable — the payload travels with the record.
+- **Assets live in Dataverse, with a Blob pilot for new attachments.** Images, thumbnails and existing files stay in Dataverse File and Image columns. When enabled, newly uploaded videos, HTML, PDF and PowerPoint files are stored in private Azure Blob Storage by the same Dataverse Custom APIs, so record security, publication and present mode still govern every read and the app never touches storage directly ([ADR-0010](../architecture/decisions/adr-0010-attachments-in-blob-through-plugins.md)).
 - **Native N:N relationships** for solution↔technology, solution↔industry, and solution↔`cr6b0_project`. No hand-built junction tables for these — capability is a single-valued 1:N lookup, same shape as specialization area, not a tag; `nx_solutioncontributor` is a child table carrying per-person effort attributes because that relationship has attributes of its own.
 - **Power Automate for notifications only** — review-queue alerts and demo-request handoffs to Teams/Outlook. No business logic lives in flows.
 - **Present mode is enforced server-side as well as client-side.** The production query requires Published, Safety Acknowledged and Client Safe Reviewed, and omits internal client/project fields. The PoC mirrors this before render; bundled data is not protected by it.

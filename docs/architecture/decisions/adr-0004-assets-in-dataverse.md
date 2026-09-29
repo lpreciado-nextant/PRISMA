@@ -1,6 +1,6 @@
 # ADR-0004 — Assets in Dataverse File/Image columns
 
-**Status:** Accepted
+**Status:** Accepted; superseded for newly uploaded videos, HTML, PDF and PowerPoint files by [ADR-0010](adr-0010-attachments-in-blob-through-plugins.md) when Blob uploads are enabled. Images, thumbnails and existing files remain in Dataverse.
 **Date:** 2026-09-16
 
 ## Context

@@ -1,8 +1,8 @@
 # ADR-0009 - Mediated media and publication access
 
-**Status:** Accepted; protected ranges, SHA-bound resume and approved hosted CSP configuration applied; effective non-admin verification pending
+**Status:** Accepted; protected ranges, SHA-bound resume and approved hosted CSP configuration applied; effective non-admin verification pending. [ADR-0010](adr-0010-attachments-in-blob-through-plugins.md) keeps these controls and moves new attachment bytes to Blob through the same APIs.
 **Date:** 2026-09-22
-**Last updated:** 2026-09-22
+**Last updated:** 2026-09-29
 
 ## Context
 

@@ -224,8 +224,9 @@ namespace Prisma.Plugins
                     RequireActive(caller, parent.GetAttributeValue<EntityReference>("nx_capability"));
                     foreach (var area in graph.Graph.AreaIds) RequireActive(caller, new EntityReference("nx_specializationarea", Guid.Parse(area)));
                     foreach (var person in graph.Graph.Contributors) RequireActive(caller, new EntityReference("cr6b0_consultant", Guid.Parse(person.PersonId)));
+                    var storage = new MediaStorage(serviceProvider, server);
                     foreach (var item in media)
-                        MediaApi.VerifyStoredMedia(server, item);
+                        MediaApi.VerifyStoredMedia(server, item, storage);
                 }
                 PublicationAccess(server, identifier, media, action == "approve");
                 if (action == "delete")

@@ -11,7 +11,7 @@ export async function imageDataUrl(blob: Blob, signal?: AbortSignal): Promise<st
 }
 
 export type MediaKind = "image" | "attachment" | "thumbnail";
-export type MediaItem = { id: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput };
+export type MediaItem = { id: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput; storage?: "blob" };
 export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[]; uploadProtocol?: 2; maxBlockSize?: 4194304 };
 export type MediaApi = {
   read: (id: string) => Promise<unknown>;
@@ -39,6 +39,7 @@ export function parseMedia(response: unknown): MediaState {
       || (item.kind !== "image" && item.kind !== "attachment" && item.kind !== "thumbnail") || typeof item.name !== "string" || typeof item.mime !== "string"
       || !integer(item.size) || !integer(item.received) || item.received > item.size || !integer(item.nextBlock) || typeof item.complete !== "boolean") throw new Error("Invalid media record.");
     if ((item.caption !== undefined && (typeof item.caption !== "string" || item.caption.length > 200)) || (item.sortOrder !== undefined && (!integer(item.sortOrder) || item.sortOrder > 12))) throw new Error("Invalid media metadata.");
+    if (item.storage !== undefined && (item.storage !== "blob" || item.kind !== "attachment" || item.mime === "application/vnd.prisma.link")) throw new Error("Invalid media storage.");
     if (item.mime === "application/vnd.prisma.link" || item.linkedAsset !== undefined) {
       const linked = object(item.linkedAsset);
       if (item.mime !== "application/vnd.prisma.link" || item.kind !== "attachment" || !item.complete || item.size !== 0 || item.received !== 0 || item.nextBlock !== 0

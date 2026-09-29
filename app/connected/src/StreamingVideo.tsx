@@ -26,7 +26,7 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
     setDownloading(true);
     try {
       const check = await readVideoRange(transferApi, solutionId, item.id, mode, 0, item.size, controller.signal);
-      const blob = await downloadMedia(item);
+      const blob = await downloadMedia(item, { solutionId, mode, signal: controller.signal });
       await readVideoRange(transferApi, solutionId, item.id, mode, 0, item.size, controller.signal, check.version);
       controller.signal.throwIfAborted();
       const url = URL.createObjectURL(blob); downloads.current.push(url);
@@ -67,7 +67,7 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
     void (async () => {
       if (full) {
         await read(0, controller.signal);
-        const blob = await downloadMedia(item);
+        const blob = await downloadMedia(item, { solutionId, mode, signal: controller.signal });
         await read(0, controller.signal);
         controller.signal.throwIfAborted();
         try {

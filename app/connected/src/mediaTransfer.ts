@@ -34,7 +34,7 @@ export async function transferVideo(api: MediaApi, transfer: TransferApi, initia
 }
 
 export async function readVideoRange(api: TransferApi, id: string, assetId: string, mode: PlaybackMode, offset: number, size: number,
-  signal: AbortSignal, version?: string): Promise<{ bytes: Uint8Array<ArrayBuffer>; version: string }> {
+  signal: AbortSignal, version?: string, mime = "video/mp4"): Promise<{ bytes: Uint8Array<ArrayBuffer>; version: string }> {
   signal.throwIfAborted();
   const count = Math.min(1024 * 1024, size - offset);
   if (!Number.isSafeInteger(offset) || offset < 0 || count <= 0) throw new Error("Invalid video range.");
@@ -51,14 +51,25 @@ export async function readVideoRange(api: TransferApi, id: string, assetId: stri
     deadline.throwIfAborted();
   } finally { deadline.removeEventListener("abort", cancel); }
   signal.throwIfAborted();
-  return parseVideoRange(raw, id, assetId, offset, size, count, version);
+  return parseVideoRange(raw, id, assetId, offset, size, count, version, mime);
 }
 
-export function parseVideoRange(raw: unknown, id: string, assetId: string, offset: number, size: number, count: number, version?: string): { bytes: Uint8Array<ArrayBuffer>; version: string } {
+// Every range is pinned to the first response's version, so a file changed or revoked mid-read fails instead of mixing revisions.
+export async function readAttachment(api: TransferApi, id: string, item: { id: string; size: number; mime: string }, mode: PlaybackMode, signal: AbortSignal): Promise<Blob> {
+  const parts: Uint8Array<ArrayBuffer>[] = [];
+  let version: string | undefined;
+  for (let offset = 0; offset < item.size; offset += 1024 * 1024) {
+    const range = await readVideoRange(api, id, item.id, mode, offset, item.size, signal, version, item.mime);
+    version = range.version; parts.push(range.bytes);
+  }
+  return new Blob(parts, { type: item.mime });
+}
+
+export function parseVideoRange(raw: unknown, id: string, assetId: string, offset: number, size: number, count: number, version?: string, mime = "video/mp4"): { bytes: Uint8Array<ArrayBuffer>; version: string } {
   const response = raw as { success?: boolean; data?: { ResultJson?: string } };
   if (!response?.success || typeof response.data?.ResultJson !== "string") throw new Error("Video access unavailable.");
   const result = JSON.parse(response.data.ResultJson);
-  if (result.id !== id || result.assetId !== assetId || result.offset !== offset || result.size !== size || result.mime !== "video/mp4"
+  if (result.id !== id || result.assetId !== assetId || result.offset !== offset || result.size !== size || result.mime !== mime
     || typeof result.version !== "string" || !/^\d+:\d+:[a-f0-9]{32}$/.test(result.version) || (version && version !== result.version)
     || typeof result.content !== "string" || result.content.length > Math.ceil(count / 3) * 4) throw new Error("Unconfirmed video range.");
   const binary = atob(result.content);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fileDigest, transferVideo, readVideoRange, type TransferApi } from "./mediaTransfer.ts";
-import type { MediaApi, MediaState } from "./media.ts";
+import { fileDigest, transferVideo, readVideoRange, readAttachment, type TransferApi } from "./mediaTransfer.ts";
+import { parseMedia, type MediaApi, type MediaState } from "./media.ts";
 import { bufferedAhead, FullVideoRequiredError, validateStreamingLayout } from "./videoStream.ts";
 import { captionsVtt, decodeCaption } from "./mp4Captions.ts";
 import { MediaContractError, mediaOperation, mediaProvider, rangeCount, type MediaProvider, type VideoFile } from "../../src/lib/mediaContract.ts";
@@ -95,6 +95,35 @@ test("video ranges reject mismatched versions, sizes, offsets and canceled resul
     await assert.rejects(readVideoRange({ ...api, range: async () => wrap({ ...response, ...patch }) }, id, asset, "present", 0, 3, signal(), version));
   const controller = new AbortController();
   await assert.rejects(readVideoRange({ ...api, range: async () => { controller.abort(); return wrap(response); } }, id, asset, "present", 0, 3, controller.signal), { name: "AbortError" });
+});
+test("Blob-backed attachments assemble bounded ranges pinned to the first version and exact type", async () => {
+  const size = 1024 * 1024 + 5;
+  const bytes = Uint8Array.from({ length: size }, (_value, index) => index % 251);
+  const version = "123:456:" + "b".repeat(32);
+  const calls: { offset: number; count: number; version?: string }[] = [];
+  const forbidden = async () => { throw new Error("Unexpected operation"); };
+  let served = version;
+  const range = async (_id: string, _asset: string, mode: string, offset: number, count: number, expected?: string) => {
+    assert.equal(mode, "published"); calls.push({ offset, count, version: expected });
+    const chunk = bytes.subarray(offset, offset + count);
+    return wrap({ id, assetId: asset, version: served, offset, size, mime: "application/pdf", content: Buffer.from(chunk).toString("base64") });
+  };
+  const api: TransferApi = { begin: forbidden, checkpoint: forbidden, range };
+  const blob = await readAttachment(api, id, { id: asset, size, mime: "application/pdf" }, "published", signal());
+  assert.equal(blob.type, "application/pdf");
+  assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+  assert.deepEqual(calls, [{ offset: 0, count: 1024 * 1024, version: undefined }, { offset: 1024 * 1024, count: 5, version }]);
+  await assert.rejects(readAttachment(api, id, { id: asset, size, mime: "text/html" }, "published", signal()), /Unconfirmed/);
+  let first = true;
+  const changing: TransferApi = { ...api, range: async (...args) => { served = first ? version : "123:457:" + "b".repeat(32); first = false; return range(...args); } };
+  await assert.rejects(readAttachment(changing, id, { id: asset, size, mime: "application/pdf" }, "published", signal()), /Unconfirmed/);
+});
+test("storage marker is accepted only for uploaded attachments", () => {
+  const item = { id: asset, sessionId: asset, kind: "attachment", name: "deck.pdf", mime: "application/pdf", size: 3, received: 3, nextBlock: 1, complete: true, storage: "blob" };
+  const state = { id, rowVersion: "10", sessionId: null, blockSize: 524288, media: [item] };
+  assert.equal(parseMedia(wrap(state)).media[0].storage, "blob");
+  for (const patch of [{ storage: "dataverse" }, { kind: "image", mime: "image/png" }, { storage: "https://account.blob.core.windows.net/media" }])
+    assert.throws(() => parseMedia(wrap({ ...state, media: [{ ...item, ...patch }] })), /storage/);
 });
 
 function adapterFixture(provider: MediaProvider) {

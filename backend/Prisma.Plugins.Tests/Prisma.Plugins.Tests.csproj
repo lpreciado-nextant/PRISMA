@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="System.Net.Http" />
     <ProjectReference Include="../Prisma.Plugins/Prisma.Plugins.csproj" />
     <PackageReference Include="Microsoft.CrmSdk.CoreAssemblies" Version="9.0.2.*" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />

@@ -19,7 +19,7 @@ export function PublishedView({ solution, present, assetId, favorite }: { soluti
   const [detail, setDetail] = useState<PublishedDetail | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const mediaAction = useMediaAction(item => navigate(`/s/${solution.id}/demo/${item.id}`));
+  const mediaAction = useMediaAction(item => navigate(`/s/${solution.id}/demo/${item.id}`), { solutionId: solution.id, mode: present ? "present" : "published" });
   useEffect(() => {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => { controller.abort(); setError(true); }, 20_000);

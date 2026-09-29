@@ -205,7 +205,8 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
     if (item.linkedAsset || (solutionId && item.mime === "video/mp4")) return;
     let active = true;
     let url: string | undefined;
-    void downloadMedia(item).then(async blob => {
+    const controller = new AbortController();
+    void downloadMedia(item, solutionId ? { solutionId, mode, signal: controller.signal } : undefined).then(async blob => {
       const html = item.mime === "text/html" ? await blob.text() : undefined;
       const image = item.kind !== "attachment" ? await imageDataUrl(blob) : undefined;
       if (!active) return;
@@ -219,8 +220,8 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
         setContent({ url, html: `<!doctype html>${document.documentElement.outerHTML}` });
       } else setContent({ url });
     }).catch(() => { if (active) setError(true); });
-    return () => { active = false; if (url?.startsWith("blob:")) URL.revokeObjectURL(url); };
-  }, [item, solutionId]);
+    return () => { active = false; controller.abort(); if (url?.startsWith("blob:")) URL.revokeObjectURL(url); };
+  }, [item, solutionId, mode]);
   if (solutionId && item.mime === "video/mp4") {
     const player = <StreamingVideo key={`${item.id}:${mode}`} item={item} solutionId={solutionId} mode={mode} />;
     return viewerTitle ? <ViewerFrame name={viewerTitle} kind="Video walkthrough" onClose={onClose}>{player}</ViewerFrame>

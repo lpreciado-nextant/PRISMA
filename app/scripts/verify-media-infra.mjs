@@ -131,6 +131,39 @@ try {
   assert.equal(lab.variables.blobContributor, template.variables.blobContributor);
   assert.doesNotMatch(JSON.stringify(lab.outputs), /listKeys|listAccountSas|listServiceSas/i);
   console.log("PASS dev lab: Entra-only, IP allow-listed, container-scoped developer roles (not the production foundation)");
+
+  const pilot = compile("build", "pilot.bicep", "pilot.json");
+  const pilotParameters = compile("build-params", "pilot.bicepparam", "pilot.parameters.json", { PRISMA_PILOT_OWNER: "check" });
+  assert.deepEqual(Object.keys(pilotParameters.parameters).sort(), ["budgetContactEmails", "budgetStartDate", "monthlyBudget", "owner", "pluginFederatedSubject"]);
+  const pilotType = type => pilot.resources.filter(resource => resource.type === type);
+  assert.deepEqual(pilot.resources.map(resource => resource.type), ["Microsoft.Storage/storageAccounts", "Microsoft.Storage/storageAccounts/blobServices",
+    "Microsoft.Storage/storageAccounts/blobServices/containers", "Microsoft.ManagedIdentity/userAssignedIdentities", "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials",
+    "Microsoft.Authorization/roleAssignments", "Microsoft.OperationalInsights/workspaces", "Microsoft.Insights/diagnosticSettings", "Microsoft.Authorization/locks", "Microsoft.Consumption/budgets"], "Review additions to the pilot.");
+  const pilotStorage = pilot.resources[0].properties;
+  for (const name of ["allowBlobPublicAccess", "allowSharedKeyAccess", "allowCrossTenantReplication", "isHnsEnabled", "isLocalUserEnabled", "isSftpEnabled", "isNfsV3Enabled"]) assert.equal(pilotStorage[name], false, name);
+  assert.equal(pilotStorage.minimumTlsVersion, "TLS1_2");
+  assert.equal(pilotStorage.defaultToOAuthAuthentication, true);
+  assert.equal(pilotStorage.encryption.requireInfrastructureEncryption, true);
+  assert.deepEqual(pilot.resources[2].properties, { publicAccess: "None" });
+  assert.deepEqual(pilot.resources[1].properties.cors, { corsRules: [] });
+  assert.equal(pilot.resources[1].properties.deleteRetentionPolicy.allowPermanentDelete, false);
+  const federation = pilot.resources[4];
+  assert.equal(federation.condition, "[not(empty(parameters('pluginFederatedSubject')))]");
+  assert.deepEqual(federation.properties.audiences, ["api://AzureADTokenExchange"]);
+  const pilotRoles = pilotType("Microsoft.Authorization/roleAssignments");
+  assert.equal(pilotRoles.length, 1);
+  assert.equal(pilotRoles[0].scope, "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default', 'media')]");
+  assert.equal(pilotRoles[0].properties.principalType, "ServicePrincipal");
+  assert.equal(pilotRoles[0].properties.roleDefinitionId, "[variables('blobContributor')]");
+  assert.equal(pilot.variables.blobContributor, template.variables.blobContributor);
+  const pilotDiagnostics = pilotType("Microsoft.Insights/diagnosticSettings")[0].properties;
+  assert.equal(pilotDiagnostics.copy[0].count, "[length(createArray('StorageRead', 'StorageWrite', 'StorageDelete'))]");
+  assert.deepEqual(pilotDiagnostics.metrics, [{ category: "Transaction", enabled: true }]);
+  assert.equal(pilotType("Microsoft.Authorization/locks")[0].properties.level, "CanNotDelete");
+  assert.equal(pilotType("Microsoft.OperationalInsights/workspaces")[0].properties.features.disableLocalAuth, true);
+  assert.equal(pilotType("Microsoft.Consumption/budgets")[0].condition, "[greater(parameters('monthlyBudget'), 0)]");
+  assert.doesNotMatch(JSON.stringify(pilot.outputs), /listKeys|listAccountSas|listServiceSas/i);
+  console.log("PASS pilot: Entra-only storage, one container-scoped plug-in identity, audit logs, lock and optional budget");
 } finally {
   rmSync(directory, { recursive: true, force: true });
 }

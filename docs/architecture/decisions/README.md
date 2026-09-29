@@ -11,12 +11,13 @@ Decisions with lasting consequences are recorded here as short ADRs. Open questi
 | [0001](adr-0001-dataverse-single-source-of-truth.md) | Dataverse as the single source of truth | Accepted |
 | [0002](adr-0002-client-side-search.md) | Client-side search over an in-memory catalogue | Accepted |
 | [0003](adr-0003-hash-routing.md) | Hash routing | Accepted |
-| [0004](adr-0004-assets-in-dataverse.md) | Assets in Dataverse File/Image columns | Accepted |
+| [0004](adr-0004-assets-in-dataverse.md) | Assets in Dataverse File/Image columns | Accepted; superseded for new uploaded attachments by 0010 |
 | [0005](adr-0005-present-mode-server-side-enforcement.md) | Present mode enforced server-side | Accepted |
 | [0006](adr-0006-power-automate-notifications-only.md) | Power Automate for notifications only | Accepted |
 | [0007](adr-0007-contributor-effort.md) | Contributor-level maturity-based effort | Accepted; holiday policy in code, no calendar tables |
 | [0008](adr-0008-controlled-submission-transitions.md) | Controlled submission transitions | Accepted; deployed, acceptance pending |
 | [0009](adr-0009-mediated-media-and-publication-access.md) | Mediated media and publication access | Accepted; deployed, least-privilege verification pending |
+| [0010](adr-0010-attachments-in-blob-through-plugins.md) | Uploaded attachments in Azure Blob through Dataverse plug-ins | Accepted for pilot; implemented locally, not deployed |
 
 ## Template
 

@@ -12,7 +12,8 @@ const string organizationUrl = "https://nextantpulse.crm.dynamics.com";
 const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
-if (!new[] { "inspect", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+if (!new[] { "inspect", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
+    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
@@ -282,6 +283,12 @@ if (command == "smoke-graph") { SmokeGraph(client); return; }
 if (command == "smoke-media") { SmokeMedia(client); return; }
 if (command == "smoke-review") { SmokeReview(client); return; }
 if (command == "smoke-delete") { SmokeDelete(client); return; }
+if (command == "plugin-subject") { PluginSubject(args.Skip(1).ToArray()); return; }
+if (command == "blob-schema") { BlobSchema(client, args.Skip(1).ToArray()); return; }
+if (command == "blob-plugin") { BlobPlugin(client, args.Skip(1).ToArray()); return; }
+if (command == "bind-managed-identity") { BindManagedIdentity(client, args.Skip(1).ToArray()); return; }
+if (command == "set-blob-config") { SetBlobConfig(client, args.Skip(1).ToArray()); return; }
+if (command == "smoke-blob") { SmokeBlob(client, args.Skip(1).ToArray()); return; }
 
 static void SeedReferenceData(IOrganizationService service, string[] options)
 {
@@ -955,4 +962,212 @@ static void SmokeGraph(IOrganizationService service)
     var reopened = JsonDocument.Parse((string)service.Execute(read)["ResultJson"]).RootElement;
     if (reopened.GetProperty("rowVersion").GetString() != after.GetProperty("rowVersion").GetString()) throw new InvalidOperationException("Rejected write changed the draft.");
     Console.WriteLine($"PASS: graph save/reopen, computed effort, tag links and direct-write/concurrency guards. Test draft {identifier} retained.");
+}
+
+static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+
+static System.Security.Cryptography.X509Certificates.X509Certificate2 SigningCertificate(string path)
+{
+    if (AssemblyName.GetAssemblyName(path).Name != "Prisma.Plugins") throw new InvalidOperationException("Unexpected assembly file.");
+    try
+    {
+#pragma warning disable SYSLIB0057
+        return new System.Security.Cryptography.X509Certificates.X509Certificate2(System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(path));
+#pragma warning restore SYSLIB0057
+    }
+    catch (System.Security.Cryptography.CryptographicException) { throw new InvalidOperationException("The plug-in assembly has no Authenticode signature; managed identity requires signtool signing."); }
+}
+
+// Read-only: prints the federated credential subject for the pilot template (Power Platform managed identity version 2).
+static void PluginSubject(string[] options)
+{
+    if (options.Length < 1 || options.Length > 2 || (options.Length == 2 && options[1] != "--self-signed")) throw new ArgumentException("Use plugin-subject <signed-plugin.dll> [--self-signed]. Read-only.");
+    var certificate = SigningCertificate(Path.GetFullPath(options[0]));
+    var tenant = Base64Url(Guid.Parse("d232b207-f86f-4fba-8891-ccbf30b12898").ToByteArray());
+    var prefix = $"/eid1/c/pub/t/{tenant}/a/qzXoWDkuqUa3l6zM5mM0Rw/n/plugin/e/ce09ad9b-57d1-e5df-9400-8ce973c86213";
+    var sha = (string value) => Base64Url(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value)));
+    Console.WriteLine($"Signer subject: {certificate.Subject}; issuer: {certificate.Issuer}; expires {certificate.NotAfter:u}.");
+    Console.WriteLine(options.Length == 2
+        ? $"{prefix}/h/{Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(certificate.RawData)).ToLowerInvariant()}"
+        : $"{prefix}/i/{sha(certificate.Issuer)}/s/{sha(certificate.Subject)}");
+    Console.WriteLine("Set PRISMA_PILOT_PLUGIN_SUBJECT to this value. Self-signed certificates are for development/test only.");
+}
+
+static void BlobSchema(IOrganizationService service, string[] options)
+{
+    if (options.Length > 1 || (options.Length == 1 && options[0] != "--execute")) throw new ArgumentException("Use blob-schema [--execute]; preview is read-only.");
+    var attributes = ((RetrieveEntityResponse)service.Execute(new RetrieveEntityRequest { LogicalName = "nx_uploadsession", EntityFilters = EntityFilters.Attributes, RetrieveAsIfPublished = true })).EntityMetadata.Attributes;
+    var fields = new[] { ("nx_Storage", "Storage provider", 20), ("nx_BlobName", "Blob name", 100), ("nx_BlobETag", "Blob version", 100), ("nx_HashState", "Upload hash state", 100) };
+    var missing = new List<(string Schema, string Label, int Length)>();
+    foreach (var field in fields)
+    {
+        var existing = attributes.SingleOrDefault(attribute => attribute.LogicalName == field.Item1.ToLowerInvariant());
+        if (existing == null) missing.Add(field);
+        else if (existing is not StringAttributeMetadata text || text.MaxLength != field.Item3) throw new InvalidOperationException($"Unexpected metadata for {field.Item1}.");
+    }
+    var variables = new[] { ("nx_MediaBlobContainerUrl", "PRISMA media Blob container URL", 100000000, (string?)null), ("nx_MediaBlobUploads", "PRISMA media Blob uploads", 100000002, (string?)"no") };
+    var absent = new List<(string Schema, string Label, int Type, string? Default)>();
+    foreach (var variable in variables)
+    {
+        var existing = Find(service, "environmentvariabledefinition", "schemaname", variable.Item1);
+        if (existing == null) { absent.Add(variable); continue; }
+        if (service.Retrieve("environmentvariabledefinition", existing.Id, new ColumnSet("type")).GetAttributeValue<OptionSetValue>("type")?.Value != variable.Item3) throw new InvalidOperationException($"Unexpected type for {variable.Item1}.");
+    }
+    Console.WriteLine($"Plan: add private nx_uploadsession columns [{string.Join(", ", missing.Select(field => field.Schema))}] and publish only nx_uploadsession; " +
+        $"create PRISMA_Dev environment variables [{string.Join(", ", absent.Select(variable => variable.Schema))}] with uploads defaulting to no. No rows, roles, plug-ins or apps change.");
+    if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
+    foreach (var field in missing)
+        service.Execute(new CreateAttributeRequest { EntityName = "nx_uploadsession", SolutionUniqueName = "PRISMA_Dev",
+            Attribute = new StringAttributeMetadata { SchemaName = field.Schema, DisplayName = new Label(field.Label, 1033), MaxLength = field.Length } });
+    if (missing.Count != 0) service.Execute(new PublishXmlRequest { ParameterXml = "<importexportxml><entities><entity>nx_uploadsession</entity></entities></importexportxml>" });
+    foreach (var variable in absent)
+        Create(service, new Entity("environmentvariabledefinition") { ["schemaname"] = variable.Schema, ["displayname"] = variable.Label, ["type"] = new OptionSetValue(variable.Type),
+            ["defaultvalue"] = variable.Default, ["description"] = "Read by the PRISMA media plug-ins. Uploads stay in Dataverse unless explicitly enabled." });
+    Console.WriteLine("Blob media schema and configuration definitions are in place; uploads remain disabled.");
+}
+
+static void BlobPlugin(IOrganizationService service, string[] options)
+{
+    if (options.Length != 0 && (options.Length != 2 || options[0] != "--execute")) throw new ArgumentException("Use blob-plugin [--execute <signed-plugin.dll>]. Execution requires explicit approval.");
+    var assembly = Find(service, "pluginassembly", "name", "Prisma.Plugins") ?? throw new InvalidOperationException("Existing assembly missing.");
+    if (assembly.Id != Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba")) throw new InvalidOperationException("Unexpected assembly target.");
+    if (!((RetrieveEntityResponse)service.Execute(new RetrieveEntityRequest { LogicalName = "nx_uploadsession", EntityFilters = EntityFilters.Attributes })).EntityMetadata.Attributes.Any(attribute => attribute.LogicalName == "nx_hashstate"))
+        throw new InvalidOperationException("Run blob-schema first; the updated plug-in reads the new session columns.");
+    Console.WriteLine("Plan: update the existing assembly; register asynchronous post-delete nx_uploadsession step PRISMA.Media.BlobDeletion with a 'session' pre-image. No roles, APIs or apps change.");
+    if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
+    var path = Path.GetFullPath(options[1]);
+    var signer = SigningCertificate(path);
+    Console.WriteLine($"Signed by {signer.Subject}.");
+    service.Update(new Entity("pluginassembly", assembly.Id) { ["content"] = Convert.ToBase64String(File.ReadAllBytes(path)) });
+    var deletionType = PluginType(service, assembly.Id, "Prisma.Plugins.BlobDeletion");
+    var message = Find(service, "sdkmessage", "name", "Delete") ?? throw new InvalidOperationException("Missing Delete message.");
+    var filter = new QueryExpression("sdkmessagefilter") { ColumnSet = new ColumnSet(false) };
+    filter.Criteria.AddCondition("sdkmessageid", ConditionOperator.Equal, message.Id);
+    filter.Criteria.AddCondition("primaryobjecttypecode", ConditionOperator.Equal, "nx_uploadsession");
+    const string stepName = "PRISMA.Media.BlobDeletion";
+    var step = Save(service, new Entity("sdkmessageprocessingstep") {
+        ["name"] = stepName, ["eventhandler"] = new EntityReference("plugintype", deletionType), ["sdkmessageid"] = new EntityReference("sdkmessage", message.Id),
+        ["sdkmessagefilterid"] = new EntityReference("sdkmessagefilter", service.RetrieveMultiple(filter).Entities.Single().Id),
+        ["stage"] = new OptionSetValue(40), ["mode"] = new OptionSetValue(1), ["rank"] = 1, ["supporteddeployment"] = new OptionSetValue(0), ["asyncautodelete"] = true
+    }, Find(service, "sdkmessageprocessingstep", "name", stepName));
+    AddComponent(service, step, 92);
+    var images = new QueryExpression("sdkmessageprocessingstepimage") { ColumnSet = new ColumnSet(false) };
+    images.Criteria.AddCondition("sdkmessageprocessingstepid", ConditionOperator.Equal, step);
+    images.Criteria.AddCondition("entityalias", ConditionOperator.Equal, "session");
+    Save(service, new Entity("sdkmessageprocessingstepimage") {
+        ["sdkmessageprocessingstepid"] = new EntityReference("sdkmessageprocessingstep", step), ["imagetype"] = new OptionSetValue(0), ["entityalias"] = "session", ["name"] = "session",
+        ["messagepropertyname"] = "Target", ["attributes"] = "nx_storage,nx_blobname,nx_blobetag,nx_complete,nx_parentid,nx_targetid"
+    }, service.RetrieveMultiple(images).Entities.SingleOrDefault());
+    Console.WriteLine("Blob-capable assembly and post-commit deletion step registered. Uploads remain governed by nx_MediaBlobUploads.");
+}
+
+static void BindManagedIdentity(IOrganizationService service, string[] options)
+{
+    var execute = options.Length == 2 && options[0] == "--execute";
+    if ((options.Length != 1 && !execute) || !Guid.TryParse(options[^1], out var clientId)) throw new ArgumentException("Use bind-managed-identity [--execute] <plugin-identity-client-id>. Preview is read-only.");
+    var tenant = Guid.Parse("d232b207-f86f-4fba-8891-ccbf30b12898");
+    var assembly = service.Retrieve("pluginassembly", Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba"), new ColumnSet("name", "managedidentityid"));
+    if (assembly.GetAttributeValue<string>("name") != "Prisma.Plugins") throw new InvalidOperationException("Unexpected assembly target.");
+    var bound = assembly.GetAttributeValue<EntityReference>("managedidentityid");
+    if (bound != null)
+    {
+        var record = service.Retrieve("managedidentity", bound.Id, new ColumnSet("applicationid", "tenantid", "version"));
+        Console.WriteLine($"Assembly already bound to managed identity {bound.Id}: application {record.GetAttributeValue<Guid>("applicationid")}, tenant {record.GetAttributeValue<Guid>("tenantid")}, version {record.GetAttributeValue<object>("version")}.");
+        if (record.GetAttributeValue<Guid>("applicationid") != clientId || record.GetAttributeValue<Guid>("tenantid") != tenant) throw new InvalidOperationException("The existing binding differs; resolve it explicitly instead of rebinding.");
+        return;
+    }
+    var columns = ((RetrieveEntityResponse)service.Execute(new RetrieveEntityRequest { LogicalName = "managedidentity", EntityFilters = EntityFilters.Attributes })).EntityMetadata.Attributes;
+    foreach (var (name, type) in new[] { ("applicationid", AttributeTypeCode.Uniqueidentifier), ("tenantid", AttributeTypeCode.Uniqueidentifier), ("credentialsource", AttributeTypeCode.Picklist), ("subjectscope", AttributeTypeCode.Picklist), ("version", AttributeTypeCode.Integer) })
+        if (columns.SingleOrDefault(column => column.LogicalName == name)?.AttributeType != type) throw new InvalidOperationException($"Unexpected managedidentity.{name} metadata; reassess before binding.");
+    Console.WriteLine($"Plan: create a version 2 managed identity record for application {clientId} in tenant {tenant} and bind assembly Prisma.Plugins. The federated credential must already exist on that identity.");
+    if (!execute) { Console.WriteLine("Read-only preview. No changes made."); return; }
+    var identity = Create(service, new Entity("managedidentity") {
+        ["name"] = "PRISMA media plug-in", ["applicationid"] = clientId, ["tenantid"] = tenant,
+        ["credentialsource"] = new OptionSetValue(2), ["subjectscope"] = new OptionSetValue(1), ["version"] = 2
+    });
+    service.Update(new Entity("pluginassembly", assembly.Id) { ["managedidentityid"] = new EntityReference("managedidentity", identity) });
+    Console.WriteLine($"Bound Prisma.Plugins to managed identity record {identity}.");
+}
+
+static void SetBlobConfig(IOrganizationService service, string[] options)
+{
+    var execute = options.FirstOrDefault() == "--execute";
+    var values = options.Skip(execute ? 1 : 0).ToArray();
+    if (values.Length != 2 || (values[1] != "yes" && values[1] != "no")
+        || !System.Text.RegularExpressions.Regex.IsMatch(values[0], "\\Ahttps://[a-z0-9]{3,24}\\.blob\\.core\\.windows\\.net/[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){2,62}\\z"))
+        throw new ArgumentException("Use set-blob-config [--execute] <https://account.blob.core.windows.net/container> <yes|no>. Preview is read-only.");
+    var changes = new List<(Guid Definition, Entity? Current, string Value)>();
+    foreach (var (schema, value) in new[] { ("nx_MediaBlobContainerUrl", values[0]), ("nx_MediaBlobUploads", values[1]) })
+    {
+        var definition = Find(service, "environmentvariabledefinition", "schemaname", schema) ?? throw new InvalidOperationException($"Run blob-schema first; {schema} is missing.");
+        var current = Find(service, "environmentvariablevalue", "environmentvariabledefinitionid", definition.Id);
+        var existing = current == null ? null : service.Retrieve("environmentvariablevalue", current.Id, new ColumnSet("value")).GetAttributeValue<string>("value");
+        Console.WriteLine($"{schema}: {existing ?? "(default)"} -> {value}");
+        changes.Add((definition.Id, current, value));
+    }
+    if (!execute) { Console.WriteLine("Read-only preview. No changes made."); return; }
+    foreach (var change in changes)
+    {
+        if (change.Current == null) service.Create(new Entity("environmentvariablevalue") { ["environmentvariabledefinitionid"] = new EntityReference("environmentvariabledefinition", change.Definition), ["value"] = change.Value });
+        else service.Update(new Entity("environmentvariablevalue", change.Current.Id) { ["value"] = change.Value });
+    }
+    Console.WriteLine("Blob media configuration updated. Existing files keep their original storage; setting uploads to no is the rollback for new uploads.");
+}
+
+static void SmokeBlob(IOrganizationService service, string[] options)
+{
+    if (options.Length != 1) throw new ArgumentException("Use smoke-blob <non-sensitive .pdf|.html|.mp4 up to 60 MiB>. Creates and deletes one labelled test draft.");
+    var file = new FileInfo(options[0]);
+    if (!new[] { ".pdf", ".html", ".mp4" }.Contains(file.Extension.ToLowerInvariant()) || file.Length == 0 || file.Length > 60 * 1024 * 1024) throw new ArgumentException("Use a non-empty PDF, HTML or MP4 fixture up to 60 MiB.");
+    var bytes = File.ReadAllBytes(file.FullName);
+    var digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
+    var draft = JsonDocument.Parse((string)service.Execute(new OrganizationRequest("nx_SaveCoreDraft") {
+        ["DraftJson"] = JsonSerializer.Serialize(new { name = "[PRISMA TEST] Blob media acceptance", summary = "Disposable Blob storage verification." })
+    })["ResultJson"]).RootElement;
+    var id = Guid.Parse(draft.GetProperty("id").GetString()!);
+    Console.WriteLine($"Created disposable Blob draft {id}.");
+    var version = draft.GetProperty("rowVersion").GetString()!;
+    JsonElement Call(string name, params (string Name, object Value)[] values)
+    {
+        var request = new OrganizationRequest(name) { ["SolutionId"] = id };
+        if (name != "nx_ReadVideoRange") request["ExpectedRowVersion"] = version;
+        foreach (var value in values) request[value.Name] = value.Value;
+        var result = JsonDocument.Parse((string)service.Execute(request)["ResultJson"]).RootElement;
+        if (result.TryGetProperty("rowVersion", out var next)) version = next.GetString()!;
+        if (result.ToString().Contains("blob.core.windows.net", StringComparison.OrdinalIgnoreCase) || result.ToString().Contains("nx_blob", StringComparison.Ordinal)) throw new InvalidOperationException("Storage reference escaped.");
+        return result;
+    }
+    try
+    {
+        var started = Call("nx_BeginMediaUpload", ("Kind", "attachment:v3"), ("FileName", file.Name), ("Size", bytes.Length));
+        var session = Guid.Parse(started.GetProperty("sessionId").GetString()!);
+        var record = started.GetProperty("media").EnumerateArray().Single(item => item.GetProperty("sessionId").GetString() == session.ToString());
+        if (!record.TryGetProperty("storage", out var storage) || storage.GetString() != "blob") throw new InvalidOperationException("Upload did not select Blob storage; check nx_MediaBlobUploads.");
+        var asset = Guid.Parse(record.GetProperty("id").GetString()!);
+        for (var index = 0; index * 4194304 < bytes.Length; index++)
+        {
+            var block = bytes.AsSpan(index * 4194304, Math.Min(4194304, bytes.Length - index * 4194304)).ToArray();
+            Call("nx_UploadMediaBlock", ("SessionId", session), ("BlockIndex", index), ("Content", Convert.ToBase64String(block)));
+        }
+        Call("nx_FinishMediaUpload", ("SessionId", session));
+        AssertRejected(() => service.Update(new Entity("nx_uploadsession", session) { ["nx_blobname"] = "forged" }), "direct Blob reference change");
+        string? rangeVersion = null;
+        using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        for (var offset = 0; offset < bytes.Length; offset += 1048576)
+        {
+            var range = Call("nx_ReadVideoRange", ("AssetId", asset), ("Mode", "submission"), ("Offset", offset), ("Count", 1048576), ("Version", rangeVersion ?? ""));
+            rangeVersion ??= range.GetProperty("version").GetString();
+            hash.AppendData(Convert.FromBase64String(range.GetProperty("content").GetString()!));
+        }
+        if (Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant() != digest) throw new InvalidOperationException("Blob range checksum mismatch.");
+        AssertRejected(() => Call("nx_ReadVideoRange", ("AssetId", asset), ("Mode", "present"), ("Offset", 0), ("Count", 1)), "draft present read");
+        AssertRejected(() => Call("nx_ReadVideoRange", ("AssetId", asset), ("Mode", "submission"), ("Offset", 0), ("Count", 1), ("Version", "stale")), "stale range version");
+        Console.WriteLine($"PASS Blob upload, digest-verified finalization and protected ranges: {bytes.Length} bytes in {timer.Elapsed.TotalSeconds:F1}s readback; SHA256 {digest}.");
+    }
+    finally
+    {
+        Call("nx_TransitionSubmission", ("Action", "delete"), ("Comments", ""), ("Cleared", false));
+        Console.WriteLine($"Deleted disposable draft {id}. Blob deletion runs asynchronously; confirm the PRISMA.Media.BlobDeletion system job succeeded.");
+    }
 }

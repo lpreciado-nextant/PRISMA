@@ -78,7 +78,7 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
   const [uncertain, setUncertain] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [preview, setPreview] = useState<MediaItem | null>(null);
-  const mediaAction = useMediaAction(setPreview);
+  const mediaAction = useMediaAction(setPreview, { solutionId: id, mode: "submission" });
   const lifetime = useRef<AbortController | null>(null);
   const running = useRef(false);
   useEffect(() => {
