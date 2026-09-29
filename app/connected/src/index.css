@@ -62,7 +62,7 @@
 	filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--accent-deep) 25%, transparent));
 }
 
-.welcome-copy { max-width: 640px; }
+.welcome-copy { max-width: 760px; }
 .welcome-overline {
 	margin: 0 0 12px;
 	color: var(--ink-2);
@@ -70,56 +70,51 @@
 }
 
 .welcome-copy h1 {
-	font-size: 36px;
-	line-height: 1.25;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	line-height: 1;
 	letter-spacing: 0;
 	overflow-wrap: anywhere;
 }
 
-.welcome-copy .prisma-wordmark { display: inline-block; letter-spacing: 0; }
-.welcome-status {
-	min-height: 28px;
-	margin: 16px 0 28px;
-	font-size: 17px;
+.welcome-hello {
+	font-size: clamp(20px, 2.4vw, 26px);
+	font-weight: 500;
 	color: var(--ink-2);
 }
 
-.welcome-connection {
-	width: min(100%, 380px);
-	border-radius: 16px;
-	overflow: hidden;
+/* The wordmark is the hero of the entry screen. */
+.welcome-copy .welcome-wordmark {
+	display: inline-block;
+	margin-top: 6px;
+	font-size: clamp(3.6rem, 10vw, 6.75rem);
+	letter-spacing: -0.04em;
 }
 
-.welcome-steps {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 12px;
-	margin: 0;
-	padding: 18px 20px;
-	list-style: none;
-}
-
-.welcome-step {
-	display: flex;
-	align-items: center;
+.welcome-acronym {
 	justify-content: center;
-	gap: 10px;
-	font-size: 14px;
+	margin-top: 18px;
+}
+
+/* A single slim rail and one friendly status line, instead of connection steps. */
+.welcome-loading {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 14px;
+	width: min(100%, 260px);
+	margin-top: 40px;
+}
+
+.welcome-status {
+	min-height: 24px;
+	margin: 0;
+	font-size: 15.5px;
 	color: var(--ink-2);
 }
 
-.welcome-step-icon {
-	display: grid;
-	place-items: center;
-	flex: 0 0 32px;
-	height: 32px;
-	border: 1px solid var(--glass-edge);
-	border-radius: 50%;
-}
-
-.welcome-step-icon.is-active { color: var(--accent); border-color: var(--accent); }
-.welcome-step-icon.is-complete { color: var(--live); border-color: var(--live); }
-.welcome-track { height: 2px; background: var(--glass-edge); overflow: hidden; }
+.welcome-track { width: 100%; height: 3px; border-radius: 3px; background: var(--glass-edge); overflow: hidden; }
 .welcome-track span {
 	display: block;
 	width: 40%;
@@ -178,8 +173,6 @@
 	.welcome-screen { padding: 32px 20px; }
 	.welcome-copy h1 { font-size: 28px; }
 	.welcome-emblem { margin-bottom: 24px; }
-	.welcome-steps { gap: 8px; padding: 16px 12px; }
-	.welcome-step { gap: 8px; font-size: 13px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

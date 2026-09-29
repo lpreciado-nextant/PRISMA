@@ -142,21 +142,21 @@ test("welcome reflects actual connection state and withholds Begin until ready",
   assert.match(connecting, /Welcome to/);
   assert.match(connecting, /src="\.\/prisma-mark-v2.svg"/);
   assert.match(connecting, /role="status" aria-live="polite" aria-atomic="true"/);
-  assert.match(connecting, /Connecting your workspace/);
-  assert.match(connecting, /Workspace<span class="sr-only"> connecting/);
-  assert.match(connecting, /Catalogue<span class="sr-only"> waiting/);
-  assert.doesNotMatch(connecting, /<button|type="checkbox"|aria-valuenow|Dataverse|Loading catalogue/);
+  // One friendly status line and a slim rail; the old Workspace/Catalogue steps were a debugging aid.
+  assert.match(connecting, /Signing you in/);
+  assert.match(connecting, /class="welcome-track"/);
+  assert.match(connecting, /Prototypes, References, Interactive Solutions, Models, Automations/);
+  assert.doesNotMatch(connecting, /<button|type="checkbox"|aria-valuenow|Dataverse|Loading catalogue|welcome-step/);
   const connected = render(welcome.WelcomeScreen, { authenticated: true, present: false });
   assert.match(connected, /Preparing your catalogue/);
-  assert.match(connected, /Workspace<span class="sr-only"> connected/);
-  assert.match(connected, /Catalogue<span class="sr-only"> preparing/);
+  assert.doesNotMatch(connected, /Signing you in|welcome-step/);
 });
 
 test("welcome exposes Begin on completion and prevents repeated entry during the flash", () => {
   const props = { authenticated: true, present: false, ready: true, onBegin: noop };
   const html = render(welcome.WelcomeScreen, props);
   assert.match(html, /Your catalogue is ready/);
-  assert.match(html, /Catalogue<span class="sr-only"> ready/);
+  assert.match(html, /data-ready="true"/);
   assert.match(html, /<button[^>]*>Begin /);
   assert.doesNotMatch(html, /disabled=""|type="checkbox"|aria-current="step"/);
   assert.match(render(welcome.WelcomeScreen, { ...props, entering: true }), /disabled=""/);
@@ -166,7 +166,6 @@ test("welcome exposes Begin on completion and prevents repeated entry during the
 test("welcome presentation state stays generic and uses presentation status", () => {
   const html = render(welcome.WelcomeScreen, { authenticated: true, present: true });
   assert.match(html, /Preparing your presentation/);
-  assert.match(html, /Presentation<span class="sr-only"> preparing/);
   assert.doesNotMatch(html, /Catalogue|Not signed in|userPrincipalName/);
 });
 
