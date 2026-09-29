@@ -1,6 +1,6 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-09-28
+**Status:** Living · **Last updated:** 2026-09-29
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
@@ -34,6 +34,31 @@ One entry per meeting or working session, newest first. Each entry lists the fee
 ```
 
 ---
+
+## 2026-09-28 / 29 — Working sessions: integration, favorites ranking and library UX
+
+### Feedback
+
+- Bring the `juli` branch into `main` step by step, fixing each step so it builds.
+- Show which solutions the team saves most, Netflix Top 10 style.
+- White screenshots get lost in the light theme; card images should be larger; thumbnails should be framed by the contributor; screenshots should open large with arrows.
+- The library hero should say more; the entry screen should not show technical connection steps.
+- Add sorting and a list view to All solutions.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| `juli` integrated into `main` (roles, favorites, present mode, main demo) | Live | PR #1; two favorites fixes (server-side writes; card heart hidden when favorites don't load) |
+| Favorites ranking API `nx_GetTopFavorites` | Live | See [SchemaV2](../data_model/SchemaV2.md#nx_solutionfavorite--per-person-favorites). A later plug-in upload replaced it once; see the [deployment collision note](../architecture/technical-architecture.md) |
+| Top 3 shelf, hero copy with live counts, welcome screen | Live | [Design system](../design/design-system.md#library-page) |
+| Sort by creation date and grid/list view | Live | Catalogue reads `createdon` |
+| Thumbnail framing, detail hero beside the image, screenshot lightbox | Live | No schema change: the framed crop is what gets uploaded |
+| Light-theme contrast for white thumbnails | Live | Pale steel-blue cards and image edges |
+
+### Open decisions
+
+- Whether the ranking should also count views or demo requests, and whether it should ever show in present mode.
 
 ## 2026-09-23 — Data model update: Specialization Area, roles, client role, favorites
 

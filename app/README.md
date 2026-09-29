@@ -463,6 +463,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### Library and imagery updates (2026-09-29)
+
+Published to the same PRISMA app with `--solution-id` after each change was checked in Local Play: the favorites ranking (`nx_GetTopFavorites`) and Top 10 shelf, catalogue cards with 16:9 images, thumbnail framing, the screenshot lightbox, the detail hero beside the image, light-theme contrast for white thumbnails, and finally the Top 3 carousel, hero copy, welcome screen, sort and list view (bundle `index-BQ9OwXJ-.js`, from `main` `8fa73e9`). Every push was built from `main` after a fast-forward to `origin/main`, so each one also carried the media work already there. One early push, built before Luis's Blob client reached `main`, replaced his hosted bundle; see the [deployment collision note](../docs/architecture/technical-architecture.md). **Before publishing the app or deploying the backend, fast-forward to `origin/main`.** Backend uploads use Luis's signed `blob-plugin` path, not unsigned `apply`.
+
 ### Roles and favorites deployment (2026-09-28)
 
 With explicit approval, `Prisma.Deploy apply` (built from `main` `86cc461`, 49 backend tests passing) deployed the updated plug-in assembly to **Nextant Pulse**: N:N Specialization Area drafts, `nx_clientrole` and contributor `nx_role`, and the new `nx_SetFavorite` / `nx_GetMyFavorites` Custom APIs with User-depth Read on `nx_solutionfavorite` for the three PRISMA roles. No users or teams were assigned.

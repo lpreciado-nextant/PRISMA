@@ -1,13 +1,14 @@
 # Design system
 
-**Status:** Living, shared loading states aligned across connected and PoC apps · **Last updated:** 2026-09-22
+**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 3 shelf and imagery patterns added · **Last updated:** 2026-09-29
 **Reference implementation:** [`app/src/index.css`](../../app/src/index.css) and the component set in [`app/src/components/`](../../app/src/components/)
 
 The HTML prototype established the visual language; the code app PoC evolved it into the **liquid-glass system** and is the current reference. The production app matches the PoC.
 
 ## Identity
 
-- **Wordmark:** PRISMA, central to the identity.
+- **Wordmark:** PRISMA, central to the identity. The name stands for **P**rototypes, **R**eferences, **I**nteractive **S**olutions, **M**odels, **A**utomations; the welcome screen spells it out under the wordmark (`PrismaAcronym`), with each initial in the brand lavender.
+- **Mark gradient:** `--prism-1` to `--prism-5` (gold, mauve, lavender, blue, teal) are the colours of the PRISMA mark, with deeper stops in the light theme. The Top 3 numerals use their own pastel pair, `--rank-from` (purple) and `--rank-to` (blue).
 - **Brand base:** steel blue `#1C567C` (from the Nextant wordmark).
 - **Per-specialization accents** — each Specialization Area carries its own accent colour, applied to cards, tabs, chips, and generated poster placeholders:
   - AI & Automation
@@ -22,7 +23,7 @@ The HTML prototype established the visual language; the code app PoC evolved it 
 | Body | Source Sans 3 |
 | Mono (metadata, keys) | IBM Plex Mono |
 
-> Fonts currently load from Google Fonts. If the tenant enforces a strict CSP, self-host all three families (noted as a soft dependency in the [app README](../../app/README.md)).
+Schibsted Grotesk ships weights 400 to 900; the heavy weights carry the wordmark, rank numerals and generated posters, so they are never synthesized. The connected app bundles every family and weight through Fontsource (the host CSP allows same-origin fonts only); the PoC requests the same weights from Google Fonts. See the CSP note in the [app README](../../app/README.md) before adding a family or weight.
 
 ## Surface language — liquid glass
 
@@ -36,6 +37,8 @@ Translucent refractive surfaces over an aurora ground:
 
 Light and dark themes are both first-class. Theme logic lives in [`app/src/lib/theme.ts`](../../app/src/lib/theme.ts). All colour tokens must pass contrast in both themes.
 
+**White screenshots in the light theme.** A white thumbnail on a white card dissolves, so in the light theme catalogue cards take a pale steel-blue sheet, and every card, list-row and Top 3 image has a hairline edge and a faint inner ring. The dark theme keeps its dark glass.
+
 ## Motion
 
 - Purposeful and short; no decorative animation on the CSM hero path.
@@ -45,11 +48,24 @@ Light and dark themes are both first-class. Theme logic lives in [`app/src/lib/t
 
 Both apps use [`LoadingState`](../../app/src/components/LoadingState.tsx) and the shared tokens in [`index.css`](../../app/src/index.css):
 
-- **Page:** compact prism with glass facets, a display heading and an indeterminate rail when loading replaces the main content. Keep existing back navigation available. The initial welcome screen remains a separate entry experience.
+- **Page:** compact prism with glass facets, a display heading and an indeterminate rail when loading replaces the main content. Keep existing back navigation available. The initial welcome screen remains a separate entry experience: "Welcome to" above a large wordmark and its meaning, then one slim rail and one status line ("Signing you in", "Preparing your catalogue", "Your catalogue is ready"). Begin appears only when the catalogue is ready. Connection steps are not shown to people.
 - **Media:** small prism and status inside the image or preview bounds. Reserve space and retain viewer controls; do not turn a media wait into a full-page blocker.
 - **Inline:** body-sized status with a short rail for saves, reads, buffering and downloads. Known percentages use the shared `ProgressRail`, also used for uploads. Unknown progress never displays a fabricated percentage.
 
 Status text uses a polite live region; page titles retain heading semantics. Progress bars expose measured values and upload finalization/incomplete states. Reduced motion stops decorative movement. Completion and errors replace loading indicators rather than leaving them active. Busy button labels and the draft header's save status stay compact.
+
+## Library page
+
+- **Hero:** eyebrow on its own row, then the wordmark beside "Nextant's solutions across AI, Data and Operations, with demos ready for your next client conversation.", top-aligned with it. Under the line, live counts from the visible catalogue: solutions, specialization areas and technologies.
+- **Top 3 shelf** (`TopTenRow`): "Most saved by the team · Top 3 solutions" in a faintly tinted panel. Identical horizontal cards (a 4:3 crop of the thumbnail, category, title, summary, heart) with a large pastel purple-to-blue rank numeral behind each. "View all" shows the rest of the ranking (up to 10) in the same carousel; Hide/Show folds it to its heading. Arrows sit upper right. It shows only on the unfiltered library, never in present mode, and hides when nobody has saved anything.
+- **All solutions:** heading row with a compact "Sort by: Newest/Oldest" (creation date) and a grid/list icon toggle. Grid keeps the cards; list uses compact `SolutionRow`s. Sort and layout persist for the session and never affect the Top 3. Present mode shows neither.
+- **Cards:** 16:9 image, full area names in the `xs` tag size, name, two-line summary, chips. The Top 3 uses short area names (AI, DS, IBO) where space is tight.
+
+## Imagery
+
+- **Card thumbnails are framed at submission.** `ImageFramer` opens a 16:9 frame (pan by drag or arrows, zoom up to 4x, rule-of-thirds guides) and uploads the framed crop as a JPEG, never upscaled, at most 1920 wide. No framing metadata is stored.
+- **Detail hero:** title, tags, heart and summary beside the whole 16:9 thumbnail; stacked on small screens.
+- **Screenshots** open in a full-screen `Lightbox`: arrows, arrow keys, swipe, counter, caption, filmstrip, Esc or backdrop to close.
 
 ## Present mode treatment
 
@@ -66,3 +82,9 @@ Present mode changes the visual register (see [present mode](../workflows/presen
 | Badges | `app/src/components/Badges.tsx` | Maturity status, specialization and tag chips |
 | Present banner | `app/src/components/PresentBanner.tsx` | Persistent present-mode indicator |
 | Background | `app/src/components/Background.tsx` | Aurora ground |
+| Top 3 shelf | `app/src/components/TopTenRow.tsx` | Most-saved ranking carousel with rank numerals |
+| Solution row | `app/src/components/SolutionRow.tsx` | List-view line for the library |
+| Select picker | `app/src/components/SelectPicker.tsx` | Themed dropdown; `compact` for toolbars |
+| Image framer | `app/src/components/ImageFramer.tsx` | 16:9 thumbnail pan and zoom before upload |
+| Lightbox | `app/src/components/Lightbox.tsx` | Full-screen screenshot viewer |
+| PRISMA acronym | `app/src/components/PrismaAcronym.tsx` | The name spelled out under the wordmark |

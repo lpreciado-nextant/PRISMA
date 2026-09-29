@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; Blob pilot session columns and environment variables specified, not deployed · **Last updated:** 2026-09-29
+**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29; Blob pilot session columns and environment variables specified, not deployed · **Last updated:** 2026-09-29
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `SpecializationArea`, `Industry` and `Technology` are **native N:N**, while `Capability` is a single-valued lookup. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
 
@@ -383,7 +383,7 @@ Alternate key `nx_SolutionUser` (`nx_solutionuser`) = `nx_solution` + `nx_user`,
 - `nx_GetMyFavorites` reads **as the caller**, so User-depth Read keeps the list to the caller's own rows.
 - Saving is not restricted to Published solutions: an owner can read their own drafts. The app hides the heart on the caller's own solutions and in present mode.
 - A solution that is later withdrawn or retired keeps its favorite rows, but the reader no longer has access to it, so "My favorites" hides it.
-- Favorite counts are a candidate signal for a future "top ranking". Because rows are private, counts across people must come from an elevated server-side aggregate, not from client reads.
+- **Ranking (`nx_GetTopFavorites`, deployed 2026-09-29):** the server reads every favorite row, keeps rows with a consultant whose Solution is Published and active, and returns up to 10 Solution ids, most people first (ties go to the most recent save, then the id). It returns only ids, never who saved a Solution or how many times. It requires `prvReadnx_solutionfavorite`. The library shows it as the Top 3 shelf, outside present mode.
 
 ### `nx_demoasset` — the demo
 
@@ -536,7 +536,7 @@ Reviewed and accepted, not defects:
 - Column lengths in Dataverse are largely 850 (text) and 4000 (multiline); the design lengths above were not applied and are not enforced at the column level.
 - Required levels do not match the Required column above — notably `nx_capability` is `ApplicationRequired` in Dataverse while drafts may leave it empty. `ApplicationRequired` is not enforced on SDK writes, so the draft plugin is unaffected; a model-driven form would be.
 - `cr6b0_consultant` and `cr6b0_project` carry many columns of their own beyond the ones documented above, and `cr6b0_consultant.cr6b0_specializationarea` points to a **different** table of that name, outside this solution. Both are treated as independent, pre-existing tables; the sections above list their identifiers, person links and the columns PRISMA reads, not their full column sets.
-- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` and `nx_solutioncontributor.nx_role` are read and written by connected drafts (deployed 2026-09-28).
+- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` and `nx_solutioncontributor.nx_role` are read and written by connected drafts (deployed 2026-09-28). The published catalogue also reads the system `createdon` for "Newest/Oldest first" (2026-09-29).
 
 **Open after the 2026-09-23 changes (these are defects, not accepted divergences):**
 
