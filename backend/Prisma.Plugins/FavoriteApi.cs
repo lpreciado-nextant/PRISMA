@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
 using Microsoft.Xrm.Sdk;
@@ -18,6 +19,20 @@ namespace Prisma.Plugins
         [DataMember(Name = "solutionIds")] public string[] SolutionIds { get; set; }
     }
 
+    /// <summary>Ranks solutions by how many people saved them. Ties go to the most recently saved, then to the id, so the order is stable.</summary>
+    public static class FavoriteRanking
+    {
+        public const int TopCount = 10;
+
+        public static Guid[] Top(IEnumerable<KeyValuePair<Guid, DateTime>> saves, int count = TopCount)
+        {
+            return saves.GroupBy(save => save.Key)
+                .Select(group => new { Id = group.Key, Saves = group.Count(), Latest = group.Max(save => save.Value) })
+                .OrderByDescending(entry => entry.Saves).ThenByDescending(entry => entry.Latest).ThenBy(entry => entry.Id)
+                .Take(count).Select(entry => entry.Id).ToArray();
+        }
+    }
+
     /// <summary>
     /// `nx_solutionfavorite` create/delete and list, scoped to the signed-in caller's own
     /// `cr6b0_consultant` record. The client never writes `nx_user` itself: it is always
@@ -31,6 +46,7 @@ namespace Prisma.Plugins
     {
         public const string SetMessage = "nx_SetFavorite";
         public const string ListMessage = "nx_GetMyFavorites";
+        public const string TopMessage = "nx_GetTopFavorites";
 
         public void Execute(IServiceProvider serviceProvider)
         {
@@ -39,6 +55,7 @@ namespace Prisma.Plugins
             var caller = factory.CreateOrganizationService(context.InitiatingUserId);
             var server = factory.CreateOrganizationService(null);
             if (context.MessageName == ListMessage) { List(context, caller, server); return; }
+            if (context.MessageName == TopMessage) { Top(context, server); return; }
             if (context.MessageName != SetMessage) throw new InvalidPluginExecutionException("Invalid favorite operation.");
             var solutionId = (Guid)context.InputParameters["SolutionId"];
             var saved = (bool)context.InputParameters["Saved"];
@@ -71,6 +88,36 @@ namespace Prisma.Plugins
             var rows = caller.RetrieveMultiple(query).Entities;
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new FavoriteList {
                 SolutionIds = rows.Select(row => row.GetAttributeValue<EntityReference>("nx_solution")?.Id.ToString("D")).Where(id => id != null).ToArray()
+            });
+        }
+
+        /// <summary>
+        /// Counts every person's favorites, so it reads as the server. It returns only the ranked solution ids of
+        /// Published, active solutions: never who saved them or how many times. Rows without a consultant are ignored.
+        /// </summary>
+        private static void Top(IPluginExecutionContext context, IOrganizationService server)
+        {
+            var saves = new List<KeyValuePair<Guid, DateTime>>();
+            var query = new QueryExpression("nx_solutionfavorite") { ColumnSet = new ColumnSet("nx_solution", "createdon") };
+            query.Criteria.AddCondition("nx_user", ConditionOperator.NotNull);
+            var solution = query.AddLink("nx_solution", "nx_solution", "nx_solutionid");
+            solution.LinkCriteria.AddCondition("nx_publicationstatus", ConditionOperator.Equal, ReviewPolicy.Published);
+            solution.LinkCriteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+            query.PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 };
+            while (true)
+            {
+                var page = server.RetrieveMultiple(query);
+                foreach (var row in page.Entities)
+                {
+                    var target = row.GetAttributeValue<EntityReference>("nx_solution");
+                    if (target != null) saves.Add(new KeyValuePair<Guid, DateTime>(target.Id, row.GetAttributeValue<DateTime>("createdon")));
+                }
+                if (!page.MoreRecords || query.PageInfo.PageNumber >= 20) break;
+                query.PageInfo.PageNumber++;
+                query.PageInfo.PagingCookie = page.PagingCookie;
+            }
+            context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new FavoriteList {
+                SolutionIds = FavoriteRanking.Top(saves).Select(id => id.ToString("D")).ToArray()
             });
         }
 

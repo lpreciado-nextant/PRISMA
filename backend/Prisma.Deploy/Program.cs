@@ -603,6 +603,7 @@ RegisterApi(client, publishedType, "nx_GetPublishedDetail", "prvReadnx_Solution"
 var favoriteType = PluginType(client, assemblyId, "Prisma.Plugins.FavoriteApi");
 RegisterApi(client, favoriteType, "nx_SetFavorite", "prvReadnx_solutionfavorite", new[] { ("SolutionId", 12, false), ("Saved", 0, false) });
 RegisterApi(client, favoriteType, "nx_GetMyFavorites", "prvReadnx_solutionfavorite", Array.Empty<(string, int, bool)>());
+RegisterApi(client, favoriteType, "nx_GetTopFavorites", "prvReadnx_solutionfavorite", Array.Empty<(string, int, bool)>());
 Console.WriteLine("Draft graph and media APIs/guards registered. Application roles remain unassigned. No code app was published.");
 
 static void EnsureMediaSchema(IOrganizationService service, Guid businessUnit)
