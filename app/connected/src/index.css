@@ -148,8 +148,8 @@
 
 .welcome-begin:hover { background: color-mix(in srgb, var(--accent) 28%, var(--glass-bg-2)); }
 .welcome-begin:disabled { cursor: default; }
-/* visibility, not display, so the status line and Begin don't shift up. */
-.welcome-screen[data-ready="true"] .welcome-track { visibility: hidden; }
+.welcome-screen[data-ready="true"] .welcome-loading { margin-top: 24px; }
+.welcome-screen[data-ready="true"] .welcome-track { display: none; }
 
 .welcome-flash {
 	position: fixed;
