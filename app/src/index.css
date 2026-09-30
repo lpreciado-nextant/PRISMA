@@ -406,6 +406,8 @@
     display: flex;
     gap: 1.25rem;
     overflow-x: auto;
+    /* overflow-x: auto would otherwise compute overflow-y to auto too. */
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
     scroll-padding-inline: 6px;
