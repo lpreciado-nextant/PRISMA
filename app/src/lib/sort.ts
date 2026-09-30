@@ -10,6 +10,25 @@ function created(solution: Solution): number {
   return Number.isNaN(time) ? 0 : time;
 }
 
+/**
+ * Short, glanceable age for a solution ("Today", "3d", "2w", "4mo", "1yr"), paired with the full
+ * creation date for the tooltip/title. Mirrors `created()`'s createdOn → dateAdded fallback so the
+ * label always matches what "Newest/Oldest first" actually sorted on. Returns null with no usable date.
+ */
+export function solutionAge(solution: Solution): { label: string; title: string } | null {
+  const time = created(solution);
+  if (time === 0) return null;
+  const days = Math.max(0, Math.floor((Date.now() - time) / 86_400_000));
+  const label =
+    days < 1 ? "Today"
+    : days < 7 ? `${days}d`
+    : days < 30 ? `${Math.floor(days / 7)}w`
+    : days < 365 ? `${Math.floor(days / 30)}mo`
+    : `${Math.floor(days / 365)}yr`;
+  const date = new Date(time).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  return { label, title: `Created ${date}` };
+}
+
 /** Sorts by creation date; ties keep their incoming order. Solutions without a date go last either way. */
 export function sortSolutions(solutions: Solution[], order: SortOrder): Solution[] {
   const direction = order === "newest" ? -1 : 1;

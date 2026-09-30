@@ -6,6 +6,7 @@ import { Poster } from "./Poster";
 import { FavoriteButton } from "./FavoriteButton";
 import { navigate } from "../lib/router";
 import { solutionAreas } from "../lib/areas";
+import { solutionAge } from "../lib/sort";
 
 /**
  * List-view row for the library: the same solution as a compact horizontal line
@@ -23,6 +24,7 @@ export function SolutionRow({ solution, present, index, onOpen, poster, favorita
 }) {
   const open = () => onOpen ? onOpen() : navigate(`/s/${solution.id}`);
   const showHeart = favoritable && !present;
+  const age = solutionAge(solution);
   return (
     <div className="animate-rise relative min-w-0" style={{ animationDelay: `${Math.min(index, 9) * 30}ms` }}>
       <div
@@ -44,6 +46,16 @@ export function SolutionRow({ solution, present, index, onOpen, poster, favorita
         <div className="hidden shrink-0 flex-col items-end gap-1.5 md:flex">
           <StatusPill status={solution.status} />
           {solution.capabilities[0] && <Chip>{solution.capabilities[0]}</Chip>}
+          {age && (
+            <span
+              className="inline-flex items-center gap-1 font-mono text-[10.5px]"
+              style={{ color: "var(--ink-3)" }}
+              title={age.title}
+            >
+              <Icon name="clock" size={11} />
+              {age.label}
+            </span>
+          )}
         </div>
         <span className="hidden shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 sm:block" style={{ color: "var(--accent)" }} aria-hidden="true">
           <Icon name="arrowRight" size={16} />

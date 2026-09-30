@@ -40,7 +40,7 @@ export function AreaTag({ area, size = "sm", short = false }: { area: Specializa
         fontFamily: "var(--font-display)",
         color: meta.cssVar,
         borderColor: `color-mix(in srgb, ${meta.cssVar} 32%, transparent)`,
-        background: `color-mix(in srgb, ${meta.cssVar} 11%, transparent)`,
+        background: `color-mix(in srgb, ${meta.cssVar} 17%, transparent)`,
       }}
     >
       <span className={`${size === "xs" ? "h-1 w-1" : "h-1.5 w-1.5"} rounded-full`} style={{ background: meta.cssVar }} />

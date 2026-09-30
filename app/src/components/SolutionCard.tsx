@@ -6,6 +6,7 @@ import { Poster } from "./Poster";
 import { navigate } from "../lib/router";
 import { initials } from "../lib/powerContext";
 import { solutionAreas } from "../lib/areas";
+import { solutionAge } from "../lib/sort";
 import { FavoriteButton } from "./FavoriteButton";
 
 export function SolutionCard({
@@ -37,6 +38,7 @@ export function SolutionCard({
   // Present mode never shows builder names, regardless of what the caller passed.
   const names = present ? [] : contributorNames ?? solution.contributorNames ?? solution.contributors.filter(contributor => contributor.contributorRole !== "CSM").map(contributor => contributor.builtBy.name);
   const builderNames = names.join(", ");
+  const age = solutionAge(solution);
   const publicationStatus = showPublicationStatus && !present
     ? solution.publicationStatus === "Draft" && solution.reviewOutcome === "Changes requested" ? "Changes requested" : solution.publicationStatus
     : undefined;
@@ -115,13 +117,25 @@ export function SolutionCard({
             {clientLine ?? (builderNames || (catalogueOnly || present ? "Published solution" : "Contributors pending"))}
           </span>
         </div>
-        <span
-          className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-semibold transition-transform duration-300 group-hover:translate-x-0.5"
-          style={{ fontFamily: "var(--font-display)", color: "var(--accent)" }}
-        >
-          Open
-          <Icon name="arrowRight" size={14} />
-        </span>
+        <div className="flex shrink-0 items-center gap-3">
+          {age && (
+            <span
+              className="hidden items-center gap-1 font-mono text-[10.5px] sm:inline-flex"
+              style={{ color: "var(--ink-3)" }}
+              title={age.title}
+            >
+              <Icon name="clock" size={11} />
+              {age.label}
+            </span>
+          )}
+          <span
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold transition-transform duration-300 group-hover:translate-x-0.5"
+            style={{ fontFamily: "var(--font-display)", color: "var(--accent)" }}
+          >
+            Open
+            <Icon name="arrowRight" size={14} />
+          </span>
+        </div>
       </div>
     </div>
     {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="absolute top-3 right-3 z-10" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
