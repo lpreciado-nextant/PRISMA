@@ -231,8 +231,9 @@
   .glass {
     position: relative;
     background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+    /* Prefixed first: in the other order the production minifier drops the unprefixed one Chromium needs. */
     -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+    backdrop-filter: blur(var(--glass-blur)) saturate(180%);
     border: 1px solid var(--glass-edge);
     box-shadow:
       var(--glass-shadow),
@@ -245,14 +246,12 @@
       transform 0.55s var(--ease-spring);
   }
 
-  /* Refractive backdrop: the SVG displacement bends the blurred aurora at the
-     surface, which is what makes the glass read as liquid rather than frosted.
-     Applied only when the runtime gate confirms Chromium (see liquidGlass.ts).
-     .glass-lite opts out — used on large repeated surfaces (the card grid)
-     where per-frame displacement during scroll costs more than it shows. */
-  :root.refract .glass:not(.glass-lite) {
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%) url(#glass-refraction);
-    backdrop-filter: blur(var(--glass-blur)) saturate(180%) url(#glass-refraction);
+  /* For surfaces that sit only on the static, already-blurred ground (the card grid, detail
+     sections, floating loader facets): nothing passes behind them, so a backdrop filter would
+     cost a GPU pass on every frame they repaint or move and show nothing. */
+  .glass-lite {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
   .glass-raised {
@@ -352,8 +351,7 @@
 
   /* ---- Section panels ---------------------------------------------- */
   /* Sets a page region apart (the Top 10). A tinted, bordered sheet with no
-     backdrop-filter of its own: the glass tiles inside keep the refraction,
-     and the panel stays cheap to scroll. */
+     backdrop-filter of its own, so it stays cheap to scroll. */
   .section-panel {
     position: relative;
     border-radius: 28px;

@@ -20,8 +20,8 @@ export function WelcomeScreen({ authenticated, present, ready = false, entering 
   }
   return <section className="welcome-screen" data-ready={ready} aria-labelledby="welcome-title" onPointerMove={moveHighlight} onPointerLeave={resetHighlight}>
     <div className="welcome-emblem" aria-hidden="true">
-      <div className="welcome-facet welcome-facet-back glass" />
-      <div className="welcome-facet welcome-facet-front glass" />
+      <div className="welcome-facet welcome-facet-back glass glass-lite" />
+      <div className="welcome-facet welcome-facet-front glass glass-lite" />
       <img className="welcome-mark" src="./prisma-mark-v2.svg" alt="" width="104" height="104" />
     </div>
     <div className="welcome-copy">

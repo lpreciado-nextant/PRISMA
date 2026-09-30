@@ -1,6 +1,6 @@
 # Design system
 
-**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 3 shelf, imagery and text-contrast rules · **Last updated:** 2026-09-30
+**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 3 shelf, imagery and text-contrast rules; glass rendering budget (refraction removed) · **Last updated:** 2026-09-30
 **Reference implementation:** [`app/src/index.css`](../../app/src/index.css) and the component set in [`app/src/components/`](../../app/src/components/)
 
 The HTML prototype established the visual language; the code app PoC evolved it into the **liquid-glass system** and is the current reference. The production app matches the PoC.
@@ -27,11 +27,17 @@ Schibsted Grotesk ships weights 400 to 900; the heavy weights carry the wordmark
 
 ## Surface language — liquid glass
 
-Translucent refractive surfaces over an aurora ground:
+Translucent frosted surfaces over an aurora ground:
 
 - Cards, rails, and the masthead are glass panels — blur, low-alpha fill, fine border highlight.
-- The background is a slow-moving aurora gradient; it must respect `prefers-reduced-motion`.
+- The background is a static aurora (three blurred colour fields and a faint grid). It does not animate: every blurred panel above it would re-filter on each frame.
 - Depth comes from layered translucency, not drop shadows alone.
+
+**Rendering budget.** Each `backdrop-filter` is a GPU pass that re-runs whenever anything behind or under the surface changes (scrolling, hover, a floating animation). So:
+
+- `.glass` (blur and saturate) is kept for surfaces that something can pass behind or that sit on imagery: the sticky masthead, the present banner, dialogs, the lightbox, favorite hearts and status pills on thumbnails, plus the search field, area tabs and facet rail, where the saturated tint is visible.
+- `.glass-lite` has no backdrop filter. Use it for surfaces that sit only on the static ground (the card grid, list rows, detail sections, form steps, the viewer frame) and for anything that animates continuously, such as the floating loader and welcome facets.
+- No SVG filters in `backdrop-filter`. An SVG displacement ("refraction") was removed on 2026-09-30: it was not visible over the blurred aurora, yet in headless Edge with a software renderer (a weak-GPU stand-in, 1440×900) hovering across the card grid ran at 12 frames per second with it and 39 without, and the page loader at 25 and 60. Making the floating loader facets `.glass-lite` then cut the loader's GPU load from 50% to 11%.
 
 ## Themes
 
@@ -44,7 +50,7 @@ Light and dark themes are both first-class. Theme logic lives in [`app/src/lib/t
 ## Motion
 
 - Purposeful and short; no decorative animation on the CSM hero path.
-- `prefers-reduced-motion` disables the aurora drift and non-essential transitions.
+- `prefers-reduced-motion` disables non-essential transitions and the loader float.
 
 ## Loading states
 

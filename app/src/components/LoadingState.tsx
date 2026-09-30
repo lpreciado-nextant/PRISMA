@@ -15,7 +15,7 @@ export function LoadingState({ label, variant = "inline", progress, className = 
   const Heading = variant === "page" ? "h1" : "p";
   return <Container className={`loading-state loading-state--${variant} ${className}`} aria-labelledby={variant === "page" ? headingId : undefined}>
     {variant !== "inline" && <div className="loading-emblem" aria-hidden="true">
-      {variant === "page" && <><div className="loading-facet loading-facet--back glass" /><div className="loading-facet loading-facet--front glass" /></>}
+      {variant === "page" && <><div className="loading-facet loading-facet--back glass glass-lite" /><div className="loading-facet loading-facet--front glass glass-lite" /></>}
       <img src="./prisma-mark-v2.svg" alt="" width={variant === "page" ? 72 : 32} height={variant === "page" ? 72 : 32} />
     </div>}
     <Heading id={headingId} className="loading-label"><span role="status" aria-live="polite" aria-atomic="true">{label}</span></Heading>

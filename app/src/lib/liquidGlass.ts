@@ -1,20 +1,10 @@
 /**
- * Runtime halves of the liquid-glass treatment, after
+ * Runtime half of the liquid-glass treatment, after
  * https://github.com/rdev/liquid-glass-react — ported natively instead of
  * importing the library, which wraps single fixed widgets and is unmaintained.
+ * Its SVG refraction was removed: over the blurred aurora it was invisible, yet
+ * it re-ran a displacement filter on every glass panel in every frame.
  */
-
-/**
- * SVG displacement in a backdrop-filter chain only renders on Chromium (the
- * reference library carries the same caveat). Everywhere else the declaration
- * can invalidate the whole chain and kill the blur, so gate it up front.
- */
-export function enableRefraction() {
-  const isChromium = /Chrom(e|ium)/.test(navigator.userAgent);
-  if (isChromium && CSS.supports("backdrop-filter", "blur(4px) url(#x)")) {
-    document.documentElement.classList.add("refract");
-  }
-}
 
 /**
  * Drives the specular highlight: one delegated, rAF-throttled listener that

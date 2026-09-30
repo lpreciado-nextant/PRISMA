@@ -1,27 +1,11 @@
 /**
- * Everything glass sits on this. Three slow-drifting colour fields plus a
- * hairline grid give the blur something to actually refract — without them
- * backdrop-filter has nothing to work with and the surfaces read as flat grey.
+ * Everything glass sits on this. Three colour fields plus a hairline grid give
+ * the blur something to work with — without them backdrop-filter has nothing to
+ * soften and the surfaces read as flat grey.
  */
 export function Background() {
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      {/* Displacement map consumed by the .refract backdrop-filter chain. */}
-      <svg width="0" height="0" style={{ position: "absolute" }}>
-        <filter
-          id="glass-refraction"
-          x="-20%"
-          y="-20%"
-          width="140%"
-          height="140%"
-          colorInterpolationFilters="sRGB"
-        >
-          <feTurbulence type="fractalNoise" baseFrequency="0.004 0.007" numOctaves="1" seed="7" result="noise" />
-          <feGaussianBlur in="noise" stdDeviation="3" result="soft" />
-          <feDisplacementMap in="SourceGraphic" in2="soft" scale="24" xChannelSelector="R" yChannelSelector="G" />
-        </filter>
-      </svg>
-
       <div
         className="absolute inset-0"
         style={{

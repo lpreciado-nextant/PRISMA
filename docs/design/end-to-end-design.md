@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
 **Status:** Agreed two-field story design; wizard resume, selectable MP4 captions and same-account video acceptance verified; Blob pilot for new attachments approved (ADR-0010), not deployed; production-host and least-privilege gates remain open
-**Last updated:** 2026-09-29
+**Last updated:** 2026-09-30
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
@@ -205,7 +205,7 @@ Present mode state is obvious and persistent (a clear banner, dismissible withou
 2. **Never embarrass a CSM in front of a client.** No broken embeds, no half-finished entries, no internal snark on screen, no real client data where it shouldn't be. This is why publication is gated and why present mode restricts rather than merely hides.
 3. **Contribution must feel like credit, not paperwork.** Builders see their name on the card and their work in front of clients.
 4. **Show, don't describe.** Cards are visual. Detail pages lead with the demo. The library is a showcase, not a spreadsheet with a stylesheet.
-5. **The prototype's visual language is the baseline; the PoC is the current reference.** The HTML prototype establishes the palette (steel blue `#1C567C` from the wordmark, per-specialization accents) and typography (Schibsted Grotesk / Source Sans 3 / IBM Plex Mono), light and dark themes, and motion. The code app PoC evolves that into a liquid-glass system — translucent refractive surfaces over an aurora ground — with the PRISMA wordmark central to the identity. The production app matches the PoC.
+5. **The prototype's visual language is the baseline; the PoC is the current reference.** The HTML prototype establishes the palette (steel blue `#1C567C` from the wordmark, per-specialization accents) and typography (Schibsted Grotesk / Source Sans 3 / IBM Plex Mono), light and dark themes, and motion. The code app PoC evolves that into a liquid-glass system — translucent frosted surfaces over an aurora ground — with the PRISMA wordmark central to the identity. The production app matches the PoC.
 6. **Accessible by default.** WCAG 2.1 AA: keyboard-navigable throughout, visible focus, reduced-motion respected, semantic landmarks. Already partially implemented in the prototype and not to be regressed.
 
 ---

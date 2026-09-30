@@ -177,7 +177,7 @@ examples/
 run-poc.bat                                                Build and serve the PoC locally
 ```
 
-The prototype defines the palette (steel blue `#1C567C`, per-specialization accents), typography (Schibsted Grotesk / Source Sans 3 / IBM Plex Mono), light and dark themes, motion, and WCAG 2.1 AA behaviour. The PoC in `app/` evolves that baseline into a liquid-glass design system — same palette and type, translucent refractive surfaces — and is the current visual reference. See [app/README.md](app/README.md) for what it implements.
+The prototype defines the palette (steel blue `#1C567C`, per-specialization accents), typography (Schibsted Grotesk / Source Sans 3 / IBM Plex Mono), light and dark themes, motion, and WCAG 2.1 AA behaviour. The PoC in `app/` evolves that baseline into a liquid-glass design system — same palette and type, translucent frosted surfaces — and is the current visual reference. See [app/README.md](app/README.md) for what it implements.
 
 ---
 
