@@ -36,12 +36,20 @@ export function ImageFramer({ source, name, onConfirm, onCancel }: {
   }, []);
 
   useEffect(() => {
-    const url = typeof source === "string" ? source : URL.createObjectURL(source);
+    // Read the file as a data: URL, never blob:. The code-app CSP allows blob: for media
+    // only, so a blob: image is blocked in the hosted app (and fails as "can't be read").
+    let active = true;
     const element = new Image();
-    element.onload = () => { setImage(element); confirm.current?.focus(); };
-    element.onerror = () => setFailed(true);
-    element.src = url;
-    return () => { element.onload = null; element.onerror = null; if (typeof source !== "string") URL.revokeObjectURL(url); };
+    element.onload = () => { if (active) { setImage(element); confirm.current?.focus(); } };
+    element.onerror = () => { if (active) setFailed(true); };
+    if (typeof source === "string") element.src = source;
+    else {
+      const reader = new FileReader();
+      reader.onload = () => { if (active && typeof reader.result === "string") element.src = reader.result; };
+      reader.onerror = () => { if (active) setFailed(true); };
+      reader.readAsDataURL(source);
+    }
+    return () => { active = false; element.onload = null; element.onerror = null; };
   }, [source]);
 
   useLayoutEffect(() => {
