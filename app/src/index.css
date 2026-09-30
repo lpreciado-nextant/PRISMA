@@ -51,8 +51,9 @@
   --ground: #05080c;
   --ground-2: #0a121b;
   --ink: #e9eff4;
-  --ink-2: #a3b1bc;
-  --ink-3: #74838f;
+  /* Secondary and tertiary text: 10.4:1 and 6.8:1 on the dark ground. */
+  --ink-2: #b8c4ce;
+  --ink-3: #909eaa;
 
   --accent: #7fb6d9;
   --accent-deep: #1c567c;
@@ -95,8 +96,9 @@
   --ground: #eef2f6;
   --ground-2: #dbe6f0;
   --ink: #0d161d;
-  --ink-2: #47565f;
-  --ink-3: #6d7c88;
+  /* Secondary and tertiary text: at least 7.9:1 and 5.1:1 on the light ground and cards (WCAG AA). */
+  --ink-2: #3b4852;
+  --ink-3: #56646f;
 
   --accent: #1c567c;
   --accent-deep: #123f5d;
@@ -366,15 +368,20 @@
       var(--glass-shadow);
     padding: clamp(18px, 2.4vw, 30px);
   }
-  /* Light theme: only a faint blue/lavender tint; the white Top 3 cards carry
-     the contrast with their own border and shadow. Dark keeps its dark glass. */
-  [data-theme="light"] .section-panel--featured {
-    border-color: color-mix(in srgb, var(--sa-ibo) 14%, white);
-    background: linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--accent) 5%, white) 0%,
-      color-mix(in srgb, var(--sa-ibo) 4%, white) 100%
-    );
+  /* The Top 3 sits on the page's own ground, lifted only by a ~4% lavender
+     tint, a hairline edge and a whisper of shadow: featured, not a separate box. */
+  .top-shelf.section-panel {
+    border-color: color-mix(in srgb, var(--sa-ibo) 16%, transparent);
+    background: color-mix(in srgb, var(--sa-ibo) 5%, transparent);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--ground) 40%, transparent), 0 14px 32px -26px rgba(0, 0, 0, 0.55);
+  }
+  [data-theme="light"] .top-shelf.section-panel {
+    border-color: color-mix(in srgb, var(--sa-ibo) 13%, transparent);
+    background: color-mix(in srgb, var(--sa-ibo) 4%, transparent);
+    box-shadow: 0 1px 2px rgba(13, 30, 45, 0.04), 0 12px 28px -24px rgba(13, 30, 45, 0.28);
+  }
+  .top-shelf.section-panel--featured::before {
+    display: none;
   }
   /* A faint accent bloom in the corner marks the featured region. */
   .section-panel--featured::before {
@@ -461,14 +468,14 @@
     transform: translate(-4px, -52%) scale(1.03);
   }
 
-  /* Identical horizontal cards: a squarer 4:3 crop of the thumbnail on the left
+  /* Identical horizontal cards: a square crop of the thumbnail on the left
      (centred), category, title, summary and heart on the right. */
   .top-card {
     position: relative;
     z-index: 1;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    width: min(370px, calc(100vw - 7rem));
+    width: min(350px, calc(100vw - 7rem));
     height: 116px;
     overflow: hidden;
     border-radius: 18px;
@@ -485,7 +492,7 @@
   .top-card-image {
     display: block;
     height: 100%;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1 / 1;
     overflow: hidden;
     border-right: 1px solid var(--glass-edge);
   }

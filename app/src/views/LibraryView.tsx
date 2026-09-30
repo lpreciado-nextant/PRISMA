@@ -52,7 +52,7 @@ export function LibraryView({
 }) {
   const [sort, setSort] = useState<SortOrder>(() => remembered(SORT_KEY, SORT_ORDERS, "newest"));
   const [layout, setLayout] = useState<LibraryLayout>(() => remembered(LAYOUT_KEY, ["grid", "list"] as const, "grid"));
-  // Sorting and layout apply to All solutions only; the Top 3 keeps its own ranking.
+  // Sorting and layout apply to the Solution Library grid only; the Top 3 keeps its own ranking.
   const results = useMemo(() => sortSolutions(filterSolutions(catalogue, filters), sort), [catalogue, filters, sort]);
   const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
   const chips = activeChips(filters);
@@ -164,7 +164,8 @@ export function LibraryView({
         <div className="min-w-0">
           {!present && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-              <h2 className="text-[clamp(1.35rem,2vw,1.6rem)] leading-none font-bold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}>All solutions</h2>
+              {/* Same type and lavender as the Top 3 title. */}
+              <h2 className="text-[clamp(1.3rem,2vw,1.65rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em", color: "var(--sa-ibo)" }}>Solution Library</h2>
               <div className="flex items-center gap-2">
                 <SelectPicker
                   compact
