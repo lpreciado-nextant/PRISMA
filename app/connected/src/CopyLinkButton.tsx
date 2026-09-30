@@ -24,11 +24,11 @@ export function CopyLinkButton({ appLocation, route }: { appLocation: AppLocatio
     }
   };
   return <>
-    <button type="button" onClick={() => void copy()} className="ml-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px]" style={{ borderColor: "var(--glass-edge)" }}>
-      <Icon name={state === "copied" ? "check" : "link"} />{state === "copied" ? "Link copied" : "Copy link"}
+    <button type="button" onClick={() => void copy()} className="glass inline-flex h-9 shrink-0 cursor-pointer items-center gap-2 rounded-full px-3.5 text-[13px] font-semibold transition-transform duration-200 hover:scale-105" style={{ fontFamily: "var(--font-display)", color: "var(--ink-2)" }}>
+      <Icon name={state === "copied" ? "check" : "link"} size={15} />{state === "copied" ? "Link copied" : "Copy link"}
     </button>
     <span className="sr-only" role="status">{state === "copied" ? "Link copied to the clipboard." : ""}</span>
-    {state === "manual" && <div className="mt-3 max-w-[640px]">
+    {state === "manual" && <div className="mt-1 basis-full max-w-[640px]">
       <label htmlFor={fieldId} className="block text-[13px]" style={{ color: "var(--ink-2)" }}>Copy this link to share the solution</label>
       <input id={fieldId} ref={field} readOnly value={url} onFocus={event => event.currentTarget.select()}
         className="mt-1 w-full rounded-lg border bg-transparent px-3 py-2 font-mono text-[12.5px]" style={{ borderColor: "var(--glass-edge)" }} />
