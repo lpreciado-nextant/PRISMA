@@ -1,6 +1,6 @@
 # Design system
 
-**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 3 shelf and imagery patterns added · **Last updated:** 2026-09-29
+**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 3 shelf, imagery and text-contrast rules · **Last updated:** 2026-09-30
 **Reference implementation:** [`app/src/index.css`](../../app/src/index.css) and the component set in [`app/src/components/`](../../app/src/components/)
 
 The HTML prototype established the visual language; the code app PoC evolved it into the **liquid-glass system** and is the current reference. The production app matches the PoC.
@@ -37,6 +37,8 @@ Translucent refractive surfaces over an aurora ground:
 
 Light and dark themes are both first-class. Theme logic lives in [`app/src/lib/theme.ts`](../../app/src/lib/theme.ts). All colour tokens must pass contrast in both themes.
 
+**Text contrast.** Secondary (`--ink-2`) and tertiary (`--ink-3`) text are grey, not black, but always pass WCAG AA: light `#3b4852` (7.9:1 or more) and `#56646f` (5.1:1 or more) on the ground and cards; dark `#b8c4ce` (10.4:1) and `#909eaa` (6.8:1). Keep new greys at or above these ratios.
+
 **White screenshots in the light theme.** A white thumbnail on a white card dissolves, so in the light theme catalogue cards take a pale steel-blue sheet, and every card, list-row and Top 3 image has a hairline edge and a faint inner ring. The dark theme keeps its dark glass.
 
 ## Motion
@@ -57,8 +59,8 @@ Status text uses a polite live region; page titles retain heading semantics. Pro
 ## Library page
 
 - **Hero:** eyebrow on its own row, then the wordmark beside "Nextant's solutions across AI, Data and Operations, with demos ready for your next client conversation.", top-aligned with it. Under the line, live counts from the visible catalogue: solutions, specialization areas and technologies.
-- **Top 3 shelf** (`TopTenRow`): "Most saved by the team · Top 3 solutions" in a faintly tinted panel. Identical horizontal cards (a 4:3 crop of the thumbnail, category, title, summary, heart) with a large pastel purple-to-blue rank numeral behind each. "View all" shows the rest of the ranking (up to 10) in the same carousel; Hide/Show folds it to its heading. Arrows sit upper right. It shows only on the unfiltered library, never in present mode, and hides when nobody has saved anything.
-- **All solutions:** heading row with a compact "Sort by: Newest/Oldest" (creation date) and a grid/list icon toggle. Grid keeps the cards; list uses compact `SolutionRow`s. Sort and layout persist for the session and never affect the Top 3. Present mode shows neither.
+- **Top 3 shelf** (`TopTenRow`): eyebrow "Most saved in the Solution Library" over the heading "Top 3". It sits on the page's own ground, lifted only by a ~4% lavender tint, a hairline edge and a faint shadow, never a separate white box. Identical horizontal cards (a square crop of the thumbnail, category, title, summary, heart), 350px wide, with a large pastel purple-to-blue rank numeral behind each; white cards in the light theme. "View all" shows the rest of the ranking (up to 10, and the heading becomes "Top 10") in the same carousel; Hide/Show folds it to its heading. Arrows sit upper right. It shows only on the unfiltered library, never in present mode, and hides when nobody has saved anything.
+- **Solution Library:** heading row with a compact "Sort by: Newest/Oldest" (creation date) and a grid/list icon toggle. The heading shares the Top 3 heading's type and lavender (`--sa-ibo`, extra bold, the same size). Grid keeps the cards; list uses compact `SolutionRow`s. Sort and layout persist for the session and never affect the Top 3. Present mode shows neither.
 - **Cards:** 16:9 image, full area names in the `xs` tag size, name, two-line summary, chips. The Top 3 uses short area names (AI, DS, IBO) where space is tight.
 
 ## Imagery
