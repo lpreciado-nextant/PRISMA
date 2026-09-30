@@ -4,7 +4,8 @@ type Entry = { at: number; promise: Promise<PublishedDetail>; value?: PublishedD
 
 /**
  * One `nx_GetPublishedDetail` read per solution and projection, shared by cards, Top 10 tiles and the detail page.
- * Cards reuse a recent read; the detail page always refreshes, so a withdrawal or revoked access still shows there.
+ * Cards reuse a recent read; the detail page accepts only one started seconds earlier (a hover prefetch), so a
+ * withdrawal or revoked access still shows there.
  */
 export function createPublishedDetails(read: (id: string, present: boolean) => Promise<unknown>, maxAge = 5 * 60_000, limit = 200, now = () => Date.now()) {
   const entries = new Map<string, Entry>();
@@ -20,9 +21,9 @@ export function createPublishedDetails(read: (id: string, present: boolean) => P
     return entry.promise;
   };
   return {
-    load(id: string, present: boolean): Promise<PublishedDetail> {
+    load(id: string, present: boolean, age = maxAge): Promise<PublishedDetail> {
       const entry = entries.get(key(id, present));
-      return entry && now() - entry.at < maxAge ? entry.promise : refresh(id, present);
+      return entry && now() - entry.at < age ? entry.promise : refresh(id, present);
     },
     refresh,
     /** The last confirmed detail, for an immediate render while a read is in flight. */

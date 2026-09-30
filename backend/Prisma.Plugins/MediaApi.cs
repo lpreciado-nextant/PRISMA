@@ -470,8 +470,13 @@ namespace Prisma.Plugins
         public static MediaSnapshot Snapshot(IOrganizationService service, Entity row)
         {
             var kind = row.GetAttributeValue<string>("nx_kind");
-            var linked = row.GetAttributeValue<string>("nx_mime") == LinkedAssetPolicy.Mime;
             var target = service.Retrieve(MediaPolicy.Table(kind), Guid.Parse(row.GetAttributeValue<string>("nx_targetid")), kind == "attachment" ? new ColumnSet("nx_sortorder", "nx_assettype", "nx_externalurl", "nx_allowsembedding", "nx_embedhint") : new ColumnSet("nx_sortorder", "nx_caption"));
+            return Snapshot(row, target);
+        }
+
+        public static MediaSnapshot Snapshot(Entity row, Entity target)
+        {
+            var linked = row.GetAttributeValue<string>("nx_mime") == LinkedAssetPolicy.Mime;
             return new MediaSnapshot {
                 SessionId = row.Id.ToString(), Id = row.GetAttributeValue<string>("nx_targetid"), Kind = row.GetAttributeValue<string>("nx_kind"),
                 Name = row.GetAttributeValue<string>("nx_filename"), Mime = row.GetAttributeValue<string>("nx_mime"),

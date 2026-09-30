@@ -27,7 +27,8 @@ export function PublishedView({ solution, present, assetId, favorite }: { soluti
   useEffect(() => {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => { controller.abort(); setError(true); }, 20_000);
-    void publishedDetails.refresh(solution.id, present).then(next => {
+    // Only a read started moments ago (a card's hover prefetch) is reused; anything older is read again.
+    void publishedDetails.load(solution.id, present, 10_000).then(next => {
       controller.signal.throwIfAborted();
       // Unchanged content keeps its objects, so images already on screen do not reload.
       setDetail(current => current && JSON.stringify(current) === JSON.stringify(next) ? current : next);

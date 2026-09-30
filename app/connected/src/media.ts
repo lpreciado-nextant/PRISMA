@@ -24,6 +24,23 @@ export type MediaApi = {
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const object = (value: unknown): Record<string, unknown> => { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid media response."); return value as Record<string, unknown>; };
 const integer = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+export function parseMediaItem(value: unknown): MediaItem {
+  const item = object(value);
+  if (typeof item.id !== "string" || !guid.test(item.id) || typeof item.sessionId !== "string" || !guid.test(item.sessionId)
+    || (item.kind !== "image" && item.kind !== "attachment" && item.kind !== "thumbnail") || typeof item.name !== "string" || typeof item.mime !== "string"
+    || !integer(item.size) || !integer(item.received) || item.received > item.size || !integer(item.nextBlock) || typeof item.complete !== "boolean") throw new Error("Invalid media record.");
+  if ((item.caption !== undefined && (typeof item.caption !== "string" || item.caption.length > 200)) || (item.sortOrder !== undefined && (!integer(item.sortOrder) || item.sortOrder > 12))) throw new Error("Invalid media metadata.");
+  if (item.storage !== undefined && (item.storage !== "blob" || item.kind !== "attachment" || item.mime === "application/vnd.prisma.link")) throw new Error("Invalid media storage.");
+  if (item.mime === "application/vnd.prisma.link" || item.linkedAsset !== undefined) {
+    const linked = object(item.linkedAsset);
+    if (item.mime !== "application/vnd.prisma.link" || item.kind !== "attachment" || !item.complete || item.size !== 0 || item.received !== 0 || item.nextBlock !== 0
+      || typeof linked.name !== "string" || typeof linked.assetType !== "string" || typeof linked.externalUrl !== "string" || typeof linked.embedHint !== "string" || typeof linked.allowsEmbedding !== "boolean") throw new Error("Invalid linked asset record.");
+    const validated = validateLinkedAsset(linked as LinkedAssetInput);
+    if (validated.name !== item.name) throw new Error("Mismatched linked asset name.");
+    return { ...item, linkedAsset: validated } as MediaItem;
+  }
+  return item as MediaItem;
+}
 export function parseMedia(response: unknown): MediaState {
   const result = object(response);
   const data = object(result.data);
@@ -35,23 +52,7 @@ export function parseMedia(response: unknown): MediaState {
     || (state.maxBlockSize !== undefined && (state.maxBlockSize !== 4194304 || state.uploadProtocol !== 2))
     || (state.blobBlockSize !== undefined && (state.blobBlockSize !== 8388608 || state.uploadProtocol !== 2))
     || (state.maxBlobBlockSize !== undefined && (state.maxBlobBlockSize !== 16777216 || state.uploadProtocol !== 2)) || !Array.isArray(state.media) || state.media.length > 13) throw new Error("Invalid media limits.");
-  const media = state.media.map(value => {
-    const item = object(value);
-    if (typeof item.id !== "string" || !guid.test(item.id) || typeof item.sessionId !== "string" || !guid.test(item.sessionId)
-      || (item.kind !== "image" && item.kind !== "attachment" && item.kind !== "thumbnail") || typeof item.name !== "string" || typeof item.mime !== "string"
-      || !integer(item.size) || !integer(item.received) || item.received > item.size || !integer(item.nextBlock) || typeof item.complete !== "boolean") throw new Error("Invalid media record.");
-    if ((item.caption !== undefined && (typeof item.caption !== "string" || item.caption.length > 200)) || (item.sortOrder !== undefined && (!integer(item.sortOrder) || item.sortOrder > 12))) throw new Error("Invalid media metadata.");
-    if (item.storage !== undefined && (item.storage !== "blob" || item.kind !== "attachment" || item.mime === "application/vnd.prisma.link")) throw new Error("Invalid media storage.");
-    if (item.mime === "application/vnd.prisma.link" || item.linkedAsset !== undefined) {
-      const linked = object(item.linkedAsset);
-      if (item.mime !== "application/vnd.prisma.link" || item.kind !== "attachment" || !item.complete || item.size !== 0 || item.received !== 0 || item.nextBlock !== 0
-        || typeof linked.name !== "string" || typeof linked.assetType !== "string" || typeof linked.externalUrl !== "string" || typeof linked.embedHint !== "string" || typeof linked.allowsEmbedding !== "boolean") throw new Error("Invalid linked asset record.");
-      const validated = validateLinkedAsset(linked as LinkedAssetInput);
-      if (validated.name !== item.name) throw new Error("Mismatched linked asset name.");
-      return { ...item, linkedAsset: validated } as MediaItem;
-    }
-    return item as MediaItem;
-  });
+  const media = state.media.map(parseMediaItem);
   if (new Set(media.map(item => item.id)).size !== media.length) throw new Error("Duplicate media record.");
   return { id: state.id, rowVersion: state.rowVersion, sessionId: state.sessionId, blockSize: state.blockSize as number, media, ...(state.uploadProtocol === 2 ? { uploadProtocol: 2 as const } : {}), ...(state.maxBlockSize === 4194304 ? { maxBlockSize: 4194304 as const } : {}), ...(state.blobBlockSize === 8388608 ? { blobBlockSize: 8388608 as const } : {}), ...(state.maxBlobBlockSize === 16777216 ? { maxBlobBlockSize: 16777216 as const } : {}) };
 }

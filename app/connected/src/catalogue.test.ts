@@ -216,3 +216,21 @@ test("the catalogue graph never carries builder credits in present mode and fail
   assert.throws(() => parseCatalogueGraph(graphResult([{ ...graphEntry, areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "other" }] }]), false), /unmapped/);
   assert.throws(() => parseCatalogueGraph({ success: false, data: {} }, false), /did not return/);
 });
+
+test("graph thumbnails reach the catalogue, and only a marked graph confirms a solution has none", async () => {
+  const thumbnail = { id: "22222222-2222-4222-8222-222222222222", sessionId: "33333333-3333-4333-8333-333333333333", kind: "thumbnail", name: "card.png", mime: "image/png", size: 10, received: 10, nextBlock: 1, complete: true, caption: "", sortOrder: 1 };
+  const marked = (solutions: object[]) => ({ success: true, data: { ResultJson: JSON.stringify({ solutions, thumbnails: true }) } });
+  const [withThumbnail] = await loadCatalogue(reader(), false, signal(), undefined, async present => parseCatalogueGraph(marked([{ ...graphEntry, thumbnail }]), present));
+  assert.deepEqual(withThumbnail.cardThumbnail, thumbnail);
+  const [without] = await loadCatalogue(reader(), false, signal(), undefined, async present => parseCatalogueGraph(marked([graphEntry]), present));
+  assert.equal(without.cardThumbnail, null);
+  const [older] = await loadCatalogue(reader(), false, signal(), undefined, async present => parseCatalogueGraph(graphResult([graphEntry]), present));
+  assert.equal(Object.hasOwn(older, "cardThumbnail"), false);
+  const [perSolution] = await loadCatalogue(reader(), false, signal(), async () => [], async present => parseCatalogueGraph(marked([]), present));
+  assert.equal(Object.hasOwn(perSolution, "cardThumbnail"), false);
+  assert.throws(() => parseCatalogueGraph(graphResult([{ ...graphEntry, thumbnail }]), false), /thumbnail/);
+  assert.throws(() => parseCatalogueGraph(marked([{ ...graphEntry, thumbnail: { ...thumbnail, kind: "image" } }]), false), /thumbnail/);
+  assert.throws(() => parseCatalogueGraph(marked([{ ...graphEntry, thumbnail: { ...thumbnail, complete: false } }]), false), /thumbnail/);
+  assert.throws(() => parseCatalogueGraph(marked([{ ...graphEntry, thumbnail: { ...thumbnail, received: 5 } }]), false), /thumbnail/);
+  assert.throws(() => parseCatalogueGraph(marked([{ ...graphEntry, thumbnail: { ...thumbnail, id: "x" } }]), false), /media record/);
+});

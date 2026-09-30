@@ -1,13 +1,13 @@
-import type { Solution } from "../../src/types";
 import { Icon } from "../../src/components/Icon";
 import { navigate } from "../../src/lib/router";
 import { ConnectedSolutionCard } from "./ConnectedSolutionCard";
+import type { CatalogueSolution } from "./catalogue";
 
 /** "My favorites": saved solutions, newest first. Unavailable ones (withdrawn, retired) are simply not listed. */
 export function FavoritesView({ catalogue, ids, pending, onToggle }: {
-  catalogue: Solution[]; ids: Set<string>; pending: Set<string>; onToggle: (id: string) => void;
+  catalogue: CatalogueSolution[]; ids: Set<string>; pending: Set<string>; onToggle: (id: string) => void;
 }) {
-  const saved = [...ids].map(id => catalogue.find(solution => solution.id === id)).filter((solution): solution is Solution => Boolean(solution));
+  const saved = [...ids].map(id => catalogue.find(solution => solution.id === id)).filter((solution): solution is CatalogueSolution => Boolean(solution));
 
   return (
     <div className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
@@ -46,7 +46,7 @@ export function FavoritesView({ catalogue, ids, pending, onToggle }: {
       ) : (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {saved.map((solution, index) => (
-            <ConnectedSolutionCard key={solution.id} solution={solution} present={false} index={index}
+            <ConnectedSolutionCard key={solution.id} solution={solution} present={false} index={index} thumbnail={solution.cardThumbnail}
               favorite={{ saved: true, pending: pending.has(solution.id), onToggle: () => onToggle(solution.id) }} />
           ))}
         </div>

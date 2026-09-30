@@ -1,6 +1,7 @@
 import type { ClientRole, Solution, SolutionStatus, SpecializationArea } from "../../src/types.ts";
 import { CLIENT_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata.ts";
 import type { IGetAllOptions } from "./generated/models/CommonModels.ts";
+import { parseMediaItem, type MediaItem } from "./media.ts";
 
 export type CatalogueTable = "solutions" | "areas" | "capabilities" | "technologies" | "industries" | "people" | "projects";
 export type ReadRows = (table: CatalogueTable, options: IGetAllOptions) => Promise<{
@@ -104,14 +105,23 @@ export async function readAll(read: ReadRows, table: CatalogueTable, options: IG
   return rows;
 }
 
-export type CatalogueGraphEntry = { areas: SpecializationArea[]; technologies: string[]; industries: string[]; contributors?: string[] };
+/** `null`: the graph confirmed no thumbnail. Absent: unknown (older plug-in or per-solution read), so the card reads the detail. */
+export type CatalogueGraphEntry = { areas: SpecializationArea[]; technologies: string[]; industries: string[]; contributors?: string[]; thumbnail?: MediaItem | null };
+export type CatalogueSolution = Solution & { cardThumbnail?: MediaItem | null };
 export type ReadCatalogueGraph = (present: boolean, signal: AbortSignal) => Promise<Map<string, CatalogueGraphEntry>>;
+
+function graphThumbnail(value: unknown): MediaItem {
+  const item = parseMediaItem(value);
+  if (item.kind !== "thumbnail" || !item.complete || item.storage || item.linkedAsset || item.size !== item.received) throw new Error("Invalid catalogue graph thumbnail.");
+  return item;
+}
 
 /** Parses `nx_GetCatalogueGraph`. Present mode must carry no builder credits; every name must be readable. */
 export function parseCatalogueGraph(result: { success: boolean; data: Record<string, unknown> }, present: boolean): Map<string, CatalogueGraphEntry> {
   if (!result.success || typeof result.data?.ResultJson !== "string") throw new Error("Dataverse did not return the catalogue graph.");
-  const solutions = (JSON.parse(result.data.ResultJson) as { solutions?: unknown })?.solutions;
-  if (!Array.isArray(solutions)) throw new Error("Invalid catalogue graph.");
+  const parsed = JSON.parse(result.data.ResultJson) as { solutions?: unknown; thumbnails?: unknown };
+  const solutions = parsed?.solutions;
+  if (!Array.isArray(solutions) || (parsed.thumbnails !== undefined && typeof parsed.thumbnails !== "boolean")) throw new Error("Invalid catalogue graph.");
   const graph = new Map<string, CatalogueGraphEntry>();
   for (const entry of solutions) {
     if (!entry || typeof entry !== "object") throw new Error("Invalid catalogue graph.");
@@ -125,12 +135,17 @@ export function parseCatalogueGraph(result: { success: boolean; data: Record<str
     const areas = value(entry, "areas");
     if (!Array.isArray(areas) || areas.some(area => !area || typeof area !== "object")) throw new Error("Invalid catalogue graph areas.");
     if (present && value(entry, "contributors") !== undefined) throw new Error("The presentation catalogue returned builder credits.");
-    graph.set(solutionId, { areas: orderedAreas(areas), technologies: names("technologies"), industries: names("industries"), ...(present ? {} : { contributors: names("contributors") }) });
+    const thumbnail = value(entry, "thumbnail");
+    if (thumbnail !== undefined && parsed.thumbnails !== true) throw new Error("Invalid catalogue graph thumbnail.");
+    graph.set(solutionId, {
+      areas: orderedAreas(areas), technologies: names("technologies"), industries: names("industries"), ...(present ? {} : { contributors: names("contributors") }),
+      ...(parsed.thumbnails === true ? { thumbnail: thumbnail === undefined ? null : graphThumbnail(thumbnail) } : {}),
+    });
   }
   return graph;
 }
 
-export async function loadCatalogue(read: ReadRows, present: boolean, signal: AbortSignal, readCredits?: (id: string, present: boolean, signal: AbortSignal) => Promise<string[]>, readGraph?: ReadCatalogueGraph): Promise<Solution[]> {
+export async function loadCatalogue(read: ReadRows, present: boolean, signal: AbortSignal, readCredits?: (id: string, present: boolean, signal: AbortSignal) => Promise<string[]>, readGraph?: ReadCatalogueGraph): Promise<CatalogueSolution[]> {
   const [solutions, capabilities, graph] = await Promise.all([
     readAll(read, "solutions", catalogueQuery(present), signal),
     readAll(read, "capabilities", { select: ["nx_capabilityid", "nx_capabilityname"], orderBy: ["nx_capabilityid asc"] }, signal),
@@ -138,7 +153,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
     readGraph?.(present, signal).catch(() => { signal.throwIfAborted(); return undefined; }),
   ]);
   const capabilityMap = new Map(capabilities.map(row => [id(row, "nx_capabilityid"), text(row, "nx_capabilityname", true)]));
-  const catalogue: Solution[] = [];
+  const catalogue: CatalogueSolution[] = [];
   const controller = new AbortController();
   const activeSignal = AbortSignal.any([signal, controller.signal]);
   const readTags = async (solutionId: string): Promise<CatalogueGraphEntry> => {
@@ -167,7 +182,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       contributors,
     };
   };
-  const hydrate = async (row: object): Promise<Solution> => {
+  const hydrate = async (row: object): Promise<CatalogueSolution> => {
     activeSignal.throwIfAborted();
     if (value(row, "nx_publicationstatus") !== PUBLISHED) throw new Error("Dataverse returned a record outside the published catalogue.");
     const acknowledged = flag(row, "nx_safetyacknowledged");
@@ -183,7 +198,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
     const bulk = graph?.get(solutionId);
     const tags = bulk ? { ...bulk, contributors: present ? [] : bulk.contributors } : await readTags(solutionId);
     activeSignal.throwIfAborted();
-    const { areas: specializationAreas, technologies, industries, contributors: contributorNames } = tags;
+    const { areas: specializationAreas, technologies, industries, contributors: contributorNames, thumbnail } = tags;
     if (contributorNames && contributorNames.some(name => typeof name !== "string" || !name.trim())) throw new Error("Invalid contributor search projection.");
     return {
       id: solutionId,
@@ -209,6 +224,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       clientRole: clientRole(row),
       contributors: [],
       ...(contributorNames ? { contributorNames } : {}),
+      ...(thumbnail !== undefined ? { cardThumbnail: thumbnail } : {}),
       assets: [],
     };
   };

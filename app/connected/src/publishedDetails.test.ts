@@ -20,6 +20,11 @@ test("published details share in-flight and recent reads per projection", async 
   clock = 1000;
   await details.load(id, false);
   assert.deepEqual(calls, [false, true, false]);
+  // The detail page accepts only a read started moments earlier.
+  clock = 1500;
+  await details.load(id, false, 600);
+  await details.load(id, false, 400);
+  assert.deepEqual(calls, [false, true, false, false]);
 });
 
 test("published details refresh always reads and forget failures", async () => {

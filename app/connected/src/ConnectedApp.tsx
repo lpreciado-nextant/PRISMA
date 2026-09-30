@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import type { Solution } from "../../src/types";
 import type { AppUser } from "../../src/lib/powerContext";
 import { Background } from "../../src/components/Background";
 import { Masthead } from "../../src/components/Masthead";
@@ -12,7 +11,7 @@ import { SolutionRow } from "../../src/components/SolutionRow";
 import { navigate, replaceQuery, useRoute } from "../../src/lib/router";
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
-import { loadCatalogue } from "./catalogue";
+import { loadCatalogue, type CatalogueSolution } from "./catalogue";
 import { getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails } from "./dataSource";
 import { workflowData } from "./workflow";
 import { loadFavorites, loadTopFavorites, setFavorite } from "./favorites";
@@ -35,7 +34,7 @@ async function readCredits(id: string, present: boolean, signal: AbortSignal) {
   signal.throwIfAborted();
   return detail.contributors.map(person => person.name);
 }
-type LoadState = { kind: "loading" } | { kind: "host-required" } | { kind: "error" } | { kind: "ready"; catalogue: Solution[] };
+type LoadState = { kind: "loading" } | { kind: "host-required" } | { kind: "error" } | { kind: "ready"; catalogue: CatalogueSolution[] };
 
 export default function ConnectedApp() {
   const [present, setPresent] = useState(() => {
@@ -178,6 +177,7 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     // Only solutions this person can see in the catalogue, in the server's rank order.
     return topIds.flatMap(id => byId.get(id) ?? []);
   }, [present, state, topIds]);
+  const thumbnails = useMemo(() => new Map(state.kind === "ready" ? state.catalogue.map(entry => [entry.id, entry.cardThumbnail] as const) : []), [state]);
   const toggleFavorite = (id: string) => {
     if (!favorites || pendingFavorites.has(id)) return;
     const next = !favorites.has(id);
@@ -238,11 +238,11 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
         : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly
-            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} renderPoster={solution => <PublishedThumbnail solution={solution} />}
+            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} renderPoster={solution => <PublishedThumbnail solution={solution} thumbnail={thumbnails.get(solution.id)} />}
               favorite={favorites ? solution => ({ saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) }) : undefined} /> : undefined}
-            renderRow={(entry, index) => <SolutionRow solution={entry} present={present} index={index} poster={<PublishedThumbnail solution={entry} />}
+            renderRow={(entry, index) => <SolutionRow solution={entry} present={present} index={index} poster={<PublishedThumbnail solution={entry} thumbnail={thumbnails.get(entry.id)} />}
               favoritable={!!favorites} favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />}
-            renderCard={(entry, index) => <ConnectedSolutionCard solution={entry} present={present} index={index}
+            renderCard={(entry, index) => <ConnectedSolutionCard solution={entry} present={present} index={index} thumbnail={thumbnails.get(entry.id)}
             favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />} />}
       </Suspense>
     </main>

@@ -24,18 +24,22 @@ namespace Prisma.Plugins
         [DataMember(Name = "technologies")] public List<string> Technologies { get; set; }
         [DataMember(Name = "industries")] public List<string> Industries { get; set; }
         [DataMember(Name = "contributors", EmitDefaultValue = false)] public List<string> Contributors { get; set; }
+        [DataMember(Name = "thumbnail", EmitDefaultValue = false)] public MediaSnapshot Thumbnail { get; set; }
     }
 
     [DataContract]
     public sealed class CatalogueGraphResult
     {
         [DataMember(Name = "solutions")] public CatalogueEntry[] Solutions { get; set; }
+        /// <summary>Tells the client an entry without a thumbnail has none, rather than coming from an older plug-in.</summary>
+        [DataMember(Name = "thumbnails")] public bool Thumbnails { get; set; }
     }
 
     /// <summary>Groups bulk tag and credit rows by visible solution. Rows for any other solution are ignored.</summary>
     public sealed class CatalogueGraph
     {
         private readonly Dictionary<Guid, CatalogueEntry> entries = new Dictionary<Guid, CatalogueEntry>();
+        private readonly Dictionary<Guid, List<MediaSnapshot>> thumbnails = new Dictionary<Guid, List<MediaSnapshot>>();
         private readonly bool present;
 
         public CatalogueGraph(IEnumerable<Guid> solutions, bool present)
@@ -68,7 +72,25 @@ namespace Prisma.Plugins
             Add(solution, entry => entry.Contributors, string.IsNullOrWhiteSpace(name) ? "Consultant" : name);
         }
 
-        public CatalogueGraphResult Build() { return new CatalogueGraphResult { Solutions = entries.Values.ToArray() }; }
+        public CatalogueGraphResult Build()
+        {
+            foreach (var entry in entries)
+            {
+                List<MediaSnapshot> candidates;
+                // The same order as the published detail's media, whose first thumbnail the card used before.
+                if (thumbnails.TryGetValue(entry.Key, out candidates)) entry.Value.Thumbnail = candidates.OrderBy(item => item.SortOrder).ThenBy(item => item.Id).First();
+            }
+            return new CatalogueGraphResult { Solutions = entries.Values.ToArray(), Thumbnails = true };
+        }
+
+        public void Thumbnail(Guid solution, MediaSnapshot snapshot)
+        {
+            if (snapshot.Kind != "thumbnail" || !snapshot.Complete || snapshot.Storage != null || snapshot.LinkedAsset != null) throw MediaPolicy.Invalid("Invalid catalogue thumbnail.");
+            if (!entries.ContainsKey(solution)) return;
+            List<MediaSnapshot> candidates;
+            if (!thumbnails.TryGetValue(solution, out candidates)) thumbnails.Add(solution, candidates = new List<MediaSnapshot>());
+            candidates.Add(snapshot);
+        }
 
         private void Add(Guid solution, Func<CatalogueEntry, List<string>> list, string name)
         {
@@ -106,7 +128,8 @@ namespace Prisma.Plugins
             var solutions = new QueryExpression("nx_solution") { ColumnSet = new ColumnSet(false) };
             Visible(solutions.Criteria, present);
             solutions.AddOrder("nx_solutionid", OrderType.Ascending);
-            var graph = new CatalogueGraph(Rows(caller, solutions).Select(row => row.Id), present);
+            var visible = Rows(caller, solutions).Select(row => row.Id).ToList();
+            var graph = new CatalogueGraph(visible, present);
 
             Tags(caller, present, DraftGraph.Relationships[3], "nx_specializationarea", new[] { "nx_specializationareaname", "nx_sortordernumber" },
                 (solution, tag, row) => graph.Area(solution, tag, Aliased(row, "nx_specializationareaname") as string, Aliased(row, "nx_sortordernumber") as int?));
@@ -125,6 +148,7 @@ namespace Prisma.Plugins
                 foreach (var row in Rows(caller, contributors))
                     graph.Contributor(row.GetAttributeValue<EntityReference>("nx_solution").Id, Aliased(row, "cr6b0_consultantname") as string);
             }
+            Thumbnails(caller, factory.CreateOrganizationService(null), visible, graph);
             tracing?.Trace("Catalogue graph returned {0} solutions (present: {1}).", graph.Count, present);
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(graph.Build());
         }
@@ -155,6 +179,51 @@ namespace Prisma.Plugins
         }
 
         private static object Aliased(Entity row, string column) { return row.GetAttributeValue<AliasedValue>("tag." + column)?.Value; }
+
+        /// <summary>
+        /// Upload sessions are private, so they are read with system rights but only for solutions the caller can already see;
+        /// the image rows are read as the caller, so a thumbnail the caller cannot read is left out.
+        /// </summary>
+        private static void Thumbnails(IOrganizationService caller, IOrganizationService server, IList<Guid> visible, CatalogueGraph graph)
+        {
+            var sessions = new List<Entity>();
+            foreach (var batch in Batches(visible.Select(id => id.ToString("D"))))
+            {
+                var query = new QueryExpression("nx_uploadsession") { ColumnSet = new ColumnSet("nx_parentid", "nx_targetid", "nx_kind", "nx_filename", "nx_mime", "nx_bytes", "nx_received", "nx_nextblock", "nx_complete", "nx_storage") };
+                query.Criteria.AddCondition("nx_kind", ConditionOperator.Equal, "thumbnail");
+                query.Criteria.AddCondition("nx_complete", ConditionOperator.Equal, true);
+                query.Criteria.AddCondition("nx_parentid", ConditionOperator.In, batch);
+                query.AddOrder("nx_uploadsessionid", OrderType.Ascending);
+                sessions.AddRange(Rows(server, query));
+            }
+            var images = new Dictionary<Guid, Entity>();
+            foreach (var batch in Batches(sessions.Select(row => Guid.Parse(row.GetAttributeValue<string>("nx_targetid")))))
+            {
+                var query = new QueryExpression("nx_solutionimage") { ColumnSet = new ColumnSet("nx_sortorder", "nx_caption") };
+                query.Criteria.AddCondition("nx_solutionimageid", ConditionOperator.In, batch);
+                query.AddOrder("nx_solutionimageid", OrderType.Ascending);
+                foreach (var row in Rows(caller, query)) images[row.Id] = row;
+            }
+            foreach (var session in sessions)
+            {
+                Entity image;
+                if (images.TryGetValue(Guid.Parse(session.GetAttributeValue<string>("nx_targetid")), out image))
+                    graph.Thumbnail(Guid.Parse(session.GetAttributeValue<string>("nx_parentid")), MediaApi.Snapshot(session, image));
+            }
+        }
+
+        private static IEnumerable<object[]> Batches<T>(IEnumerable<T> values)
+        {
+            var batch = new List<object>();
+            foreach (var value in values)
+            {
+                batch.Add(value);
+                if (batch.Count < 500) continue;
+                yield return batch.ToArray();
+                batch.Clear();
+            }
+            if (batch.Count > 0) yield return batch.ToArray();
+        }
 
         private static IEnumerable<Entity> Rows(IOrganizationService caller, QueryExpression query)
         {
