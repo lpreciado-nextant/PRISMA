@@ -67,6 +67,7 @@ export function Lightbox({ items, start, onClose }: { items: LightboxItem[]; sta
         <button ref={close} type="button" onClick={onClose} aria-label="Close screenshots" title="Close (Esc)" className="glass grid size-10 shrink-0 cursor-pointer place-items-center rounded-full"><Icon name="close" size={17} /></button>
       </div>
 
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- Escape closes the lightbox; the backdrop click is a pointer shortcut. */}
       <div
         className="relative flex min-h-0 flex-1 items-center justify-center px-4 py-4 sm:px-20"
         onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}

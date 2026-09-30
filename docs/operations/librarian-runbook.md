@@ -1,19 +1,32 @@
 # Librarian runbook
 
-**Status:** Browser-local review uses dedicated outcome/comments fields; controlled production transitions and notifications pending · **Last updated:** 2026-09-21
+**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet · **Last updated:** 2026-09-30
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
 
 ## Reviewing a submission
 
-The local queue is at `#/review`, also available from the masthead outside present mode. Tabs show Pending review, Changes requested and Published; search by name, summary or owner and filter by specialization. Open a submission to inspect its full detail, screenshots, contributor effort and attachments. Review attachment routes preserve the return path to the queue record; uploaded HTML stays sandboxed.
+### Connected PRISMA
 
-To approve, check the independent client-safety confirmation and choose **Approve & publish**. To return, enter actionable comments and choose **Return for changes**; blank comments are not accepted. The contributor sees the latest comments in My submissions and the editor, corrects the Draft and submits it again. Decisions and media are saved in this browser and survive reload; they are not shared with other browsers or written to Dataverse. Storage failures leave the decision open for retry.
+The review queue is at `#/review`, shown in the masthead only to accounts with the **PRISMA Librarian** role (direct or through a team). System Administrator alone is not enough; the plug-ins check the role on every call. Tabs show Pending review, Changes requested and Published; search by name, summary or owner and filter by specialization. Open a record (`#/review/:id`) to inspect its detail, screenshots, contributor effort and attachments; HTML stays sandboxed and videos use the protected player.
 
-Review Comments allow up to 4000 characters and are separate from editorial Library Notes. Review Outcome records the latest decision, not current clearance. A returned record is Draft + Changes requested; resubmission retains feedback but belongs in Pending review. An edited formerly approved record may retain outcome Approved while not published or cleared. Approval replaces the latest comments; blank approval comments clear the earlier feedback. No full review history is captured. Legacy local feedback is copied to the new field conservatively, leaving original notes intact.
+There are **no notifications yet** ([ADR-0006](../architecture/decisions/adr-0006-power-automate-notifications-only.md) is accepted but not built). Check the queue on an agreed cadence until review alerts exist.
 
-Access is simulated for this UI PoC. It is not a production librarian role check, and no Teams/Outlook notifications are sent. Use non-sensitive test records only. Production roles and field-level security remain required.
+- **Approve & publish** requires the independent client-safety confirmation. The server rechecks completeness, active capability/areas/contributors and every stored file (size, and version for Blob files), then publishes and grants the **PRISMA Published Readers** team read access to the solution, its contributors and finalized media.
+- **Return for changes** requires comments (up to 4000 characters). The record goes back to Draft with outcome Changes requested; the contributor's safety acknowledgment is cleared.
+- **Retire** (Published only) removes the record from the catalogue and revokes reader access. The owner can later withdraw it to Draft, refresh it and resubmit.
+- Every action carries the record's row version. If someone else changed it first, the action is rejected; reopen the record and review the latest version.
+
+Librarians cannot edit a contributor's content in the app; return it with comments instead. Owners can withdraw Pending, Published or Retired records to Draft at any time, which also revokes reader access.
+
+### Mock PoC
+
+The PoC queue at `#/review` simulates the same flow in this browser only. Decisions and media survive reload but are not shared with other browsers or written to Dataverse; access is simulated, not a role check. Use non-sensitive test records only.
+
+### Review fields
+
+Review Comments allow up to 4000 characters and are separate from editorial Library Notes. Review Outcome records the latest decision, not current clearance. A returned record is Draft + Changes requested; resubmission retains feedback but belongs in Pending review. An edited formerly approved record may retain outcome Approved while not published or cleared. Approval replaces the latest comments; blank approval comments clear the earlier feedback. No full review history is captured.
 
 **Checklist before approving:**
 
@@ -29,22 +42,22 @@ Access is simulated for this UI PoC. It is not a production librarian role check
 - [ ] Calendar-mode contributions have covered US dates and valid 0-100% allocation; direct hours are finite and nonnegative, at most two decimals. Check the [schema contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort)
 - [ ] Project links, if present, meet [intake criteria](../data_model/SchemaV2.md#intake-triage-not-every-legacy-record-gets-linked-to-a-solution); client engagement names and per-person effort details do not appear in present mode
 
-**Outcomes:** approve client-safe content (Published, Client Safe Reviewed true, Review Outcome Approved), or request changes (Draft, Review Outcome Changes requested, required Review Comments and both safety booleans false). Approval revalidates submission completeness. Acknowledgment and historical outcome alone never grant clearance. Production enforces this through [controlled transitions](../architecture/security-model.md#controlled-transitions); the PoC only simulates the role.
+**Outcomes:** approve client-safe content (Published, Client Safe Reviewed true, Review Outcome Approved), or request changes (Draft, Review Outcome Changes requested, required Review Comments and both safety booleans false). Approval revalidates submission completeness. Acknowledgment and historical outcome alone never grant clearance. The connected app enforces this through [controlled transitions](../architecture/security-model.md#controlled-transitions); the PoC only simulates the role.
 
-**Re-reviews:** submitting contributor edits to a published record returns it to *Pending review*; saving unfinished edits returns it to *Draft*. Either save withdraws it from the catalogue and clears client-safe approval. Opening the editor alone changes nothing. A diff and audit history remain production follow-up work. Trivial librarian-only note corrections may remain published; the PoC does not implement this separate editing path.
+**Re-reviews:** a published record must be withdrawn to Draft before its owner can edit it; withdrawal removes it from the catalogue and clears client-safe approval, and resubmission returns it to *Pending review*. A diff and audit history remain follow-up work.
 
 **SLA:** _TBD — set with the librarian team (see risk R4: more than one librarian, SLA on review)._
 
 ## Retiring a record
 
-Retire when stale, superseded, or client-sensitive. Retired records leave search/browse but keep their history; a refreshed record can be re-approved back to *Published*.
+Retire when stale, superseded, or client-sensitive. Retired records leave search/browse and lose reader access but keep their history; the owner can withdraw a retired record to Draft, refresh it and resubmit it for approval.
 
 ## Reference data upkeep
 
 - Add governed values (capabilities, industries, specialization areas) as the practice evolves — contributors cannot.
 - Periodically merge duplicate technologies ([governance](../data_model/reference-data-governance.md)).
 - Maintain sort orders that drive tab/chip/facet ordering.
-- Review US federal holiday coverage and publish a new calendar version before the current period expires; the PoC currently covers only 2026. Do not edit referenced calendar versions or silently recalculate production history ([calendar stewardship](../data_model/reference-data-governance.md#calendar-stewardship)).
+- Review US federal holiday coverage before it runs out: the connected effort calculation covers 2020–2035 in code ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md)); the PoC mock calendar covers only 2026. Do not silently recalculate production history ([calendar stewardship](../data_model/reference-data-governance.md#calendar-stewardship)).
 
 ## Recurring duties
 

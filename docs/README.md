@@ -1,6 +1,6 @@
 # PRISMA documentation
 
-**Status:** Living, including schema references, PRISMA_Dev context, proposed Azure Blob Storage transition, verified offline migration tooling and compiled infrastructure templates; no Azure deployment · **Last updated:** 2026-09-28
+**Status:** Living; connected PRISMA pilot published with plug-in backend and Azure Blob media pilot live since 2026-09-29; offline migration tooling and production infrastructure templates remain undeployed · **Last updated:** 2026-09-30
 
 Documentation map for the PRISMA — Nextant Solution Library project. The [end-to-end design](design/end-to-end-design.md) is the overview; each aspect below has a dedicated living document.
 

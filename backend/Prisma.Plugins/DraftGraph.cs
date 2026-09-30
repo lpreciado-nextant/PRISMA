@@ -166,15 +166,23 @@ namespace Prisma.Plugins
 
         private static HashSet<Guid> Links(IOrganizationService caller, Guid parent, string relationship)
         {
-            var metadata = (ManyToManyRelationshipMetadata)((RetrieveRelationshipResponse)caller.Execute(new RetrieveRelationshipRequest { Name = relationship })).RelationshipMetadata;
-            var first = metadata.Entity1LogicalName == "nx_solution";
-            var source = first ? metadata.Entity1IntersectAttribute : metadata.Entity2IntersectAttribute;
-            var target = first ? metadata.Entity2IntersectAttribute : metadata.Entity1IntersectAttribute;
-            var query = new QueryExpression(metadata.IntersectEntityName) { ColumnSet = new ColumnSet(target), TopCount = 101 };
+            string intersect, source, target;
+            IntersectOf(caller, relationship, out intersect, out source, out target);
+            var query = new QueryExpression(intersect) { ColumnSet = new ColumnSet(target), TopCount = 101 };
             query.Criteria.AddCondition(source, ConditionOperator.Equal, parent);
             var rows = caller.RetrieveMultiple(query).Entities;
             if (rows.Count > 100) throw Invalid("Related record limit exceeded.");
             return new HashSet<Guid>(rows.Select(row => row.GetAttributeValue<Guid>(target)));
+        }
+
+        /// <summary>Intersect table of a Solution N:N, with its Solution-side (source) and tag-side (target) columns.</summary>
+        internal static void IntersectOf(IOrganizationService service, string relationship, out string intersect, out string source, out string target)
+        {
+            var metadata = (ManyToManyRelationshipMetadata)((RetrieveRelationshipResponse)service.Execute(new RetrieveRelationshipRequest { Name = relationship })).RelationshipMetadata;
+            var first = metadata.Entity1LogicalName == "nx_solution";
+            intersect = metadata.IntersectEntityName;
+            source = first ? metadata.Entity1IntersectAttribute : metadata.Entity2IntersectAttribute;
+            target = first ? metadata.Entity2IntersectAttribute : metadata.Entity1IntersectAttribute;
         }
 
         private static void SyncLinks(IOrganizationService caller, Guid parent, string relationship, string table, HashSet<Guid> desired)

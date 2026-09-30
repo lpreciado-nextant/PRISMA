@@ -55,7 +55,7 @@ namespace Prisma.Plugins
             var caller = factory.CreateOrganizationService(context.InitiatingUserId);
             var server = factory.CreateOrganizationService(null);
             if (context.MessageName == ListMessage) { List(context, caller, server); return; }
-            if (context.MessageName == TopMessage) { Top(context, server); return; }
+            if (context.MessageName == TopMessage) { Top(context, server, (ITracingService)serviceProvider.GetService(typeof(ITracingService))); return; }
             if (context.MessageName != SetMessage) throw new InvalidPluginExecutionException("Invalid favorite operation.");
             var solutionId = (Guid)context.InputParameters["SolutionId"];
             var saved = (bool)context.InputParameters["Saved"];
@@ -95,7 +95,7 @@ namespace Prisma.Plugins
         /// Counts every person's favorites, so it reads as the server. It returns only the ranked solution ids of
         /// Published, active solutions: never who saved them or how many times. Rows without a consultant are ignored.
         /// </summary>
-        private static void Top(IPluginExecutionContext context, IOrganizationService server)
+        private static void Top(IPluginExecutionContext context, IOrganizationService server, ITracingService tracing)
         {
             var saves = new List<KeyValuePair<Guid, DateTime>>();
             var query = new QueryExpression("nx_solutionfavorite") { ColumnSet = new ColumnSet("nx_solution", "createdon") };
@@ -116,6 +116,7 @@ namespace Prisma.Plugins
                 query.PageInfo.PageNumber++;
                 query.PageInfo.PagingCookie = page.PagingCookie;
             }
+            tracing?.Trace("Top favorites ranked {0} saves across {1} pages.", saves.Count, query.PageInfo.PageNumber);
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new FavoriteList {
                 SolutionIds = FavoriteRanking.Top(saves).Select(id => id.ToString("D")).ToArray()
             });

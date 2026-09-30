@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { catalogueQuery, loadCatalogue, orderedAreas, readAll, type ReadRows } from "./catalogue.ts";
+import { catalogueQuery, loadCatalogue, orderedAreas, parseCatalogueGraph, readAll, type ReadRows } from "./catalogue.ts";
 import { matchesQuery } from "../../src/lib/search.ts";
 
 const solutionId = "11111111-1111-1111-1111-111111111111";
@@ -16,13 +16,13 @@ const record = {
 };
 const signal = () => new AbortController().signal;
 function reader(overrides: object = {}): ReadRows {
-  return async table => ({ success: true, data: {
+  return async table => ({ success: true, data: ({
     solutions: [{ ...record, ...overrides }],
     areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "ai", nx_sortordernumber: 10 }],
     capabilities: [{ nx_capabilityid: capabilityId, nx_capabilityname: "Automation" }],
     technologies: [{ nx_technologyname: "Dataverse" }],
     industries: [{ nx_industryname: "Technology" }],
-  }[table] });
+  } as Record<string, object[]>)[table] ?? [] });
 }
 
 test("maps live names, numeric choices, lookups and N:N tag queries", async () => {
@@ -170,4 +170,49 @@ test("a failed hydration batch cancels siblings and never starts the next batch"
   }), /Credit access denied/);
   assert.equal(seen.length, 4);
   assert.equal(batchSignal?.aborted, true);
+});
+
+const graphResult = (solutions: object[]) => ({ success: true, data: { ResultJson: JSON.stringify({ solutions }) } });
+const graphEntry = { id: solutionId, areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "data", nx_sortordernumber: 1 }], technologies: ["Fabric"], industries: ["Retail"], contributors: ["Graph Builder"] };
+
+test("the bulk catalogue graph replaces every per-solution tag and credit request", async () => {
+  const base = reader();
+  const tables: string[] = [];
+  let credits = 0;
+  let requested: boolean | undefined;
+  const [result] = await loadCatalogue(async (table, options) => { tables.push(table); return base(table, options); }, false, signal(),
+    async () => { credits++; return ["Per-solution Builder"]; },
+    async present => { requested = present; return parseCatalogueGraph(graphResult([graphEntry]), present); });
+  assert.deepEqual(tables.sort(), ["capabilities", "solutions"]);
+  assert.equal(credits, 0);
+  assert.equal(requested, false);
+  assert.deepEqual(result.specializationAreas, ["data"]);
+  assert.deepEqual(result.technologies, ["Fabric"]);
+  assert.deepEqual(result.industries, ["Retail"]);
+  assert.equal(matchesQuery(result, "Graph Builder"), true);
+});
+
+test("a failed bulk graph falls back to per-solution reads, and a solution missing from it is read on its own", async () => {
+  const [fallback] = await loadCatalogue(reader(), false, signal(), async () => ["Per-solution Builder"], async () => { throw new Error("API not deployed"); });
+  assert.deepEqual(fallback.technologies, ["Dataverse"]);
+  assert.equal(matchesQuery(fallback, "Per-solution Builder"), true);
+  const [missing] = await loadCatalogue(reader(), false, signal(), async () => ["Per-solution Builder"], async present => parseCatalogueGraph(graphResult([]), present));
+  assert.deepEqual(missing.technologies, ["Dataverse"]);
+  const controller = new AbortController();
+  await assert.rejects(loadCatalogue(reader(), false, controller.signal, undefined, async () => { controller.abort(); throw new Error("Late"); }), { name: "AbortError" });
+});
+
+test("the catalogue graph never carries builder credits in present mode and fails closed on malformed rows", async () => {
+  const { contributors, ...clientSafe } = graphEntry;
+  assert.equal(contributors.length, 1);
+  const [presented] = await loadCatalogue(reader(), true, signal(), undefined, async present => parseCatalogueGraph(graphResult([clientSafe]), present));
+  assert.deepEqual(presented.contributorNames, []);
+  assert.deepEqual(presented.technologies, ["Fabric"]);
+  assert.throws(() => parseCatalogueGraph(graphResult([graphEntry]), true), /builder credits/);
+  assert.throws(() => parseCatalogueGraph(graphResult([clientSafe]), false), /contributors/);
+  assert.throws(() => parseCatalogueGraph(graphResult([graphEntry, graphEntry]), false), /repeated/);
+  assert.throws(() => parseCatalogueGraph(graphResult([{ ...graphEntry, technologies: [""] }]), false), /technologies/);
+  assert.throws(() => parseCatalogueGraph(graphResult([{ ...graphEntry, id: "not-a-guid" }]), false), /identifier/);
+  assert.throws(() => parseCatalogueGraph(graphResult([{ ...graphEntry, areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "other" }] }]), false), /unmapped/);
+  assert.throws(() => parseCatalogueGraph({ success: false, data: {} }, false), /did not return/);
 });

@@ -22,6 +22,7 @@ Thumbs.db
 
 # Batch scripts
 *.bat
+!/run-poc.bat
 
 # Local test media and generated output
 /test-data/

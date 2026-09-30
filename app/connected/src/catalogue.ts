@@ -104,28 +104,45 @@ export async function readAll(read: ReadRows, table: CatalogueTable, options: IG
   return rows;
 }
 
-export async function loadCatalogue(read: ReadRows, present: boolean, signal: AbortSignal, readCredits?: (id: string, present: boolean, signal: AbortSignal) => Promise<string[]>): Promise<Solution[]> {
-  const [solutions, capabilities] = await Promise.all([
+export type CatalogueGraphEntry = { areas: SpecializationArea[]; technologies: string[]; industries: string[]; contributors?: string[] };
+export type ReadCatalogueGraph = (present: boolean, signal: AbortSignal) => Promise<Map<string, CatalogueGraphEntry>>;
+
+/** Parses `nx_GetCatalogueGraph`. Present mode must carry no builder credits; every name must be readable. */
+export function parseCatalogueGraph(result: { success: boolean; data: Record<string, unknown> }, present: boolean): Map<string, CatalogueGraphEntry> {
+  if (!result.success || typeof result.data?.ResultJson !== "string") throw new Error("Dataverse did not return the catalogue graph.");
+  const solutions = (JSON.parse(result.data.ResultJson) as { solutions?: unknown })?.solutions;
+  if (!Array.isArray(solutions)) throw new Error("Invalid catalogue graph.");
+  const graph = new Map<string, CatalogueGraphEntry>();
+  for (const entry of solutions) {
+    if (!entry || typeof entry !== "object") throw new Error("Invalid catalogue graph.");
+    const solutionId = id(entry, "id");
+    if (graph.has(solutionId)) throw new Error("The catalogue graph repeated a solution.");
+    const names = (key: string) => {
+      const list = value(entry, key);
+      if (!Array.isArray(list) || list.some(name => typeof name !== "string" || !name.trim())) throw new Error(`Invalid catalogue graph ${key}.`);
+      return list as string[];
+    };
+    const areas = value(entry, "areas");
+    if (!Array.isArray(areas) || areas.some(area => !area || typeof area !== "object")) throw new Error("Invalid catalogue graph areas.");
+    if (present && value(entry, "contributors") !== undefined) throw new Error("The presentation catalogue returned builder credits.");
+    graph.set(solutionId, { areas: orderedAreas(areas), technologies: names("technologies"), industries: names("industries"), ...(present ? {} : { contributors: names("contributors") }) });
+  }
+  return graph;
+}
+
+export async function loadCatalogue(read: ReadRows, present: boolean, signal: AbortSignal, readCredits?: (id: string, present: boolean, signal: AbortSignal) => Promise<string[]>, readGraph?: ReadCatalogueGraph): Promise<Solution[]> {
+  const [solutions, capabilities, graph] = await Promise.all([
     readAll(read, "solutions", catalogueQuery(present), signal),
     readAll(read, "capabilities", { select: ["nx_capabilityid", "nx_capabilityname"], orderBy: ["nx_capabilityid asc"] }, signal),
+    // One bulk read replaces several requests per solution; if it fails, the per-solution reads still work.
+    readGraph?.(present, signal).catch(() => { signal.throwIfAborted(); return undefined; }),
   ]);
   const capabilityMap = new Map(capabilities.map(row => [id(row, "nx_capabilityid"), text(row, "nx_capabilityname", true)]));
   const catalogue: Solution[] = [];
   const controller = new AbortController();
   const activeSignal = AbortSignal.any([signal, controller.signal]);
-  const hydrate = async (row: object): Promise<Solution> => {
-    activeSignal.throwIfAborted();
-    if (value(row, "nx_publicationstatus") !== PUBLISHED) throw new Error("Dataverse returned a record outside the published catalogue.");
-    const acknowledged = flag(row, "nx_safetyacknowledged");
-    const cleared = flag(row, "nx_clientsafereviewed");
-    if (present && (!acknowledged || !cleared)) throw new Error("Dataverse returned a record outside the presentation filter.");
-    const solutionId = id(row, "nx_solutionid");
-    const capability = capabilityMap.get(id(row, "_nx_capability_value"));
-    if (!capability) throw new Error("A solution has an unreadable capability.");
-    const maturityValue = value(row, "nx_status");
-    const status = typeof maturityValue === "number" ? MATURITY[maturityValue] : undefined;
-    if (!status) throw new Error("A solution has an unsupported maturity choice.");
-    const [areas, technologies, industries, contributorNames] = await Promise.all([
+  const readTags = async (solutionId: string): Promise<CatalogueGraphEntry> => {
+    const [areas, technologies, industries, contributors] = await Promise.all([
       readAll(read, "areas", {
         select: ["nx_specializationareaid", "nx_specializationareaname", "nx_sortordernumber"],
         filter: `nx_Solution_nx_SpecializationArea_nx_SpecializationArea/any(solution:solution/nx_solutionid eq ${solutionId})`,
@@ -143,8 +160,30 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       }, activeSignal),
       readCredits?.(solutionId, present, activeSignal),
     ]);
+    return {
+      areas: orderedAreas(areas),
+      technologies: technologies.map(tag => text(tag, "nx_technologyname", true)),
+      industries: industries.map(tag => text(tag, "nx_industryname", true)),
+      contributors,
+    };
+  };
+  const hydrate = async (row: object): Promise<Solution> => {
     activeSignal.throwIfAborted();
-    const specializationAreas = orderedAreas(areas);
+    if (value(row, "nx_publicationstatus") !== PUBLISHED) throw new Error("Dataverse returned a record outside the published catalogue.");
+    const acknowledged = flag(row, "nx_safetyacknowledged");
+    const cleared = flag(row, "nx_clientsafereviewed");
+    if (present && (!acknowledged || !cleared)) throw new Error("Dataverse returned a record outside the presentation filter.");
+    const solutionId = id(row, "nx_solutionid");
+    const capability = capabilityMap.get(id(row, "_nx_capability_value"));
+    if (!capability) throw new Error("A solution has an unreadable capability.");
+    const maturityValue = value(row, "nx_status");
+    const status = typeof maturityValue === "number" ? MATURITY[maturityValue] : undefined;
+    if (!status) throw new Error("A solution has an unsupported maturity choice.");
+    // A solution published after the bulk read is absent from it and is read on its own.
+    const bulk = graph?.get(solutionId);
+    const tags = bulk ? { ...bulk, contributors: present ? [] : bulk.contributors } : await readTags(solutionId);
+    activeSignal.throwIfAborted();
+    const { areas: specializationAreas, technologies, industries, contributors: contributorNames } = tags;
     if (contributorNames && contributorNames.some(name => typeof name !== "string" || !name.trim())) throw new Error("Invalid contributor search projection.");
     return {
       id: solutionId,
@@ -165,8 +204,8 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       dateAdded: text(row, "nx_dateadded").slice(0, 10),
       createdOn: text(row, "createdon") || undefined,
       capabilities: [capability],
-      technologies: technologies.map(tag => text(tag, "nx_technologyname", true)),
-      industries: industries.map(tag => text(tag, "nx_industryname", true)),
+      technologies,
+      industries,
       clientRole: clientRole(row),
       contributors: [],
       ...(contributorNames ? { contributorNames } : {}),

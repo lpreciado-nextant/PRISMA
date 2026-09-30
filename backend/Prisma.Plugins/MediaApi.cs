@@ -280,6 +280,8 @@ namespace Prisma.Plugins
                 }
             }
             var latest = caller.Retrieve("nx_solution", identifier, new ColumnSet(false));
+            ((ITracingService)serviceProvider.GetService(typeof(ITracingService)))?.Trace("{0}: storage {1}, block size {2}, {3} ms (hash {4} ms, storage {5} ms).",
+                context.MessageName, storage.UploadsToBlob ? "blob-enabled" : "dataverse", blockSize, clock.ElapsedMilliseconds, hashing.ElapsedMilliseconds, storing.ElapsedMilliseconds);
             if (progressed != null && blockSize != MediaPolicy.BlockSize)
             {
                 context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaProgress { Id = identifier.ToString(), RowVersion = latest.RowVersion, SessionId = sessionId.ToString(), BlockSize = blockSize, Received = progressed.GetAttributeValue<int>("nx_received"), NextBlock = progressed.GetAttributeValue<int>("nx_nextblock"),

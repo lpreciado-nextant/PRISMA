@@ -1,9 +1,11 @@
 # Content health
 
-**Status:** Draft, client-safe review controls aligned · **Last updated:** 2026-09-21
+**Status:** Draft; no automated link-health, staleness or re-confirmation checks exist yet — the librarian's manual retire action is the only live control · **Last updated:** 2026-09-30
 **Addresses risks:** R3 (demos break silently) and R5 (stale content presented as current) in the [risk register](../delivery/risks.md)
 
 CSM trust, once eroded by a broken embed or a stale demo, is unrecoverable. Content health is proactive, not complaint-driven.
+
+**Today in connected PRISMA:** cards show Date Added and support newest/oldest sorting; hosted, Power Apps and Power BI links are stored as linked assets with an `Allows Embedding` flag (Power Apps and Power BI always open in a new tab); librarians can retire a published record, which also revokes reader access. Nothing below is scheduled or automated yet.
 
 ## Link health
 

@@ -25,7 +25,7 @@ export function SolutionRow({ solution, present, index, onOpen, poster, favorita
   const showHeart = favoritable && !present;
   return (
     <div className="animate-rise relative min-w-0" style={{ animationDelay: `${Math.min(index, 9) * 30}ms` }}>
-      <article
+      <div
         role="button"
         tabIndex={0}
         aria-label={`${solution.name} — ${solution.summary}`}
@@ -48,7 +48,7 @@ export function SolutionRow({ solution, present, index, onOpen, poster, favorita
         <span className="hidden shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 sm:block" style={{ color: "var(--accent)" }} aria-hidden="true">
           <Icon name="arrowRight" size={16} />
         </span>
-      </article>
+      </div>
       {showHeart && <FavoriteButton id={solution.id} name={solution.name} className="absolute top-1/2 right-3 z-10 -translate-y-1/2" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
     </div>
   );

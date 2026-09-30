@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Living; all six local media-preparation items completed, including offline byte verification/checkpoint recovery/rollback reports and compiled private-storage infrastructure templates; local HTML/document/MP4 Edge acceptance passed; a development-only Azure lab storage account now backs the workbench on request; production remains on Dataverse and Azure Blob Storage transition is still proposed; hosted/browser-matrix, production cloud deployment and least-privilege acceptance remain open · **Last updated:** 2026-09-29
+**Status:** Living; connected pilot published; Azure Blob media pilot deployed and enabled 2026-09-29 for new attachments (existing files stay in Dataverse); bulk catalogue graph API built but not deployed; production cloud foundation, hosted browser matrix and least-privilege acceptance remain open · **Last updated:** 2026-09-30
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -107,6 +107,14 @@ The SDK utility also supports `smoke-graph`, `smoke-media` and `smoke-review` ag
 6. **Verify and publish only the new app.** Test save/reload from another session, incomplete drafts, media round-trips, submit/return/resubmit/approve, edit withdrawal, permission denials, direct-write bypass attempts, stale-version conflicts, child access and deletion. Verify present-mode server filters and projection, with no transient internal data on mode changes. Test with non-admin identities and approved non-sensitive fixtures. Then build, publish PRISMA, add/verify its solution membership, configure sharing, and run the authenticated hosted smoke test. Full read/write is the chosen first-release gate; do not publish a read-only placeholder.
 
 Reference-data counts do not prove vocabulary completeness. Review the two live capabilities against the submission UI before any seed migration. Do not seed the mock catalogue automatically or modify existing Consultant/Project records. File/image operations and invocation of the controlled APIs through the installed SDK must be proven in Local Play before selecting the final client transport. The current Microsoft SDK documents generated file/image helpers as preview; verify the installed generator rather than assuming those helpers exist.
+
+### Bulk catalogue graph (built, not deployed)
+
+The published library reads each solution's areas, technologies and industries with three OData queries and its builder names with a full `nx_GetPublishedDetail` call: four requests per solution, four solutions at a time. That is about 160 requests for the 40-record seed target, and the detail call does another dozen server reads each. `nx_GetCatalogueGraph` ([CatalogueApi.cs](../../backend/Prisma.Plugins/CatalogueApi.cs)) replaces them with a handful of paged queries: visible published solutions, each tag intersect table joined to its tag, and (outside present mode) contributor rows joined to consultant names. It reads as the caller, so sharing decides what is returned exactly as before; present mode applies the client-safe filter on the server and returns no builder names.
+
+`loadCatalogue` accepts the bulk reader as an optional argument. If the call fails, or a solution was published after it ran, that solution falls back to the existing per-solution reads, so the app works against either backend. To enable it, each step separately approved: push a signed assembly containing `CatalogueApi` (`blob-plugin --execute`), run `catalogue-api` (preview) then `catalogue-api --execute`, generate the client from `app/connected` with `pa app add dataverse-api --api-name nx_GetCatalogueGraph`, pass `parseCatalogueGraph(await service.nx_GetCatalogueGraph(present), present)` as `readGraph` in `ConnectedApp.tsx`, then publish the app.
+
+The contributor, review and media-editor screens are also loaded on demand (the main connected chunk went from 561 KB to 458 KB); the published viewer's code is fetched while the detail page is open.
 
 ## System shape
 
@@ -372,4 +380,4 @@ The PoC uses IndexedDB and does not enforce production roles or concurrency. Con
 
 ## Notifications
 
-Power Automate handles review-queue alerts and demo-request handoffs to Teams/Outlook. No business logic lives in flows.
+Planned: Power Automate handles review-queue alerts and demo-request handoffs to Teams/Outlook, with no business logic in flows ([ADR-0006](decisions/adr-0006-power-automate-notifications-only.md)). **Not built yet:** librarians must check the review queue themselves.

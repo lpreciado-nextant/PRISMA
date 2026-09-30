@@ -225,7 +225,7 @@ test("caption checkpoint chains into core and graph saves without restoring safe
     assert.equal(JSON.parse(json).safetyAcknowledged, false);
     calls.push("core");
     return result({ ...fields, ...JSON.parse(json), id, rowVersion: String(++version) });
-  } }, { read: async () => ({}), save: async (id, expected, json) => {
+  } }, { read: unusedRead, save: async (id, expected, json) => {
     assert.equal(expected, String(version));
     calls.push("graph");
     return result({ id, rowVersion: String(++version), graph: JSON.parse(json), hours: [] });
@@ -274,6 +274,7 @@ const draft: SavedDraft = { ...EMPTY_DRAFT, name: "Core draft", id: "45dc1e23-1b
 const result = (data: unknown) => ({ success: true, data: { ResultJson: JSON.stringify(data) } });
 const signal = () => new AbortController().signal;
 const api: DraftApi = { list: async () => result({ records: [draft], moreRecords: false }), save: async () => result(draft) };
+const unusedRead = async () => ({ success: false, data: {} });
 
 test("wizard save chains confirmed versions and acknowledges only after graph writes", async () => {
   const calls: string[] = [];
@@ -285,7 +286,7 @@ test("wizard save chains confirmed versions and acknowledges only after graph wr
     calls.push(`core:${fields.safetyAcknowledged}`);
     return result({ ...draft, ...fields, rowVersion: String(++version) });
   } };
-  const graphApi: GraphApi = { read: async () => ({}), save: async (id, expected, json) => {
+  const graphApi: GraphApi = { read: unusedRead, save: async (id, expected, json) => {
     assert.equal(expected, String(version));
     calls.push("graph");
     return result({ id, rowVersion: String(++version), graph: JSON.parse(json), hours: [] });
@@ -300,7 +301,7 @@ test("wizard save stops after an uncertain graph response and retains its confir
   let checkpoint: SavedDraft | undefined;
   let saves = 0;
   const coreApi: DraftApi = { ...api, save: async json => { saves++; return result({ ...draft, ...JSON.parse(json), rowVersion: "90071992547409932" }); } };
-  const graphApi: GraphApi = { read: async () => ({}), save: async () => { throw new Error("Connection lost"); } };
+  const graphApi: GraphApi = { read: unusedRead, save: async () => { throw new Error("Connection lost"); } };
   await assert.rejects(persistDraftGraph(coreApi, graphApi, { ...draft, name: "Updated", safetyAcknowledged: true }, draft, { ...emptyGraph(), technologyIds: [draft.id] }, emptyGraph(), signal(), core => { checkpoint = core; }), /Connection lost/);
   assert.equal(saves, 1);
   assert.equal(checkpoint?.rowVersion, "90071992547409932");
@@ -398,7 +399,7 @@ test("owned cards hydrate saved technology chips and reject missing or stale res
 test("wizard creates one named draft and reuses its confirmed identifier", async () => {
   let creates = 0;
   const coreApi: DraftApi = { ...api, save: async (_json, id, version) => { creates++; assert.equal(id, undefined); assert.equal(version, undefined); return result(draft); } };
-  const graphApi: GraphApi = { read: async () => ({}), save: async () => { throw new Error("Unexpected graph write"); } };
+  const graphApi: GraphApi = { read: unusedRead, save: async () => { throw new Error("Unexpected graph write"); } };
   const first = await persistDraftGraph(coreApi, graphApi, draft, undefined, emptyGraph(), emptyGraph(), signal(), () => {});
   const reopened = await persistDraftGraph(coreApi, graphApi, draft, first.core, first.graph, first.graph, signal(), () => {});
   assert.equal(creates, 1);
@@ -406,8 +407,8 @@ test("wizard creates one named draft and reuses its confirmed identifier", async
 });
 
 test("named drafts ignore untouched contributor placeholders without dropping authored effort", async () => {
-  const placeholder = { id: null, personId: "", directHours: null, startDate: null, endDate: null, allocation: 100 };
-  const graphApi: GraphApi = { read: async () => ({}), save: async () => { throw new Error("Unexpected graph write"); } };
+  const placeholder = { id: null, personId: "", directHours: null, startDate: null, endDate: null, allocation: 100, roleValue: null };
+  const graphApi: GraphApi = { read: unusedRead, save: async () => { throw new Error("Unexpected graph write"); } };
   const graph = { ...emptyGraph(), contributors: [placeholder] };
   const saved = await persistDraftGraph(api, graphApi, draft, draft, graph, emptyGraph(), signal(), () => {});
   assert.deepEqual(saved.graph.contributors, []);
@@ -417,7 +418,7 @@ test("named drafts ignore untouched contributor placeholders without dropping au
 });
 
 test("live effort preview matches observed federal holidays and validates active inputs", () => {
-  const person = { id: null, personId: "consultant", directHours: 13.25, allocation: 50, startDate: "2026-07-01", endDate: "2026-07-06" };
+  const person = { id: null, personId: "consultant", directHours: 13.25, allocation: 50, startDate: "2026-07-01", endDate: "2026-07-06", roleValue: null };
   assert.deepEqual(contributorEffort(person, 125060000), { businessDays: 3, hours: 12, error: "" });
   assert.equal(contributorEffort({ ...person, startDate: "2021-12-30", endDate: "2022-01-03" }, 125060000).hours, 8);
   assert.equal(contributorEffort({ ...person, startDate: "2020-06-19", endDate: "2020-06-19" }, 125060000).hours, 4);
@@ -478,7 +479,7 @@ test("a lost committed save response is not retried or followed by graph writes"
     stored = { ...draft, ...JSON.parse(json), rowVersion: "90071992547409932" };
     throw new Error("Response lost after commit");
   } };
-  const graphApi: GraphApi = { read: async () => ({}), save: async () => { graphWrites++; return {}; } };
+  const graphApi: GraphApi = { read: unusedRead, save: async () => { graphWrites++; return unusedRead(); } };
   await assert.rejects(persistDraftGraph(coreApi, graphApi, { ...draft, summary: "Committed change" }, draft, { ...emptyGraph(), technologyIds: [spare] }, emptyGraph(), signal(), () => { throw new Error("Unconfirmed checkpoint"); }), /Response lost/);
   assert.equal(writes, 1);
   assert.equal(graphWrites, 0);

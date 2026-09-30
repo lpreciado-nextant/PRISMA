@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App lint, tests and builds
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      # Install scripts only fetch tooling binaries (ffmpeg-static, keytar) that CI does not use.
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run typecheck:tests
+      - run: npm test
+      - run: npm run test:connected
+      - run: npm run test:ui
+      - run: npm run test:migration
+      - run: npm run build
+      - run: npm run build:connected
+
+  backend:
+    name: Plug-in tests and deploy tool build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test backend/Prisma.Plugins.Tests --nologo
+      - run: dotnet build backend/Prisma.Deploy --nologo

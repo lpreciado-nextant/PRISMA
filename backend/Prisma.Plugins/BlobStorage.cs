@@ -359,6 +359,7 @@ namespace Prisma.Plugins
             Entity session;
             if (!context.PreEntityImages.TryGetValue("session", out session)) throw MediaPolicy.Invalid("Blob deletion requires the session pre-image.");
             if (!BlobMedia.IsBlob(session)) return;
+            ((ITracingService)serviceProvider.GetService(typeof(ITracingService)))?.Trace("Deleting stored media for upload session {0}.", session.Id);
             var factory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             BlobMedia.Delete(new MediaStorage(serviceProvider, factory.CreateOrganizationService(null)).Store, session);
         }

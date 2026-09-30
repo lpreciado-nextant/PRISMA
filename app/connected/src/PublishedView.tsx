@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Lightbox } from "../../src/components/Lightbox";
 import type { Solution } from "../../src/types";
 import { Icon } from "../../src/components/Icon";
@@ -7,12 +7,14 @@ import { DetailView, GalleryFigure } from "../../src/views/DetailView";
 import { navigate } from "../../src/lib/router";
 import { workflowApi } from "./dataSource";
 import { mediaAsset, parsePublished, type PublishedDetail } from "./workflow";
-import { MediaPreview } from "./DraftMediaEditor";
 import type { MediaItem } from "./media";
 import { useMediaAction } from "./useMediaAction";
 import { ProtectedImage } from "./ProtectedImage";
 import { contributorCredit } from "./draftGraph";
 import { MATURITY_OPTIONS } from "./drafts";
+
+const loadViewer = () => import("./DraftMediaEditor");
+const MediaPreview = lazy(() => loadViewer().then(module => ({ default: module.MediaPreview })));
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px]";
 
@@ -30,10 +32,12 @@ export function PublishedView({ solution, present, assetId, favorite }: { soluti
     }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [solution.id, present, attempt]);
+  // Fetch the viewer while the detail page is read, so opening an asset stays immediate.
+  useEffect(() => { void loadViewer().catch(() => undefined); }, []);
   const asset = detail?.media.find(item => item.id === assetId);
   if (error) return <section className="mx-auto max-w-[1100px] px-6 py-12" role="alert"><h1 className="text-[28px] font-semibold">Detail unavailable</h1><p className="my-4">The solution may have changed or your access may be insufficient.</p><button className={button} onClick={() => { setError(false); setDetail(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></section>;
   if (!detail) return <LoadingState variant="page" label="Loading solution..." />;
-  if (assetId) return asset ? <MediaPreview item={asset} solutionId={solution.id} mode={present ? "present" : "published"} viewerTitle={solution.name} onClose={() => navigate(`/s/${solution.id}`)} /> : <section className="mx-auto max-w-[1340px] px-4 py-6"><p role="alert" className="mb-4">Asset unavailable.</p><button className={button} onClick={() => navigate(`/s/${solution.id}`)}><Icon name="chevronLeft" />Back to solution</button></section>;
+  if (assetId) return asset ? <Suspense fallback={<LoadingState variant="page" label="Loading viewer..." />}><MediaPreview item={asset} solutionId={solution.id} mode={present ? "present" : "published"} viewerTitle={solution.name} onClose={() => navigate(`/s/${solution.id}`)} /></Suspense> : <section className="mx-auto max-w-[1340px] px-4 py-6"><p role="alert" className="mb-4">Asset unavailable.</p><button className={button} onClick={() => navigate(`/s/${solution.id}`)}><Icon name="chevronLeft" />Back to solution</button></section>;
   const hydrated: Solution = { ...solution, libraryNotes: present ? undefined : detail.libraryNotes, assets: detail.media.filter(item => item.kind === "attachment").map(mediaAsset), projects: present ? [] : detail.projects.map((projectName, index) => ({ id: String(index), projectName })) };
   const maturity = MATURITY_OPTIONS.find(option => option.label === solution.status)!.value;
   const effort = { ...detail, contributors: detail.contributors.map(person => person.effort ? contributorCredit(person.effort, maturity, person.name, person.hours, person.email) : person) };

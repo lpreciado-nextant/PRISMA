@@ -75,6 +75,7 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
         <div className={`absolute top-full right-0 z-20 mt-1 rounded-lg border p-1 shadow-lg ${compact ? "min-w-[11rem]" : "left-0"}`} style={{ background: "var(--ground)", borderColor: "var(--glass-edge)", color: "var(--ink)" }}>
           <ul id={`${id}-list`} role="listbox" aria-label={label} className="max-h-60 overflow-y-auto">
             {options.map((option, index) => (
+              // eslint-disable-next-line jsx-a11y/click-events-have-key-events -- the combobox input owns keyboard selection (aria-activedescendant).
               <li
                 key={option}
                 id={`${id}-option-${index}`}

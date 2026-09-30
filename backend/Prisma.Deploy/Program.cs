@@ -13,7 +13,7 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
@@ -306,6 +306,7 @@ if (command == "blob-plugin") { BlobPlugin(client, args.Skip(1).ToArray()); retu
 if (command == "bind-managed-identity") { BindManagedIdentity(client, args.Skip(1).ToArray()); return; }
 if (command == "set-blob-config") { SetBlobConfig(client, args.Skip(1).ToArray()); return; }
 if (command == "smoke-blob") { SmokeBlob(client, args.Skip(1).ToArray()); return; }
+if (command == "catalogue-api") { RegisterCatalogueApi(client, args.Skip(1).ToArray()); return; }
 
 static void SeedReferenceData(IOrganizationService service, string[] options)
 {
@@ -616,6 +617,7 @@ RegisterApi(client, reviewType, "nx_TransitionSubmission", "prvWritenx_Solution"
 });
 var publishedType = PluginType(client, assemblyId, "Prisma.Plugins.PublishedApi");
 RegisterApi(client, publishedType, "nx_GetPublishedDetail", "prvReadnx_Solution", new[] { ("SolutionId", 12, false), ("Present", 0, false) });
+RegisterApi(client, PluginType(client, assemblyId, "Prisma.Plugins.CatalogueApi"), "nx_GetCatalogueGraph", "prvReadnx_Solution", new[] { ("Present", 0, false) });
 // nx_solutionfavorite's schema name is lowercase (accepted quirk, see SchemaV2), so its generated privilege names are too.
 var favoriteType = PluginType(client, assemblyId, "Prisma.Plugins.FavoriteApi");
 RegisterApi(client, favoriteType, "nx_SetFavorite", "prvReadnx_solutionfavorite", new[] { ("SolutionId", 12, false), ("Saved", 0, false) });
@@ -1042,6 +1044,20 @@ static void BlobSchema(IOrganizationService service, string[] options)
         Create(service, new Entity("environmentvariabledefinition") { ["schemaname"] = variable.Schema, ["displayname"] = variable.Label, ["type"] = new OptionSetValue(variable.Type),
             ["defaultvalue"] = variable.Default, ["description"] = "Read by the PRISMA media plug-ins. Uploads stay in Dataverse unless explicitly enabled." });
     Console.WriteLine("Blob media schema and configuration definitions are in place; uploads remain disabled.");
+}
+
+static void RegisterCatalogueApi(IOrganizationService service, string[] options)
+{
+    if (options.Length > 1 || (options.Length == 1 && options[0] != "--execute")) throw new ArgumentException("Use catalogue-api [--execute]; preview is read-only. Execution requires explicit approval.");
+    var assembly = Find(service, "pluginassembly", "name", "Prisma.Plugins") ?? throw new InvalidOperationException("Existing assembly missing.");
+    if (assembly.Id != Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba")) throw new InvalidOperationException("Unexpected assembly target.");
+    var existing = Find(service, "customapi", "uniquename", "nx_GetCatalogueGraph");
+    Console.WriteLine(existing != null
+        ? "nx_GetCatalogueGraph is already registered; --execute only adds anything missing."
+        : "Plan: register nx_GetCatalogueGraph (required Boolean Present, String ResultJson) on Prisma.Plugins.CatalogueApi with execute privilege prvReadnx_Solution, in PRISMA_Dev. Push a signed assembly containing CatalogueApi first (blob-plugin --execute). No roles, data or apps change.");
+    if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
+    RegisterApi(service, PluginType(service, assembly.Id, "Prisma.Plugins.CatalogueApi"), "nx_GetCatalogueGraph", "prvReadnx_Solution", new[] { ("Present", 0, false) });
+    Console.WriteLine("Registered nx_GetCatalogueGraph. Generate its client from app/connected: pa app add dataverse-api --api-name nx_GetCatalogueGraph.");
 }
 
 static void BlobPlugin(IOrganizationService service, string[] options)

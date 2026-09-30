@@ -27,7 +27,8 @@ export function DemoStage({ solution, asset, fallbackHtml }: { solution: Solutio
       <iframe
         title={`${solution.name} live app`}
         src={asset.externalUrl}
-        sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
+        // Opaque origin, matching the connected viewer: an embedded page must never reach the host app.
+        sandbox="allow-scripts allow-forms allow-popups"
         referrerPolicy="no-referrer"
         className="h-full w-full border-0"
       />

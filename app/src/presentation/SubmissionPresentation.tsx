@@ -232,6 +232,7 @@ export function ResetDialog({ kind, onCancel, onConfirm }: { kind: "sample" | "b
   return <dialog id="reset-dialog" className="presentation-dialog" aria-labelledby="reset-title" onCancel={onCancel}>
     <h2 id="reset-title">{kind === "sample" ? "Load the BSO Quota example?" : "Start a blank submission?"}</h2>
     <p>This replaces the presentation draft, including local images. Your separate PoC draft is not affected.</p>
+    {/* eslint-disable-next-line jsx-a11y/no-autofocus -- a modal confirmation starts on its least destructive action. */}
     <div><button className="presentation-command" autoFocus onClick={onCancel}>Cancel</button><button className="presentation-command presentation-primary" onClick={onConfirm}>{kind === "sample" ? "Load example" : "Start blank"}</button></div>
   </dialog>;
 }

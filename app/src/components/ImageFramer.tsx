@@ -150,8 +150,10 @@ export function ImageFramer({ source, name, onConfirm, onCancel }: {
         <button type="button" disabled={busy} aria-label="Cancel framing" title="Cancel" onClick={onCancel} className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-lg text-(--ink-2) disabled:opacity-40"><Icon name="close" size={18} /></button>
       </div>
 
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a custom 2-D control: arrow keys move, plus/minus zoom, as its label announces. */}
       <div
         ref={frame}
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the keyboard can frame the image.
         tabIndex={0}
         role="group"
         aria-label={`Framing area, zoom ${zoomPercent}%. Drag or use the arrow keys to move the image; plus and minus to zoom.`}

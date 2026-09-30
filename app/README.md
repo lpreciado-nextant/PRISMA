@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** All six local media-preparation items are complete: durable uploads, failure/cleanup tests, repeatable Edge acceptance, HTML/documents, offline migration verification/recovery/rollback reports, and locally compiled infrastructure templates. No live exporter or migration execution. A development-only [Azure lab storage account](#azure-lab-storage) now backs the workbench on request; no production Azure foundation is provisioned. Shared MP4 contract and Dataverse/local Blob adapters tested; production remains on Dataverse. Local scans and identities are simulated, not real malware scanning or authorization. Shared loading states deployed; hosted submission/review loaders, fonts, logos and empty-catalogue present mode verified. Two-field story deployed and hosted save/reopen verified; retired Dataverse column deleted. Connected profile photo included in the approved publication. Welcome/Begin transition and video fallback notice deployed and hosted-verified; submission, return/revision, publication and present-mode workflow previously passed with one privileged account. Non-admin and separate-reviewer acceptance remain open.
-**Last updated:** 2026-09-29
+**Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API and on-demand contributor screens are built locally and not yet deployed. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
+**Last updated:** 2026-09-30
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -76,12 +76,18 @@ From the repo root, double-click `run-poc.bat` — it installs dependencies if n
 ```powershell
 cd app
 npm install
-npm run dev          # design preview at http://localhost:5173
-npm test             # Node 22.6+; business-calendar calculations, mock data and builder search
-npm run test:ui      # shared form/media/review rendering and adapter-wiring checks
-npm run build        # TypeScript + production bundle
-npm run lint
+npm run dev              # design preview at http://localhost:5173
+npm run dev:connected    # connected target at http://localhost:5174 (open through Local Play)
+npm test                 # Node 22.6+; business-calendar calculations, mock data and builder search
+npm run test:connected   # connected catalogue, drafts, media transfer and favorites
+npm run test:ui          # shared form/media/review rendering and adapter-wiring checks
+npm run typecheck:tests  # tests run with type stripping only, so type-check them separately
+npm run build            # TypeScript + production bundle
+npm run build:connected
+npm run lint             # includes jsx-a11y accessibility rules
 ```
+
+CI ([.github/workflows/ci.yml](../.github/workflows/ci.yml)) runs lint, the test type-check, the PoC/connected/UI/migration tests, both builds and the backend tests on every pull request. The local media workbench tests (`npm run test:media`) start Azurite and child processes and stay local.
 
 ## Local Blob media workbench
 

@@ -21,6 +21,7 @@
     "build": "tsc -b && vite build",
     "build:presentation": "tsc -b && node scripts/build-submission.mjs",
     "lint": "eslint .",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.test.json",
     "test": "node --experimental-strip-types --test src/lib/*.test.ts",
     "preview": "vite preview"
   },
@@ -55,6 +56,7 @@
     "azurite": "3.37.0",
     "cfb": "1.2.2",
     "eslint": "^9.39.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "ffmpeg-static": "5.3.0",

@@ -200,6 +200,7 @@ function PreparedFileDownload({ file }: { file: File }) {
     if (link.current) link.current.href = url;
     return () => { URL.revokeObjectURL(url); };
   }, [file]);
+  // eslint-disable-next-line jsx-a11y/anchor-is-valid -- href is the object URL the effect assigns and revokes.
   return <a ref={link} download={file.name} className={button}><Icon name="download" />Keep upload file for resume</a>;
 }
 export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "submission" }: { item: MediaItem; onClose: () => void; viewerTitle?: string; solutionId?: string; mode?: PlaybackMode }) {

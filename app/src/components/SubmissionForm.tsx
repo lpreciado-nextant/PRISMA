@@ -389,6 +389,7 @@ export function PersonPicker<PersonType extends Person>({ value, options, onChan
         } else if (event.key === "Enter" && open) { event.preventDefault(); if (activePerson) select(activePerson); }
         else if (event.key === "Escape" && open) { event.preventDefault(); event.stopPropagation(); close(); }
       }} /></Field>
+    {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events -- the combobox input owns keyboard selection (aria-activedescendant). */}
     {open && <div className="absolute top-full right-0 left-0 z-20 mt-1 rounded-lg border border-(--glass-edge) bg-(--ground) p-1 shadow-lg"><ul id={`${id}-list`} role="listbox" aria-label="People" className="max-h-60 overflow-y-auto">{matches.map((person, index) => <li key={person.id} id={`${id}-option-${person.id}`} role="option" aria-selected={person.id === value.id} ref={element => { if (index === activeIndex) element?.scrollIntoView({ block: "nearest" }); }} className="cursor-pointer rounded-md px-3 py-2 text-[14px] break-words hover:bg-(--glass-edge)" style={{ background: index === activeIndex ? "var(--glass-edge)" : undefined }} onPointerDown={event => event.preventDefault()} onClick={() => select(person)}><span className="block font-semibold">{person.name}</span>{person.email && <span className="block text-[12px] text-(--ink-3)">{person.email}</span>}</li>)}</ul>{!matches.length && <p role="status" className="px-3 py-2 text-[13px] text-(--ink-3)">No matching people</p>}</div>}
   </div>;
 }

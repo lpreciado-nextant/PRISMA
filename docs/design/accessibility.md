@@ -1,6 +1,6 @@
 # Accessibility
 
-**Status:** Partial automated and keyboard/mobile checks completed; manual contrast and screen-reader acceptance pending · **Last updated:** 2026-09-22
+**Status:** Partial automated and keyboard/mobile checks completed; `jsx-a11y` lint enforced in CI; manual contrast and screen-reader acceptance pending · **Last updated:** 2026-09-30
 
 PRISMA targets **WCAG 2.1 AA**. This was partially implemented in the HTML prototype and must not regress ("accessible by default", design principle 6).
 
@@ -19,6 +19,7 @@ PRISMA targets **WCAG 2.1 AA**. This was partially implemented in the HTML proto
 
 ## Verification checklist (per release)
 
+- [x] `eslint-plugin-jsx-a11y` recommended rules pass (`npm run lint`, also in CI). Exceptions are commented inline: backdrop-click closes, listbox options driven by their combobox, the image framer's custom 2-D control and a confirmation dialog's initial focus. `media-has-caption` is off because uploaded videos carry captions only when builders supply them.
 - [ ] Full keyboard pass of the hero flow
 - [ ] Screen-reader pass (NVDA) of library, detail, submit
 - [ ] Contrast audit of both themes after any token change

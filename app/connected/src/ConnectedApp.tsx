@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { Solution } from "../../src/types";
 import type { AppUser } from "../../src/lib/powerContext";
 import { Background } from "../../src/components/Background";
 import { Masthead } from "../../src/components/Masthead";
 import { PresentBanner } from "../../src/components/PresentBanner";
 import { Icon } from "../../src/components/Icon";
+import { LoadingState } from "../../src/components/LoadingState";
 import { LibraryView } from "../../src/views/LibraryView";
 import { TopTenRow } from "../../src/components/TopTenRow";
 import { SolutionRow } from "../../src/components/SolutionRow";
@@ -15,13 +16,16 @@ import { loadCatalogue } from "./catalogue";
 import { getSignedInUser, getUserPhoto, readRows, workflowApi, favoriteApi } from "./dataSource";
 import { parsePublished, workflowData } from "./workflow";
 import { loadFavorites, loadTopFavorites, setFavorite } from "./favorites";
-import { DraftsView } from "./DraftsView";
-import { SubmissionsView, SubmissionView } from "./SubmissionsView";
 import { PublishedView } from "./PublishedView";
 import { ConnectedSolutionCard, PublishedThumbnail } from "./ConnectedSolutionCard";
 import { FavoritesView } from "./FavoritesView";
 import { clearRecoveries } from "./draftRecovery";
 import { WelcomeScreen } from "./WelcomeScreen";
+
+// Contributor and librarian screens load on first use, keeping the CSM's library-to-viewer path lighter.
+const DraftsView = lazy(() => import("./DraftsView").then(module => ({ default: module.DraftsView })));
+const SubmissionsView = lazy(() => import("./SubmissionsView").then(module => ({ default: module.SubmissionsView })));
+const SubmissionView = lazy(() => import("./SubmissionsView").then(module => ({ default: module.SubmissionView })));
 
 const PRESENT_KEY = "prisma.connected.present";
 async function readCredits(id: string, present: boolean, signal: AbortSignal) {
@@ -221,6 +225,7 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} favoriteCount={present ? undefined : favorites?.size} />
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
     <main key={route.path} ref={main} tabIndex={-1} className="focus-visible:outline-none">
+      <Suspense fallback={<LoadingState variant="page" label="Loading..." />}>
       {state.kind === "loading" || (state.kind === "ready" && !entered) ? <WelcomeScreen authenticated={user.live} present={present} ready={state.kind === "ready"} entering={entering} onBegin={onBegin} />
         : state.kind === "host-required" ? <Message title="Power Apps sign-in required" message="Open this app through Power Apps Local Play in your signed-in browser." onRetry={onRetry} />
         : state.kind === "error" ? <Message title="Catalogue unavailable" message="Check your Dataverse access and connection, then retry." onRetry={onRetry} alert />
@@ -238,6 +243,7 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
               favoritable={!!favorites} favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />}
             renderCard={(entry, index) => <ConnectedSolutionCard solution={entry} present={present} index={index}
             favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />} />}
+      </Suspense>
     </main>
   </div>;
 }

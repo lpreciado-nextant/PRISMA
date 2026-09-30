@@ -139,6 +139,7 @@ namespace Prisma.Plugins
         public void Execute(IServiceProvider serviceProvider)
         {
             var context = (IPluginExecutionContext)serviceProvider.GetService(typeof(IPluginExecutionContext));
+            var tracing = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
             var factory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             var caller = factory.CreateOrganizationService(context.InitiatingUserId);
             var server = factory.CreateOrganizationService(null);
@@ -179,6 +180,7 @@ namespace Prisma.Plugins
                 var action = context.InputParameters["Action"] as string;
                 var change = ReviewPolicy.Change(parent, context.InitiatingUserId, librarian, context.InputParameters["ExpectedRowVersion"] as string, action,
                     context.InputParameters.Contains("Comments") ? context.InputParameters["Comments"] as string : "", context.InputParameters.Contains("Cleared") && (bool)context.InputParameters["Cleared"]);
+                tracing?.Trace("Transition '{0}' from publication status {1} (librarian: {2}).", action, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, librarian);
                 server.Execute(new UpdateRequest { Target = change, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
                 if (action == "asset")
                 {
@@ -228,7 +230,7 @@ namespace Prisma.Plugins
                     foreach (var item in media)
                         MediaApi.VerifyStoredMedia(server, item, storage);
                 }
-                PublicationAccess(server, identifier, media, action == "approve");
+                PublicationAccess(server, identifier, media, action == "approve", tracing);
                 if (action == "delete")
                 {
                     foreach (var item in media)
@@ -277,16 +279,19 @@ namespace Prisma.Plugins
                 throw MediaPolicy.Invalid("A selected reference is inactive or unavailable.");
         }
 
-        private static void PublicationAccess(IOrganizationService server, Guid parent, IList<Entity> media, bool published)
+        private static void PublicationAccess(IOrganizationService server, Guid parent, IList<Entity> media, bool published, ITracingService tracing)
         {
             var teams = new QueryExpression("team") { ColumnSet = new ColumnSet(false) };
             teams.Criteria.AddCondition("name", ConditionOperator.Equal, "PRISMA Published Readers");
-            var team = server.RetrieveMultiple(teams).Entities.Single().ToEntityReference();
+            var readers = server.RetrieveMultiple(teams).Entities;
+            if (readers.Count != 1) throw MediaPolicy.Invalid("The PRISMA Published Readers team is missing or ambiguous. Contact the platform owner.");
+            var team = readers[0].ToEntityReference();
             var targets = new List<EntityReference> { new EntityReference("nx_solution", parent) };
             var contributors = new QueryExpression("nx_solutioncontributor") { ColumnSet = new ColumnSet(false), TopCount = 101 };
             contributors.Criteria.AddCondition("nx_solution", ConditionOperator.Equal, parent);
             targets.AddRange(server.RetrieveMultiple(contributors).Entities.Select(row => row.ToEntityReference()));
             targets.AddRange(media.Where(row => row.GetAttributeValue<bool>("nx_complete")).Select(row => new EntityReference(MediaPolicy.Table(row.GetAttributeValue<string>("nx_kind")), Guid.Parse(row.GetAttributeValue<string>("nx_targetid")))));
+            tracing?.Trace("{0} reader access on {1} records.", published ? "Granting" : "Revoking", targets.Count);
             foreach (var target in targets)
                 if (published) server.Execute(new GrantAccessRequest { Target = target, PrincipalAccess = new PrincipalAccess { Principal = team, AccessMask = AccessRights.ReadAccess } });
                 else server.Execute(new RevokeAccessRequest { Target = target, Revokee = team });
