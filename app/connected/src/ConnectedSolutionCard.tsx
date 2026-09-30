@@ -1,15 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import { SolutionCard } from "../../src/components/SolutionCard";
 import type { Solution } from "../../src/types";
-import { workflowApi, readRows } from "./dataSource";
-import { loadSubmissionCardDetails, parsePublished } from "./workflow";
+import { workflowApi, readRows, publishedDetails } from "./dataSource";
+import { loadSubmissionCardDetails, type PublishedDetail } from "./workflow";
 import type { MediaItem } from "./media";
 import { ProtectedImage } from "./ProtectedImage";
 import { Poster } from "../../src/components/Poster";
 
+type CardDetails = { media: MediaItem[]; names: string[]; technologies?: string[] };
+// Present mode never exposes builder names on cards.
+const publishedCard = (detail: PublishedDetail, present: boolean): CardDetails => ({ media: detail.media, names: present ? [] : detail.contributors.map(person => person.name) });
+const publishedThumbnail = (detail: PublishedDetail | undefined) => detail?.media.find(item => item.kind === "thumbnail" && item.complete) ?? null;
+
 export function ConnectedSolutionCard({ solution, present, index, owned = false, onOpen, favorite }: { solution: Solution; present: boolean; index: number; owned?: boolean; onOpen?: () => void; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void } }) {
   const container = useRef<HTMLDivElement>(null);
-  const [details, setDetails] = useState<{ media: MediaItem[]; names: string[]; technologies?: string[] } | null>(null);
+  const [details, setDetails] = useState<CardDetails | null>(() => {
+    const cached = owned ? undefined : publishedDetails.peek(solution.id, present);
+    return cached ? publishedCard(cached, present) : null;
+  });
   const [error, setError] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
@@ -25,10 +33,9 @@ export function ConnectedSolutionCard({ solution, present, index, owned = false,
           controller.signal.throwIfAborted();
           setDetails(detail);
         } else {
-          const detail = parsePublished(await workflowApi.published(solution.id, present), solution.id, present);
+          const detail = await publishedDetails.load(solution.id, present);
           controller.signal.throwIfAborted();
-          // Present mode never exposes builder names on cards.
-          setDetails({ media: detail.media, names: present ? [] : detail.contributors.map(person => person.name) });
+          setDetails(publishedCard(detail, present));
         }
       } catch { if (!controller.signal.aborted) setError(true); }
       finally { clearTimeout(timeout); }
@@ -48,15 +55,14 @@ export function ConnectedSolutionCard({ solution, present, index, owned = false,
 /** Protected published thumbnail for a Top 10 tile; the generated poster stands in until it loads or when there is none. */
 export function PublishedThumbnail({ solution }: { solution: Solution }) {
   const container = useRef<HTMLSpanElement>(null);
-  const [thumbnail, setThumbnail] = useState<MediaItem | null>(null);
+  const [thumbnail, setThumbnail] = useState<MediaItem | null>(() => publishedThumbnail(publishedDetails.peek(solution.id, false)));
   useEffect(() => {
     const controller = new AbortController();
     let timeout: ReturnType<typeof setTimeout> | undefined;
     const load = () => {
       timeout = setTimeout(() => controller.abort(), 20_000);
-      void workflowApi.published(solution.id, false).then(result => {
-        const detail = parsePublished(result, solution.id, false);
-        if (!controller.signal.aborted) setThumbnail(detail.media.find(item => item.kind === "thumbnail" && item.complete) ?? null);
+      void publishedDetails.load(solution.id, false).then(detail => {
+        if (!controller.signal.aborted) setThumbnail(publishedThumbnail(detail));
       }).catch(() => undefined).finally(() => clearTimeout(timeout));
     };
     const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) { observer.disconnect(); load(); } }, { rootMargin: "100px" });

@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 /**
  * Hash routing, not path routing: a published code app is served from
@@ -46,7 +46,8 @@ export function parseHash(hash: string): Route {
 
 export function useRoute(): Route {
   const hash = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  return parseHash(hash);
+  // Stable per hash, so memoized filters and results survive unrelated re-renders.
+  return useMemo(() => parseHash(hash), [hash]);
 }
 
 export function buildHash(path: string, query?: Record<string, string | undefined>): string {

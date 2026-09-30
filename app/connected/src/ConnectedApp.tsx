@@ -13,8 +13,8 @@ import { navigate, replaceQuery, useRoute } from "../../src/lib/router";
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue } from "./catalogue";
-import { getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi } from "./dataSource";
-import { parsePublished, workflowData } from "./workflow";
+import { getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails } from "./dataSource";
+import { workflowData } from "./workflow";
 import { loadFavorites, loadTopFavorites, setFavorite } from "./favorites";
 import { PublishedView } from "./PublishedView";
 import { ConnectedSolutionCard, PublishedThumbnail } from "./ConnectedSolutionCard";
@@ -31,9 +31,9 @@ const PRESENT_KEY = "prisma.connected.present";
 async function readCredits(id: string, present: boolean, signal: AbortSignal) {
   // Present mode never exposes builder names, on cards or in search.
   if (present) return [];
-  const response = await workflowApi.published(id, present);
+  const detail = await publishedDetails.load(id, present);
   signal.throwIfAborted();
-  return parsePublished(response, id, present).contributors.map(person => person.name);
+  return detail.contributors.map(person => person.name);
 }
 type LoadState = { kind: "loading" } | { kind: "host-required" } | { kind: "error" } | { kind: "ready"; catalogue: Solution[] };
 
@@ -198,18 +198,19 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     previousPath.current = route.path;
     if (route.path !== "/" || previous === "/") return;
     const controller = new AbortController();
-    setState({ kind: "loading" });
-    const timeout = window.setTimeout(() => { controller.abort(); setState({ kind: "error" }); }, 20_000);
+    // The library already on screen stays usable while it refreshes; only a missing catalogue waits or fails.
+    setState(current => current.kind === "ready" ? current : { kind: "loading" });
+    const timeout = window.setTimeout(() => { controller.abort(); setState(current => current.kind === "ready" ? current : { kind: "error" }); }, 20_000);
     void loadCatalogue(readRows, present, controller.signal, readCredits, readCatalogueGraph).then(catalogue => {
       if (controller.signal.aborted) return;
       setState({ kind: "ready", catalogue });
       // The ranking may have moved while this person was elsewhere (their own saves, or other people's).
       setTopVersion(version => version + 1);
-    }).catch(() => { if (!controller.signal.aborted) setState({ kind: "error" }); }).finally(() => window.clearTimeout(timeout));
+    }).catch(() => { if (!controller.signal.aborted) setState(current => current.kind === "ready" ? current : { kind: "error" }); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [route.path, present]);
   useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [route.path]);
-  const filters = filtersFromQuery(route.query);
+  const filters = useMemo(() => filtersFromQuery(route.query), [route.query]);
   const segments = route.path.split("/").filter(Boolean);
   const section = segments[0];
   const solution = state.kind === "ready" && (segments.length === 2 || (segments.length === 4 && segments[2] === "demo")) && segments[0] === "s"

@@ -5,8 +5,8 @@ import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { DetailView, GalleryFigure } from "../../src/views/DetailView";
 import { navigate } from "../../src/lib/router";
-import { workflowApi } from "./dataSource";
-import { mediaAsset, parsePublished, type PublishedDetail } from "./workflow";
+import { publishedDetails } from "./dataSource";
+import { mediaAsset, type PublishedDetail } from "./workflow";
 import type { MediaItem } from "./media";
 import { useMediaAction } from "./useMediaAction";
 import { ProtectedImage } from "./ProtectedImage";
@@ -19,16 +19,18 @@ const MediaPreview = lazy(() => loadViewer().then(module => ({ default: module.M
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px]";
 
 export function PublishedView({ solution, present, assetId, favorite }: { solution: Solution; present: boolean; assetId?: string; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void } }) {
-  const [detail, setDetail] = useState<PublishedDetail | null>(null);
+  // The card's recent read renders at once; the fresh read below still decides access.
+  const [detail, setDetail] = useState<PublishedDetail | null>(() => publishedDetails.peek(solution.id, present) ?? null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const mediaAction = useMediaAction(item => navigate(`/s/${solution.id}/demo/${item.id}`), { solutionId: solution.id, mode: present ? "present" : "published" });
   useEffect(() => {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => { controller.abort(); setError(true); }, 20_000);
-    void workflowApi.published(solution.id, present).then(result => {
+    void publishedDetails.refresh(solution.id, present).then(next => {
       controller.signal.throwIfAborted();
-      setDetail(parsePublished(result, solution.id, present));
+      // Unchanged content keeps its objects, so images already on screen do not reload.
+      setDetail(current => current && JSON.stringify(current) === JSON.stringify(next) ? current : next);
     }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [solution.id, present, attempt]);

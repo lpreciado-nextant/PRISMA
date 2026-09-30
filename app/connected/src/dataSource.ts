@@ -28,6 +28,7 @@ import { Nx_GetSubmissionService } from "./generated/services/Nx_GetSubmissionSe
 import { Nx_TransitionSubmissionService } from "./generated/services/Nx_TransitionSubmissionService";
 import { Nx_GetPublishedDetailService } from "./generated/services/Nx_GetPublishedDetailService";
 import type { WorkflowApi } from "./workflow";
+import { createPublishedDetails } from "./publishedDetails";
 import { Nx_SetFavoriteService } from "./generated/services/Nx_SetFavoriteService";
 import { Nx_GetTopFavoritesService } from "./generated/services/Nx_GetTopFavoritesService";
 import { Nx_GetCatalogueGraphService } from "./generated/services/Nx_GetCatalogueGraphService";
@@ -51,6 +52,8 @@ export const workflowApi: WorkflowApi = {
   transition: (id, version, action, comments, cleared) => Nx_TransitionSubmissionService.nx_TransitionSubmission(id, version, action, comments, cleared),
   published: (id, present) => Nx_GetPublishedDetailService.nx_GetPublishedDetail(id, present),
 };
+
+export const publishedDetails = createPublishedDetails(workflowApi.published);
 
 export const mediaApi: MediaApi = {
   read: id => Nx_GetDraftMediaService.nx_GetDraftMedia(id),

@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Living; connected pilot published; Azure Blob media pilot deployed and enabled 2026-09-29 for new attachments (existing files stay in Dataverse); bulk catalogue graph API deployed and published 2026-09-30; production cloud foundation, hosted browser matrix and least-privilege acceptance remain open · **Last updated:** 2026-09-30
+**Status:** Living; connected pilot published; Azure Blob media pilot deployed and enabled 2026-09-29 for new attachments (existing files stay in Dataverse); bulk catalogue graph API deployed and published 2026-09-30; client read reuse implemented locally 2026-09-30, not yet published; production cloud foundation, hosted browser matrix and least-privilege acceptance remain open · **Last updated:** 2026-09-30
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -117,6 +117,10 @@ The published library reads each solution's areas, technologies and industries w
 **Deployment (2026-09-30, approved):** from `main` `f751cf1`, 68 backend tests passed and the clean Release assembly (confirmed to contain `CatalogueApi` and `FavoriteApi`) was signed with the existing certificate and pushed with `blob-plugin --execute`; `catalogue-api --execute` registered the API in `PRISMA_Dev`. A read-only check through the Web API returned all 5 published solutions (5 in present mode, none carrying builder names) and matched every solution's areas, technologies, industries and contributor names against the per-solution reads exactly; `nx_GetTopFavorites` still worked. The first call took 2.2 s (cold sandbox after the assembly update), a present-mode call 0.56 s; the equivalent per-solution reads took 9.9 s sequentially. The Power Apps CLI could not generate the client because Dataverse served a stale `$metadata` to `Accept: application/xml` requests (plain requests already listed the API), so the service and `dataSourcesInfo` entry were written in the generated shape, as was done for `nx_GetTopFavorites`; regenerate them with the CLI once it sees the operation. The connected app was then published (bundle `index-BfT_6TEH.js`, `sourcetime=1790782788518`) after 77 connected and 25 UI tests, lint and the test type-check passed.
 
 The contributor, review and media-editor screens are also loaded on demand (the main connected chunk went from 561 KB to 458 KB); the published viewer's code is fetched while the detail page is open.
+
+### Client read reuse (local, not yet published)
+
+The hero flow no longer repeats reads it has just made. [publishedDetails.ts](../../app/connected/src/publishedDetails.ts) holds one `nx_GetPublishedDetail` read per solution and projection (`Present` is part of the key), shared by library cards, Top 10 tiles and the credit fallback; concurrent requests collapse into one and a read is reused for five minutes. The detail page renders that read at once but always issues a fresh one, which replaces it and turns any failure (withdrawal, revoked sharing) into the existing *Detail unavailable* state; failed reads are never kept. Media bytes remain server-authorized on every open. Returning to the library keeps the catalogue on screen while it refreshes in the background, instead of showing the welcome loader; a failed refresh keeps the last catalogue. Protected images already downloaded render without a loading frame, the parsed route and facet counts are memoized, and `hash-wasm` loads only when a video is hashed for upload (main connected chunk 459 KB to 443 KB, 127 KB gzip).
 
 ## System shape
 

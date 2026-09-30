@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Solution } from "../types";
 import { facetCounts, type FacetKey, type Filters } from "../lib/search";
 import { Icon } from "./Icon";
@@ -31,6 +31,7 @@ export function FacetRail({
 
   const anyActive =
     filters.capabilities.length + filters.technologies.length + filters.industries.length + filters.roles.length > 0;
+  const counts = useMemo(() => GROUPS.map(({ key }) => facetCounts(all, filters, key)), [all, filters]);
 
   return (
     <aside
@@ -55,11 +56,11 @@ export function FacetRail({
       </div>
 
       <div className="flex flex-col gap-6">
-        {GROUPS.map(({ key, label }) => (
+        {GROUPS.map(({ key, label }, index) => (
           <FacetGroup
             key={key}
             label={label}
-            counts={facetCounts(all, filters, key)}
+            counts={counts[index]}
             selected={filters[key]}
             onToggle={(value) => toggle(key, value)}
           />

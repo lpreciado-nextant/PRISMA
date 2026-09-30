@@ -1,4 +1,3 @@
-import { createSHA256 } from "hash-wasm";
 import { mediaRequest, uploadMedia, type MediaApi, type MediaState } from "./media.ts";
 
 export type PlaybackMode = "submission" | "published" | "present";
@@ -8,6 +7,8 @@ export type TransferApi = {
   range: (id: string, assetId: string, mode: PlaybackMode, offset: number, count: number, version?: string) => Promise<unknown>;
 };
 export async function fileDigest(file: File, signal: AbortSignal, progress: (percent: number) => void): Promise<string> {
+  // Only uploads hash, so the WASM stays out of the library-to-viewer bundle.
+  const { createSHA256 } = await import("hash-wasm");
   const hash = await createSHA256(); hash.init();
   for (let offset = 0; offset < file.size; offset += 4 * 1024 * 1024) {
     signal.throwIfAborted();
