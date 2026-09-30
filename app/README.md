@@ -482,6 +482,8 @@ Hosted checks passed:
 
 No plug-in, schema or PoC change.
 
+Republished the same day from `origin/main` `7237ea3`, with **Copy link** moved beside the favorite heart ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790806154833), bundle `index-BsjWQEgq.js`). The upload succeeded; the hosted UI was not rechecked.
+
 ### Technology name checks (2026-09-30)
 
 At the user's request, from `origin/main` `7ef3060` (38 PoC and 82 connected tests and lint passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790801715255), bundle `index-xIM86Vo9.js`, wizard chunk `DraftsView-Dh_ArhiQ.js`). The new-technology field now checks duplicates, similar names and capitalization before creating ([rules](../docs/data_model/reference-data-governance.md#vocabularies)). No plug-in, schema or PoC change. Verified in the local PoC dev server only; the hosted app needed Microsoft sign-in, so the hosted UI has not been checked.
