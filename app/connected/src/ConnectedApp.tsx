@@ -13,7 +13,7 @@ import { navigate, replaceQuery, useRoute } from "../../src/lib/router";
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue } from "./catalogue";
-import { getSignedInUser, getUserPhoto, readRows, workflowApi, favoriteApi } from "./dataSource";
+import { getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi } from "./dataSource";
 import { parsePublished, workflowData } from "./workflow";
 import { loadFavorites, loadTopFavorites, setFavorite } from "./favorites";
 import { PublishedView } from "./PublishedView";
@@ -109,7 +109,7 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
         } catch { void 0; }
         authenticated = true;
         setUser(signedInUser);
-        const catalogue = await loadCatalogue(readRows, present, controller.signal, readCredits);
+        const catalogue = await loadCatalogue(readRows, present, controller.signal, readCredits, readCatalogueGraph);
         controller.signal.throwIfAborted();
         setState({ kind: "ready", catalogue });
       } catch {
@@ -200,7 +200,7 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
     const controller = new AbortController();
     setState({ kind: "loading" });
     const timeout = window.setTimeout(() => { controller.abort(); setState({ kind: "error" }); }, 20_000);
-    void loadCatalogue(readRows, present, controller.signal, readCredits).then(catalogue => {
+    void loadCatalogue(readRows, present, controller.signal, readCredits, readCatalogueGraph).then(catalogue => {
       if (controller.signal.aborted) return;
       setState({ kind: "ready", catalogue });
       // The ranking may have moved while this person was elsewhere (their own saves, or other people's).

@@ -1,7 +1,7 @@
 import { getContext } from "@microsoft/power-apps/app";
 import { Office365UsersService } from "./generated/services/Office365UsersService";
 import type { AppUser } from "../../src/lib/powerContext";
-import type { ReadRows } from "./catalogue";
+import { parseCatalogueGraph, type ReadCatalogueGraph, type ReadRows } from "./catalogue";
 import { Nx_solutionsService } from "./generated/services/Nx_solutionsService";
 import { Nx_specializationareasService } from "./generated/services/Nx_specializationareasService";
 import { Nx_capabilitiesService } from "./generated/services/Nx_capabilitiesService";
@@ -30,6 +30,7 @@ import { Nx_GetPublishedDetailService } from "./generated/services/Nx_GetPublish
 import type { WorkflowApi } from "./workflow";
 import { Nx_SetFavoriteService } from "./generated/services/Nx_SetFavoriteService";
 import { Nx_GetTopFavoritesService } from "./generated/services/Nx_GetTopFavoritesService";
+import { Nx_GetCatalogueGraphService } from "./generated/services/Nx_GetCatalogueGraphService";
 import { Nx_GetMyFavoritesService } from "./generated/services/Nx_GetMyFavoritesService";
 import type { FavoriteApi } from "./favorites";
 import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginResumableUploadService";
@@ -93,6 +94,13 @@ export const favoriteApi: FavoriteApi = {
   list: () => Nx_GetMyFavoritesService.nx_GetMyFavorites(),
   set: (id, saved) => Nx_SetFavoriteService.nx_SetFavorite(id, saved),
   top: () => Nx_GetTopFavoritesService.nx_GetTopFavorites(),
+};
+
+export const readCatalogueGraph: ReadCatalogueGraph = async (present, signal) => {
+  signal.throwIfAborted();
+  const result = await Nx_GetCatalogueGraphService.nx_GetCatalogueGraph(present);
+  signal.throwIfAborted();
+  return parseCatalogueGraph(result, present);
 };
 
 export async function getSignedInUser(): Promise<AppUser> {

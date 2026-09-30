@@ -185,6 +185,31 @@ export const dataSourcesInfo = {
       }
     }
   },
+  "nx_getcataloguegraph": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_GetCatalogueGraph": {
+        "path": "/api/data/v9.2/nx_GetCatalogueGraph",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "Present",
+            "in": "body",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "nx_getdraftgraph": {
     "tableId": "",
     "version": "",

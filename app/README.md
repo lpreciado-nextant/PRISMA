@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API and on-demand contributor screens are built locally and not yet deployed. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
+**Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API, plug-in tracing and on-demand contributor screens were deployed and published on 2026-09-30. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
 **Last updated:** 2026-09-30
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
@@ -468,6 +468,10 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+### Catalogue graph and review follow-ups (2026-09-30)
+
+With explicit approval, from `main` `f751cf1`: the signed Release plug-in (catalogue graph API, plug-in tracing, clearer reader-team error) was pushed with `blob-plugin --execute`, `nx_GetCatalogueGraph` was registered with `catalogue-api --execute`, and the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790782788518), bundle `index-BfT_6TEH.js`). The library now loads tags and builder names in one call, and the contributor/review screens load on demand. The API was checked against the per-solution reads through the Web API; the hosted UI has not been rechecked yet. The client service was written in the generated shape because the CLI saw stale metadata ([details](../docs/architecture/technical-architecture.md#bulk-catalogue-graph-deployed-2026-09-30)).
 
 ### Library and imagery updates (2026-09-29)
 

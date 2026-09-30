@@ -8,7 +8,7 @@ Phases 2 and 3 justify the project to a CSM; phase 4 keeps it alive. Neither can
 | Phase | Scope | Proves | Status |
 |---|---|---|---|
 | **1 — Foundation** | Dataverse schema incl. §6 deltas, security roles, reference data seeded, librarian-only bulk entry of the initial known solutions | G2 is achievable before any CSM sees the app | Tables exist; reference data partially seeded; schema/security gaps open |
-| **2 — Discovery** | Card grid, search, facets, connected detail/gallery/viewer | G1 | Published in the pilot with favorites, Top 10 shelf, sort and list view. Library load still makes several requests per solution; a bulk `nx_GetCatalogueGraph` API is built and awaits deployment. Larger-scale and non-admin acceptance pending |
+| **2 — Discovery** | Card grid, search, facets, connected detail/gallery/viewer | G1 | Published in the pilot with favorites, Top 10 shelf, sort and list view. Since 2026-09-30 the library reads all tags and builder names through one `nx_GetCatalogueGraph` call instead of several requests per solution. Larger-scale and non-admin acceptance pending |
 | **3 — Present mode** | Server-restricted eligible catalogue and projection | G3 safety | Published present-mode redaction passed; non-admin permissions and hosted acceptance pending |
 | **4 — Contribution** | Draft graph, media, submission and review | G2 at scale | Privileged lifecycle, retirement/restoration, two-tab conflicts and upload recovery passed; new attachments stored in Azure Blob (16 MiB resumable blocks); cross-account/non-admin acceptance unresolved; notifications absent |
 | **5 — Handoff** | Demo requests, contributor dashboards, one-pager downloads | G3/G4 | Not started |
@@ -33,4 +33,4 @@ Phases 2 and 3 justify the project to a CSM; phase 4 keeps it alive. Neither can
 | 2026-09-22 | Connected PRISMA published as a pilot with acceptance gates deferred; hosted CSP additions approved; full hosted workflow passed with a privileged account |
 | 2026-09-28 | Specialization-area N:N, client and contributor roles, favorites APIs and "Target client role" filter deployed |
 | 2026-09-29 | Azure Blob media pilot deployed and enabled; Top 10 shelf, 16 MiB resumable uploads and faster protected reads published |
-| 2026-09-30 | Implementation review: CI, accessibility lint, test type-checks, lazy-loaded contributor screens and the bulk catalogue graph API (not yet deployed) added |
+| 2026-09-30 | Implementation review: CI, accessibility lint, test type-checks, lazy-loaded contributor screens and the bulk catalogue graph API added; plug-in (with tracing) and API deployed, connected app published |
