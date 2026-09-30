@@ -12,13 +12,15 @@ import { useMediaAction } from "./useMediaAction";
 import { ProtectedImage } from "./ProtectedImage";
 import { contributorCredit } from "./draftGraph";
 import { MATURITY_OPTIONS } from "./drafts";
+import { CopyLinkButton } from "./CopyLinkButton";
+import type { AppLocation } from "./deepLink";
 
 const loadViewer = () => import("./DraftMediaEditor");
 const MediaPreview = lazy(() => loadViewer().then(module => ({ default: module.MediaPreview })));
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px]";
 
-export function PublishedView({ solution, present, assetId, favorite }: { solution: Solution; present: boolean; assetId?: string; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void } }) {
+export function PublishedView({ solution, present, assetId, favorite, appLocation }: { solution: Solution; present: boolean; assetId?: string; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void }; appLocation?: AppLocation }) {
   // The card's recent read renders at once; the fresh read below still decides access.
   const [detail, setDetail] = useState<PublishedDetail | null>(() => publishedDetails.peek(solution.id, present) ?? null);
   const [error, setError] = useState(false);
@@ -47,6 +49,7 @@ export function PublishedView({ solution, present, assetId, favorite }: { soluti
   const thumbnail = detail.media.find(item => item.kind === "thumbnail" && item.complete);
   return <DetailView solution={hydrated} present={present} connected effort={effort} imageCount={detail.media.filter(item => item.kind === "image").length}
     favoritable={!!favorite} favorite={favorite}
+    headerActions={!present && appLocation && <CopyLinkButton appLocation={appLocation} route={`/s/${solution.id}`} />}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     gallery={<PublishedGallery media={detail.media} />}
     reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}

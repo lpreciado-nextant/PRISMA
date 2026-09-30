@@ -39,6 +39,7 @@ import { Nx_GetUploadCheckpointService } from "./generated/services/Nx_GetUpload
 import { Nx_ReadVideoRangeService } from "./generated/services/Nx_ReadVideoRangeService";
 import { readAttachment, type PlaybackMode, type TransferApi } from "./mediaTransfer";
 import { createDataverseMediaAdapter } from "./dataverseMediaAdapter";
+import { ROUTE_PARAM, type AppLocation } from "./deepLink";
 
 export const transferApi: TransferApi = {
   begin: (...args) => Nx_BeginResumableUploadService.nx_BeginResumableUpload(...args),
@@ -110,6 +111,11 @@ export async function getSignedInUser(): Promise<AppUser> {
   const context = await getContext();
   if (!context.user?.fullName || !context.user.userPrincipalName) throw new Error("Power Apps sign-in is required.");
   return { fullName: context.user.fullName, userPrincipalName: context.user.userPrincipalName, live: true };
+}
+
+export async function getAppLocation(): Promise<AppLocation> {
+  const { app, user } = await getContext();
+  return { route: app.queryParams?.[ROUTE_PARAM], appUrl: app.appUrl, appId: app.appId, environmentId: app.environmentId, tenantId: user?.tenantId };
 }
 
 export async function getUserPhoto(userPrincipalName: string): Promise<string | undefined> {

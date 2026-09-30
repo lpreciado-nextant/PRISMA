@@ -10,7 +10,7 @@ Decisions with lasting consequences are recorded here as short ADRs. Open questi
 |---|---|---|
 | [0001](adr-0001-dataverse-single-source-of-truth.md) | Dataverse as the single source of truth | Accepted |
 | [0002](adr-0002-client-side-search.md) | Client-side search over an in-memory catalogue | Accepted |
-| [0003](adr-0003-hash-routing.md) | Hash routing | Accepted |
+| [0003](adr-0003-hash-routing.md) | Hash routing | Accepted; amended 2026-09-30 for `?route=` player deep links |
 | [0004](adr-0004-assets-in-dataverse.md) | Assets in Dataverse File/Image columns | Accepted; superseded for new uploaded attachments by 0010 |
 | [0005](adr-0005-present-mode-server-side-enforcement.md) | Present mode enforced server-side | Accepted |
 | [0006](adr-0006-power-automate-notifications-only.md) | Power Automate for notifications only | Accepted; not yet implemented (no flows exist) |

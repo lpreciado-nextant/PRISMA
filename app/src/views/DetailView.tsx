@@ -64,9 +64,9 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite }: {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, headerActions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite }: {
   solution: Solution; present: boolean; favoritable?: boolean; onEdit?: () => void; onBack?: () => void;
-  backLabel?: string; reviewActions?: React.ReactNode; assetBasePath?: string;
+  backLabel?: string; headerActions?: React.ReactNode; reviewActions?: React.ReactNode; assetBasePath?: string;
   catalogueOnly?: boolean;
   connected?: boolean;
   effort?: { contributors: { name: string; hours: number | null; email?: string; effortMode?: "direct" | "calendar"; startDate?: string | null; endDate?: string | null; allocation?: number | null; businessDays?: number | null; contributorRole?: "CSM" | "Consultant" }[]; totalHours: number | null };
@@ -107,6 +107,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, revie
         <Icon name="chevronLeft" size={15} />
         {backLabel ?? (onEdit ? "My submissions" : "Back to the library")}
       </button>
+      {headerActions}
       {onEdit && <button className="ml-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px]" style={{ borderColor: "var(--glass-edge)" }} onClick={onEdit}><Icon name="file" />Edit submission</button>}
       {onEdit && <p className="mt-3 text-[13px]" style={{ color: "var(--proto)" }}>{solution.publicationStatus}{!connected && ". Local preview only."}</p>}
       {reviewActions}

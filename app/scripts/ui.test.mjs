@@ -103,6 +103,18 @@ test("published detail loading uses the branded accessible state without exposin
   }
 });
 
+test("copy link renders only for a shareable route and player address", async () => {
+  const { CopyLinkButton } = await server.ssrLoadModule("/connected/src/CopyLinkButton.tsx");
+  const appLocation = { appId: "cffbecd7-c927-474e-b6ed-6c7957ec74cb", environmentId: "ce09ad9b-57d1-e5df-9400-8ce973c86213", tenantId: "d232b207-f86f-4fba-8891-ccbf30b12898" };
+  const route = "/s/3e16f641-b8b6-f111-aaac-6045bd049fba";
+  const html = render(CopyLinkButton, { appLocation, route });
+  assert.match(html, /<button type="button"[^>]*>.*Copy link<\/button>/);
+  assert.match(html, /role="status"><\/span>/);
+  assert.doesNotMatch(html, /<input/);
+  assert.equal(render(CopyLinkButton, { appLocation: { ...appLocation, appId: "local" }, route }), "");
+  assert.equal(render(CopyLinkButton, { appLocation, route: "/admin" }), "");
+});
+
 test("submission routes use page loaders with contextual labels and retain back navigation", async () => {
   const { DraftsView } = await server.ssrLoadModule("/connected/src/DraftsView.tsx");
   const { SubmissionsView, SubmissionView } = await server.ssrLoadModule("/connected/src/SubmissionsView.tsx");

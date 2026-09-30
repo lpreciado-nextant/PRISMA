@@ -8,11 +8,12 @@ import { LoadingState } from "../../src/components/LoadingState";
 import { LibraryView } from "../../src/views/LibraryView";
 import { TopTenRow } from "../../src/components/TopTenRow";
 import { SolutionRow } from "../../src/components/SolutionRow";
-import { navigate, replaceQuery, useRoute } from "../../src/lib/router";
+import { navigate, parseHash, replaceQuery, useRoute } from "../../src/lib/router";
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue, type CatalogueSolution } from "./catalogue";
-import { getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails } from "./dataSource";
+import { getAppLocation, getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails } from "./dataSource";
+import { routeHash, type AppLocation } from "./deepLink";
 import { workflowData } from "./workflow";
 import { loadFavorites, loadTopFavorites, setFavorite } from "./favorites";
 import { PublishedView } from "./PublishedView";
@@ -52,6 +53,20 @@ export default function ConnectedApp() {
     setEntry(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "entered" : "illuminating");
   };
   const [theme, toggleTheme] = useTheme();
+  const [appLocation, setAppLocation] = useState<AppLocation>();
+  useEffect(() => {
+    let active = true;
+    void getAppLocation().then(launch => {
+      if (!active) return;
+      setAppLocation(launch);
+      const hash = routeHash(launch.route);
+      // A link only picks the first screen; once the person has moved, their own navigation wins.
+      if (!hash || (window.location.hash || "#/") !== "#/") return;
+      const { path, query } = parseHash(hash);
+      replaceQuery(path, Object.fromEntries(query));
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
   const togglePresent = () => {
     const next = !present;
     if (next) { try { clearRecoveries(sessionStorage); } catch { void 0; } }
@@ -60,7 +75,7 @@ export default function ConnectedApp() {
   };
   return <>
     <div inert={entry === "illuminating" || entry === "revealing"}>
-      <CatalogueSession key={`${present}:${attempt}`} present={present} onTogglePresent={togglePresent}
+      <CatalogueSession key={`${present}:${attempt}`} present={present} onTogglePresent={togglePresent} appLocation={appLocation}
         theme={theme} onToggleTheme={toggleTheme} onRetry={() => setAttempt(current => current + 1)}
         entered={entry === "revealing" || entry === "entered"} entering={entry === "illuminating"} onBegin={begin} transitionComplete={entry === "entered"} />
     </div>
@@ -70,8 +85,8 @@ export default function ConnectedApp() {
 
 const TOP_RETRY_DELAYS = [2_000, 5_000, 10_000];
 
-function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRetry, entered, entering, onBegin, transitionComplete }: {
-  present: boolean; onTogglePresent: () => void; theme: "light" | "dark";
+function CatalogueSession({ present, onTogglePresent, appLocation, theme, onToggleTheme, onRetry, entered, entering, onBegin, transitionComplete }: {
+  present: boolean; onTogglePresent: () => void; appLocation?: AppLocation; theme: "light" | "dark";
   onToggleTheme: () => void; onRetry: () => void;
   entered: boolean; entering: boolean; onBegin: () => void; transitionComplete: boolean;
 }) {
@@ -234,7 +249,7 @@ function CatalogueSession({ present, onTogglePresent, theme, onToggleTheme, onRe
         : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} />
         : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
-        : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]}
+        : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} appLocation={appLocation}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
         : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly

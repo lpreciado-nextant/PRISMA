@@ -53,7 +53,7 @@ Everything here stays inside what the [code apps documentation](https://learn.mi
 
 - **Single-page app.** Code apps support SPAs; this is one.
 - **Official Vite plugin.** `@microsoft/power-apps-vite/plugin` is registered in `vite.config.ts` alongside React and Tailwind. Tailwind is a build-time plugin only — it emits plain CSS.
-- **Hash routing, not path routing.** A published app is served from `/play/e/{environmentId}/a/{appId}`, so the app never owns the path segment. All navigation goes through `window.location.hash`.
+- **Hash routing, not path routing.** A published app is served from `/play/e/{environmentId}/a/{appId}`, so the app never owns the path segment. All navigation goes through `window.location.hash`. The player frame hides that hash, so the connected app accepts deep links as a `route` query parameter on the play URL (read once from `getContext().app.queryParams`, validated against known routes in `connected/src/deepLink.ts`). Published detail pages offer **Copy link**. See [ADR-0003](../docs/architecture/decisions/adr-0003-hash-routing.md). On 2026-09-30, Local Play passed `route` through: a solution link opened its detail page after **Begin**, a `/?q=` link opened the filtered library, and an invalid route stayed on the library. Local Play reports app ID `local` and no `appUrl`, so **Copy link** is hidden there by design. Its host frame allows `clipboard-write`. The published host passed the same checks plus **Copy link** ([deployment record](#deep-links-and-copy-link-2026-09-30)).
 - **No `initialize()`.** The client library is v1.0+. The PoC wraps `getContext()` so it renders outside the host; the connected target requires host identity and uses generated SDK data services.
 - **No server-side code.** No API routes, no SSR, no build-time secrets.
 - **Relative asset references.** `./nextant-mark.svg` rather than `/nextant-mark.svg`, so assets resolve under the published base path.
@@ -468,6 +468,19 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+### Deep links and Copy link (2026-09-30)
+
+At the user's request, from `origin/main` `06f39ca` plus the uncommitted deep-link change (86 connected, 38 PoC and 26 UI tests, lint and both builds passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790805739347), bundle `index-CRgLVpxo.js`). The app now opens `?route=` play links and published detail pages offer **Copy link** ([ADR-0003](../docs/architecture/decisions/adr-0003-hash-routing.md)).
+
+Hosted checks passed:
+
+- The new bundle was served, and the host passed `route` through: the frame hash was `#/s/{id}` before **Begin**, and the solution opened afterwards.
+- **Copy link** wrote to the clipboard without the manual fallback. The link came from the host's `appUrl`, kept `tenantId` and `hint`, dropped `sourcetime` and added `route`.
+- Opening that copied link reopened the same solution.
+- Present mode hid **Copy link**, and turning it off restored the button.
+
+No plug-in, schema or PoC change.
 
 ### Technology name checks (2026-09-30)
 

@@ -1,6 +1,6 @@
 # Discovery & presentation — the CSM hero flow
 
-**Status:** Aligned with client-safe review and maturity-based effort · **Last updated:** 2026-09-21
+**Status:** Aligned with client-safe review and maturity-based effort · **Last updated:** 2026-09-30
 **Source:** [End-to-end design §3.2](../design/end-to-end-design.md#32-discovery--presentation-the-csm-path)
 **Measure:** problem statement → presentable demo in **under two minutes**, unaided (G1). Anything that adds a click to this path needs to earn it.
 
@@ -30,7 +30,7 @@ flowchart LR
 
 - Filter by: specialization area, capability, technology and industry; solution-status facets are planned. Present eligibility is enforced before search, not a user-selectable sharing facet.
 - Additive, live counts, individually removable as chips.
-- Active filter state is reflected in the URL — bookmarkable, pasteable into a Teams thread.
+- Active filter state is reflected in the in-app URL hash. In the published app the player hides that hash, so views are shared as play links carrying `?route=` ([ADR-0003](../architecture/decisions/adr-0003-hash-routing.md)); solution detail pages have **Copy link**.
 
 ## Browse
 
