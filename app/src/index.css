@@ -67,6 +67,9 @@
   --sa-ai: #6aa5f5;
   --sa-data: #4fbfab;
   --sa-ibo: #a99ae6;
+  /* The colour the wordmark's "P" shows (its gradient opens 40% ink, 60% accent): a deep steel
+     blue in the light theme, a light blue here. Section headings use it to echo the mark. */
+  --brand-p: color-mix(in srgb, var(--ink) 40%, var(--accent));
 
   --live: #5fd3a2;
   --proto: #e0b860;
@@ -112,6 +115,7 @@
   --sa-ai: #1c567c;
   --sa-data: #0b6157;
   --sa-ibo: #57468c;
+  --brand-p: color-mix(in srgb, var(--ink) 40%, var(--accent));
 
   --live: #0b6145;
   --proto: #7c5408;

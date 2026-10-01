@@ -167,8 +167,8 @@ export function LibraryView({
         <div className="min-w-0">
           {!present && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-              {/* Same type and lavender as the Top 3 title. */}
-              <h2 className="text-[clamp(1.3rem,2vw,1.65rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em", color: "var(--sa-ibo)" }}>Solution Library</h2>
+              {/* Same type and colour (the wordmark's "P") as the Top 3 title. */}
+              <h2 className="text-[clamp(1.3rem,2vw,1.65rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em", color: "var(--brand-p)" }}>Solution Library</h2>
               <div className="flex items-center gap-2">
                 <button
                   ref={refineToggle}
