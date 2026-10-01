@@ -118,6 +118,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
+**Attendees:** Ximena, Ernesto
+
 ### Feedback
 
 - Allow direct linking to external resources instead of requiring download and re-upload.
@@ -130,6 +132,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 - Collect user feedback on overall UX, navigation and visual design.
 - Communicate effort without exposing hours or cost: consider high-level duration bands (e.g. 2-3 weeks, 2-3 months) or a Small/Medium/Large complexity label instead of actual hours.
 - Evaluate future integration with time-tracking systems, and how solutions/prototypes would map to workstreams and projects if that integration is pursued.
+- Allow more than one target client role per solution.
+- Allow associating more than one client with a solution.
 
 ### Changes
 
