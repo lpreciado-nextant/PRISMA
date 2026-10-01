@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### Brand "P" headings (2026-10-01)
+
+At the user's request, from `origin/main` `7b6d5c7` (lint, both builds, 87 connected, 38 PoC and 27 UI tests passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790891537048), bundle `index-C6AQilzB.js`). The "Top N" and "Solution Library" headings use `--brand-p`, the colour of the wordmark's "P", instead of the IBO lavender. No plug-in, schema or PoC data change. The user checked it in Local Play before publishing; the hosted app has not been checked yet.
+
 ### Submit flow rearranged (2026-10-01)
 
 At the user's request, from `origin/main` `7142984` (lint, both builds, 87 connected, 38 PoC and 27 UI tests passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790889030805), bundle `index-BYIbGW_E.js`). Submission steps 2 and 3 are now **Define the solution** and **Solution context**; the client fields show only after "Is this solution associated with a client?" is answered Yes, and Before you start has new copy ([contribution workflow](../docs/workflows/contribution-and-review.md)). No plug-in, schema or PoC data change. The user checked the flow in Local Play before publishing; the hosted app has not been checked yet.
