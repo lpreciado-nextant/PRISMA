@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
 **Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API, plug-in tracing and on-demand contributor screens were deployed and published on 2026-09-30, followed the same day by graph card thumbnails, shared detail reads and blur-only glass. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-01
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -468,6 +468,10 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+### Merged builder credits on detail (2026-10-01)
+
+At the user's request, from `origin/main` `6fafe44` (86 connected and 26 UI tests, lint and both builds passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790864464742), bundle `index-BCgxqy32.js`). The detail page no longer lists builders twice: **At a glance** drops its **Built by** row, and the **Contributor effort** panel becomes **Built by & effort**, with linked names, roles and hours. CSMs stay in their own **At a glance** row. No plug-in, schema or PoC change. The host served the new package, but its frame did not render in the integrated browser, so the hosted UI has not been checked.
 
 ### Deep links and Copy link (2026-09-30)
 
