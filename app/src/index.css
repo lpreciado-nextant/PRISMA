@@ -63,7 +63,8 @@
   --accent-deep: #1c567c;
   --on-accent: #06131c;
 
-  --sa-ai: #7fb6d9;
+  /* AI is a saturated blue (hue 215) so it never reads as Data's teal (hue 169). */
+  --sa-ai: #6aa5f5;
   --sa-data: #4fbfab;
   --sa-ibo: #a99ae6;
 
@@ -438,6 +439,19 @@
     position: relative;
   }
 
+  /* ---- Area tags ---------------------------------------------------- */
+  /* Dark theme: a richer fill and edge so the three areas tell apart at a
+     glance; text stays at least 4.7:1 on its own fill. */
+  .area-tag {
+    color: var(--tag);
+    border-color: color-mix(in srgb, var(--tag) 48%, transparent);
+    background: color-mix(in srgb, var(--tag) 24%, transparent);
+  }
+  [data-theme="light"] .area-tag {
+    border-color: color-mix(in srgb, var(--tag) 32%, transparent);
+    background: color-mix(in srgb, var(--tag) 17%, transparent);
+  }
+
   /* ---- Top 3 shelf ------------------------------------------------- */
   /* Horizontal, snap-scrolling carousel. The edge mask fades cards into the
      panel instead of clipping them; padding keeps focus rings unmasked. */
@@ -526,8 +540,9 @@
     transform: translate(-4px, -52%) scale(1.03);
   }
 
-  /* Identical horizontal cards: a square crop of the thumbnail on the left
-     (centred), category, title, summary and heart on the right. */
+  /* Identical horizontal cards: a square crop of the thumbnail on the left;
+     on the right the title (up to two balanced lines) sits level with the
+     corner "♥ 12" and the summary centres in the space below. */
   .top-card {
     position: relative;
     z-index: 1;
@@ -566,9 +581,29 @@
     display: flex;
     min-width: 0;
     flex-direction: column;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.65rem 0.8rem 0.65rem 0.85rem;
+    padding: 0.6rem 0.3rem 0.55rem 0.85rem;
+  }
+  /* A long name wraps to a balanced second line instead of an ellipsis; the
+     heart lines up with the first line. */
+  .top-card-title {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .top-card-title > :first-child {
+    text-wrap: balance;
+  }
+  .top-card-title > button {
+    margin-top: -0.4rem;
+  }
+  .top-card-summary {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    align-items: center;
+    padding-right: 0.5rem;
   }
   @media (max-width: 640px) {
     .top-card {

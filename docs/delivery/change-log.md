@@ -14,7 +14,6 @@ One entry per meeting or working session, newest first. Each entry lists the fee
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | Mostly Live; one Proposed, one Dropped |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
-- Top 3 `2xs` area tag (9.5px) vs. the tag-readability pass ([2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing))
 - Top 3 shelf vs. Newest First default: how a solution should be visible in both without the shelf crowding out new content ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Relative date buckets (Today / This Week / Last Week / 2 Weeks Ago / Last Month / Last Year) vs. the compact `createdon` age tag ("3d/2w/4mo/1yr") in code since `64c1ac2` ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Demo viewing: full-screen vs. new tab vs. modal/popup — pick one primary pattern ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
@@ -71,10 +70,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 |---|---|---|
 | `nx_GetTopFavorites` returns `saves` per ranked solution | Live | `3015bd5`. Signed plug-in pushed 2026-10-01; `inspect-favorites` returned `saves`. See [SchemaV2](../data_model/SchemaV2.md#nx_solutionfavorite--per-person-favorites) |
 | Save count beside the Top 3 heart, narrower cards (half the next card peeks), `2xs` area tag | Live | `3015bd5`. Connected app published 2026-10-01 ([app README](../../app/README.md#top-3-save-counts-2026-10-01)); hosted UI not yet checked. [Design system](../design/design-system.md#library-page) |
-
-### Open decisions
-
-- The `2xs` tag text (9.5px) runs against the tag-readability feedback in PR-020/PR-022; revisit in that pass.
+| Top cards: "♥ 12" as one small heart + count with no circle in the top-right corner, level with the title; summary centred below; area tag removed | In code | Replaces the detail-only count on the cards; the count moves with the viewer's own click. Not yet committed or published |
+| Dark theme area tags: AI shifted to a saturated blue (`#6aa5f5`) so it no longer reads as Data's teal; richer tag fill and edge | In code | Light theme unchanged. Not yet committed or published |
 
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 

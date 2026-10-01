@@ -194,19 +194,24 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   }, [present, state, topRanking]);
   const topSaves = useMemo(() => new Map(topRanking.flatMap(({ id, saves }) => saves === undefined ? [] : [[id, saves] as const])), [topRanking]);
   const thumbnails = useMemo(() => new Map(state.kind === "ready" ? state.catalogue.map(entry => [entry.id, entry.cardThumbnail] as const) : []), [state]);
+  // Moves a ranked solution's count with the person's own heart until the next ranking read replaces it.
+  const shiftTopSaves = (id: string, delta: number) => setTopRanking(current => current.map(entry =>
+    entry.id === id.toLowerCase() && entry.saves !== undefined ? { ...entry, saves: Math.max(0, entry.saves + delta) } : entry));
   const toggleFavorite = (id: string) => {
     if (!favorites || pendingFavorites.has(id)) return;
     const next = !favorites.has(id);
     setPendingFavorites(current => new Set(current).add(id));
     setFavorites(current => { const updated = new Set(current); if (next) updated.add(id); else updated.delete(id); return updated; });
+    shiftTopSaves(id, next ? 1 : -1);
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 20_000);
     void setFavorite(favoriteApi, id, next, controller.signal).then(confirmed => {
       setFavorites(current => { const updated = new Set(current ?? []); if (confirmed) updated.add(id); else updated.delete(id); return updated; });
       setTopVersion(version => version + 1);
     }).catch(() => {
-      // Roll back the optimistic update; the heart returns to its prior state.
+      // Roll back the optimistic update; the heart and its count return to their prior state.
       setFavorites(current => { const updated = new Set(current ?? []); if (next) updated.delete(id); else updated.add(id); return updated; });
+      shiftTopSaves(id, next ? -1 : 1);
     }).finally(() => { window.clearTimeout(timeout); setPendingFavorites(current => { const updated = new Set(current); updated.delete(id); return updated; }); });
   };
   useEffect(() => {
@@ -254,7 +259,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id), saves: topSaves.get(solution.id.toLowerCase()) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
         : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly
-            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} renderPoster={solution => <PublishedThumbnail solution={solution} thumbnail={thumbnails.get(solution.id)} />}
+            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} saves={solution => topSaves.get(solution.id.toLowerCase())} renderPoster={solution => <PublishedThumbnail solution={solution} thumbnail={thumbnails.get(solution.id)} />}
               favorite={favorites ? solution => ({ saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) }) : undefined} /> : undefined}
             renderRow={(entry, index) => <SolutionRow solution={entry} present={present} index={index} poster={<PublishedThumbnail solution={entry} thumbnail={thumbnails.get(entry.id)} />}
               favoritable={!!favorites} favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />}

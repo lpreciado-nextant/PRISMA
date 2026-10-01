@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import type { Solution } from "../types";
 import { solutionAreas } from "../lib/areas";
 import { navigate } from "../lib/router";
-import { AreaTag } from "./Badges";
 import { FavoriteButton } from "./FavoriteButton";
 import { Icon } from "./Icon";
 import { Poster } from "./Poster";
@@ -21,12 +20,14 @@ type Favorite = { saved: boolean; pending?: boolean; onToggle: () => void };
 
 /**
  * "Most saved by the team" ranking, Netflix Top 10 style: horizontal cards (the
- * whole 16:9 thumbnail left, category, title, summary and heart right) with a
+ * thumbnail left; the title beside a corner "♥ 12" on top, the summary centred below) with a
  * large gradient rank numeral behind each one. Shows the top ten in a carousel.
- * Order comes from the caller.
+ * Order and the "♥ 12" save counts come from the caller.
  */
-export function TopTenRow({ solutions, renderPoster, onOpen, favorite }: {
+export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: {
   solutions: Solution[];
+  /** How many people saved a solution, shown beside its small heart; omit (or return undefined) for no count. */
+  saves?: (solution: Solution) => number | undefined;
   /** Replaces the generated poster, e.g. with a protected Dataverse thumbnail. */
   renderPoster?: (solution: Solution) => ReactNode;
   onOpen?: (solution: Solution) => void;
@@ -100,12 +101,14 @@ export function TopTenRow({ solutions, renderPoster, onOpen, favorite }: {
                   {renderPoster?.(solution) ?? <Poster id={solution.id} name={solution.name} area={area} src={solution.thumbnail} className="h-full w-full" />}
                 </span>
                 <span className="top-card-body">
-                  <span className="flex min-w-0 items-center justify-between gap-2">
-                    <AreaTag area={area} size="2xs" />
-                    {heart && <FavoriteButton id={solution.id} name={solution.name} className="relative z-[2] -my-1.5 -mr-1 h-8 w-8" saved={heart.saved} pending={heart.pending} onToggle={heart.onToggle} />}
+                  {/* The title (up to two lines) sits level with the corner heart; the summary centres below. */}
+                  <span className="top-card-title">
+                    <span className="line-clamp-2 text-[15px] leading-[1.25] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{solution.name}</span>
+                    {heart && <FavoriteButton id={solution.id} name={solution.name} bare className="relative z-[2]" saved={heart.saved} pending={heart.pending} onToggle={heart.onToggle} count={saves?.(solution)} />}
                   </span>
-                  <span className="line-clamp-1 text-[15px] leading-snug font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{solution.name}</span>
-                  <span className="line-clamp-2 text-[12.5px] leading-snug" style={{ color: "var(--ink-2)" }}>{solution.summary}</span>
+                  <span className="top-card-summary">
+                    <span className="line-clamp-2 text-[12.5px] leading-snug" style={{ color: "var(--ink-2)" }}>{solution.summary}</span>
+                  </span>
                 </span>
               </div>
             </li>
