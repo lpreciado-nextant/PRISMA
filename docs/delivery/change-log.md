@@ -1,8 +1,29 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-09-29
+**Status:** Living · **Last updated:** 2026-10-01
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
+
+**Entries** (newest first — jump to a meeting)
+| Date | Session | Mostly |
+|---|---|---|
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity | All Proposed — nothing built yet |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | All Proposed — nothing built yet |
+| [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | All Live |
+| [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | Mostly Live; one Proposed, one Dropped |
+
+**Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
+- Top 3 shelf vs. Newest First default: how a solution should be visible in both without the shelf crowding out new content ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
+- Relative date buckets (Today / This Week / Last Week / 2 Weeks Ago / Last Month / Last Year) vs. the exact `createdon` tag shipped on 2026-10-01 ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
+- Demo viewing: full-screen vs. new tab vs. modal/popup — pick one primary pattern ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Effort: duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Time-tracking integration and workstream/project mapping — not scoped, future release only ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Favorites ranking: whether to also count views/demo requests, and visibility in present mode ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux))
+- Specialization areas: max per solution, whether a "primary" area is needed ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
+- `nx_clientrole`: meaning, required at submit?, shown in present mode? ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
+- CSM rows (`nx_role`): effort, cardinality, contributor-minimum counting ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
+
+When a decision above gets resolved, delete its bullet here and update the matching "Open decisions" bullet in that entry (or move it into the [decision log](decision-log.md) if it needs its own record).
 
 **Status values**
 
@@ -34,6 +55,88 @@ One entry per meeting or working session, newest first. Each entry lists the fee
 ```
 
 ---
+
+## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
+
+**Attendees:** Sebastian, …
+
+### Feedback
+
+- Keep the Top 3 Most Liked Solutions section as a featured playlist, but make sure newly added solutions still surface in the main library feed.
+- Keep the default sort as Newest First so recent solutions aren't buried under highly-liked content.
+- Make it easy to discover recently published content without relying only on filters.
+- Add an uploaded/published date indicator to solution cards.
+- Prefer relative dates (Today, This Week, Last Week, 2 Weeks Ago, Last Month, Last Year) over exact timestamps, so new content is easy to spot at a glance.
+- Improve visual differentiation between solution tags/categories; increase color contrast, especially in dark mode — stronger fills, more distinct colors, additional visual indicators.
+- Review tag-color accessibility and readability across the platform.
+- Every solution needs a clear one-line summary (One-Liner).
+- Make "What it Does" concise and easy to understand.
+- Make "Why it Matters" focused on business value.
+- Prioritize clarity for CSMs, internal stakeholders, and customers reviewing solutions.
+- Strengthen the value-proposition messaging per solution: what problem it solves, who benefits, why it's relevant.
+- Reduce technical complexity in solution descriptions where possible.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| PR-016 Published date on solution cards | In code | Shipped as a compact age label ("3d/2w/4mo/1yr") with full date on hover, in `64c1ac2` |
+| PR-017 Relative date labels (Today/This Week/Last Week/2 Weeks Ago/Last Month/Last Year) | In code | `64c1ac2` ships a shorter age format, not yet the exact bucket wording requested; revisit copy |
+| PR-018 Keep Top 3 featured section | Proposed | Shelf already exists ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux)); no change needed unless it's found to be crowding out new content |
+| PR-019 New-content visibility in default view | Proposed | Needs a concrete mechanism beyond Newest-First sort — see open decisions |
+| PR-020 Tag color accessibility | Proposed | High priority |
+| PR-021 Enhanced tag styling (fills/borders/stronger colors) | In code | `64c1ac2` raises the specialization-area badge tint from 11% to 17%; other tag types not yet covered |
+| PR-022 Dark-mode tag readability review | Proposed | Medium priority |
+| PR-023 One-Liner standardization | Proposed | Medium priority |
+| PR-024 "What It Does" optimization | Proposed | Medium priority |
+| PR-025 "Why It Matters" enhancement | Proposed | Medium priority |
+| PR-026 Business-value-first ordering | Proposed | Medium priority |
+
+### Open decisions
+
+- How a solution stays visible in the main feed while the Top 3 shelf is also shown (PR-018/PR-019) — no mechanism agreed yet.
+- Exact relative-date bucket wording and thresholds (PR-017) vs. the shorter age format already shipped.
+- Scope of the tag-contrast pass (PR-020/021/022): specialization-area badges only, or all tag/category types.
+
+## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
+
+### Feedback
+
+- Allow direct linking to external resources instead of requiring download and re-upload.
+- Associate demos, tools, videos and documentation through direct URLs; add direct access links to prototypes and related apps.
+- Support linking directly to internal repositories such as Marketing Kits and other knowledge sources.
+- Let users open demos/prototypes full-screen, or in a separate browser tab/window.
+- Consider a popup/modal viewing mode for demos as an alternative.
+- Reduce how much screen space the PRISMA frame takes while a demo is being viewed.
+- Standardize how media assets (video, image, HTML, demo) are displayed across the platform.
+- Collect user feedback on overall UX, navigation and visual design.
+- Communicate effort without exposing hours or cost: consider high-level duration bands (e.g. 2-3 weeks, 2-3 months) or a Small/Medium/Large complexity label instead of actual hours.
+- Evaluate future integration with time-tracking systems, and how solutions/prototypes would map to workstreams and projects if that integration is pursued.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| External resource / repository links (incl. Marketing Kit) | Proposed | High priority. Store a URL instead of requiring upload |
+| Tool URL field | Proposed | High priority |
+| Prototype URL field | Proposed | High priority |
+| Full-screen demo/prototype view | Proposed | High priority |
+| Open demo/prototype in a new tab | Proposed | High priority |
+| Demo modal/popup view | Proposed | Medium priority. Likely redundant with full-screen/new-tab — see open decisions |
+| Reduce chrome around the demo viewer | Proposed | High priority |
+| User feedback capture (comments/suggestions) | Proposed | Medium priority |
+| Solution rating / usefulness score | Proposed | Low priority |
+| Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the maturity-based effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
+| Complexity classification (Small / Medium / Large) | Proposed | Medium priority. Alternative or complement to duration bands above |
+| Time-tracking system integration | Proposed | Low priority · Backlog |
+| Solution-to-workstream/project mapping | Proposed | Low priority · Backlog. Prerequisite if time-tracking integration is pursued |
+| Media display standardization (video/image/HTML/demo) | Proposed | Medium priority |
+
+### Open decisions
+
+- Full-screen vs. new tab vs. modal/popup: whether to build all three or pick one primary demo-viewing pattern.
+- How effort is represented going forward — duration bands, Small/Medium/Large complexity, or both — and whether this replaces or sits alongside the hours-based model in ADR-0007.
+- Whether and when time-tracking integration and workstream/project mapping get scoped for a future release.
 
 ## 2026-09-28 / 29 — Working sessions: integration, favorites ranking and library UX
 
