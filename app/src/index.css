@@ -439,6 +439,42 @@
     position: relative;
   }
 
+  /* ---- Demo viewer full screen -------------------------------------- */
+  /* The browser's full screen (:fullscreen) or, when the host forbids it, the
+     stage expanded over the PRISMA chrome. A small exit control stays on top. */
+  .viewer-stage:fullscreen {
+    border-radius: 0;
+    background: var(--ground);
+  }
+  .viewer-stage--expanded {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    border-radius: 0;
+    background: var(--ground);
+  }
+  .viewer-stage-exit {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 2;
+    display: grid;
+    width: 2.25rem;
+    height: 2.25rem;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(8, 14, 20, 0.62);
+    color: #ffffff;
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 0.2s ease;
+  }
+  .viewer-stage-exit:hover,
+  .viewer-stage-exit:focus-visible {
+    opacity: 1;
+  }
+
   /* ---- Area tags ---------------------------------------------------- */
   /* Dark theme: a richer fill and edge so the three areas tell apart at a
      glance; text stays at least 4.7:1 on its own fill. */

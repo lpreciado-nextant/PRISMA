@@ -1,6 +1,6 @@
 # Demo assets
 
-**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain. · **Last updated:** 2026-09-22
+**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain. · **Last updated:** 2026-10-01
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
@@ -227,5 +227,7 @@ Linked-asset live checks on 2026-09-22 covered all four types, hosted edit, reop
 ## Viewer routes
 
 Full-screen viewer at `#/s/:id/demo/:assetId` — PoC implementation in [`app/src/views/ViewerView.tsx`](../../app/src/views/ViewerView.tsx). In present mode the viewer is full-bleed with minimal chrome.
+
+**Full screen (2026-10-01, live):** every viewer (PoC and connected, through [`ViewerFrame`](../../app/src/components/ViewerFrame.tsx)) has a **Full screen** button that puts only the demo stage into the browser's full screen; Esc or the small corner control exits, and Esc then does not also close the viewer. The Power Apps host runs the app in its own iframe and may not grant full screen; then the stage instead expands over the PRISMA chrome to fill the app's window. Either way the demo stays in its sandboxed iframe, with no sandbox change. Videos keep their native full screen; hosted URLs keep Pop out (new tab). In Local Play on 2026-10-01 the Power Apps host granted browser full screen: the demo filled the whole monitor (user-verified).
 
 Librarian previews use `#/review/:id/demo/:assetId`, with the same sandbox and a return path to the review record. Review routes are blocked in present mode.

@@ -16,7 +16,7 @@ One entry per meeting or working session, newest first. Each entry lists the fee
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
 - Top 3 shelf vs. Newest First default: how a solution should be visible in both without the shelf crowding out new content ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Relative date buckets (Today / This Week / Last Week / 2 Weeks Ago / Last Month / Last Year) vs. the compact `createdon` age tag ("3d/2w/4mo/1yr") in code since `64c1ac2` ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
-- Demo viewing: full-screen vs. new tab vs. modal/popup — pick one primary pattern ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Demo viewing: full-screen is now in code as the primary pattern (Pop out stays for hosted URLs); confirm, and whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Effort: duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Time-tracking integration and workstream/project mapping — not scoped, future release only ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Favorites ranking: whether to also count views/demo requests, and visibility in present mode ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux))
@@ -137,7 +137,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | External resource / repository links (incl. Marketing Kit) | Proposed | High priority. Store a URL instead of requiring upload |
 | Tool URL field | Proposed | High priority |
 | Prototype URL field | Proposed | High priority |
-| Full-screen demo/prototype view | Proposed | High priority |
+| Full-screen demo/prototype view | Live | 2026-10-01: Full screen button in every viewer (browser full screen, or the stage expanded over the PRISMA chrome when the Power Apps host forbids it). In Local Play the host granted full screen and the demo filled the monitor. See [Demo assets](../workflows/demo-assets.md#viewer-routes) |
 | Open demo/prototype in a new tab | Proposed | High priority |
 | Demo modal/popup view | Proposed | Medium priority. Likely redundant with full-screen/new-tab — see open decisions |
 | Reduce chrome around the demo viewer | Proposed | High priority |
