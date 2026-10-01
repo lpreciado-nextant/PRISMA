@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### Demo viewer full screen (2026-10-01)
+
+At the user's request, from `origin/main` `766960c` (lint, both builds, 87 connected, 38 PoC and 26 UI tests passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790886873024), bundle `index-ufg3DBFN.js`). Every viewer has a Full screen button for the demo stage ([Demo assets](../docs/workflows/demo-assets.md#viewer-routes)); before publishing, the user confirmed in Local Play that the host grants browser full screen. No plug-in, schema or PoC data change. The hosted app has not been checked yet.
+
 ### Top 10 corner heart and dark area tags (2026-10-01)
 
 At the user's request, from `origin/main` `7b83ef4` (lint, both builds, 87 connected, 38 PoC and 26 UI tests passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790885430700), bundle `index-BlnBUP6V.js`). Top cards show "♥ 12" as a small corner heart with no circle, level with a title that wraps to two balanced lines; the area tag is gone; in the dark theme AI is a saturated blue and area tags take a richer fill. No plug-in, schema or PoC data change. The hosted UI has not been checked yet.
