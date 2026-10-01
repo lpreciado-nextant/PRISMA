@@ -35,7 +35,7 @@ export function FacetRail({
 
   return (
     <aside
-      className="glass glass-sheen sticky hidden overflow-y-auto rounded-[20px] p-5 lg:block"
+      className="glass glass-gloss sticky hidden overflow-y-auto rounded-[20px] p-5 lg:block"
       style={{ top: "var(--sticky-top)", maxHeight: "calc(100vh - var(--sticky-top) - 2rem)" }}
     >
       <div className="mb-4 flex items-center gap-2">

@@ -231,7 +231,7 @@ function SearchField({
   resultCount: number;
 }) {
   return (
-    <div className="glass glass-sheen flex h-14 items-center gap-3 rounded-[16px] px-4">
+    <div className="glass glass-gloss flex h-14 items-center gap-3 rounded-[16px] px-4">
       <Icon name="search" size={18} className="shrink-0" />
       <input
         type="search"

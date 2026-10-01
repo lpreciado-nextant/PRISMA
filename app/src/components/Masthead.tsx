@@ -28,7 +28,7 @@ export function Masthead({
 }) {
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6">
-      <div className="glass glass-sheen @container mx-auto flex min-h-16 w-full max-w-[1340px] flex-wrap items-center gap-2 rounded-[20px] px-3 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-0">
+      <div className="glass glass-gloss @container mx-auto flex min-h-16 w-full max-w-[1340px] flex-wrap items-center gap-2 rounded-[20px] px-3 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-0">
         <button
           type="button"
           onClick={() => navigate("/")}
