@@ -70,8 +70,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 |---|---|---|
 | `nx_GetTopFavorites` returns `saves` per ranked solution | Live | `3015bd5`. Signed plug-in pushed 2026-10-01; `inspect-favorites` returned `saves`. See [SchemaV2](../data_model/SchemaV2.md#nx_solutionfavorite--per-person-favorites) |
 | Save count beside the Top 3 heart, narrower cards (half the next card peeks), `2xs` area tag | Live | `3015bd5`. Connected app published 2026-10-01 ([app README](../../app/README.md#top-3-save-counts-2026-10-01)); hosted UI not yet checked. [Design system](../design/design-system.md#library-page) |
-| Top cards: "♥ 12" as one small heart + count with no circle in the top-right corner, level with the title; summary centred below; area tag removed | In code | Replaces the detail-only count on the cards; the count moves with the viewer's own click. Not yet committed or published |
-| Dark theme area tags: AI shifted to a saturated blue (`#6aa5f5`) so it no longer reads as Data's teal; richer tag fill and edge | In code | Light theme unchanged. Not yet committed or published |
+| Top cards: "♥ 12" as one small heart + count with no circle in the top-right corner, level with the title; summary centred below; area tag removed | Live | `7b83ef4`, published 2026-10-01 ([app README](../../app/README.md#top-10-corner-heart-and-dark-area-tags-2026-10-01)); hosted UI not yet checked. The count moves with the viewer's own click |
+| Dark theme area tags: AI shifted to a saturated blue (`#6aa5f5`) so it no longer reads as Data's teal; richer tag fill and edge | Live | `7b83ef4`, published 2026-10-01. Light theme unchanged |
 
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 

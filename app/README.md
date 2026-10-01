@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### Top 10 corner heart and dark area tags (2026-10-01)
+
+At the user's request, from `origin/main` `7b83ef4` (lint, both builds, 87 connected, 38 PoC and 26 UI tests passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790885430700), bundle `index-BlnBUP6V.js`). Top cards show "♥ 12" as a small corner heart with no circle, level with a title that wraps to two balanced lines; the area tag is gone; in the dark theme AI is a saturated blue and area tags take a richer fill. No plug-in, schema or PoC data change. The hosted UI has not been checked yet.
+
 ### Top 3 save counts (2026-10-01)
 
 At the user's request, from `origin/main` `3015bd5` (lint, both builds, 87 connected, 38 PoC, 26 UI and 72 backend tests passed): the Release plug-in, signed with the existing certificate, was pushed with `blob-plugin --execute`, and `inspect-favorites` confirmed `nx_GetTopFavorites` now returns `saves` alongside `solutionIds`. The connected app was then published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790879620244), bundle `index-CFvo8-cN.js`), carrying Luis's library fixes of the same day and Juliana's Top 3 counts, narrower cards and `2xs` area tags. The hosted UI has not been checked yet.
