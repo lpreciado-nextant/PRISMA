@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### All areas note removed (2026-10-01)
+
+At the user's request, from `origin/main` `ee44807` (lint, both builds, 87 connected, 38 PoC and 27 UI tests passed; no newer teammate commits on `origin`), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790891886335), bundle `index-BgC9lJoG.js`). With All selected, the library hero no longer shows "Everything Nextant has built and can show, across all three Specialization Areas."; a chosen area still shows its note. No plug-in, schema or PoC data change. The hosted app has not been checked yet.
+
 ### Brand "P" headings (2026-10-01)
 
 At the user's request, from `origin/main` `7b6d5c7` (lint, both builds, 87 connected, 38 PoC and 27 UI tests passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790891537048), bundle `index-C6AQilzB.js`). The "Top N" and "Solution Library" headings use `--brand-p`, the colour of the wordmark's "P", instead of the IBO lavender. No plug-in, schema or PoC data change. The user checked it in Local Play before publishing; the hosted app has not been checked yet.
