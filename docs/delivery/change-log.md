@@ -74,6 +74,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Dark theme area tags: AI shifted to a saturated blue (`#6aa5f5`) so it no longer reads as Data's teal; richer tag fill and edge | Live | `7b83ef4`, published 2026-10-01. Light theme unchanged |
 | Submit flow: steps 2–3 rearranged into **Define the solution** (name, summary, areas, what it does, business value) and **Solution context** (status, built by & effort, client); client fields only after "Is this solution associated with a client?" = Yes; rewritten Before you start copy | Live | PoC and connected share the change, published 2026-10-01 ([app README](../../app/README.md#submit-flow-rearranged-2026-10-01)). No schema or plug-in change; No clears the client name, anonymous profile and client role |
 | "Top N" and "Solution Library" headings take the wordmark "P" colour (`--brand-p`) instead of the IBO lavender | Live | Deep steel blue in light, light blue in dark, so a heading no longer reads as an area. Published 2026-10-01 ([app README](../../app/README.md#brand-p-headings-2026-10-01)) |
+| Library hero: the "All areas" note ("Everything Nextant has built and can show…") removed; a chosen area still shows its note | Live | Published 2026-10-01 ([app README](../../app/README.md#all-areas-note-removed-2026-10-01)) |
 
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 

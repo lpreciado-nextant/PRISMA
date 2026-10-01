@@ -26,9 +26,6 @@ function remember(key: string, value: string) {
   try { sessionStorage.setItem(key, value); } catch { void 0; }
 }
 
-const ALL_AREAS_NOTE =
-  "Everything Nextant has built and can show, across all three Specialization Areas.";
-
 export function LibraryView({
   catalogue,
   filters,
@@ -135,9 +132,12 @@ export function LibraryView({
           ))}
         </div>
 
-        <p className="mt-4 max-w-[72ch] text-[14.5px]" style={{ color: "var(--ink-2)" }}>
-          {filters.area === "all" ? ALL_AREAS_NOTE : AREAS[filters.area].note}
-        </p>
+        {/* Only a chosen area carries a note; "All" needs no explanation. */}
+        {filters.area !== "all" && (
+          <p className="mt-4 max-w-[72ch] text-[14.5px]" style={{ color: "var(--ink-2)" }}>
+            {AREAS[filters.area].note}
+          </p>
+        )}
 
         {chips.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
