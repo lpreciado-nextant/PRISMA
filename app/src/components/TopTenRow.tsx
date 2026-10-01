@@ -102,7 +102,7 @@ export function TopTenRow({ solutions, renderPoster, onOpen, favorite }: {
           return (
             <li key={solution.id} className="top-card-item animate-rise" data-wide={rank >= 10 ? "" : undefined} style={{ animationDelay: `${Math.min(index, 9) * 45}ms` } as CSSProperties}>
               <span className="top-rank" aria-hidden="true">{rank}</span>
-              <div className="top-card lift group">
+              <div className="top-card glass-sheen lift group">
                 {/* The whole card opens the solution; the heart sits above this stretched button. */}
                 <button type="button" onClick={() => openSolution(solution)} className="absolute inset-0 z-[1] cursor-pointer rounded-[inherit]" aria-label={`Number ${rank}: ${solution.name} — ${solution.summary}`} />
                 <span className="top-card-image">

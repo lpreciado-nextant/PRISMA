@@ -45,7 +45,7 @@ export function SolutionCard({
 
   // The heart is a sibling of the card, not a child: the card itself is a button.
   return (
-    <div className="animate-rise relative grid min-w-0" style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}>
+    <div className="card-shell animate-rise relative grid min-w-0" style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}>
     <div
       className="solution-card glass glass-lite glass-sheen lift group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] [overflow-wrap:anywhere]"
       onClick={() => onOpen ? onOpen() : navigate(`/s/${solution.id}`)}
@@ -138,7 +138,7 @@ export function SolutionCard({
         </div>
       </div>
     </div>
-    {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="absolute top-3 right-3 z-10" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
+    {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} className="card-heart absolute top-3 right-3 z-10" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
     </div>
   );
 }

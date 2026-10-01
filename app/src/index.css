@@ -262,8 +262,10 @@
     background: var(--glass-bg-2);
   }
 
-  /* Hover interaction for glass panels that invite a click. */
-  .lift:hover {
+  /* Hover interaction for glass panels that invite a click. A card shell also
+     lifts its card while the pointer is on the sibling heart. */
+  .lift:hover,
+  .card-shell:hover > .lift {
     transform: translateY(-5px);
     background: var(--glass-bg-2);
     border-color: var(--glass-edge-hi);
@@ -301,7 +303,8 @@
   }
 
   /* Clickable panels only: brightening a large or sticky panel repaints all of it for no affordance. */
-  .glass-sheen.lift:hover::before {
+  .glass-sheen.lift:hover::before,
+  .card-shell:hover > .glass-sheen.lift::before {
     opacity: 0.65;
   }
 
@@ -490,6 +493,11 @@
     background: color-mix(in srgb, var(--ground-2) 80%, transparent);
     box-shadow: inset 0 1px 0 0 var(--glass-edge-hi), var(--glass-shadow);
     text-align: left;
+    transition:
+      background 0.5s var(--ease-sheet),
+      border-color 0.5s var(--ease-sheet),
+      box-shadow 0.5s var(--ease-sheet),
+      transform 0.55s var(--ease-spring);
   }
   [data-theme="light"] .top-card {
     border-color: color-mix(in srgb, var(--sa-ibo) 14%, #e4e9f0);
@@ -799,4 +807,12 @@
   .animate-scale-in {
     animation: scale-in 0.4s var(--ease-sheet) backwards;
   }
+}
+
+/* Unlayered so it beats the heart's own transition utility: it rides the card's lift spring. */
+.card-heart {
+  transition: translate 0.55s var(--ease-spring), scale 0.2s ease;
+}
+.card-shell:hover > .card-heart {
+  translate: 0 -5px;
 }
