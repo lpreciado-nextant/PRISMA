@@ -75,7 +75,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
   imageCount?: number;
   onAssetOpen?: (asset: DemoAsset) => void;
   /** Controls the favorite heart instead of the PoC's local browser-only store. */
-  favorite?: { saved: boolean; pending?: boolean; onToggle: () => void };
+  favorite?: { saved: boolean; pending?: boolean; onToggle: () => void; saves?: number };
 }) {
   const areas = solutionAreas(solution);
   const assets = [...solution.assets].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -127,7 +127,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
         </div>
         <div className="p-6 sm:p-8 lg:flex lg:flex-col lg:self-stretch lg:pt-6">
           {((favoritable && !present) || actions) && <div className="mb-4 flex flex-wrap items-center gap-2">
-            {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
+            {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} count={favorite?.saves} />}
             {actions}
           </div>}
           <div className="flex flex-wrap items-center gap-2.5 lg:mt-auto">

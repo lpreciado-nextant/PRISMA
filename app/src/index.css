@@ -562,21 +562,6 @@
   [data-theme="light"] .top-card-image {
     border-right-color: color-mix(in srgb, var(--ink) 7%, transparent);
   }
-  /* "Saved by" count beside the heart: tiny and quiet, a hint of popularity. */
-  .top-card-saves {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
-    font-family: var(--font-mono);
-    font-size: 11px;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-2);
-  }
-  .top-card-saves:last-child {
-    padding-right: 0.35rem;
-    color: var(--favorite);
-  }
   .top-card-body {
     display: flex;
     min-width: 0;

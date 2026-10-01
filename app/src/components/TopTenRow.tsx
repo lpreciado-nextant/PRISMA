@@ -7,9 +7,8 @@ import { FavoriteButton } from "./FavoriteButton";
 import { Icon } from "./Icon";
 import { Poster } from "./Poster";
 
-const OPEN_KEY = "prisma.top10.open";
 const HIDDEN_KEY = "prisma.top10.hidden";
-const PODIUM = 3;
+const LIMIT = 10;
 
 function readFlag(key: string): boolean {
   try { return localStorage.getItem(key) === "true"; } catch { return false; }
@@ -23,26 +22,22 @@ type Favorite = { saved: boolean; pending?: boolean; onToggle: () => void };
 /**
  * "Most saved by the team" ranking, Netflix Top 10 style: horizontal cards (the
  * whole 16:9 thumbnail left, category, title, summary and heart right) with a
- * large gradient rank numeral behind each one. Shows the top three; "View all"
- * reveals the rest of the ranking in the same carousel. Order comes from the
- * caller, and so does the small "saved by" count beside each heart.
+ * large gradient rank numeral behind each one. Shows the top ten in a carousel.
+ * Order comes from the caller.
  */
-export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: {
+export function TopTenRow({ solutions, renderPoster, onOpen, favorite }: {
   solutions: Solution[];
-  /** How many people saved a solution; omit (or return undefined) to show no count. */
-  saves?: (solution: Solution) => number | undefined;
   /** Replaces the generated poster, e.g. with a protected Dataverse thumbnail. */
   renderPoster?: (solution: Solution) => ReactNode;
   onOpen?: (solution: Solution) => void;
   /** Heart state for a solution; omit to hide the heart (for example when favorites didn't load). */
   favorite?: (solution: Solution) => Favorite | undefined;
 }) {
-  const [open, setOpen] = useState(() => readFlag(OPEN_KEY));
-  // Hidden folds the shelf down to its heading; both states are per-viewer conveniences.
+  // Hidden folds the shelf down to its heading; a per-viewer convenience.
   const [hidden, setHidden] = useState(() => readFlag(HIDDEN_KEY));
   const track = useRef<HTMLOListElement>(null);
   const [edges, setEdges] = useState({ start: true, end: true });
-  const shown = open ? solutions : solutions.slice(0, PODIUM);
+  const shown = solutions.slice(0, LIMIT);
 
   useEffect(() => {
     const element = track.current;
@@ -60,7 +55,6 @@ export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: 
 
   if (solutions.length === 0) return null;
 
-  const toggle = () => { setOpen(!open); writeFlag(OPEN_KEY, !open); };
   const toggleHidden = () => { setHidden(!hidden); writeFlag(HIDDEN_KEY, !hidden); };
   const openSolution = (solution: Solution) => onOpen ? onOpen(solution) : navigate(`/s/${solution.id}`);
   const page = (direction: 1 | -1) => {
@@ -80,11 +74,6 @@ export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: 
           </h2>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {!hidden && solutions.length > PODIUM && (
-            <button type="button" onClick={toggle} aria-expanded={open} aria-controls="top-ten-shelf" className="top-view-all">
-              {open ? `Show top ${PODIUM}` : "View all"}
-            </button>
-          )}
           {!hidden && <>
             <ShelfButton label="Previous solutions" icon="chevronLeft" disabled={edges.start} onClick={() => page(-1)} />
             <ShelfButton label="More solutions" icon="chevronRight" disabled={edges.end} onClick={() => page(1)} />
@@ -101,24 +90,19 @@ export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: 
           const rank = index + 1;
           const area = solutionAreas(solution)[0] ?? solution.specializationArea;
           const heart = favorite?.(solution);
-          const count = saves?.(solution);
-          const savedBy = count === undefined ? "" : `, saved by ${count} ${count === 1 ? "person" : "people"}`;
           return (
             <li key={solution.id} className="top-card-item animate-rise" data-wide={rank >= 10 ? "" : undefined} style={{ animationDelay: `${Math.min(index, 9) * 45}ms` } as CSSProperties}>
               <span className="top-rank" aria-hidden="true">{rank}</span>
               <div className="top-card glass-sheen lift group">
                 {/* The whole card opens the solution; the heart sits above this stretched button. */}
-                <button type="button" onClick={() => openSolution(solution)} className="absolute inset-0 z-[1] cursor-pointer rounded-[inherit]" aria-label={`Number ${rank}: ${solution.name}${savedBy} — ${solution.summary}`} />
+                <button type="button" onClick={() => openSolution(solution)} className="absolute inset-0 z-[1] cursor-pointer rounded-[inherit]" aria-label={`Number ${rank}: ${solution.name} — ${solution.summary}`} />
                 <span className="top-card-image">
                   {renderPoster?.(solution) ?? <Poster id={solution.id} name={solution.name} area={area} src={solution.thumbnail} className="h-full w-full" />}
                 </span>
                 <span className="top-card-body">
                   <span className="flex min-w-0 items-center justify-between gap-2">
                     <AreaTag area={area} size="2xs" />
-                    <span className="-my-1.5 -mr-1 flex shrink-0 items-center">
-                      {count !== undefined && <span className="top-card-saves" aria-hidden="true" title={`Saved by ${count} ${count === 1 ? "person" : "people"}`}>{!heart && <Icon name="heart" size={11} filled />}{count}</span>}
-                      {heart && <FavoriteButton id={solution.id} name={solution.name} className="relative z-[2] h-8 w-8" saved={heart.saved} pending={heart.pending} onToggle={heart.onToggle} />}
-                    </span>
+                    {heart && <FavoriteButton id={solution.id} name={solution.name} className="relative z-[2] -my-1.5 -mr-1 h-8 w-8" saved={heart.saved} pending={heart.pending} onToggle={heart.onToggle} />}
                   </span>
                   <span className="line-clamp-1 text-[15px] leading-snug font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{solution.name}</span>
                   <span className="line-clamp-2 text-[12.5px] leading-snug" style={{ color: "var(--ink-2)" }}>{solution.summary}</span>

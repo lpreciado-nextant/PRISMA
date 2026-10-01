@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### Top 3 save counts (2026-10-01)
+
+At the user's request, from `origin/main` `3015bd5` (lint, both builds, 87 connected, 38 PoC, 26 UI and 72 backend tests passed): the Release plug-in, signed with the existing certificate, was pushed with `blob-plugin --execute`, and `inspect-favorites` confirmed `nx_GetTopFavorites` now returns `saves` alongside `solutionIds`. The connected app was then published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790879620244), bundle `index-CFvo8-cN.js`), carrying Luis's library fixes of the same day and Juliana's Top 3 counts, narrower cards and `2xs` area tags. The hosted UI has not been checked yet.
+
 ### Merged builder credits on detail (2026-10-01)
 
 At the user's request, from `origin/main` `6fafe44` (86 connected and 26 UI tests, lint and both builds passed), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790864464742), bundle `index-BCgxqy32.js`). The detail page no longer lists builders twice: **At a glance** drops its **Built by** row, and the **Contributor effort** panel becomes **Built by & effort**, with linked names, roles and hours. CSMs stay in their own **At a glance** row. No plug-in, schema or PoC change. The host served the new package, but its frame did not render in the integrated browser, so the hosted UI has not been checked.

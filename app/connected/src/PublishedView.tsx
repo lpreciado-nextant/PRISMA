@@ -20,7 +20,7 @@ const MediaPreview = lazy(() => loadViewer().then(module => ({ default: module.M
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px]";
 
-export function PublishedView({ solution, present, assetId, favorite, appLocation }: { solution: Solution; present: boolean; assetId?: string; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void }; appLocation?: AppLocation }) {
+export function PublishedView({ solution, present, assetId, favorite, appLocation }: { solution: Solution; present: boolean; assetId?: string; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void; saves?: number }; appLocation?: AppLocation }) {
   // The card's recent read renders at once; the fresh read below still decides access.
   const [detail, setDetail] = useState<PublishedDetail | null>(() => publishedDetails.peek(solution.id, present) ?? null);
   const [error, setError] = useState(false);
