@@ -250,15 +250,6 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
 
           <Panel title="At a glance">
             <dl className="flex flex-col gap-3 text-[14px]">
-              {!present && !catalogueOnly && <Row label="Built by">
-                <ul className="space-y-1 break-words">
-                  {effort ? effortBuilders.map((person, index) => <li key={index}>{!present && person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>) : builders.map(({ id, builtBy }) => (
-                    <li key={id}>
-                      {present ? builtBy.name : <a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a>}
-                    </li>
-                  ))}
-                </ul>
-              </Row>}
               <Row label={areas.length > 1 ? "Areas" : "Area"}>{areas.map((area) => AREAS[area].name).join(" · ")}</Row>
               {!present && !effort && csms.length > 0 && <Row label={csms.length > 1 ? "CSMs" : "CSM"}>
                 <ul className="space-y-1 break-words">
@@ -282,11 +273,11 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
           </Panel>
 
           {!present && !catalogueOnly && (
-            <Panel title="Contributor effort">
+            <Panel title="Built by & effort">
               <ul className="space-y-4 text-[14px]">
-                {effort ? effortBuilders.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.name}{person.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {person.contributorRole}</span>}</p>{person.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : person.effortMode === "calendar" && <><p className="text-[12px]">{person.startDate || "Start date missing"} to {person.endDate || "End date missing"}</p><p>{person.allocation === null ? "Allocation missing" : `${person.allocation}% allocation`}{person.businessDays !== null && person.businessDays !== undefined ? ` · ${person.businessDays} business days` : ""}</p><p className="text-[12px] text-(--ink-3)">US federal holidays</p></>}<p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : contributions.map((contributor) => (
+                {effort ? effortBuilders.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}{person.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {person.contributorRole}</span>}</p>{person.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : person.effortMode === "calendar" && <><p className="text-[12px]">{person.startDate || "Start date missing"} to {person.endDate || "End date missing"}</p><p>{person.allocation === null ? "Allocation missing" : `${person.allocation}% allocation`}{person.businessDays !== null && person.businessDays !== undefined ? ` · ${person.businessDays} business days` : ""}</p><p className="text-[12px] text-(--ink-3)">US federal holidays</p></>}<p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : builders.map((contributor) => (
                   <li key={contributor.id} className="break-words">
-                    <p className="font-semibold">{contributor.builtBy.name}{contributor.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {contributor.contributorRole}</span>}</p>
+                    <p className="font-semibold"><a href={`mailto:${contributor.builtBy.email}`} style={{ color: "var(--accent)" }}>{contributor.builtBy.name}</a>{contributor.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {contributor.contributorRole}</span>}</p>
                     {contributor.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : <>
                       <p className="text-[12px]">{contributor.startDate} to {contributor.endDate}</p>
                       <p>{contributor.allocation}% allocation · {contributor.businessDays} business days</p>
