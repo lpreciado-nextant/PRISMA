@@ -174,7 +174,9 @@
 
   html {
     scroll-behavior: smooth;
+    /* Ground stays on html only: a body background would paint over the -z-10 aurora. */
     background: var(--ground);
+    transition: background 0.6s ease;
     /* Stops the bounce from chaining to the white Power Apps host frame. */
     overscroll-behavior-y: none;
   }
@@ -182,16 +184,13 @@
   body {
     overscroll-behavior-y: none;
     margin: 0;
-    background: var(--ground);
     color: var(--ink);
     font-family: var(--font-body);
     font-size: 16px;
     line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
-    transition:
-      background 0.6s ease,
-      color 0.6s ease;
+    transition: color 0.6s ease;
   }
 
   h1,
