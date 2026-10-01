@@ -192,7 +192,7 @@ test("both adapters consume the shared form and review surfaces", async () => {
     assert.match(poc, new RegExp(`<${component}\\b`));
     assert.match(connected, new RegExp(`<${component}\\b`));
   }
-  // Both flows render Solution details and Client as separate section cards on the same "What is it?" step.
+  // Both flows render Solution details (Define the solution) and Status, Built by & effort and Client (Solution context) as section cards.
   for (const source of [poc, connected]) {
     assert.match(source, /<SolutionDetailsFields\b/);
     assert.match(source, /<ClientFields\b/);
@@ -200,6 +200,9 @@ test("both adapters consume the shared form and review surfaces", async () => {
   for (const source of [poc, connected]) {
     assert.match(source, /<NamedSection title="Solution details">/);
     assert.match(source, /<NamedSection title="Built by & effort">/);
+    assert.match(source, /<NamedSection title="Status">/);
+    assert.match(source, /<StoryFields nested\b/);
+    assert.match(source, /onAssociated=\{setClientAssociated\}/);
   }
   for (const source of [poc, graph]) assert.match(source, /<ContributorRow\b/);
   for (const source of [poc, media]) assert.match(source, /<SubmissionMedia\b/);
@@ -247,8 +250,24 @@ test("identity fields retain PoC examples, limits and separate client contexts",
   assert.match(html, /0\/200 characters/);
 });
 
+test("the client question hides every client field until Yes", () => {
+  const props = { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, role: "", roles: ["Chief of Staff"], onRole: noop, framed: true, onAssociated: noop };
+  for (const associated of [undefined, false]) {
+    const html = render(form.ClientFields, { ...props, associated });
+    assert.match(html, /Is this solution associated with a client\?/);
+    assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
+    assert.doesNotMatch(html, /Client name|Anonymous client profile|Target client role/);
+  }
+  const yes = render(form.ClientFields, { ...props, associated: true });
+  assert.match(yes, /Target client role/);
+  assert.match(yes, /Client name/);
+  assert.match(yes, /Anonymous client profile/);
+  // Without the question (no onAssociated) the fields show as before.
+  assert.match(render(form.ClientFields, { ...props, onAssociated: undefined }), /Client name/);
+});
+
 test("safety and contributor rows preserve baseline copy and accessible field structure", () => {
-  assert.match(render(form.SubmissionSafety, { accepted: false, onChange: noop }), /Prepare a client-safe story/);
+  assert.match(render(form.SubmissionSafety, { accepted: false, onChange: noop }), /Help keep PRISMA content safe/);
   const html = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), direct: true, value: { directHours: null, allocation: 100, startDate: "", endDate: "" }, onChange: noop, result: { error: "Enter hours", hours: 0, businessDays: 0 } });
   assert.match(html, /<legend[^>]*>Contributor 1/);
   assert.match(html, /sm:col-span-2/);
@@ -370,8 +389,8 @@ test("section cards carry one section-level visibility badge and mixed sections 
   const client = render(form.ClientFields, { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, role: "", roles: ["Chief of Staff"], onRole: noop, framed: true });
   assert.equal((client.match(/Internal only/g) ?? []).length, 1);
   assert.equal((client.match(/Shown to clients/g) ?? []).length, 2);
-  // "What is it?" holds three cards, so the step itself stays unframed; single-section steps become cards.
-  assert.doesNotMatch(inCards(createElement(form.StepShell, { title: "What is it?" })), /rounded-\[20px\] border/);
+  // Multi-card steps stay unframed; single-section steps become cards.
+  for (const title of ["Define the solution", "Solution context"]) assert.doesNotMatch(inCards(createElement(form.StepShell, { title })), /rounded-\[20px\] border/);
   assert.match(inCards(createElement(form.StepShell, { title: "Tag it" })), /<h2[^>]*>Tag it<\/h2>.*Shown to clients/);
   assert.doesNotMatch(render(form.StepShell, { title: "Tag it" }), /Shown to clients/);
 });

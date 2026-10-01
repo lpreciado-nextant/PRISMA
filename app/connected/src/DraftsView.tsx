@@ -4,7 +4,7 @@ import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { TagPicker } from "../../src/components/TagPicker";
 import { SolutionCard } from "../../src/components/SolutionCard";
-import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, SolutionDetailsFields, ClientFields, StoryFields, SubmissionReview } from "../../src/components/SubmissionForm";
+import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, SolutionDetailsFields, ClientFields, StoryFields, SubmissionReview, StatusField } from "../../src/components/SubmissionForm";
 import type { Solution, SpecializationArea } from "../../src/types";
 import { MAX_AREAS } from "../../src/lib/areas";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
@@ -120,6 +120,22 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     if (status === "saved") setStatus("idle");
   };
   const changeGraph = (next: DraftGraph) => { setGraph(next); change("safetyAcknowledged", false); };
+  // "Is this solution associated with a client?" Any client value already answers Yes. No clears the
+  // client fields (so nothing hidden is saved); switching back to Yes restores them.
+  const [clientChoice, setClientChoice] = useState<boolean | null>(null);
+  const clientStash = useRef<Pick<CoreDraft, "clientContext" | "clientContextRedacted" | "clientRoleValue"> | null>(null);
+  const clientAssociated = clientChoice ?? (draft.clientContext.trim() || draft.clientContextRedacted.trim() || draft.clientRoleValue != null ? true : undefined);
+  const setClientAssociated = (associated: boolean) => {
+    setClientChoice(associated);
+    const stash = associated ? clientStash.current : null;
+    if (!associated) clientStash.current = { clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted, clientRoleValue: draft.clientRoleValue };
+    else clientStash.current = null;
+    if (!associated || stash) {
+      setDraft(current => ({ ...current, safetyAcknowledged: false, ...(stash ?? { clientContext: "", clientContextRedacted: "", clientRoleValue: undefined }) }));
+      if (status === "saved") setStatus("idle");
+    }
+  };
+  const clientValid = clientAssociated === false || (clientAssociated === true && !!draft.clientContext.trim() && !!draft.clientContextRedacted.trim());
   const addTechnology = async (name: string) => {
     const controller = lifetime.current;
     if (!controller || !saved || saving.current || status === "uncertain" || mediaBusy) throw new Error("Draft unavailable.");
@@ -232,8 +248,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const thumbnail = media.find(item => item.kind === "thumbnail" && item.complete);
   const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person));
   const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !contributorEffort(person, draft.maturity).error);
-  const complete = canSave && graph.areaIds.length > 0 && graph.projectIds.length <= 1 && !!draft.summary.trim() && !!draft.capabilityId && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
-  const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && effortComplete && (!draft.clientContext.trim() || !!draft.clientContextRedacted.trim()) : step === 3 ? canSave && graph.projectIds.length <= 1 && !!draft.capabilityId : step === 4 ? complete : canSave;
+  const complete = canSave && graph.areaIds.length > 0 && graph.projectIds.length <= 1 && !!draft.summary.trim() && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
+  const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() : step === 2 ? canSave && effortComplete && clientValid : step === 3 ? canSave && graph.projectIds.length <= 1 && !!draft.capabilityId : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;
@@ -258,26 +274,31 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     <div className="glass glass-lite glass-sheen animate-rise mt-5 rounded-[24px] p-6 sm:p-8">
       <fieldset disabled={locked} className="min-w-0">
         {step === 0 && <SubmissionSafety accepted={accepted} onChange={setAccepted} />}
-        {step === 1 && <StepShell title="What is it?">
+        {step === 1 && <StepShell title="Define the solution">
           <NamedSection title="Solution details">
             <SolutionDetailsFields value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
-              selectedAreas={graph.areaIds} onAreas={areaIds => changeGraph({ ...graph, areaIds })} maxAreas={MAX_AREAS} areas={[...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name)).map(option => ({ value: option.id, label: areaName(option.name) }))}
-              status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
+              selectedAreas={graph.areaIds} onAreas={areaIds => changeGraph({ ...graph, areaIds })} maxAreas={MAX_AREAS} areas={[...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name)).map(option => ({ value: option.id, label: areaName(option.name) }))} />
           </NamedSection>
-          <ClientFields framed value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
-            role={draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : ""} roles={CLIENT_ROLES} onRole={value => change("clientRoleValue", value ? CLIENT_ROLE_VALUES[value] : undefined)} />
+          <StoryFields nested whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={change} />
+        </StepShell>}
+        {step === 2 && <StepShell title="Solution context">
+          <NamedSection title="Status">
+            <StatusField status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
+          </NamedSection>
           <NamedSection title="Built by & effort">
             <DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="contributors" onChange={changeGraph} />
           </NamedSection>
+          <ClientFields framed value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
+            role={draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : ""} roles={CLIENT_ROLES} onRole={value => change("clientRoleValue", value ? CLIENT_ROLE_VALUES[value] : undefined)}
+            associated={clientAssociated} onAssociated={setClientAssociated} />
         </StepShell>}
-        {step === 2 && <StoryFields whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={change} />}
         {step === 3 && <StepShell title="Tag it"><TagPicker label="Capability (required, choose one)" governed options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
       </fieldset>
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}
       {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}
         contributors={preview.contributors.map(person => person.builtBy.name).join(", ")} hours={!hours.length || hours.some(value => value === null) ? null : Math.round(hours.reduce<number>((total, value) => total + (value ?? 0), 0) * 100) / 100}
         images={`${thumbnail ? "Thumbnail" : "Generated poster"} · ${media.filter(item => item.kind === "image" && item.complete).length} screenshots`} safety={draft.safetyAcknowledged ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.clientContextRedacted} nextState="Pending review">
-        <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>{!complete && <p role="alert">Complete identity, at least one specialization area, contributor effort, capability and at least one detail image before submitting.</p>}
+        <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>{!complete && <p role="alert">Complete Define the solution, Solution context (status, effort and the client question), a capability and at least one detail image before submitting.</p>}
       </SubmissionReview>}
       <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave && graph.projectIds.length <= 1} canContinue={canContinue} canSubmit={complete && !captionsDirty && draft.safetyAcknowledged && !!hours.length && hours.every(value => value !== null)}
         onBack={() => goBack(step - 1)} onSave={() => void persist("close")} onContinue={() => void persist("continue")} onSubmit={() => void persist("submit")} />

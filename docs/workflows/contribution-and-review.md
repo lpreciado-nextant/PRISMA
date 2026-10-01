@@ -1,6 +1,6 @@
 # Contribution & review workflow
 
-**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain · **Last updated:** 2026-09-30
+**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain · **Last updated:** 2026-10-01
 **Source:** [End-to-end design §3.1](../design/end-to-end-design.md#31-contribution--publication) · Roles: [Contributor, Librarian](../design/end-to-end-design.md#2-users-and-roles)
 
 ## Lifecycle
@@ -85,8 +85,8 @@ Guided multi-step form with draft saving at every step. **Friction budget: under
 | Step | Collects | Notes |
 |---|---|---|
 | 1. Before you start | Required safety acknowledgment | Replaces sharing/sample-data classifications; authorized, anonymized client-visible content; not review approval |
-| 2. What is it? | Identity, maturity, contributors, internal client and anonymous context | Direct hours for ideas/prototypes; dates/allocation for demos/production. Anonymous context required if a client is supplied |
-| 3. What & why | Actions/results and business value | Separate fields with examples; optional AI assistance deferred |
+| 2. Define the solution | Name, summary, specialization areas, what it does and business value | Story fields are separate, with examples; optional AI assistance deferred |
+| 3. Solution context | Status (maturity), contributors and effort, client | Direct hours for ideas/prototypes; dates/allocation for demos/production. Starts with "Is this solution associated with a client?" (required): client role, internal name and anonymous context show only on Yes, where name and anonymous context are required; No clears them |
 | 4. Tag it | Exactly one capability; searchable technologies and industries | Capability required at submit, optional in Draft. New technologies allowed with duplicate, similar-name and capitalization checks ([governance](../data_model/reference-data-governance.md#vocabularies)); other lists governed |
 | 5. Media | One to six required detail images; optional thumbnail, HTML, video and one-pager/slides | Images alone suffice. Capability-specific guidance; permission-dependent formats deferred |
 | 6. Review & submit | Client-visible card and summary | Revalidate safety, identity/effort, anonymous context and required images |

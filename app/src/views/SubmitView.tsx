@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   AssetType,
   ClientRole,
@@ -20,7 +20,7 @@ import type { AppUser } from "../lib/powerContext";
 import { calculateEffort, usesDirectHours } from "../lib/effort";
 import { MAX_AREAS, solutionAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
-import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, Field } from "../components/SubmissionForm";
+import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, Field, StatusField } from "../components/SubmissionForm";
 import { SelectPicker } from "../components/SelectPicker";
 import { ImageFramer } from "../components/ImageFramer";
 
@@ -182,6 +182,22 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
+  // "Is this solution associated with a client?" Any client value already answers Yes. No clears the
+  // client fields (so nothing hidden is saved); switching back to Yes restores them.
+  const [clientChoice, setClientChoice] = useState<boolean | null>(null);
+  const clientStash = useRef<Pick<Draft, "clientContext" | "redacted" | "clientRole"> | null>(null);
+  const clientAssociated = clientChoice ?? (draft.clientContext.trim() || draft.redacted.trim() || draft.clientRole ? true : undefined);
+  const setClientAssociated = (associated: boolean) => {
+    setClientChoice(associated);
+    if (!associated) {
+      clientStash.current = { clientContext: draft.clientContext, redacted: draft.redacted, clientRole: draft.clientRole };
+      setDraft((d) => ({ ...d, clientContext: "", redacted: "", clientRole: "" }));
+    } else if (clientStash.current) {
+      const stash = clientStash.current;
+      clientStash.current = null;
+      setDraft((d) => ({ ...d, ...stash }));
+    }
+  };
 
   const directEffort = usesDirectHours(draft.status);
   const normalizedContributors = draft.contributors.map((contributor) => ({ ...contributor, effortMode: directEffort ? "direct" as const : "calendar" as const }));
@@ -206,12 +222,12 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const contributorsValid = draft.contributors.length > 0 && contributionResults.every((result) => !result.error);
   const nameValid = Boolean(draft.name.trim()) && draft.name.trim() !== UNTITLED_SOLUTION && draft.name.length <= 100;
   const detailsValid = nameValid && Boolean(draft.summary.trim()) && draft.areas.length > 0;
-  const clientValid = !draft.clientContext.trim() || Boolean(draft.redacted.trim());
+  const clientValid = clientAssociated === false || (clientAssociated === true && Boolean(draft.clientContext.trim()) && Boolean(draft.redacted.trim()));
   const basicsValid = detailsValid && clientValid && contributorsValid;
   const safetyValid = draft.safetyAcknowledged;
   const mediaValid = draft.images.length > 0 && !mediaBusy;
   const capabilityValid = draft.capabilities.length === 1;
-  const stepValid = safetyValid && (step === 1 ? basicsValid : step === 3 ? capabilityValid : step === 4 ? mediaValid : true);
+  const stepValid = safetyValid && (step === 1 ? detailsValid : step === 2 ? clientValid && contributorsValid : step === 3 ? capabilityValid : step === 4 ? mediaValid : true);
   const totalHours = Math.round(contributionResults.reduce((total, result) => total + result.hours, 0) * 100) / 100;
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
     set("contributors", draft.contributors.map((contributor) => contributor.id === id ? { ...contributor, ...patch } : contributor));
@@ -271,7 +287,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
     return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => {
       if (initialSolution) { navigate("/submit"); return; }
       setDraft({ ...EMPTY_DRAFT, contributors: [{ id: crypto.randomUUID(), builtBy: { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName }, startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID }] });
-      setStep(0); setSubmissionId(crypto.randomUUID()); setSubmitted(false);
+      setStep(0); setSubmissionId(crypto.randomUUID()); setSubmitted(false); setClientChoice(null); clientStash.current = null;
     }}>is pending review in this local preview. No notification was sent and nothing was published. {onSaveDraft ? "Submissions and media are saved in this browser." : "This walkthrough does not save submissions."}</SubmissionSuccess>;
   }
 
@@ -327,11 +343,24 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         {step > 0 && !safetyValid && <p role="alert">Accept the safety requirements in Before you start to continue.</p>}
 
         {step === 1 && safetyValid && (
-          <StepShell title="What is it?">
+          <StepShell title="Define the solution">
             <NamedSection title="Solution details">
-            <SolutionDetailsFields grouped value={draft} onText={set} area={draft.areas[0] ?? "ai"} areas={AREA_ORDER.map(value => ({ value, label: AREAS[value].name }))} onArea={value => set("areas", [value])} selectedAreas={draft.areas} onAreas={value => set("areas", value)} maxAreas={MAX_AREAS} status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
+            <SolutionDetailsFields grouped value={draft} onText={set} area={draft.areas[0] ?? "ai"} areas={AREA_ORDER.map(value => ({ value, label: AREAS[value].name }))} onArea={value => set("areas", [value])} selectedAreas={draft.areas} onAreas={value => set("areas", value)} maxAreas={MAX_AREAS} />
             </NamedSection>
-            <ClientFields framed value={draft} onText={set} role={draft.clientRole} roles={CLIENT_ROLES} onRole={value => set("clientRole", value)} />
+            <StoryFields nested whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={set}>
+              <p className="flex items-center gap-2 text-[13px]" style={{ color: "var(--ink-3)" }}>
+                <Icon name="sparkle" size={14} />
+                In the real app an AI assist expands terse bullets into prose here.
+              </p>
+            </StoryFields>
+          </StepShell>
+        )}
+
+        {step === 2 && safetyValid && (
+          <StepShell title="Solution context">
+            <NamedSection title="Status">
+              <StatusField status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
+            </NamedSection>
             <NamedSection title="Built by & effort">
             <ContributorEditor bare direct={directEffort} total={contributorsValid ? totalHours : null} onAdd={() => set("contributors", [...draft.contributors, {
               id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" }, startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID,
@@ -348,16 +377,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
               })}
             </ContributorEditor>
             </NamedSection>
+            <ClientFields framed value={draft} onText={set} role={draft.clientRole} roles={CLIENT_ROLES} onRole={value => set("clientRole", value)} associated={clientAssociated} onAssociated={setClientAssociated} />
           </StepShell>
-        )}
-
-        {step === 2 && safetyValid && (
-          <StoryFields whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={set}>
-            <p className="flex items-center gap-2 text-[13px]" style={{ color: "var(--ink-3)" }}>
-              <Icon name="sparkle" size={14} />
-              In the real app an AI assist expands terse bullets into prose here.
-            </p>
-          </StoryFields>
         )}
 
         {step === 3 && safetyValid && (
@@ -403,7 +424,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         {step === 5 && safetyValid && (
           <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.contributorRole ? `${contributor.builtBy.name} (${contributor.contributorRole})` : contributor.builtBy.name).join(", ")} hours={totalHours}
             images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.clientRole} nextState="Pending review (local)">
-            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete What is it? (details, client and effort), select one capability and add at least one detail image before submitting.</p>}
+            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution, Solution context (status, effort and the client question), select one capability and add at least one detail image before submitting.</p>}
           </SubmissionReview>
         )}
 

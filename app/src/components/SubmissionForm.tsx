@@ -20,11 +20,12 @@ import { LINK_ASSET_TYPES, validateLinkedAsset, type LinkedAssetInput, type Link
 import { useVideoPreparation } from "../lib/useVideoPreparation";
 import { LocalVideoPreview } from "./ViewerFrame";
 
-export const SUBMISSION_STEPS = ["Before you start", "What is it?", "What & why", "Tag it", "Media", "Review & submit"] as const;
+export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Solution context", "Tag it", "Media", "Review & submit"] as const;
 
 const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> = {
   "Before you start": { icon: "shield" },
   "Solution details": { icon: "file", visibility: "client" },
+  Status: { icon: "clock", visibility: "client" },
   Client: { icon: "briefcase" },
   "Built by & effort": { icon: "users", visibility: "internal" },
   "What does it do, and why does it matter?": { icon: "sparkle", visibility: "client" },
@@ -34,10 +35,12 @@ const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> 
 };
 
 const STEP_INTRODUCTIONS: Record<string, string> = {
-  "Before you start": "Your work will help CSMs present solutions to clients. Prepare a client-safe story before adding content.",
-  "What is it?": "The card's first impression — name it like a product, not a project code.",
+  "Before you start": "Help keep PRISMA content safe and ready to present to clients.",
+  "Define the solution": "What it is and why it matters: the card and the story CSMs tell.",
+  "Solution context": "Where it stands, who built it, and whether a client is involved.",
+  Status: "How mature the solution is today. It also decides how effort is entered below.",
   "Solution details": "The card's first impression. Name it like a product, not a project code, and say in one line what it does.",
-  Client: "Optional. Who this is for, and how to talk about them in front of other clients.",
+  Client: "Who this was built for, and how to talk about them in front of other clients.",
   "Built by & effort": "Add the contributors who worked on this solution and capture the effort required to deliver it. This information is used for internal tracking only.",
   "What does it do, and why does it matter?": "CSMs rely on this step most. Write it for someone who wasn't on the project.",
   "Tag it": "Tags help CSMs find this later. Capabilities and industries come from a fixed list; technologies are free text.",
@@ -103,11 +106,11 @@ export function Field({ label, required, hint, badge, children }: { label: strin
 export function SubmissionSafety({ accepted, onChange }: { accepted: boolean; onChange: (accepted: boolean) => void }) {
   return <StepShell title="Before you start">
     <ul className="list-disc space-y-4 pl-5 text-[15px]">
-      <li>Use fake or anonymized data everywhere: text, screenshots, videos, files and HTML. No confidential numbers, names or identifying details.</li>
-      <li>Only attach material you're allowed to share. A librarian still reviews everything.</li>
-      <li>Put the client's real name only in the internal client field. For presentations, write an anonymous description. No client? Leave both empty.</li>
+      <li><b>Keep it client-safe.</b> Use fake or anonymized data in text, screenshots, videos, files, and HTML.</li>
+      <li><b>Only share approved content.</b> Upload materials you're authorized to share. A librarian will review your submission before publishing.</li>
+      <li><b>Protect client information.</b> If a client is associated with the solution, their real name is kept internal. Use an anonymous description for client-facing content.</li>
     </ul>
-    <label className="flex cursor-pointer items-start gap-3 text-[15px]"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={accepted} onChange={event => onChange(event.target.checked)} /><span>I'll only submit content I'm allowed to share and that's safe for clients, with the client's name only in the internal field.</span></label>
+    <label className="flex cursor-pointer items-start gap-3 text-[15px]"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={accepted} onChange={event => onChange(event.target.checked)} /><span>I confirm that my submission is safe to share and does not contain confidential or unauthorized information.</span></label>
   </StepShell>;
 }
 
@@ -233,7 +236,8 @@ type IdentityProps<Area extends string, Status extends string, Role extends stri
 
 /** Name, summary, area and status. \`grouped\` splits them into labelled subsections inside a section card. */
 /** Pass `selectedAreas` + `onAreas` for N:N specialization areas (up to `maxAreas`); otherwise `area` + `onArea` pick one. */
-export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "role" | "roles" | "onRole"> & { grouped?: boolean }) {
+/** Omit `onStatus` to leave Status out (the guided flow asks it under Solution context, through `StatusField`). */
+export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "role" | "roles" | "onRole" | "status" | "statuses" | "onStatus"> & Partial<Pick<IdentityProps<Area, Status, string>, "status" | "statuses" | "onStatus">> & { grouped?: boolean }) {
   const toggleArea = (option: Area) => {
     if (!selectedAreas || !onAreas) return;
     if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));
@@ -247,7 +251,7 @@ export function SolutionDetailsFields<Area extends string, Status extends string
     {selectedAreas && onAreas
       ? <Field label="Specialization areas" required hint={`Choose up to ${maxAreas}. The first one you pick sets the card colour.`}><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={selectedAreas.includes(option.value)} onClick={() => toggleArea(option.value)}>{option.label}</Chip>)}</div></Field>
       : <Field label="Specialization area"><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>}
-    <Field label="Status"><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
+    {onStatus && status !== undefined && statuses && <StatusField status={status} statuses={statuses} onStatus={onStatus} />}
   </>;
   if (!grouped) return <>{naming}{classification}</>;
   return <>
@@ -256,21 +260,35 @@ export function SolutionDetailsFields<Area extends string, Status extends string
   </>;
 }
 
-/** Target role, internal client name and anonymous profile. Fields carry their own badges because their visibility differs. */
-export function ClientFields<Role extends string>({ value, onText, role, roles, onRole, framed = false }: Pick<IdentityProps<string, string, Role>, "value" | "onText" | "role" | "roles" | "onRole"> & { framed?: boolean }) {
-  const fields = <>
+export function StatusField<Status extends string>({ status, statuses, onStatus }: { status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void }) {
+  return <Field label="Status"><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>;
+}
+
+/**
+ * Target role, internal client name and anonymous profile. Fields carry their own badges because their visibility differs.
+ * Pass `associated` + `onAssociated` to ask "Is this solution associated with a client?" first and show the fields only on Yes.
+ */
+export function ClientFields<Role extends string>({ value, onText, role, roles, onRole, framed = false, associated, onAssociated }: Pick<IdentityProps<string, string, Role>, "value" | "onText" | "role" | "roles" | "onRole"> & { framed?: boolean; associated?: boolean; onAssociated?: (associated: boolean) => void }) {
+  const asked = onAssociated !== undefined;
+  const question = asked && <fieldset className="min-w-0">
+    <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Is this solution associated with a client?<span style={{ color: "var(--proto)" }}> *</span></legend>
+    <div className="flex flex-wrap gap-2">{([[true, "Yes"], [false, "No"]] as const).map(([option, label]) => <label key={label} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${associated === option ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
+      <input type="radio" className="sr-only" name="client-associated" checked={associated === option} onChange={() => onAssociated(option)} />{label}
+    </label>)}</div>
+  </fieldset>;
+  const fields = (!asked || associated) && <>
     {onRole && roles && <FormSubsection title="Audience">
       <Field label="Target client role" badge={<VisibilityBadge visibility="client" />} hint="Select the primary client role this solution is designed to support."><SelectPicker label="Target client role" value={role ?? ""} options={role ? ["", ...roles] : roles} onChange={onRole} getLabel={option => option || "No specific role"} placeholder="e.g. Chief of Staff" /></Field>
     </FormSubsection>}
     <FormSubsection title="Client details">
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-        <Field label="Client name" badge={<VisibilityBadge visibility="internal" />} hint="Internal reference only. Enter the client or organization associated with this solution."><input className={submissionInputClass} value={value.clientContext} onChange={event => onText("clientContext", event.target.value)} placeholder="e.g. Fabrikam Logistics" maxLength={200} /></Field>
-        <Field label="Anonymous client profile" required={!!value.clientContext.trim()} badge={<VisibilityBadge visibility="client" />} hint="Used in presentations instead of the client name. Keep it brief and non-identifying."><input className={submissionInputClass} value={value.redacted} onChange={event => onText("redacted", event.target.value)} placeholder="e.g. A national logistics provider" maxLength={200} /></Field>
+        <Field label="Client name" required={asked} badge={<VisibilityBadge visibility="internal" />} hint="Internal reference only. Enter the client or organization associated with this solution."><input className={submissionInputClass} value={value.clientContext} onChange={event => onText("clientContext", event.target.value)} placeholder="e.g. Fabrikam Logistics" maxLength={200} /></Field>
+        <Field label="Anonymous client profile" required={asked || !!value.clientContext.trim()} badge={<VisibilityBadge visibility="client" />} hint="Used in presentations instead of the client name. Keep it brief and non-identifying."><input className={submissionInputClass} value={value.redacted} onChange={event => onText("redacted", event.target.value)} placeholder="e.g. A national logistics provider" maxLength={200} /></Field>
       </div>
     </FormSubsection>
   </>;
-  if (!framed) return fields;
-  return <SectionCard level={3} icon={SECTION_META.Client.icon} title="Client" description={STEP_INTRODUCTIONS.Client}>{fields}</SectionCard>;
+  if (!framed) return <>{question}{fields}</>;
+  return <SectionCard level={3} icon={SECTION_META.Client.icon} title="Client" description={STEP_INTRODUCTIONS.Client}>{question}{fields}</SectionCard>;
 }
 
 /** The single-page identity step used by the connected app: details followed by a framed Client card. */
@@ -315,12 +333,14 @@ export function SectionCard({ level = 2, icon, title, description, visibility, c
   </section>;
 }
 
-export function StoryFields({ whatItDoes, businessValue, onChange, children }: { whatItDoes: string; businessValue: string; onChange: (key: "whatItDoes" | "businessValue", value: string) => void; children?: ReactNode }) {
-  return <StepShell title="What does it do, and why does it matter?">
+/** `nested` renders the story as a section card inside a larger step (Define the solution) instead of a step of its own. */
+export function StoryFields({ whatItDoes, businessValue, onChange, nested = false, children }: { whatItDoes: string; businessValue: string; onChange: (key: "whatItDoes" | "businessValue", value: string) => void; nested?: boolean; children?: ReactNode }) {
+  const Shell = nested ? NamedSection : StepShell;
+  return <Shell title="What does it do, and why does it matter?">
     <Field label="What it does" hint="What a user does in it, and what they get out of it."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={whatItDoes} onChange={event => onChange("whatItDoes", event.target.value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
     <Field label="Business value" hint="The problem it solves and why that matters. Add real numbers only if you have them."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={businessValue} onChange={event => onChange("businessValue", event.target.value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
     {children}
-  </StepShell>;
+  </Shell>;
 }
 
 export function SubmissionReview({ card, attachments, contributors, hours, images, safety, client, context, role, nextState, children }: {
