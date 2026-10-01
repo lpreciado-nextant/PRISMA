@@ -325,9 +325,16 @@
         transparent 72%,
         color-mix(in srgb, var(--glass-sheen) 40%, transparent) 100%
       );
-    opacity: 0.5;
+    opacity: 0.4;
     -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.35) 60%, transparent 100%);
     mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.35) 60%, transparent 100%);
+    transition: opacity 0.4s var(--ease-sheet);
+    /* Own layer: the hover fade runs on the compositor instead of repainting the panel. */
+    will-change: opacity;
+  }
+
+  .glass-gloss:hover::before {
+    opacity: 0.85;
   }
 
   .eyebrow {

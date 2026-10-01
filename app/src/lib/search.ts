@@ -108,6 +108,10 @@ export function areaCounts(all: Solution[], f: Filters): Map<SpecializationArea 
   return counts;
 }
 
+export function activeFacetCount(f: Filters): number {
+  return f.capabilities.length + f.technologies.length + f.industries.length + f.roles.length;
+}
+
 export function activeChips(f: Filters): { key: FacetKey; value: string }[] {
   return [
     ...f.capabilities.map((value) => ({ key: "capabilities" as const, value })),

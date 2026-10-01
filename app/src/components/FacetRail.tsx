@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { Solution } from "../types";
-import { facetCounts, type FacetKey, type Filters } from "../lib/search";
+import { activeFacetCount, facetCounts, type FacetKey, type Filters } from "../lib/search";
 import { Icon } from "./Icon";
 
 const GROUPS: { key: FacetKey; label: string }[] = [
@@ -12,15 +12,38 @@ const GROUPS: { key: FacetKey; label: string }[] = [
 
 const COLLAPSED_LIMIT = 6;
 
-export function FacetRail({
-  all,
-  filters,
-  onChange,
-}: {
+type FacetProps = {
   all: Solution[];
   filters: Filters;
   onChange: (next: Filters) => void;
-}) {
+};
+
+export function FacetRail(props: FacetProps) {
+  return (
+    <aside
+      className="glass glass-gloss sticky hidden overflow-y-auto rounded-[20px] p-5 lg:block"
+      style={{ top: "var(--sticky-top)", maxHeight: "calc(100vh - var(--sticky-top) - 2rem)" }}
+    >
+      <FacetBody {...props} />
+    </aside>
+  );
+}
+
+/** Below lg the rail is hidden; this collapsible copy is opened from the library toolbar. */
+export function FacetPanel({ id, onClose, ...props }: FacetProps & { id: string; onClose: () => void }) {
+  return (
+    <section id={id} aria-label="Refine solutions" className="glass glass-gloss animate-scale-in mb-5 rounded-[20px] p-5 lg:hidden">
+      <FacetBody {...props} onClose={onClose} />
+    </section>
+  );
+}
+
+function FacetBody({
+  all,
+  filters,
+  onChange,
+  onClose,
+}: FacetProps & { onClose?: () => void }) {
   const toggle = (key: FacetKey, value: string) => {
     const current = filters[key];
     onChange({
@@ -29,15 +52,11 @@ export function FacetRail({
     });
   };
 
-  const anyActive =
-    filters.capabilities.length + filters.technologies.length + filters.industries.length + filters.roles.length > 0;
+  const anyActive = activeFacetCount(filters) > 0;
   const counts = useMemo(() => GROUPS.map(({ key }) => facetCounts(all, filters, key)), [all, filters]);
 
   return (
-    <aside
-      className="glass glass-gloss sticky hidden overflow-y-auto rounded-[20px] p-5 lg:block"
-      style={{ top: "var(--sticky-top)", maxHeight: "calc(100vh - var(--sticky-top) - 2rem)" }}
-    >
+    <>
       <div className="mb-4 flex items-center gap-2">
         <Icon name="sliders" size={15} />
         <span className="eyebrow">Refine</span>
@@ -53,6 +72,18 @@ export function FacetRail({
             Clear
           </button>
         )}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close refine options"
+            title="Close"
+            className={`${anyActive ? "" : "ml-auto "}grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg`}
+            style={{ color: "var(--ink-2)" }}
+          >
+            <Icon name="close" size={15} />
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-6">
@@ -66,7 +97,7 @@ export function FacetRail({
           />
         ))}
       </div>
-    </aside>
+    </>
   );
 }
 

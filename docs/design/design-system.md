@@ -1,6 +1,6 @@
 # Design system
 
-**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 3 shelf, imagery and text-contrast rules; glass rendering budget (refraction removed) · **Last updated:** 2026-09-30
+**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 3 shelf, imagery and text-contrast rules; glass rendering budget (refraction removed); collapsible Refine panel on small screens · **Last updated:** 2026-10-01
 **Reference implementation:** [`app/src/index.css`](../../app/src/index.css) and the component set in [`app/src/components/`](../../app/src/components/)
 
 The HTML prototype established the visual language; the code app PoC evolved it into the **liquid-glass system** and is the current reference. The production app matches the PoC.
@@ -85,7 +85,7 @@ Present mode changes the visual register (see [present mode](../workflows/presen
 |---|---|---|
 | Masthead | `app/src/components/Masthead.tsx` | Wordmark, search, present-mode toggle, theme switch |
 | Solution card | `app/src/components/SolutionCard.tsx` | Thumbnail/poster, name, one-liner, status badge, capability chips |
-| Facet rail | `app/src/components/FacetRail.tsx` | Additive facets with live counts, removable chips |
+| Facet rail | `app/src/components/FacetRail.tsx` | Additive facets with live counts, removable chips. Below `lg` the rail is replaced by a collapsible Refine panel opened from the library toolbar (badge shows active facet count) |
 | Poster | `app/src/components/Poster.tsx` | Generated per-specialization placeholder for records without a thumbnail |
 | Badges | `app/src/components/Badges.tsx` | Maturity status, specialization and tag chips |
 | Present banner | `app/src/components/PresentBanner.tsx` | Persistent present-mode indicator |

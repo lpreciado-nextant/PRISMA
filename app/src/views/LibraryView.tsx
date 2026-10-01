@@ -1,9 +1,9 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import type { Solution } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
-import { activeChips, areaCounts, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
+import { activeChips, activeFacetCount, areaCounts, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
 import { Chip } from "../components/Badges";
-import { FacetRail } from "../components/FacetRail";
+import { FacetPanel, FacetRail } from "../components/FacetRail";
 import { Icon } from "../components/Icon";
 import { SolutionCard } from "../components/SolutionCard";
 import { SolutionRow } from "../components/SolutionRow";
@@ -52,6 +52,9 @@ export function LibraryView({
 }) {
   const [sort, setSort] = useState<SortOrder>(() => remembered(SORT_KEY, SORT_ORDERS, "newest"));
   const [layout, setLayout] = useState<LibraryLayout>(() => remembered(LAYOUT_KEY, ["grid", "list"] as const, "grid"));
+  const [refineOpen, setRefineOpen] = useState(false);
+  const refineToggle = useRef<HTMLButtonElement>(null);
+  const refineCount = activeFacetCount(filters);
   // Sorting and layout apply to the Solution Library grid only; the Top 3 keeps its own ranking.
   const results = useMemo(() => sortSolutions(filterSolutions(catalogue, filters), sort), [catalogue, filters, sort]);
   const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
@@ -167,6 +170,23 @@ export function LibraryView({
               {/* Same type and lavender as the Top 3 title. */}
               <h2 className="text-[clamp(1.3rem,2vw,1.65rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em", color: "var(--sa-ibo)" }}>Solution Library</h2>
               <div className="flex items-center gap-2">
+                <button
+                  ref={refineToggle}
+                  type="button"
+                  onClick={() => setRefineOpen(!refineOpen)}
+                  aria-expanded={refineOpen}
+                  aria-controls={refineOpen ? "refine-panel" : undefined}
+                  aria-label={refineCount ? `Refine, ${refineCount} active` : "Refine"}
+                  className="toolbar-control flex h-9 cursor-pointer items-center gap-2 rounded-[10px] px-3 text-[13px] font-semibold lg:hidden"
+                >
+                  <Icon name="sliders" size={14} />
+                  Refine
+                  {refineCount > 0 && (
+                    <span className="grid h-5 min-w-5 place-items-center rounded-full px-1 font-mono text-[10.5px]" style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
+                      {refineCount}
+                    </span>
+                  )}
+                </button>
                 <SelectPicker
                   compact
                   label="Sort solutions"
@@ -192,6 +212,9 @@ export function LibraryView({
                 </div>
               </div>
             </div>
+          )}
+          {!present && refineOpen && (
+            <FacetPanel id="refine-panel" all={catalogue} filters={filters} onChange={onFilters} onClose={() => { setRefineOpen(false); refineToggle.current?.focus(); }} />
           )}
           {results.length > 0 ? (
             layout === "list" && !present ? (
