@@ -9,6 +9,10 @@
 
 @custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
 
+/* Non-inherited so a pointer move restyles only the lit card, not its whole subtree. */
+@property --mx { syntax: "*"; inherits: false; }
+@property --my { syntax: "*"; inherits: false; }
+
 .loading-state {
   display: flex;
   min-width: 0;
@@ -270,6 +274,8 @@
      cursor like light on a curved surface. Pointer-events off so it never
      swallows a click. */
   .glass-sheen::before {
+    --mx: inherit;
+    --my: inherit;
     content: "";
     position: absolute;
     inset: 0;
@@ -294,7 +300,8 @@
     transition: opacity 0.4s var(--ease-sheet);
   }
 
-  .glass-sheen:hover::before {
+  /* Clickable panels only: brightening a large or sticky panel repaints all of it for no affordance. */
+  .glass-sheen.lift:hover::before {
     opacity: 0.65;
   }
 

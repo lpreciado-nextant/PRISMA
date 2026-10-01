@@ -1,4 +1,4 @@
-import { type PointerEvent } from "react";
+import { type PointerEvent, useRef } from "react";
 import { Icon } from "../../src/components/Icon";
 import { PrismaAcronym } from "../../src/components/PrismaAcronym";
 
@@ -8,20 +8,30 @@ export function WelcomeScreen({ authenticated, present, ready = false, entering 
   // One friendly line for people; the old Workspace/Catalogue steps were a debugging aid.
   const status = ready ? (present ? "Your presentation is ready" : "Your catalogue is ready")
     : !authenticated ? "Signing you in" : present ? "Preparing your presentation" : "Preparing your catalogue";
+  const facetRef = useRef<HTMLDivElement>(null);
+  const frame = useRef(0);
   function moveHighlight(event: PointerEvent<HTMLElement>) {
     if (event.pointerType !== "mouse" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    event.currentTarget.style.setProperty("--welcome-x", `${((event.clientX - bounds.left) / bounds.width) * 100}%`);
-    event.currentTarget.style.setProperty("--welcome-y", `${((event.clientY - bounds.top) / bounds.height) * 100}%`);
+    const section = event.currentTarget;
+    const { clientX, clientY } = event;
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => {
+      const facet = facetRef.current;
+      if (!facet) return;
+      const bounds = section.getBoundingClientRect();
+      facet.style.setProperty("--welcome-x", `${((clientX - bounds.left) / bounds.width) * 100}%`);
+      facet.style.setProperty("--welcome-y", `${((clientY - bounds.top) / bounds.height) * 100}%`);
+    });
   }
-  function resetHighlight(event: PointerEvent<HTMLElement>) {
-    event.currentTarget.style.removeProperty("--welcome-x");
-    event.currentTarget.style.removeProperty("--welcome-y");
+  function resetHighlight() {
+    cancelAnimationFrame(frame.current);
+    facetRef.current?.style.removeProperty("--welcome-x");
+    facetRef.current?.style.removeProperty("--welcome-y");
   }
   return <section className="welcome-screen" data-ready={ready} aria-labelledby="welcome-title" onPointerMove={moveHighlight} onPointerLeave={resetHighlight}>
     <div className="welcome-emblem" aria-hidden="true">
       <div className="welcome-facet welcome-facet-back glass glass-lite" />
-      <div className="welcome-facet welcome-facet-front glass glass-lite" />
+      <div ref={facetRef} className="welcome-facet welcome-facet-front glass glass-lite" />
       <img className="welcome-mark" src="./prisma-mark-v2.svg" alt="" width="104" height="104" />
     </div>
     <div className="welcome-copy">

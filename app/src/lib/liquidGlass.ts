@@ -26,13 +26,14 @@ export function initPointerSheen() {
     // detail page crawl.
     const el = (lastEvent?.target as Element | null)?.closest?.(".glass-sheen.lift");
     const next = el instanceof HTMLElement ? el : null;
+    // Measure before any style write so the read doesn't force a synchronous layout.
+    const r = next?.getBoundingClientRect();
     if (lit && lit !== next) {
       lit.style.removeProperty("--mx");
       lit.style.removeProperty("--my");
     }
     lit = next;
-    if (next && lastEvent) {
-      const r = next.getBoundingClientRect();
+    if (next && r && lastEvent) {
       next.style.setProperty("--mx", `${(((lastEvent.clientX - r.left) / r.width) * 100).toFixed(1)}%`);
       next.style.setProperty("--my", `${(((lastEvent.clientY - r.top) / r.height) * 100).toFixed(1)}%`);
     }
