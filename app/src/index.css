@@ -453,6 +453,7 @@
     padding: 14px 6px 18px;
     margin-inline: -6px;
     scrollbar-width: none;
+    container-type: inline-size;
     -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 40px), transparent 100%);
     mask-image: linear-gradient(to right, transparent 0, #000 12px, #000 calc(100% - 40px), transparent 100%);
   }
@@ -467,8 +468,12 @@
     padding-bottom: clamp(16px, 2vw, 22px);
   }
 
+  /* Cards are sized from the track so the next one always peeks in (a third of
+     a card), signalling that the shelf scrolls. */
   .top-card-item {
     --rank-inset: 3.2rem;
+    --visible: 1;
+    --card-w: calc((100cqw - var(--visible) * 1.25rem) / (var(--visible) + 0.35) - 3.2rem);
     position: relative;
     display: flex;
     flex-shrink: 0;
@@ -478,6 +483,15 @@
   }
   .top-card-item[data-wide] {
     --rank-inset: 5rem;
+  }
+  @container (min-width: 600px) {
+    .top-card-item { --visible: 2; }
+  }
+  @container (min-width: 1000px) {
+    .top-card-item { --visible: 3; }
+  }
+  @container (min-width: 1500px) {
+    .top-card-item { --visible: 4; }
   }
 
   /* The large numeral sits behind the card's left edge so number and card read
@@ -514,7 +528,7 @@
     z-index: 1;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
-    width: min(350px, calc(100vw - 7rem));
+    width: var(--card-w);
     height: 116px;
     overflow: hidden;
     border-radius: 18px;
