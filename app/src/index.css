@@ -174,9 +174,13 @@
 
   html {
     scroll-behavior: smooth;
+    background: var(--ground);
+    /* Stops the bounce from chaining to the white Power Apps host frame. */
+    overscroll-behavior-y: none;
   }
 
   body {
+    overscroll-behavior-y: none;
     margin: 0;
     background: var(--ground);
     color: var(--ink);
