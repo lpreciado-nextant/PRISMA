@@ -125,12 +125,12 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
             />}
           </div>
         </div>
-        <div className="p-6 sm:p-8">
+        <div className="p-6 sm:p-8 lg:flex lg:flex-col lg:self-stretch lg:pt-6">
           {((favoritable && !present) || actions) && <div className="mb-4 flex flex-wrap items-center gap-2">
             {favoritable && !present && <FavoriteButton id={solution.id} name={solution.name} saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
             {actions}
           </div>}
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5 lg:mt-auto">
             {areas.map((area) => <AreaTag key={area} area={area} size="md" />)}
             <StatusPill status={solution.status} />
             {!present && !solution.clientSafeReviewed && (
@@ -155,7 +155,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
             {solution.name}
           </h1>
           <p
-            className={`mt-3 max-w-[62ch] ${present ? "text-[20px]" : "text-[17.5px]"}`}
+            className={`mt-3 max-w-[62ch] lg:mb-auto ${present ? "text-[20px]" : "text-[17.5px]"}`}
             style={{ color: "var(--ink-2)" }}
           >
             {solution.summary}
