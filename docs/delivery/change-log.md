@@ -190,4 +190,4 @@ When a decision above gets resolved, delete its bullet here and update the match
 - Specialization areas: the maximum per solution (the app assumes 3), and whether a "primary" area is needed. The current rule is lowest Sort Order.
 - `nx_clientrole`: what it represents, whether it is required at submit, and whether it shows in present mode.
 - CSM rows (`nx_role`): whether they carry effort, whether there is exactly one per solution, and whether they count toward the contributor minimum.
-- Favorites and ranking: which signals the ranking counts, and who can see it.
+- Favorites and ranking: which signals the ranking counts. Visibility: the Top 3 shows every internal user how many people saved each ranked solution (never who), outside present mode.

@@ -471,12 +471,14 @@
     padding-bottom: clamp(16px, 2vw, 22px);
   }
 
-  /* Cards are sized from the track so the next one always peeks in (a third of
-     a card), signalling that the shelf scrolls. */
+  /* Cards are sized from the track so the next one always peeks in: past its
+     rank numeral and the edge fade, about half of the card itself shows,
+     signalling that the shelf scrolls. */
   .top-card-item {
     --rank-inset: 3.2rem;
     --visible: 1;
-    --card-w: calc((100cqw - var(--visible) * 1.25rem) / (var(--visible) + 0.35) - 3.2rem);
+    --peek: 0.6;
+    --card-w: calc((100cqw - var(--visible) * 1.25rem) / (var(--visible) + var(--peek)) - 3.2rem);
     position: relative;
     display: flex;
     flex-shrink: 0;
@@ -559,6 +561,21 @@
   }
   [data-theme="light"] .top-card-image {
     border-right-color: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+  /* "Saved by" count beside the heart: tiny and quiet, a hint of popularity. */
+  .top-card-saves {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-2);
+  }
+  .top-card-saves:last-child {
+    padding-right: 0.35rem;
+    color: var(--favorite);
   }
   .top-card-body {
     display: flex;

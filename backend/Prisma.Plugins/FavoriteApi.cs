@@ -19,6 +19,14 @@ namespace Prisma.Plugins
         [DataMember(Name = "solutionIds")] public string[] SolutionIds { get; set; }
     }
 
+    [DataContract]
+    public sealed class TopFavoriteList
+    {
+        [DataMember(Name = "solutionIds")] public string[] SolutionIds { get; set; }
+        /// <summary>How many people saved each solution, in the same order as <see cref="SolutionIds"/>.</summary>
+        [DataMember(Name = "saves")] public int[] Saves { get; set; }
+    }
+
     /// <summary>Ranks solutions by how many people saved them. Ties go to the most recently saved, then to the id, so the order is stable.</summary>
     public static class FavoriteRanking
     {
@@ -26,10 +34,16 @@ namespace Prisma.Plugins
 
         public static Guid[] Top(IEnumerable<KeyValuePair<Guid, DateTime>> saves, int count = TopCount)
         {
+            return Ranked(saves, count).Select(entry => entry.Key).ToArray();
+        }
+
+        /// <summary>The same ranking with how many people saved each solution.</summary>
+        public static KeyValuePair<Guid, int>[] Ranked(IEnumerable<KeyValuePair<Guid, DateTime>> saves, int count = TopCount)
+        {
             return saves.GroupBy(save => save.Key)
                 .Select(group => new { Id = group.Key, Saves = group.Count(), Latest = group.Max(save => save.Value) })
                 .OrderByDescending(entry => entry.Saves).ThenByDescending(entry => entry.Latest).ThenBy(entry => entry.Id)
-                .Take(count).Select(entry => entry.Id).ToArray();
+                .Take(count).Select(entry => new KeyValuePair<Guid, int>(entry.Id, entry.Saves)).ToArray();
         }
     }
 
@@ -92,8 +106,8 @@ namespace Prisma.Plugins
         }
 
         /// <summary>
-        /// Counts every person's favorites, so it reads as the server. It returns only the ranked solution ids of
-        /// Published, active solutions: never who saved them or how many times. Rows without a consultant are ignored.
+        /// Counts every person's favorites, so it reads as the server. It returns the ranked solution ids of
+        /// Published, active solutions and how many people saved each, never who. Rows without a consultant are ignored.
         /// </summary>
         private static void Top(IPluginExecutionContext context, IOrganizationService server, ITracingService tracing)
         {
@@ -117,8 +131,10 @@ namespace Prisma.Plugins
                 query.PageInfo.PagingCookie = page.PagingCookie;
             }
             tracing?.Trace("Top favorites ranked {0} saves across {1} pages.", saves.Count, query.PageInfo.PageNumber);
-            context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new FavoriteList {
-                SolutionIds = FavoriteRanking.Top(saves).Select(id => id.ToString("D")).ToArray()
+            var ranked = FavoriteRanking.Ranked(saves);
+            context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new TopFavoriteList {
+                SolutionIds = ranked.Select(entry => entry.Key.ToString("D")).ToArray(),
+                Saves = ranked.Select(entry => entry.Value).ToArray()
             });
         }
 

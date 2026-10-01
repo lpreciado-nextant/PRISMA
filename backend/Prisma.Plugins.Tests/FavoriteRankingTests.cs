@@ -19,6 +19,14 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
+        public void RankedCarriesHowManyPeopleSavedEachSolution()
+        {
+            var ranked = FavoriteRanking.Ranked(new[] { Save(1, 0), Save(2, 0), Save(2, 1), Save(3, 0), Save(3, 1), Save(3, 2) });
+            Assert.Equal(new[] { Id(3), Id(2), Id(1) }, ranked.Select(entry => entry.Key));
+            Assert.Equal(new[] { 3, 2, 1 }, ranked.Select(entry => entry.Value));
+        }
+
+        [Fact]
         public void TiesGoToTheMostRecentlySavedThenToTheId()
         {
             Assert.Equal(new[] { Id(1), Id(2) }, FavoriteRanking.Top(new[] { Save(2, 1), Save(1, 5) }));

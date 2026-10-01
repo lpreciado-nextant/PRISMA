@@ -41,11 +41,14 @@ export async function setFavorite(api: FavoriteApi, solutionId: string, saved: b
   return data.saved;
 }
 
+/** One Top 10 entry: a lowercased solution id and, when the server sends it, how many people saved it. */
+export interface TopFavorite { id: string; saves?: number }
+
 /**
- * The team's most-saved published solutions (lowercased GUIDs), best first. The server counts every
- * person's favorites and returns only the ranked ids, never who saved them or how often.
+ * The team's most-saved published solutions, best first. The server counts every person's favorites and
+ * returns the ranked ids with how many people saved each, never who. A server without counts yields none.
  */
-export async function loadTopFavorites(api: FavoriteApi, signal: AbortSignal): Promise<string[]> {
+export async function loadTopFavorites(api: FavoriteApi, signal: AbortSignal): Promise<TopFavorite[]> {
   signal.throwIfAborted();
   const result = await api.top();
   signal.throwIfAborted();
@@ -56,5 +59,9 @@ export async function loadTopFavorites(api: FavoriteApi, signal: AbortSignal): P
   }
   const ranked = (ids as string[]).map(id => id.toLowerCase());
   if (new Set(ranked).size !== ranked.length) throw new Error("Invalid top favorites list.");
-  return ranked;
+  const saves = data.saves;
+  if (saves !== undefined && (!Array.isArray(saves) || saves.length !== ranked.length || saves.some(count => !Number.isInteger(count) || count < 1))) {
+    throw new Error("Invalid top favorites list.");
+  }
+  return ranked.map((id, index) => saves ? { id, saves: (saves as number[])[index] } : { id });
 }

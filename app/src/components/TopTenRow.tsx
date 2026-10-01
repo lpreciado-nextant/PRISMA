@@ -25,10 +25,12 @@ type Favorite = { saved: boolean; pending?: boolean; onToggle: () => void };
  * whole 16:9 thumbnail left, category, title, summary and heart right) with a
  * large gradient rank numeral behind each one. Shows the top three; "View all"
  * reveals the rest of the ranking in the same carousel. Order comes from the
- * caller; this component never sees how many times a solution was saved.
+ * caller, and so does the small "saved by" count beside each heart.
  */
-export function TopTenRow({ solutions, renderPoster, onOpen, favorite }: {
+export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: {
   solutions: Solution[];
+  /** How many people saved a solution; omit (or return undefined) to show no count. */
+  saves?: (solution: Solution) => number | undefined;
   /** Replaces the generated poster, e.g. with a protected Dataverse thumbnail. */
   renderPoster?: (solution: Solution) => ReactNode;
   onOpen?: (solution: Solution) => void;
@@ -99,19 +101,24 @@ export function TopTenRow({ solutions, renderPoster, onOpen, favorite }: {
           const rank = index + 1;
           const area = solutionAreas(solution)[0] ?? solution.specializationArea;
           const heart = favorite?.(solution);
+          const count = saves?.(solution);
+          const savedBy = count === undefined ? "" : `, saved by ${count} ${count === 1 ? "person" : "people"}`;
           return (
             <li key={solution.id} className="top-card-item animate-rise" data-wide={rank >= 10 ? "" : undefined} style={{ animationDelay: `${Math.min(index, 9) * 45}ms` } as CSSProperties}>
               <span className="top-rank" aria-hidden="true">{rank}</span>
               <div className="top-card glass-sheen lift group">
                 {/* The whole card opens the solution; the heart sits above this stretched button. */}
-                <button type="button" onClick={() => openSolution(solution)} className="absolute inset-0 z-[1] cursor-pointer rounded-[inherit]" aria-label={`Number ${rank}: ${solution.name} — ${solution.summary}`} />
+                <button type="button" onClick={() => openSolution(solution)} className="absolute inset-0 z-[1] cursor-pointer rounded-[inherit]" aria-label={`Number ${rank}: ${solution.name}${savedBy} — ${solution.summary}`} />
                 <span className="top-card-image">
                   {renderPoster?.(solution) ?? <Poster id={solution.id} name={solution.name} area={area} src={solution.thumbnail} className="h-full w-full" />}
                 </span>
                 <span className="top-card-body">
-                  <span className="flex min-w-0 items-start justify-between gap-2">
-                    <AreaTag area={area} size="xs" />
-                    {heart && <FavoriteButton id={solution.id} name={solution.name} className="relative z-[2] -mt-1 -mr-1 h-8 w-8" saved={heart.saved} pending={heart.pending} onToggle={heart.onToggle} />}
+                  <span className="flex min-w-0 items-center justify-between gap-2">
+                    <AreaTag area={area} size="2xs" />
+                    <span className="-my-1.5 -mr-1 flex shrink-0 items-center">
+                      {count !== undefined && <span className="top-card-saves" aria-hidden="true" title={`Saved by ${count} ${count === 1 ? "person" : "people"}`}>{!heart && <Icon name="heart" size={11} filled />}{count}</span>}
+                      {heart && <FavoriteButton id={solution.id} name={solution.name} className="relative z-[2] h-8 w-8" saved={heart.saved} pending={heart.pending} onToggle={heart.onToggle} />}
+                    </span>
                   </span>
                   <span className="line-clamp-1 text-[15px] leading-snug font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{solution.name}</span>
                   <span className="line-clamp-2 text-[12.5px] leading-snug" style={{ color: "var(--ink-2)" }}>{solution.summary}</span>

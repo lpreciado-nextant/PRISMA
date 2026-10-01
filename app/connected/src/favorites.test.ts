@@ -11,8 +11,15 @@ function api(result: unknown, success = true): FavoriteApi {
 
 test("top favorites keep the server's rank order and lowercase the ids", async () => {
   const upper = "AAAAAAAA-0000-0000-0000-000000000000";
-  assert.deepEqual(await loadTopFavorites(api({ solutionIds: [id(3), upper, id(1)] }), signal()), [id(3), upper.toLowerCase(), id(1)]);
+  assert.deepEqual(await loadTopFavorites(api({ solutionIds: [id(3), upper, id(1)] }), signal()), [{ id: id(3) }, { id: upper.toLowerCase() }, { id: id(1) }]);
   assert.deepEqual(await loadTopFavorites(api({ solutionIds: [] }), signal()), []);
+});
+
+test("top favorites carry how many people saved each solution", async () => {
+  assert.deepEqual(await loadTopFavorites(api({ solutionIds: [id(2), id(1)], saves: [7, 3] }), signal()), [{ id: id(2), saves: 7 }, { id: id(1), saves: 3 }]);
+  for (const saves of [[7], [7, 0], [7, 1.5], "7,3"]) {
+    await assert.rejects(loadTopFavorites(api({ solutionIds: [id(2), id(1)], saves }), signal()), /top favorites/);
+  }
 });
 
 test("top favorites reject malformed, duplicated or oversized rankings", async () => {

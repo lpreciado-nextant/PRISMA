@@ -15,7 +15,7 @@ import { loadCatalogue, type CatalogueSolution } from "./catalogue";
 import { getAppLocation, getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails } from "./dataSource";
 import { routeHash, type AppLocation } from "./deepLink";
 import { workflowData } from "./workflow";
-import { loadFavorites, loadTopFavorites, setFavorite } from "./favorites";
+import { loadFavorites, loadTopFavorites, setFavorite, type TopFavorite } from "./favorites";
 import { PublishedView } from "./PublishedView";
 import { ConnectedSolutionCard, PublishedThumbnail } from "./ConnectedSolutionCard";
 import { FavoritesView } from "./FavoritesView";
@@ -96,7 +96,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   const [librarian, setLibrarian] = useState(false);
   const [favorites, setFavorites] = useState<Set<string> | null>(null);
   const [pendingFavorites, setPendingFavorites] = useState<Set<string>>(new Set());
-  const [topIds, setTopIds] = useState<string[]>([]);
+  const [topRanking, setTopRanking] = useState<TopFavorite[]>([]);
   const [topVersion, setTopVersion] = useState(0);
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -175,12 +175,12 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     const attempt = (retry: number) => {
       const controller = current = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 20_000);
-      void loadTopFavorites(favoriteApi, controller.signal).then(ids => {
-        if (!cancelled) setTopIds(ids);
+      void loadTopFavorites(favoriteApi, controller.signal).then(ranking => {
+        if (!cancelled) setTopRanking(ranking);
       }).catch(() => {
         if (cancelled) return;
         if (retry < TOP_RETRY_DELAYS.length) timer = window.setTimeout(() => attempt(retry + 1), TOP_RETRY_DELAYS[retry]);
-        else setTopIds([]);
+        else setTopRanking([]);
       }).finally(() => window.clearTimeout(timeout));
     };
     attempt(0);
@@ -190,8 +190,9 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     if (present || state.kind !== "ready") return [];
     const byId = new Map(state.catalogue.map(solution => [solution.id.toLowerCase(), solution]));
     // Only solutions this person can see in the catalogue, in the server's rank order.
-    return topIds.flatMap(id => byId.get(id) ?? []);
-  }, [present, state, topIds]);
+    return topRanking.flatMap(({ id }) => byId.get(id) ?? []);
+  }, [present, state, topRanking]);
+  const topSaves = useMemo(() => new Map(topRanking.flatMap(({ id, saves }) => saves === undefined ? [] : [[id, saves] as const])), [topRanking]);
   const thumbnails = useMemo(() => new Map(state.kind === "ready" ? state.catalogue.map(entry => [entry.id, entry.cardThumbnail] as const) : []), [state]);
   const toggleFavorite = (id: string) => {
     if (!favorites || pendingFavorites.has(id)) return;
@@ -253,7 +254,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
         : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly
-            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} renderPoster={solution => <PublishedThumbnail solution={solution} thumbnail={thumbnails.get(solution.id)} />}
+            featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} saves={solution => topSaves.get(solution.id.toLowerCase())} renderPoster={solution => <PublishedThumbnail solution={solution} thumbnail={thumbnails.get(solution.id)} />}
               favorite={favorites ? solution => ({ saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) }) : undefined} /> : undefined}
             renderRow={(entry, index) => <SolutionRow solution={entry} present={present} index={index} poster={<PublishedThumbnail solution={entry} thumbnail={thumbnails.get(entry.id)} />}
               favoritable={!!favorites} favorite={favorites ? { saved: favorites.has(entry.id), pending: pendingFavorites.has(entry.id), onToggle: () => toggleFavorite(entry.id) } : undefined} />}
