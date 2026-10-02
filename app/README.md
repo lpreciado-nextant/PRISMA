@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### Review points list (2026-10-02)
+
+At the user's request, from `origin/main` `ee8dc31` (lint, both builds, 87 connected, 39 PoC and 29 UI tests passed; no newer teammate commits on `origin`), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790976926455), bundle `index-zJhI6Cxa.js`). The review checklist's completeness column becomes "Review points — Verify these items before making your decision." as plain bullets; only a requirement the record fails is flagged Missing. No logic, plug-in, schema or PoC data change. The user checked it in Local Play; the hosted app has not been checked yet.
+
 ### Librarian review panel (2026-10-02)
 
 At the user's request, from `origin/main` `5460e95` (lint, both builds, 87 connected, 39 PoC and 29 UI tests passed; no newer teammate commits on `origin`), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790976124020), bundle `index-BIYcc6Cr.js`). The review page's librarian panel now shows status and owner, a review checklist (areas, capability and status; internal client beside its client-facing wording; completeness of each publication requirement; earlier feedback on resubmissions), then a review decision: Ready to publish or Request changes, each revealing only its own controls. Review logic, comments and the submission preview below are unchanged. No plug-in, schema or PoC data change. The user checked it in Local Play before publishing; the hosted app has not been checked yet.
