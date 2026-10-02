@@ -1,6 +1,6 @@
 # Librarian runbook
 
-**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet · **Last updated:** 2026-09-30
+**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into status, context and decision 2026-10-02 · **Last updated:** 2026-10-02
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
@@ -13,8 +13,10 @@ The review queue is at `#/review`, shown in the masthead only to accounts with t
 
 There are **no notifications yet** ([ADR-0006](../architecture/decisions/adr-0006-power-automate-notifications-only.md) is accepted but not built). Check the queue on an agreed cadence until review alerts exist.
 
-- **Approve & publish** requires the independent client-safety confirmation. The server rechecks completeness, active capability/areas/contributors and every stored file (size, and version for Blob files), then publishes and grants the **PRISMA Published Readers** team read access to the solution, its contributors and finalized media.
-- **Return for changes** requires comments (up to 4000 characters). The record goes back to Draft with outcome Changes requested; the contributor's safety acknowledgment is cleared.
+The review panel above the submission preview shows the status and owner, then a **Review checklist**: classification (specialization areas, capability, maturity status), client safety (the internal client beside the client-facing wording), completeness of each publication requirement, and the previous feedback when a returned record comes back. Then **Review decision**. Choose **Ready to publish** or **Request changes** first; only that decision's controls appear, and a disabled final button says what is missing.
+
+- **Ready to publish → Approve & publish** requires the independent client-safety confirmation. An optional note to the contributor replaces the latest feedback; a blank note clears it. The server rechecks completeness, active capability/areas/contributors and every stored file (size, and version for Blob files), then publishes and grants the **PRISMA Published Readers** team read access to the solution, its contributors and finalized media.
+- **Request changes → Send back for changes** requires comments to the contributor (up to 4000 characters). The record goes back to Draft with outcome Changes requested; the contributor's safety acknowledgment is cleared.
 - **Retire** (Published only) removes the record from the catalogue and revokes reader access. The owner can later withdraw it to Draft, refresh it and resubmit.
 - Every action carries the record's row version. If someone else changed it first, the action is rejected; reopen the record and review the latest version.
 

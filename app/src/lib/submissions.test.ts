@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Solution } from "../types.ts";
-import { migrateSubmission, REVIEW_COMMENT_LIMIT, reviewContribution, saveContribution } from "./submissions.ts";
+import { migrateSubmission, REVIEW_COMMENT_LIMIT, reviewContribution, saveContribution, submissionFacts } from "./submissions.ts";
+import { reviewChecklist } from "./reviewChecklist.ts";
 import { presentCatalogue } from "./catalogue.ts";
 
 const solution: Solution = {
@@ -102,4 +103,11 @@ test("named incomplete drafts save, but submit and approval require complete val
     assert.throws(() => saveContribution(candidate, "Pending review"));
     assert.throws(() => reviewContribution({ ...candidate, publicationStatus: "Pending review" }, "publish", "", true));
   }
+});
+test("the review checklist reports each publication requirement of a local record", () => {
+  const ready = reviewChecklist(submissionFacts(solution));
+  assert.equal(ready.length, 6);
+  assert.ok(ready.every((check) => check.done));
+  const gaps = reviewChecklist(submissionFacts({ ...solution, capabilities: [], images: [], safetyAcknowledged: false, clientContext: "Bank X", clientContextRedacted: "", contributors: [{ ...solution.contributors[0], directHours: -1 }] }));
+  assert.deepEqual(gaps.filter((check) => !check.done).map((check) => check.label), ["Summary and capability", "Contributors with complete effort", "Detail images (1 to 6)", "Client context anonymized", "Contributor safety acknowledgment"]);
 });

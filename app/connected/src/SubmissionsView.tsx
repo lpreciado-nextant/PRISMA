@@ -5,6 +5,7 @@ import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { MySubmissionsView } from "../../src/views/MySubmissionsView";
 import { DetailView } from "../../src/views/DetailView";
 import { ReviewPanel, ReviewQueue } from "../../src/components/ReviewQueue";
+import { reviewChecklist } from "../../src/lib/reviewChecklist";
 import type { Solution } from "../../src/types";
 import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
@@ -139,10 +140,15 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={
       <>{review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
+        solution={solution} checks={reviewChecklist({
+          summary: !!core.summary.trim(), capability: !!core.capabilityId,
+          contributors: state.graph.hours.length > 0 && state.graph.hours.every(hours => hours !== null),
+          images: state.media.filter(item => item.kind === "image" && item.complete).length, uploadsComplete: state.media.every(item => item.complete),
+          safety: core.safetyAcknowledged, anonymized: !core.clientContext.trim() || !!core.clientContextRedacted.trim(),
+        })}
         comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} notice={mediaAction.message} noticeBusy={mediaAction.downloading}
         error={error && <><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></>}
         onReturn={() => void transition("return")} onApprove={() => void transition("approve")}>
-        {missing && status === 125060002 && <p role="status" className="mt-4 text-[14px]">Required content, contributor effort, images and safety acknowledgment must be complete before approval.</p>}
         {state.librarian && status === 125060000 && <button className={`${button} mt-4`} disabled={busy || uncertain} onClick={() => setConfirmation("retire")}><Icon name="close" />Retire</button>}
       </ReviewPanel> : <section aria-label="Submission status" className="mt-5 border-y border-(--glass-edge) py-5">
         <p className="eyebrow">Contributor workspace</p><h2 className="mt-2 text-[20px]">{PUBLICATIONS[state.record.publication]}</h2>

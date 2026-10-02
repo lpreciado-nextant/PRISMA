@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Icon } from "../components/Icon";
 import { ReviewPanel, ReviewQueue } from "../components/ReviewQueue";
-import type { SubmissionEntry } from "../lib/submissions";
+import { submissionFacts, type SubmissionEntry } from "../lib/submissions";
+import { reviewChecklist } from "../lib/reviewChecklist";
 import { navigate } from "../lib/router";
 import { DetailView } from "./DetailView";
 
@@ -40,6 +41,7 @@ export function ReviewView({ entries, selectedId, onDecision }: {
 
     return <DetailView solution={selected.solution} present={false} onBack={() => navigate("/review")} backLabel="Review queue" assetBasePath={`/review/${selected.solution.id}`} reviewActions={
       <ReviewPanel local status={selected.solution.publicationStatus} owner={selected.owner} client={selected.solution.clientContext} context={selected.solution.clientContextRedacted} feedback={selected.solution.reviewComments}
+        solution={selected.solution} checks={reviewChecklist(submissionFacts(selected.solution))}
         comments={comments} onComments={setComments} cleared={clientSafe} onCleared={setClientSafe} busy={saving} notice={notice} error={error} onReturn={() => void decide("return")} onApprove={() => void decide("publish")} />
     } />;
   }

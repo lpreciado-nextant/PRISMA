@@ -330,14 +330,42 @@ test("upload progress uses themed bounded progress and distinguishes finalizatio
 });
 
 test("review actions require comments on return and independent clearance on approval", () => {
-  const props = { status: "Pending review", comments: "", onComments: noop, cleared: false, onCleared: noop, busy: false, onReturn: noop, onApprove: noop };
+  const props = { status: "Pending review", owner: "Ana", comments: "", onComments: noop, cleared: false, onCleared: noop, busy: false, onReturn: noop, onApprove: noop };
+  // Status, then context, then the decision; nothing to act on until a decision is chosen.
   const html = render(review.ReviewPanel, props);
-  assert.match(html, /lg:grid-cols-2/);
-  assert.match(html, /maxLength="4000"/);
-  assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
-  assert.doesNotMatch(render(review.ReviewPanel, { ...props, comments: "Ready", cleared: true }), /disabled=""/);
-  assert.match(render(review.ReviewPanel, { ...props, comments: "Ready", cleared: true, canApprove: false }), /disabled=""/);
-  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Approve &amp; publish/);
+  assert.match(html, /Librarian review.*Pending review.*Submitted by.*Ana.*Review checklist.*Client safety.*No client named.*Review decision.*Ready to publish.*Request changes/s);
+  // The checklist compares the internal client with its client-facing wording and flags what is missing.
+  const solution = { id: "r", name: "R", summary: "S", specializationArea: "data", specializationAreas: ["data"], status: "Client demo", publicationStatus: "Pending review", reviewOutcome: "Changes requested", capabilities: ["Data platforms"], contributors: [], technologies: [], assets: [] };
+  const checked = render(review.ReviewPanel, { ...props, solution, client: "Bank X", context: "", feedback: "Anonymize it", checks: [{ label: "Summary and capability", done: true }, { label: "Detail images (1 to 6)", done: false }] });
+  assert.match(checked, /Classification.*Specialization areas.*Data Solutions.*Capability.*Data platforms.*Status.*Client demo/s);
+  assert.match(checked, /Internal client.*Bank X.*Shown to clients as.*Not provided/s);
+  assert.match(checked, /Summary and capability<span class="sr-only">: complete.*Detail images \(1 to 6\)<span class="sr-only">: missing/s);
+  assert.match(checked, /Resubmitted after changes requested.*Anonymize it/s);
+  assert.match(render(review.ReviewPanel, { ...props, solution: { ...solution, reviewOutcome: "None" }, feedback: "Old note" }), /Latest review comments/);
+  assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /<textarea|type="checkbox"|Approve &amp; publish|Send back for changes/);
+  assert.match(html, /Submission preview · what the contributor submitted/);
+  // Request changes: a required comment, sending back only once it has text.
+  const changes = { ...props, defaultDecision: "changes" };
+  const back = render(review.ReviewPanel, changes);
+  const field = back.match(/Comments to contributor.*?<textarea[^>]*>/s)?.[0] ?? "";
+  for (const attribute of [/required=""/, /maxLength="4000"/, /placeholder="Describe what needs to be updated before this solution can be published."/]) assert.match(field, attribute);
+  assert.doesNotMatch(back, /type="checkbox"|Approve &amp; publish/);
+  assert.match(back, /disabled=""[^>]*>.*Send back for changes/s);
+  assert.match(back, /Add a comment to send this submission back\./);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...changes, comments: "Fix the screenshots" }), /disabled=""/);
+  // Ready to publish: independent confirmation, an optional note, and an explained disabled state.
+  const publish = { ...props, defaultDecision: "publish" };
+  const ready = render(review.ReviewPanel, publish);
+  assert.match(ready, /type="checkbox".*I confirm that I reviewed.*Note to contributor.*optional/s);
+  assert.doesNotMatch(ready, /Send back for changes|required=""/);
+  assert.match(ready, /Confirm the review above to publish\./);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...publish, cleared: true }), /disabled=""/);
+  const incomplete = render(review.ReviewPanel, { ...publish, cleared: true, canApprove: false });
+  assert.match(incomplete, /disabled=""[^>]*>.*Approve &amp; publish/s);
+  assert.match(incomplete, /must be complete before approval/);
+  assert.match(render(review.ReviewPanel, { ...publish, cleared: true, locked: true }), /<fieldset disabled=""/);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Review decision|Approve &amp; publish/);
   assert.match(render(review.ReviewPanel, { ...props, busy: true }), /loading-state--inline/);
   assert.match(render(review.ReviewPanel, { ...props, notice: "Downloading document...", noticeBusy: true }), /loading-state--inline/);
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, notice: "Download started: document" }), /loading-state--inline/);

@@ -1,6 +1,7 @@
 import type { Solution } from "../types.ts";
 import { BUSINESS_CALENDARS } from "../data/solutions.ts";
 import { calculateEffort, usesDirectHours } from "./effort.ts";
+import type { ReviewFacts } from "./reviewChecklist.ts";
 
 export interface SubmissionEntry {
   owner: string;
@@ -23,6 +24,20 @@ export function assertSubmissionReady(solution: Solution): void {
   for (const contributor of solution.contributors) {
     calculateEffort({ ...contributor, effortMode: usesDirectHours(solution.status) ? "direct" : "calendar" }, BUSINESS_CALENDARS.find((calendar) => calendar.id === contributor.calendarId));
   }
+}
+
+/** The checklist facts for a local record, mirroring the checks in `assertSubmissionReady`. */
+export function submissionFacts(solution: Solution): ReviewFacts {
+  const people = solution.contributors.map((contributor) => contributor.builtBy.id);
+  let effort = people.length > 0 && people.every(Boolean) && new Set(people).size === people.length;
+  if (effort) try {
+    for (const contributor of solution.contributors) calculateEffort({ ...contributor, effortMode: usesDirectHours(solution.status) ? "direct" : "calendar" }, BUSINESS_CALENDARS.find((calendar) => calendar.id === contributor.calendarId));
+  } catch { effort = false; }
+  return {
+    summary: !!solution.summary.trim() && solution.summary.length <= 200, capability: solution.capabilities.length === 1 && !!solution.capabilities[0].trim(),
+    contributors: effort, images: solution.images?.filter((image) => image.src).length ?? 0, uploadsComplete: true,
+    safety: solution.safetyAcknowledged, anonymized: !solution.clientContext?.trim() || !!solution.clientContextRedacted?.trim(),
+  };
 }
 
 export function migrateSubmission(entry: SubmissionEntry & { changesRequested?: boolean }): SubmissionEntry {

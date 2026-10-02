@@ -1,6 +1,6 @@
 # Decision log — open questions
 
-**Status:** Living; pilot assignments and privileged functional lifecycle verified; Blob pilot transport decided (Q14); cross-account, least-privilege and remaining acceptance open · **Last updated:** 2026-09-29
+**Status:** Living; pilot assignments and privileged functional lifecycle verified; Blob pilot transport decided (Q14); cross-account, least-privilege and remaining acceptance open; capability owner (Q15) and review date (Q16) added 2026-10-02 · **Last updated:** 2026-10-02
 **Source:** [End-to-end design §11](../design/end-to-end-design.md#11-open-questions)
 
 Open questions live here until they resolve. Resolutions with lasting technical consequences become an [ADR](../architecture/decisions/README.md); the rest are recorded inline and reflected in the relevant doc.
@@ -21,6 +21,8 @@ Open questions live here until they resolve. Resolutions with lasting technical 
 | Q12 | Private upload sessions and non-member media owner team? | Platform owner | Approved and deployed | One organization-owned protocol table and empty Media Custodian owner team; server-held tokens and read-only contributor media. ADR-0009. |
 | Q13 | Publication audience? | Platform owner | Approved pilot membership applied | PRISMA Published Readers has the CSM read role; Mauricio was added with explicit user approval. Approval grants row shares and withdrawal/retirement revokes them, but his retained System Administrator access prevents a least-privilege revocation test. Media Custodian remains empty. |
 | Q14 | How do new attachment bytes reach Azure Blob using the sponsorship subscription? | Platform owner + sponsorship subscription owner | Decided 2026-09-29; deployment approvals and sponsorship cap/end date open | User chose plug-in transport with Power Platform managed identity, a public Entra-only endpoint, videos/HTML/PDF/PPT(X) only, existing Dataverse files kept permanently and no malware scanning. [ADR-0010](../architecture/decisions/adr-0010-attachments-in-blob-through-plugins.md). Signing-certificate choice for general release is open. |
+| Q15 | Should each capability have an owner shown to the librarian during review? | Product + Librarian | Open (raised 2026-10-02) | `nx_capability` has only a name and sort order; record ownership is not a business owner. Decide whether the owner is a consultant or a Power Platform user, whether it is informational or consulted/notified before approval, and who maintains it. Needs a new reference column; the review checklist shows the capability today. |
+| Q16 | Date the latest librarian feedback? | Product | Parked 2026-10-02 | `nx_solution.nx_reviewedon` exists (created manually, unused). Plug-in, client and docs support is on branch `feature/review-date`; remaining: field-permission check, signed plug-in push and connected publish. |
 
 ## Resolved
 
