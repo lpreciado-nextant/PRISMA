@@ -12,6 +12,7 @@ export function MediaGuidance({ capabilities }: { capabilities: string[] }) {
 import { useContext, useEffect, useId, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 import { SectionCardsContext } from "./sectionCards";
+import { OptionalMark, RequiredLegend, RequiredMark } from "./RequiredMark";
 import { LoadingState, ProgressRail } from "./LoadingState";
 import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
@@ -63,12 +64,16 @@ export function SubmissionSteps({ step, onStep, disabled = false, steps = SUBMIS
   </ol>;
 }
 
+/** Steps with fields to fill explain the required marker; the safety gate and the final review have none. */
+const NO_FIELDS = new Set(["Before you start", "Review & submit"]);
+
 export function StepShell({ title, lede, children }: { title: string; lede?: string; children: ReactNode }) {
   const cards = useContext(SectionCardsContext);
   const introduction = lede ?? STEP_INTRODUCTIONS[title];
   const meta = SECTION_META[title];
-  if (cards && meta) return <SectionCard icon={meta.icon} title={title} description={introduction} visibility={meta.visibility}>{children}</SectionCard>;
-  return <section><h2 className="text-[20px] font-semibold">{title}</h2>{introduction && <p className="mt-1 text-[14px] text-(--ink-3)">{introduction}</p>}<div className="mt-6 flex flex-col gap-5">{children}</div></section>;
+  const content = <>{!NO_FIELDS.has(title) && <RequiredLegend />}{children}</>;
+  if (cards && meta) return <SectionCard icon={meta.icon} title={title} description={introduction} visibility={meta.visibility}>{content}</SectionCard>;
+  return <section><h2 className="text-[20px] font-semibold">{title}</h2>{introduction && <p className="mt-1 text-[14px] text-(--ink-3)">{introduction}</p>}<div className="mt-6 flex flex-col gap-5">{content}</div></section>;
 }
 
 export function SubmissionFooter({ step, stepCount = SUBMISSION_STEPS.length, nextLabel = "Continue", busy = false, locked = false, canSave, canContinue, canSubmit, onBack, onSave, onContinue, onSubmit }: {
@@ -99,8 +104,8 @@ export function SubmissionSuccess({ name, children, onSubmissions, onAnother }: 
   </div>;
 }
 
-export function Field({ label, required, hint, badge, children }: { label: string; required?: boolean; hint?: string; badge?: ReactNode; children: ReactNode }) {
-  return <label className="block min-w-0"><span className="mb-1.5 block"><span className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required && <span style={{ color: "var(--proto)" }}> *</span>}</span>{badge}</span>{hint && <span className="mt-1 block text-[12px] text-(--ink-3)">{hint}</span>}</span>{children}</label>;
+export function Field({ label, required, optional, hint, badge, children }: { label: string; required?: boolean; optional?: boolean; hint?: string; badge?: ReactNode; children: ReactNode }) {
+  return <label className="block min-w-0"><span className="mb-1.5 block"><span className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required ? <RequiredMark /> : optional && <OptionalMark />}</span>{badge}</span>{hint && <span className="mt-1 block text-[12px] text-(--ink-3)">{hint}</span>}</span>{children}</label>;
 }
 
 export function SubmissionSafety({ accepted, onChange }: { accepted: boolean; onChange: (accepted: boolean) => void }) {
@@ -110,7 +115,7 @@ export function SubmissionSafety({ accepted, onChange }: { accepted: boolean; on
       <li><b>Only share approved content.</b> Upload materials you're authorized to share. A librarian will review your submission before publishing.</li>
       <li><b>Protect client information.</b> If a client is associated with the solution, their real name is kept internal. Use an anonymous description for client-facing content.</li>
     </ul>
-    <label className="flex cursor-pointer items-start gap-3 text-[15px]"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={accepted} onChange={event => onChange(event.target.checked)} /><span>I confirm that my submission is safe to share and does not contain confidential or unauthorized information.</span></label>
+    <label className="flex cursor-pointer items-start gap-3 text-[15px]"><input type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={accepted} onChange={event => onChange(event.target.checked)} /><span>I confirm that my submission is safe to share and does not contain confidential or unauthorized information.<RequiredMark /></span></label>
   </StepShell>;
 }
 
@@ -145,7 +150,7 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
     <div><p className="mb-1.5 text-[13.5px] font-semibold">Card thumbnail</p><p className="mb-2 text-[12px] text-(--ink-3)">The card grid's hero image — without one, the card gets a generated poster</p>
       {thumbnail ? <div className="flex flex-wrap items-center gap-4"><div className="h-24 w-40 shrink-0 overflow-hidden rounded-[12px] border border-(--glass-edge)">{onPreviewThumbnail ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={onPreviewThumbnail} aria-label="Preview thumbnail">{thumbnail}</button> : thumbnail}</div><button type="button" disabled={disabled} onClick={onRemoveThumbnail} className="cursor-pointer rounded-lg border border-(--glass-edge) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink-2) disabled:opacity-40">Remove</button></div> : thumbnailUpload}
     </div>
-    <div><p className="mb-1.5 text-[13.5px] font-semibold">Detail screenshots · {images.length}/6 <span className="text-(--proto)">*</span></p><p className="mb-2 text-[12px] text-(--ink-3)">At least one image showing the experience or outcome. A thumbnail alone does not meet this requirement.</p>
+    <div><p className="mb-1.5 text-[13.5px] font-semibold">Detail screenshots · {images.length}/6<RequiredMark /></p><p className="mb-2 text-[12px] text-(--ink-3)">At least one image showing the experience or outcome. A thumbnail alone does not meet this requirement.</p>
       <div className="flex flex-col gap-3">{!!images.length && <div className="grid gap-3 sm:grid-cols-2">{images.map(image => <MediaReorderItem key={image.id} id={image.id} ids={images.map(item => item.id)} label={`Screenshot ${images.indexOf(image) + 1}`} group="images" disabled={disabled || attachmentDisabled || linkedDirty} onReorder={onReorderImages} className="min-w-0 overflow-hidden rounded-[14px] border border-(--glass-edge)">
         <div className="aspect-[16/10] w-full overflow-hidden">{onPreviewImage ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={() => onPreviewImage(image.id)} aria-label={`Preview screenshot ${images.indexOf(image) + 1}`}>{image.preview}</button> : image.preview}</div><div className="flex items-center gap-2 p-2"><input disabled={disabled} className={`${submissionInputClass} h-8 min-w-0 flex-1 rounded-lg px-2.5 py-0 text-[12.5px]`} value={image.caption} onChange={event => onCaption(image.id, event.target.value)} placeholder="e.g. Unmatched invoices awaiting review" maxLength={200} aria-label="Screenshot caption" aria-describedby={`caption-hint-${image.id}`} /><button type="button" disabled={disabled} onClick={() => onRemoveImage(image.id)} aria-label="Remove this screenshot" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg text-(--ink-3) disabled:opacity-40"><Icon name="close" size={14} /></button></div>
         <p id={`caption-hint-${image.id}`} className="px-3 pb-3 text-[12px] text-(--ink-3)">Describe the screen or result shown.</p>
@@ -250,7 +255,7 @@ export function SolutionDetailsFields<Area extends string, Status extends string
   const classification = <>
     {selectedAreas && onAreas
       ? <Field label="Specialization areas" required hint={`Choose up to ${maxAreas}. The first one you pick sets the card colour.`}><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={selectedAreas.includes(option.value)} onClick={() => toggleArea(option.value)}>{option.label}</Chip>)}</div></Field>
-      : <Field label="Specialization area"><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>}
+      : <Field label="Specialization area" required><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>}
     {onStatus && status !== undefined && statuses && <StatusField status={status} statuses={statuses} onStatus={onStatus} />}
   </>;
   if (!grouped) return <>{naming}{classification}</>;
@@ -261,7 +266,7 @@ export function SolutionDetailsFields<Area extends string, Status extends string
 }
 
 export function StatusField<Status extends string>({ status, statuses, onStatus }: { status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void }) {
-  return <Field label="Status"><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>;
+  return <Field label="Status" required><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>;
 }
 
 /**
@@ -271,14 +276,14 @@ export function StatusField<Status extends string>({ status, statuses, onStatus 
 export function ClientFields<Role extends string>({ value, onText, role, roles, onRole, framed = false, associated, onAssociated }: Pick<IdentityProps<string, string, Role>, "value" | "onText" | "role" | "roles" | "onRole"> & { framed?: boolean; associated?: boolean; onAssociated?: (associated: boolean) => void }) {
   const asked = onAssociated !== undefined;
   const question = asked && <fieldset className="min-w-0">
-    <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Is this solution associated with a client?<span style={{ color: "var(--proto)" }}> *</span></legend>
+    <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Is this solution associated with a client?<RequiredMark /></legend>
     <div className="flex flex-wrap gap-2">{([[true, "Yes"], [false, "No"]] as const).map(([option, label]) => <label key={label} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${associated === option ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
       <input type="radio" className="sr-only" name="client-associated" checked={associated === option} onChange={() => onAssociated(option)} />{label}
     </label>)}</div>
   </fieldset>;
   const fields = (!asked || associated) && <>
     {onRole && roles && <FormSubsection title="Audience">
-      <Field label="Target client role" badge={<VisibilityBadge visibility="client" />} hint="Select the primary client role this solution is designed to support."><SelectPicker label="Target client role" value={role ?? ""} options={role ? ["", ...roles] : roles} onChange={onRole} getLabel={option => option || "No specific role"} placeholder="e.g. Chief of Staff" /></Field>
+      <Field label="Target client role" optional badge={<VisibilityBadge visibility="client" />} hint="Select the primary client role this solution is designed to support."><SelectPicker label="Target client role" value={role ?? ""} options={role ? ["", ...roles] : roles} onChange={onRole} getLabel={option => option || "No specific role"} placeholder="e.g. Chief of Staff" /></Field>
     </FormSubsection>}
     <FormSubsection title="Client details">
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
@@ -337,8 +342,8 @@ export function SectionCard({ level = 2, icon, title, description, visibility, c
 export function StoryFields({ whatItDoes, businessValue, onChange, nested = false, children }: { whatItDoes: string; businessValue: string; onChange: (key: "whatItDoes" | "businessValue", value: string) => void; nested?: boolean; children?: ReactNode }) {
   const Shell = nested ? NamedSection : StepShell;
   return <Shell title="What does it do, and why does it matter?">
-    <Field label="What it does" hint="What a user does in it, and what they get out of it."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={whatItDoes} onChange={event => onChange("whatItDoes", event.target.value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
-    <Field label="Business value" hint="The problem it solves and why that matters. Add real numbers only if you have them."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={businessValue} onChange={event => onChange("businessValue", event.target.value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
+    <Field label="What it does" optional hint="What a user does in it, and what they get out of it."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={whatItDoes} onChange={event => onChange("whatItDoes", event.target.value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
+    <Field label="Business value" optional hint="The problem it solves and why that matters. Add real numbers only if you have them."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={businessValue} onChange={event => onChange("businessValue", event.target.value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
     {children}
   </Shell>;
 }

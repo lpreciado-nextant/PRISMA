@@ -372,7 +372,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                   value={{ directHours: contributor.directHours ?? null, allocation: Number.isFinite(contributor.allocation) ? contributor.allocation : null, startDate: contributor.startDate, endDate: contributor.endDate }}
                   onChange={fields => updateContributor(contributor.id, { ...fields, directHours: fields.directHours === null ? undefined : fields.directHours ?? contributor.directHours, allocation: fields.allocation === null ? NaN : fields.allocation ?? contributor.allocation })}
                   onRemove={index > 0 ? () => set("contributors", draft.contributors.filter(entry => entry.id !== contributor.id)) : undefined}
-                  role={<Field label="Role" hint="Select how this person contributed to the solution."><SelectPicker label={`Contributor ${index + 1} role`} value={contributor.contributorRole ?? ""} options={contributor.contributorRole ? ["", ...CONTRIBUTOR_ROLES] : CONTRIBUTOR_ROLES} onChange={value => updateContributor(contributor.id, { contributorRole: value || undefined })} getLabel={option => option || "No role"} placeholder="e.g. Consultant" /></Field>}
+                  role={<Field label="Role" optional hint="Select how this person contributed to the solution."><SelectPicker label={`Contributor ${index + 1} role`} value={contributor.contributorRole ?? ""} options={contributor.contributorRole ? ["", ...CONTRIBUTOR_ROLES] : CONTRIBUTOR_ROLES} onChange={value => updateContributor(contributor.id, { contributorRole: value || undefined })} getLabel={option => option || "No role"} placeholder="e.g. Consultant" /></Field>}
                   person={<PersonPicker value={contributor.builtBy} options={builders.filter(builder => !draft.contributors.some(entry => entry.id !== contributor.id && entry.builtBy.id === builder.id))} onChange={builtBy => updateContributor(contributor.id, { builtBy })} />} />;
               })}
             </ContributorEditor>
@@ -383,10 +383,10 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
         {step === 3 && safetyValid && (
           <StepShell title="Tag it">
-            <TagPicker label="Capability (required, choose one)" governed options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(value) => set("capabilities", value.slice(-1))} />
+            <TagPicker label="Capability (choose one)" required governed options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(value) => set("capabilities", value.slice(-1))} />
             {!capabilityValid && <p className="text-[13px]" style={{ color: "var(--proto)" }}>Select exactly one capability before submitting.</p>}
-            <TagPicker label="Technologies" options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
-            <TagPicker label="Industries" governed options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
+            <TagPicker label="Technologies" optional options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
+            <TagPicker label="Industries" optional governed options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
           </StepShell>
         )}
 
