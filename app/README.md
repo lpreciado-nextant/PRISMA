@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### Review queue and state blocks (2026-10-02)
+
+At the user's request, from `origin/main` `e2ca558` (lint, both builds, 87 connected, 39 PoC and 30 UI tests passed; no newer teammate commits on `origin`), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790978861083), bundle `index-6VijNOOU.js`; the first push attempt failed on a DNS outage and the retry succeeded). The review queue gains area → capability → sort filters and compact state-coloured cards with a small date; returned records show "Waiting for corrections" with the feedback, and published records a green block with any approval note and an explained "Retire from library". No plug-in, schema or PoC data change; published request-changes and a retire reason are parked on `feature/published-changes` until a signed plug-in. The user checked it in Local Play; the hosted app has not been checked yet.
+
 ### Review points list (2026-10-02)
 
 At the user's request, from `origin/main` `ee8dc31` (lint, both builds, 87 connected, 39 PoC and 29 UI tests passed; no newer teammate commits on `origin`), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790976926455), bundle `index-zJhI6Cxa.js`). The review checklist's completeness column becomes "Review points — Verify these items before making your decision." as plain bullets; only a requirement the record fails is flagged Missing. No logic, plug-in, schema or PoC data change. The user checked it in Local Play; the hosted app has not been checked yet.
