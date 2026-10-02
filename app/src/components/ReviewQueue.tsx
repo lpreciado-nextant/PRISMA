@@ -35,8 +35,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
   notice?: ReactNode; noticeBusy?: boolean; error?: ReactNode; onReturn: () => void; onApprove: () => void; defaultDecision?: Decision; children?: ReactNode;
 }) {
   const heading = useId();
-  const [decision, setDecision] = useState<Decision | undefined>(defaultDecision);
-  const disabled = busy || locked;
+  const [decision, setDecision] = useState<Decision | undefined>(defaultDecision);  const disabled = busy || locked;
   const chosen = DECISIONS.find(option => option.value === decision);
   const hint = decision === "changes" ? !comments.trim() && "Add a comment to send this submission back."
     : decision === "publish" ? !canApprove ? "Required content, contributor effort, images and the safety acknowledgment must be complete before approval." : !cleared && "Confirm the review above to publish." : undefined;
@@ -73,12 +72,14 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
               <div><dt className="text-[12px] text-(--ink-3)">Shown to clients as</dt><dd className="break-words" style={context ? undefined : { color: "var(--proto)" }}>{context || "Not provided"}</dd></div>
             </dl> : <p className="mt-1.5 text-(--ink-2)">No client named; nothing to anonymize.{context && <> Shown to clients as “{context}”.</>}</p>}
           </section>
-          {checks && <section aria-label="Completeness" className="min-w-0">
-            <h4 className="font-semibold">Completeness</h4>
-            <ul className="mt-1.5 space-y-1.5">
-              {checks.map(check => <li key={check.label} className="flex items-start gap-2" style={{ color: check.done ? "var(--ink-2)" : "var(--proto)" }}>
-                <span className="mt-0.5 shrink-0" style={{ color: check.done ? "var(--live)" : "var(--proto)" }}><Icon name={check.done ? "check" : "alert"} size={14} /></span>
-                <span>{check.label}<span className="sr-only">{check.done ? ": complete" : ": missing"}</span></span>
+          {/* Points to verify, as plain bullets: no ticks, so nothing reads as already reviewed. Only a point the record
+              does not meet is flagged. */}
+          {checks && <section aria-labelledby={`${heading}-points`} className="min-w-0">
+            <h4 id={`${heading}-points`} className="font-semibold">Review points</h4>
+            <p className="text-[12px] text-(--ink-3)">Verify these items before making your decision.</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-(--ink-3)">
+              {checks.map(check => <li key={check.label} style={{ color: check.done ? "var(--ink-2)" : "var(--proto)" }}>
+                {check.label}{!check.done && <span className="ml-1.5 inline-flex items-center gap-1 text-[12px] font-semibold"><Icon name="alert" size={12} />Missing</span>}
               </li>)}
             </ul>
           </section>}

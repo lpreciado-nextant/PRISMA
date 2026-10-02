@@ -339,7 +339,12 @@ test("review actions require comments on return and independent clearance on app
   const checked = render(review.ReviewPanel, { ...props, solution, client: "Bank X", context: "", feedback: "Anonymize it", checks: [{ label: "Summary and capability", done: true }, { label: "Detail images (1 to 6)", done: false }] });
   assert.match(checked, /Classification.*Specialization areas.*Data Solutions.*Capability.*Data platforms.*Status.*Client demo/s);
   assert.match(checked, /Internal client.*Bank X.*Shown to clients as.*Not provided/s);
-  assert.match(checked, /Summary and capability<span class="sr-only">: complete.*Detail images \(1 to 6\)<span class="sr-only">: missing/s);
+  // Review points are plain bullets: nothing reads as already verified; only a point the record fails is flagged.
+  assert.match(checked, /Review points.*Verify these items before making your decision\./s);
+  const points = checked.match(/<ul class="[^"]*list-disc[^"]*">.*?<\/ul>/s)?.[0] ?? "";
+  assert.doesNotMatch(points, /type="checkbox"|<svg[^>]*>(?:(?!<\/svg>).)*m4 12 5 5L20 6/s);
+  assert.match(points, /<li[^>]*>Summary and capability<\/li>/);
+  assert.match(points, /<li[^>]*>Detail images \(1 to 6\)<span[^>]*>.*Missing<\/span><\/li>/s);
   assert.match(checked, /Resubmitted after changes requested.*Anonymize it/s);
   assert.match(render(review.ReviewPanel, { ...props, solution: { ...solution, reviewOutcome: "None" }, feedback: "Old note" }), /Latest review comments/);
   assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
