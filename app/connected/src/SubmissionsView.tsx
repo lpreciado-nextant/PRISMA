@@ -22,6 +22,11 @@ import { ProtectedImage } from "./ProtectedImage";
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px] disabled:opacity-50";
 const shell = "mx-auto max-w-[1100px] px-6 py-10";
+// Transitions that change what CSMs can see are confirmed first; each key is the plug-in action it sends.
+const CONFIRMATIONS = {
+  withdraw: { title: "Withdraw submission?", label: "Withdraw & edit", body: "This submission will return to Draft for editing. Any published access will be removed until it is approved again." },
+  retire: { title: "Retire from the library?", label: "Retire from library", body: "It disappears from search and browse and CSMs lose access to it. Nothing is deleted: the owner can update it and resubmit it for approval." },
+} as const;
 
 export function SubmissionsView({ review }: { review: boolean }) {
   const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number }[]; librarian: boolean } | null>(null);
@@ -74,7 +79,7 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
   const [error, setError] = useState("");
   const [comments, setComments] = useState("");
   const [cleared, setCleared] = useState(false);
-  const [confirmation, setConfirmation] = useState<"withdraw" | "retire" | null>(null);
+  const [confirmation, setConfirmation] = useState<keyof typeof CONFIRMATIONS | null>(null);
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -148,8 +153,8 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
         })}
         comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} notice={mediaAction.message} noticeBusy={mediaAction.downloading}
         error={error && <><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></>}
-        onReturn={() => void transition("return")} onApprove={() => void transition("approve")}>
-        {state.librarian && status === 125060000 && <button className={`${button} mt-4`} disabled={busy || uncertain} onClick={() => setConfirmation("retire")}><Icon name="close" />Retire</button>}
+        onReturn={() => void transition("return")} onApprove={() => void transition("approve")}
+        onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
       </ReviewPanel> : <section aria-label="Submission status" className="mt-5 border-y border-(--glass-edge) py-5">
         <p className="eyebrow">Contributor workspace</p><h2 className="mt-2 text-[20px]">{PUBLICATIONS[state.record.publication]}</h2>
         {mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
@@ -162,9 +167,9 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
           {!review && status !== 125060003 && <button className={button} onClick={() => setConfirmation("withdraw")}><Icon name="file" />Withdraw &amp; edit</button>}
         </fieldset>{busy && <LoadingState className="mt-4" label="Updating submission..." />}
       </section>}
-        {confirmation && <ConfirmDialog title={confirmation === "withdraw" ? "Withdraw submission?" : "Retire solution?"} confirmLabel={confirmation === "withdraw" ? "Withdraw & edit" : "Retire solution"} onCancel={() => setConfirmation(null)} onConfirm={() => { setConfirmation(null); void transition(confirmation); }}>
+        {confirmation && <ConfirmDialog title={CONFIRMATIONS[confirmation].title} confirmLabel={CONFIRMATIONS[confirmation].label} onCancel={() => setConfirmation(null)} onConfirm={() => { setConfirmation(null); void transition(confirmation); }}>
           <p className="mb-3 font-semibold text-(--ink)">{core.name}</p>
-          <p>{confirmation === "withdraw" ? "This submission will return to Draft for editing. Any published access will be removed until it is approved again." : "This solution will be retired and its published access removed."}</p>
+          <p>{CONFIRMATIONS[confirmation].body}</p>
         </ConfirmDialog>}
       </>
     } />;

@@ -347,6 +347,15 @@ test("review actions require comments on return and independent clearance on app
   assert.match(points, /<li[^>]*>Detail images \(1 to 6\)<span[^>]*>.*Missing<\/span><\/li>/s);
   assert.match(checked, /Resubmitted after changes requested.*Anonymize it/s);
   assert.match(render(review.ReviewPanel, { ...props, solution: { ...solution, reviewOutcome: "None" }, feedback: "Old note" }), /Latest review comments/);
+  // A returned record awaits its contributor: the status says so and the feedback sits below the checklist, with no decision.
+  const waiting = render(review.ReviewPanel, { ...props, status: "Draft", solution: { ...solution, publicationStatus: "Draft" }, feedback: "Anonymize it" });
+  assert.match(waiting, /<h2[^>]*>Changes requested<\/h2>.*Review checklist.*Waiting for corrections.*Sent back to the contributor.*Your feedback.*Anonymize it/s);
+  assert.doesNotMatch(waiting, /Review decision|Latest review comments|Resubmitted after/);
+  // Published: a green block with the optional approval note and an explained, secondary retire action.
+  const live = render(review.ReviewPanel, { ...props, status: "Published", solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved" }, feedback: "Great work", onRetire: noop });
+  assert.match(live, /Review checklist.*<h3[^>]*>Published<\/h3>.*Your note to the contributor.*Great work.*Remove from the library.*Nothing is deleted.*Retire from library/s);
+  assert.doesNotMatch(live, /Review decision|Latest review comments/);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Your note to the contributor|Retire from library/);
   assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /<textarea|type="checkbox"|Approve &amp; publish|Send back for changes/);
   assert.match(html, /Submission preview · what the contributor submitted/);
@@ -374,6 +383,28 @@ test("review actions require comments on return and independent clearance on app
   assert.match(render(review.ReviewPanel, { ...props, busy: true }), /loading-state--inline/);
   assert.match(render(review.ReviewPanel, { ...props, notice: "Downloading document...", noticeBusy: true }), /loading-state--inline/);
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, notice: "Download started: document" }), /loading-state--inline/);
+});
+
+test("review queue rows show area, capability, submitter and a friendly date, newest first", () => {
+  const base = { summary: "Summary", status: "Working prototype", publicationStatus: "Pending review", reviewOutcome: "None", contributors: [], technologies: [], assets: [{ id: "a" }], images: [{ id: "i", src: "x" }, { id: "j", src: "y" }] };
+  const entries = [
+    { owner: "Ana", solution: { ...base, id: "old", name: "Older app", specializationArea: "data", specializationAreas: ["data"], capabilities: ["Data platforms"], dateAdded: "2026-09-01" } },
+    { owner: "Juliana Castelblanco", solution: { ...base, id: "new", name: "PRISMA APP", specializationArea: "ai", specializationAreas: ["ai"], capabilities: ["AI & agents"], dateAdded: "2026-09-30" } },
+    { owner: "Luis", solution: { ...base, id: "done", name: "Live one", publicationStatus: "Published", specializationArea: "ibo", capabilities: [], dateAdded: "2026-08-01" } },
+  ];
+  const html = render(review.ReviewQueue, { entries, connected: false });
+  // Review status → search & filters (area before capability, then sort) → result count → rows.
+  assert.match(html, /aria-pressed="true"[^>]*>Pending review<span[^>]*>2<\/span>.*Published<span[^>]*>1<\/span>/s);
+  assert.match(html, /Search review queue.*aria-label="Specialization area".*All areas.*aria-label="Capability".*All capabilities.*aria-label="Sort".*Sort: Newest.*2 submissions/s);
+  assert.match(html, /PRISMA APP.*Older app/s);
+  assert.doesNotMatch(html, /Live one/);
+  // A small date in the top corner; the full date stays in its title and for screen readers.
+  const short = new Date().getFullYear() === 2026 ? "Sep 30" : "Sep 30, 2026";
+  assert.match(html, new RegExp(`<time dateTime="2026-09-30" title="Submitted Sep 30, 2026"[^>]*><span class="sr-only">Submitted </span>${short}</time>`));
+  assert.match(html, /AI &amp; Automation.*AI &amp; agents.*PRISMA APP.*Summary.*Juliana Castelblanco.*2 images.*1 attachment<.*Review submission/s);
+  // The row edge follows the review state (blue while pending), not the area.
+  assert.match(html, /w-1" style="background:var\(--accent\)"/);
+  assert.doesNotMatch(html, /w-1" style="background:var\(--sa-/);
 });
 
 test("review summary and success use the baseline presentation", () => {

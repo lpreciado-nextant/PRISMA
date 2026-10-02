@@ -32,11 +32,11 @@ export function ReviewView({ entries, selectedId, onDecision }: {
   };
 
   if (selectedId) {
-    if (!selected || selected.solution.publicationStatus === "Draft") return <div className="mx-auto max-w-[1340px] px-6 py-10">
+    // A returned record opens in the review panel ("Waiting for corrections"); a plain draft is not the librarian's to see.
+    if (!selected || (selected.solution.publicationStatus === "Draft" && selected.solution.reviewOutcome !== "Changes requested")) return <div className="mx-auto max-w-[1340px] px-6 py-10">
       <button type="button" onClick={() => navigate("/review")} className="inline-flex cursor-pointer items-center gap-2 text-[14px]"><Icon name="chevronLeft" />Review queue</button>
-      <h1 className="mt-6 text-[26px]">{selected ? selected.solution.reviewOutcome === "Changes requested" ? "Changes requested" : "Draft" : "Submission unavailable"}</h1>
+      <h1 className="mt-6 text-[26px]">{selected ? "Draft" : "Submission unavailable"}</h1>
       <p role="status" className="mt-3">{selected ? "This submission is with its contributor for editing." : "This submission is no longer available for review."}</p>
-      {selected?.solution.reviewComments && <p className="mt-4 whitespace-pre-wrap break-words border-l-2 pl-4" style={{ borderColor: "var(--proto)" }}>{selected.solution.reviewComments}</p>}
     </div>;
 
     return <DetailView solution={selected.solution} present={false} onBack={() => navigate("/review")} backLabel="Review queue" assetBasePath={`/review/${selected.solution.id}`} reviewActions={
