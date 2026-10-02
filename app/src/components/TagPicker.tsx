@@ -4,11 +4,14 @@ import { Chip } from "./Badges";
 import { Icon } from "./Icon";
 import { LoadingState } from "./LoadingState";
 import { submissionInputClass } from "./SubmissionForm";
+import { OptionalMark, RequiredMark } from "./RequiredMark";
 
-export function TagPicker({ label, options, selected, onChange, governed = false, allowNew = false, getLabel = value => value, onCreate }: {
+export function TagPicker({ label, options, selected, onChange, governed = false, allowNew = false, getLabel = value => value, onCreate, required = false, optional = false }: {
   label: string; options: string[]; selected: string[]; onChange: (next: string[]) => void;
   governed?: boolean; allowNew?: boolean; getLabel?: (value: string) => string;
   onCreate?: (name: string) => Promise<void>;
+  /** Marks the picker like the form's other fields. */
+  required?: boolean; optional?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [newTag, setNewTag] = useState("");
@@ -41,7 +44,7 @@ export function TagPicker({ label, options, selected, onChange, governed = false
     reset();
   };
   return <fieldset className="min-w-0">
-    <legend className="mb-2 text-[14px] font-semibold">{label}</legend>
+    <legend className="mb-2 text-[14px] font-semibold">{label}{required ? <RequiredMark /> : optional && <OptionalMark />}</legend>
     <p className="mb-2 text-[12px] text-(--ink-2)">{governed ? "Librarian-managed vocabulary" : "Tools, platforms and languages used to build the solution"}</p>
     <input type="search" className={submissionInputClass} aria-label={`Search ${label.toLowerCase()}`} placeholder={`Search ${label.toLowerCase()}`} value={query} onChange={event => setQuery(event.target.value)} />
     <div className="mt-3 flex max-h-60 flex-wrap gap-2 overflow-y-auto">

@@ -250,6 +250,18 @@ test("identity fields retain PoC examples, limits and separate client contexts",
   assert.match(html, /0\/200 characters/);
 });
 
+test("required and optional fields are marked the same way everywhere, with one legend per step", () => {
+  const required = render(form.Field, { label: "Solution name", required: true, children: createElement("input") });
+  assert.match(required, /Solution name<span aria-hidden="true"[^>]*> \*<\/span><span class="sr-only"> \(required\)<\/span>/);
+  assert.match(render(form.Field, { label: "What it does", optional: true, children: createElement("input") }), /What it does<span[^>]*>\(optional\)<\/span>/);
+  assert.doesNotMatch(render(form.Field, { label: "Plain", children: createElement("input") }), /required|optional/);
+  // The legend explains the asterisk on steps with fields, not on the safety gate or the final review.
+  assert.match(render(form.StepShell, { title: "Tag it" }), /Required to submit for review\. To save a draft, only the solution name is needed\./);
+  for (const title of ["Before you start", "Review & submit"]) assert.doesNotMatch(render(form.StepShell, { title }), /Required to submit/);
+  assert.match(render(form.StatusField, { status: "a", statuses: [{ value: "a", label: "Idea" }], onStatus: noop }), /Status<span aria-hidden="true"/);
+  assert.match(render(form.SubmissionSafety, { accepted: false, onChange: noop }), /unauthorized information\.<span aria-hidden="true"[^>]*> \*/);
+});
+
 test("the client question hides every client field until Yes", () => {
   const props = { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, role: "", roles: ["Chief of Staff"], onRole: noop, framed: true, onAssociated: noop };
   for (const associated of [undefined, false]) {
