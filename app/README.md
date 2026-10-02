@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### My submissions workspace (2026-10-02)
+
+At the user's request, from `origin/main` `3ee5b4b` (lint, both builds, 87 connected, 38 PoC and 29 UI tests passed; no newer teammate commits on `origin`; Luis's 2026-10-01 commits were already in the previous publish), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790970423723), bundle `index-B4gN9RUY.js`). My submissions gains status filter chips with counts, a separate review-state band (amber for Changes requested), whole-card opening, Edit plus a "•••" Delete menu, and a right-side librarian feedback panel. No plug-in or PoC data change; the manually created `nx_solution.nx_reviewedon` column stays unused (review-date support is parked on `feature/review-date`). The user checked it in Local Play before publishing; the hosted app has not been checked yet.
+
 ### All areas note removed (2026-10-01)
 
 At the user's request, from `origin/main` `ee44807` (lint, both builds, 87 connected, 38 PoC and 27 UI tests passed; no newer teammate commits on `origin`), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790891886335), bundle `index-BgC9lJoG.js`). With All selected, the library hero no longer shows "Everything Nextant has built and can show, across all three Specialization Areas."; a chosen area still shows its note. No plug-in, schema or PoC data change. The hosted app has not been checked yet.
