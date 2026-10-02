@@ -20,6 +20,10 @@ const DECISIONS: Choice<Decision>[] = [
   { value: "publish", title: "Ready to publish", detail: "The submission meets the requirements.", icon: "check", color: "var(--live)" },
   { value: "changes", title: "Request changes", detail: "The contributor needs to make updates.", icon: "alert", color: "var(--proto)" },
 ];
+const PUBLISHED_ACTIONS: Choice<"changes" | "retire">[] = [
+  { value: "changes", title: "Request changes", detail: "Take it out of the library and send it back to the owner to fix.", icon: "alert", color: "var(--proto)" },
+  { value: "retire", title: "Retire from library", detail: "Take it out for good, e.g. obsolete or replaced. Nothing is deleted.", icon: "eyeOff", color: "var(--ink-2)" },
+];
 
 /** One option of a decision, as a selectable card backed by a native radio (arrow keys move between options). */
 function ChoiceCard<Value extends string>({ name, option, selected, onSelect }: { name: string; option: Choice<Value>; selected: boolean; onSelect: () => void }) {
@@ -40,17 +44,19 @@ const textArea = "mt-2 block w-full resize-y rounded-lg border border-(--glass-e
  * decision's controls show. The comment is shared state, as before: required to send back, an optional note on approval
  * (approval replaces the stored feedback, or clears it when blank).
  */
-export function ReviewPanel({ status, owner, client, context, feedback, solution, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRetire, children }: {
+export function ReviewPanel({ status, owner, client, context, feedback, solution, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, children }: {
   status: string; owner?: string; client?: string; context?: string; feedback?: string;
   /** Classification and resubmission state; omitted, the checklist shows client safety only. */
   solution?: Solution; checks?: ReviewCheck[];
   comments: string; onComments: (value: string) => void;
   cleared: boolean; onCleared: (value: boolean) => void; busy: boolean; locked?: boolean; canApprove?: boolean; local?: boolean;
   notice?: ReactNode; noticeBusy?: boolean; error?: ReactNode; onReturn: () => void; onApprove: () => void; defaultDecision?: Decision;
-  /** Offered on a published record when the caller may retire it. */
-  onRetire?: () => void; children?: ReactNode;
+  /** Offered on a published record when the caller may take it out of the library; both send `comments`. */
+  onRequestChanges?: () => void; onRetire?: () => void; children?: ReactNode;
 }) {
   const heading = useId();
+  const [manage, setManage] = useState<"changes" | "retire" | undefined>();
+  const manageOption = PUBLISHED_ACTIONS.find(option => option.value === manage);
   const [decision, setDecision] = useState<Decision | undefined>(defaultDecision);
   const disabled = busy || locked;
   // A returned record is a Draft awaiting its contributor: say so, and show the feedback as what they are working from.
@@ -137,14 +143,29 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           <h4 className="eyebrow">Your note to the contributor</h4>
           <p className="mt-2 border-l-2 border-(--live) pl-3 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{feedback}</p>
         </div>}
-        {/* Retirement explained where it applies, as a secondary action, rather than a bare "Retire" button. */}
-        {onRetire && <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-(--glass-edge) pt-4">
-          <div className="min-w-0 flex-1 basis-64">
-            <h4 className="text-[14px] font-semibold">Remove from the library</h4>
-            <p className="mt-0.5 text-[13px] text-(--ink-2)">Retiring hides it from search and browse and removes CSM access. Nothing is deleted; the owner can update it and resubmit it.</p>
+        {/* Taking a published record out of the library: either back to its owner to fix, or retired for good. Both need
+            the words the owner will read; the caller confirms before acting. */}
+        {(onRequestChanges || onRetire) && <fieldset disabled={disabled} className="mt-4 min-w-0 border-t border-(--glass-edge) pt-4">
+          <legend className="sr-only">Take it out of the library</legend>
+          <h4 aria-hidden="true" className="text-[14px] font-semibold">Need to change it?</h4>
+          <div role="radiogroup" aria-label="Take it out of the library" className="mt-2.5 grid gap-3 sm:grid-cols-2">
+            {PUBLISHED_ACTIONS.filter(option => option.value === "changes" ? onRequestChanges : onRetire).map(option => <ChoiceCard key={option.value} name={`${heading}-published`} option={option} selected={manage === option.value} onSelect={() => setManage(option.value)} />)}
           </div>
-          <button type="button" disabled={disabled} onClick={onRetire} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"><Icon name="eyeOff" size={16} />Retire from library</button>
-        </div>}
+          {manageOption && <div className="animate-rise mt-4">
+            <label className="block text-[14px] font-semibold">{manage === "changes" ? "Comments to contributor" : "Reason for retiring"} <span className="font-normal text-(--ink-2)">(required)</span>
+              <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={3} required aria-required="true" className={textArea}
+                placeholder={manage === "changes" ? "Describe what needs to be updated before it can be published again." : "For example: replaced by a newer version, or no longer offered."} />
+            </label>
+            <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+              {!comments.trim() && <p id={`${heading}-manage-hint`} className="mr-auto text-[13px] text-(--ink-2)">{manage === "changes" ? "Add a comment so the owner knows what to fix." : "Add the reason the owner will see."}</p>}
+              <button type="button" aria-describedby={comments.trim() ? undefined : `${heading}-manage-hint`} disabled={!comments.trim() || disabled} onClick={manage === "changes" ? onRequestChanges : onRetire}
+                className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+                style={manage === "changes" ? { background: "var(--proto)", color: "var(--on-accent)" } : { border: "1px solid var(--glass-edge)" }}>
+                <Icon name={manageOption.icon} size={16} />{manage === "changes" ? "Send back for changes" : "Retire from library"}
+              </button>
+            </div>
+          </div>}
+        </fieldset>}
       </section>}
 
       {status === "Pending review" && <fieldset disabled={disabled} className="mt-6 min-w-0 border-t border-(--glass-edge) pt-5">

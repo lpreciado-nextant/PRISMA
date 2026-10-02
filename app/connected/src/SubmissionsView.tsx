@@ -25,7 +25,8 @@ const shell = "mx-auto max-w-[1100px] px-6 py-10";
 // Transitions that change what CSMs can see are confirmed first; each key is the plug-in action it sends.
 const CONFIRMATIONS = {
   withdraw: { title: "Withdraw submission?", label: "Withdraw & edit", body: "This submission will return to Draft for editing. Any published access will be removed until it is approved again." },
-  retire: { title: "Retire from the library?", label: "Retire from library", body: "It disappears from search and browse and CSMs lose access to it. Nothing is deleted: the owner can update it and resubmit it for approval." },
+  "request-changes": { title: "Send back for changes?", label: "Send back for changes", body: "It leaves the library and CSMs lose access to it. The owner sees your comments as Changes requested, and it returns to the review queue when they resubmit." },
+  retire: { title: "Retire from the library?", label: "Retire from library", body: "It disappears from search and browse and CSMs lose access to it. Nothing is deleted: the owner sees your reason and can update it and resubmit it for approval." },
 } as const;
 
 export function SubmissionsView({ review }: { review: boolean }) {
@@ -154,6 +155,7 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
         comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} notice={mediaAction.message} noticeBusy={mediaAction.downloading}
         error={error && <><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></>}
         onReturn={() => void transition("return")} onApprove={() => void transition("approve")}
+        onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
       </ReviewPanel> : <section aria-label="Submission status" className="mt-5 border-y border-(--glass-edge) py-5">
         <p className="eyebrow">Contributor workspace</p><h2 className="mt-2 text-[20px]">{PUBLICATIONS[state.record.publication]}</h2>

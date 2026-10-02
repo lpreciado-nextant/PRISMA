@@ -17,7 +17,11 @@ The review panel above the submission preview shows the status and owner, then a
 
 - **Ready to publish → Approve & publish** requires the independent client-safety confirmation. An optional note to the contributor replaces the latest feedback; a blank note clears it. The server rechecks completeness, active capability/areas/contributors and every stored file (size, and version for Blob files), then publishes and grants the **PRISMA Published Readers** team read access to the solution, its contributors and finalized media.
 - **Request changes → Send back for changes** requires comments to the contributor (up to 4000 characters). The record goes back to Draft with outcome Changes requested; the contributor's safety acknowledgment is cleared.
-- **Retire from library** (Published only; inside the green Published block, which also shows any approval note) removes the record from the catalogue and revokes reader access. The record keeps its history; the owner can later withdraw it to Draft, refresh it and resubmit. No reason is recorded yet, and a published record cannot yet be sent back for changes; both are on branch `feature/published-changes`, waiting for a signed plug-in.
+- A published record opens with a green **Published** block (with any approval note). Under **Need to change it?** choose one, write the text the owner will read (required), then confirm:
+  - **Request changes** sends it back like a return: it leaves the library, becomes Changes requested with your comments, and returns to the queue on resubmission. Use it when something must be fixed.
+  - **Retire from library** removes it from the catalogue and revokes reader access, with a required reason. Use it when it is obsolete or replaced.
+  Both need the 2026-10-02 plug-in update, which is not yet deployed.
+- A retired record keeps its history and its reason is visible to the owner in My submissions. The owner can later withdraw it to Draft, refresh it and resubmit.
 - Every action carries the record's row version. If someone else changed it first, the action is rejected; reopen the record and review the latest version.
 
 Librarians cannot edit a contributor's content in the app; return it with comments instead. Owners can withdraw Pending, Published or Retired records to Draft at any time, which also revokes reader access.

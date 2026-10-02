@@ -40,7 +40,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const manage = (solution: Solution): CardManagement => {
     const name = solution.name || "Untitled solution";
     return {
-      onFeedback: submissionState(solution) === "Changes requested" && solution.reviewComments ? () => setFeedbackTarget(solution) : undefined,
+      // Returned and retired records both carry the librarian's words the owner needs to act on.
+      onFeedback: ["Changes requested", "Retired"].includes(submissionState(solution)) && solution.reviewComments ? () => setFeedbackTarget(solution) : undefined,
       actions: <>
         {editable(solution) && <button type="button" aria-label={`Edit ${name}`} onClick={() => edit(solution)} className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1 text-[13px] font-semibold" style={{ color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 40%, transparent)", background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}><Icon name="edit" size={14} />Edit</button>}
         {onDelete && <OverflowMenu label={`More actions for ${name}`} items={[{ label: "Delete submission", icon: "trash", onSelect: () => { setDeleteError(""); setDeleteTarget(solution); } }]} />}
@@ -82,7 +83,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
         </article>)}
       </div>}
     </>}
-    {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} onClose={() => setFeedbackTarget(null)} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
+    {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} retired={feedbackTarget.publicationStatus === "Retired"} onClose={() => setFeedbackTarget(null)} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
     {deleteTarget && <ConfirmDialog title="Delete submission?" confirmLabel={deleting ? "Deleting..." : "Delete submission"} busy={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete}>
       <p className="break-words text-[14px]">Permanently delete "{deleteTarget.name}" and its attached media from {connected ? "Dataverse" : "this browser"}? This cannot be undone.{deleteTarget.publicationStatus === "Published" ? " It will also be removed from the library and published access revoked." : ""}</p>
       {deleteError && <p role="alert" className="mt-3 text-[14px]">{deleteError}</p>}

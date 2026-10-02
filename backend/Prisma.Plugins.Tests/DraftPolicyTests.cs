@@ -165,14 +165,39 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
+        public void LibrarianCanSendAPublishedRecordBackForChanges()
+        {
+            var owner = Guid.NewGuid();
+            var parent = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "5", ["ownerid"] = new EntityReference("systemuser", owner), ["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published) };
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, false, "5", "request-changes", "Fix it", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "4", "request-changes", "Fix it", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "5", "request-changes", " ", false));
+            var reopened = ReviewPolicy.Change(parent, owner, true, "5", "request-changes", " Remove the client name ", false);
+            Assert.Equal(DraftPolicy.DraftStatus, reopened.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value);
+            Assert.Equal(125060001, reopened.GetAttributeValue<OptionSetValue>("nx_reviewoutcome").Value);
+            Assert.Equal("Remove the client name", reopened.GetAttributeValue<string>("nx_reviewcomments"));
+            Assert.False(reopened.GetAttributeValue<bool>("nx_safetyacknowledged"));
+            Assert.False(reopened.GetAttributeValue<bool>("nx_clientsafereviewed"));
+            foreach (var status in new[] { DraftPolicy.DraftStatus, ReviewPolicy.Pending, ReviewPolicy.Retired })
+            {
+                parent["nx_publicationstatus"] = new OptionSetValue(status);
+                Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "5", "request-changes", "Fix it", false));
+            }
+        }
+
+        [Fact]
         public void RetirementRequiresLibrarianAndRestorationRequiresFreshSubmission()
         {
             var owner = Guid.NewGuid();
             var parent = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "100", ["ownerid"] = new EntityReference("systemuser", owner), ["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published) };
-            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, false, "100", "retire", "", false));
-            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "99", "retire", "", false));
-            var retired = ReviewPolicy.Change(parent, owner, true, "100", "retire", "", false);
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, false, "100", "retire", "Replaced", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "99", "retire", "Replaced", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "100", "retire", "  ", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, true, "100", "retire", new string('x', 4001), false));
+            var retired = ReviewPolicy.Change(parent, owner, true, "100", "retire", "  Replaced by v2  ", false);
             Assert.Equal(ReviewPolicy.Retired, retired.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value);
+            Assert.Equal("Replaced by v2", retired.GetAttributeValue<string>("nx_reviewcomments"));
+            Assert.False(retired.Contains("nx_reviewoutcome"));
             Assert.False(retired.GetAttributeValue<bool>("nx_clientsafereviewed"));
             parent["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Retired);
             parent.RowVersion = "101";

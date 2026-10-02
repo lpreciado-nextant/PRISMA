@@ -61,8 +61,23 @@ namespace Prisma.Plugins
                 change["nx_reviewoutcome"] = new OptionSetValue(125060002);
                 change["nx_reviewcomments"] = (comments ?? "").Trim();
             }
+            else if (action == "request-changes" && librarian && status == Published)
+            {
+                // A published record found wanting goes back to its owner exactly like a return: out of the library
+                // (shares are revoked by the caller), Draft + Changes requested, with the feedback they must act on.
+                if (string.IsNullOrWhiteSpace(comments) || comments.Trim().Length > 4000) throw MediaPolicy.Invalid("Requesting changes requires feedback of at most 4000 characters.");
+                change["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus);
+                change["nx_reviewoutcome"] = new OptionSetValue(125060001);
+                change["nx_reviewcomments"] = comments.Trim();
+                change["nx_safetyacknowledged"] = false;
+            }
             else if (action == "retire" && librarian && status == Published)
+            {
+                // Retirement is for obsolete or replaced records; the reason is what the owner sees.
+                if (string.IsNullOrWhiteSpace(comments) || comments.Trim().Length > 4000) throw MediaPolicy.Invalid("Retiring requires a reason of at most 4000 characters.");
                 change["nx_publicationstatus"] = new OptionSetValue(Retired);
+                change["nx_reviewcomments"] = comments.Trim();
+            }
             else throw MediaPolicy.Invalid("This transition is not permitted for your role or the current state.");
             return change;
         }

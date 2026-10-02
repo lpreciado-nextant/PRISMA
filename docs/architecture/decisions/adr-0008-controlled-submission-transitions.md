@@ -2,7 +2,7 @@
 
 **Status:** Accepted; functional reviewer lifecycle and explicit share revocation verified; cross-account and least-privilege acceptance pending
 **Date:** 2026-09-21
-**Last updated:** 2026-09-22
+**Last updated:** 2026-10-02
 
 ## Context
 
@@ -18,6 +18,8 @@ Contributors must save incomplete drafts, submit and revise their work, while on
 - Notifications remain post-commit and non-authoritative under [ADR-0006](adr-0006-power-automate-notifications-only.md). Row permissions and field-security profiles remain required alongside transition validation.
 - Match the PoC's confirmed owner deletion in Draft, Pending, Published and Retired states through `nx_TransitionSubmission` action `delete`. Require caller ownership and the displayed exact version; revoke published shares and delete related contributors, media and upload sessions transactionally before deleting the Solution. Never delete shared reference records. Direct deletion stays blocked. An unconfirmed response requires refresh before retry.
 - With explicit user approval, retain unsaved core text and contributor/tag/project selections in tab-scoped `sessionStorage`, keyed by signed-in identity and draft ID. Exclude credentials and media bytes; this is recovery, never a successful save or a second source of truth. Validate the bounded payload, reset safety acknowledgment and require the exact saved server version before restoration. Retain uncertain-write status across reload; require reopen/inspection rather than replay. Clear on successful save/submit, explicit discard, present entry and detected identity/authentication loss. External host sign-out cannot be detected until authentication fails or the app reloads. Unsaved media captions are not included.
+
+- **Amendment (2026-10-02, implemented, plug-in not yet deployed):** a librarian can take a published record out of the library in two ways, each requiring the words the owner will read. `request-changes` sends it back exactly like a return (Draft, Changes requested, required comments, safety cleared, shares revoked), for a record that needs fixing. `retire` now requires a reason, stored in Review Comments with the outcome unchanged, for a record that is obsolete or replaced. Owners see either text in My submissions.
 
 ## Consequences
 

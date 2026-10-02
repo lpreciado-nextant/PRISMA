@@ -119,7 +119,7 @@ export function SolutionCard({
           } : { borderTop: "1px solid var(--glass-edge)" }}
         >
           <SubmissionStatus state={publicationStatus} />
-          {managed && manage?.onFeedback && publicationStatus === "Changes requested" && (
+          {managed && manage?.onFeedback && (publicationStatus === "Changes requested" || publicationStatus === "Retired") && (
             <button
               type="button"
               onClick={manage.onFeedback}

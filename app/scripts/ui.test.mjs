@@ -352,10 +352,14 @@ test("review actions require comments on return and independent clearance on app
   assert.match(waiting, /<h2[^>]*>Changes requested<\/h2>.*Review checklist.*Waiting for corrections.*Sent back to the contributor.*Your feedback.*Anonymize it/s);
   assert.doesNotMatch(waiting, /Review decision|Latest review comments|Resubmitted after/);
   // Published: a green block with the optional approval note and an explained, secondary retire action.
-  const live = render(review.ReviewPanel, { ...props, status: "Published", solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved" }, feedback: "Great work", onRetire: noop });
-  assert.match(live, /Review checklist.*<h3[^>]*>Published<\/h3>.*Your note to the contributor.*Great work.*Remove from the library.*Nothing is deleted.*Retire from library/s);
-  assert.doesNotMatch(live, /Review decision|Latest review comments/);
-  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Your note to the contributor|Retire from library/);
+  // Taking it out of the library: request changes or retire, chosen first, each then asking for the owner-facing words.
+  const live = render(review.ReviewPanel, { ...props, status: "Published", solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved" }, feedback: "Great work", onRetire: noop, onRequestChanges: noop });
+  assert.match(live, /Review checklist.*<h3[^>]*>Published<\/h3>.*Your note to the contributor.*Great work.*Need to change it\?.*Request changes.*send it back to the owner.*Retire from library.*Nothing is deleted/s);
+  assert.equal((live.match(/type="radio"/g) ?? []).length, 2);
+  assert.doesNotMatch(live, /<textarea|Review decision|Latest review comments/);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Your note to the contributor|Need to change it/);
+  // Each action appears only when the caller offers it.
+  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published", onRetire: noop }), /send it back to the owner/);
   assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /<textarea|type="checkbox"|Approve &amp; publish|Send back for changes/);
   assert.match(html, /Submission preview · what the contributor submitted/);
@@ -484,6 +488,11 @@ test("my submissions filters by review state and keeps card controls outside the
   assert.doesNotMatch(html, /aria-label="Edit (Pending|Live) one"/);
   assert.equal((html.match(/aria-haspopup="menu"/g) ?? []).length, 4);
   assert.match(html, /role="menu"[^>]*>.*Delete submission/);
+  // A retired record carries the librarian's reason, opened the same way as returned feedback.
+  const retired = render(MySubmissionsView, { entries: [{ solution: { ...base, id: "gone", name: "Gone one", publicationStatus: "Retired", reviewOutcome: "Approved", reviewComments: "Replaced by v2" } }], connected: true });
+  assert.match(retired, /Retired.*aria-label="View feedback for Gone one"/s);
+  const { FeedbackPanel } = await server.ssrLoadModule("/src/components/FeedbackPanel.tsx");
+  assert.match(render(FeedbackPanel, { name: "Gone one", feedback: "Replaced by v2", retired: true, onClose: noop }), /Retired from the library.*Librarian&#x27;s reason.*withdraw it to Draft.*Replaced by v2/s);
 });
 
 test("the feedback panel shows the full librarian comment and the edit action", async () => {
