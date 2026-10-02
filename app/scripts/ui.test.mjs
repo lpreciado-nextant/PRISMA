@@ -395,6 +395,42 @@ test("section cards carry one section-level visibility badge and mixed sections 
   assert.doesNotMatch(render(form.StepShell, { title: "Tag it" }), /Shown to clients/);
 });
 
+test("my submissions filters by review state and keeps card controls outside the open button", async () => {
+  const { MySubmissionsView } = await server.ssrLoadModule("/src/views/MySubmissionsView.tsx");
+  const base = { summary: "Summary", specializationArea: "ai", status: "Working prototype", contributors: [], capabilities: [], technologies: [], industries: [], assets: [] };
+  const entries = [
+    { solution: { ...base, id: "draft", name: "Draft one", publicationStatus: "Draft", reviewOutcome: "None" } },
+    { solution: { ...base, id: "returned", name: "Returned one", publicationStatus: "Draft", reviewOutcome: "Changes requested", reviewComments: "Please anonymize the screenshots." } },
+    { solution: { ...base, id: "pending", name: "Pending one", publicationStatus: "Pending review", reviewOutcome: "None" } },
+    { solution: { ...base, id: "live", name: "Live one", publicationStatus: "Published", reviewOutcome: "Approved" } },
+  ];
+  const html = render(MySubmissionsView, { entries, connected: true, onDelete: async () => {} });
+  for (const [label, total] of [["All", 4], ["Draft", 1], ["Pending review", 1], ["Changes requested", 1], ["Published", 1]]) {
+    assert.match(html, new RegExp(`aria-pressed="${label === "All"}"[^>]*>(<span[^>]*></span>)?${label}<span[^>]*>${total}</span>`));
+  }
+  // A managed card is not itself a button: its title opens it and the controls sit beside that button.
+  assert.doesNotMatch(html, /role="button"/);
+  assert.equal((html.match(/class="card-open/g) ?? []).length, 4);
+  assert.equal((html.match(/aria-label="View feedback for /g) ?? []).length, 1);
+  assert.match(html, /aria-label="View feedback for Returned one"/);
+  assert.doesNotMatch(html, /Please anonymize|View submission/);
+  // Connected Pending review and Published records are withdrawn on their page, not edited from the card.
+  assert.match(html, /aria-label="Edit Draft one"/);
+  assert.match(html, /aria-label="Edit Returned one"/);
+  assert.doesNotMatch(html, /aria-label="Edit (Pending|Live) one"/);
+  assert.equal((html.match(/aria-haspopup="menu"/g) ?? []).length, 4);
+  assert.match(html, /role="menu"[^>]*>.*Delete submission/);
+});
+
+test("the feedback panel shows the full librarian comment and the edit action", async () => {
+  const { FeedbackPanel } = await server.ssrLoadModule("/src/components/FeedbackPanel.tsx");
+  const props = { name: "BI Agent Suites", feedback: "Please anonymize the client information.", onClose: noop };
+  const html = render(FeedbackPanel, { ...props, onEdit: noop });
+  assert.match(html, /Requested changes.*BI Agent Suites.*<p[^>]*>Librarian<\/p>.*Librarian feedback.*Please anonymize.*Edit solution/s);
+  assert.match(html, /aria-label="Close feedback"/);
+  assert.doesNotMatch(render(FeedbackPanel, props), /Edit solution/);
+});
+
 test("the favorites heart sits beside the card button, never inside it, and hides in present mode", () => {
   const solution = { id: "fav-fixture", name: "Fixture", summary: "Summary", specializationArea: "ai", status: "Working prototype", publicationStatus: "Published", contributors: [], capabilities: [], technologies: [], industries: [], assets: [] };
   const html = render(card.SolutionCard, { solution, present: false, index: 0, favoritable: true });

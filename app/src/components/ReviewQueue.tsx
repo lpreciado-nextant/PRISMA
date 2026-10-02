@@ -6,11 +6,11 @@ import { Icon } from "./Icon";
 import { LoadingState } from "./LoadingState";
 import { SelectPicker } from "./SelectPicker";
 import { solutionAreas } from "../lib/areas";
+import { submissionState } from "../lib/submissionState";
 
 const filters = ["Pending review", "Changes requested", "Published"] as const;
 type Entry = { solution: Solution; owner?: string; imageCount?: number; attachmentCount?: number };
-const matches = ({ solution }: Entry, status: string) => status === "Changes requested"
-  ? solution.publicationStatus === "Draft" && solution.reviewOutcome === status : solution.publicationStatus === status;
+const matches = ({ solution }: Entry, status: string) => submissionState(solution) === status;
 
 export function ReviewPanel({ status, owner, client, context, feedback, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, children }: {
   status: string; owner?: string; client?: string; context?: string; feedback?: string; comments: string; onComments: (value: string) => void;

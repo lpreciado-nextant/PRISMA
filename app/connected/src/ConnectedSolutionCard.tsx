@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { SolutionCard } from "../../src/components/SolutionCard";
+import { SolutionCard, type CardManagement } from "../../src/components/SolutionCard";
 import type { Solution } from "../../src/types";
 import { workflowApi, readRows, publishedDetails } from "./dataSource";
 import { loadSubmissionCardDetails, type PublishedDetail } from "./workflow";
@@ -12,7 +12,7 @@ type CardDetails = { media: MediaItem[]; names: string[]; technologies?: string[
 const publishedCard = (detail: PublishedDetail, present: boolean): CardDetails => ({ media: detail.media, names: present ? [] : detail.contributors.map(person => person.name) });
 const publishedThumbnail = (detail: PublishedDetail | undefined) => detail?.media.find(item => item.kind === "thumbnail" && item.complete) ?? null;
 
-export function ConnectedSolutionCard({ solution, present, index, owned = false, onOpen, favorite, thumbnail: known }: { solution: Solution; present: boolean; index: number; owned?: boolean; onOpen?: () => void; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void }; thumbnail?: MediaItem | null }) {
+export function ConnectedSolutionCard({ solution, present, index, owned = false, onOpen, favorite, thumbnail: known, manage }: { solution: Solution; present: boolean; index: number; owned?: boolean; onOpen?: () => void; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void }; thumbnail?: MediaItem | null; manage?: CardManagement }) {
   const container = useRef<HTMLDivElement>(null);
   const intent = useRef<number | undefined>(undefined);
   // The catalogue graph's thumbnail (or its confirmed absence) replaces the per-card detail read.
@@ -57,7 +57,7 @@ export function ConnectedSolutionCard({ solution, present, index, owned = false,
     onFocus: prefetch,
   })}>
     <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet", technologies: details?.technologies ?? solution.technologies }} present={present} index={index} onOpen={onOpen} showPublicationStatus={owned} catalogueOnly={!owned} contributorNames={details?.names}
-      favoritable={!owned && !present && !!favorite} favorite={favorite}
+      favoritable={!owned && !present && !!favorite} favorite={favorite} manage={owned ? manage : undefined}
       poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage key={thumbnail.id} item={thumbnail} className="h-full w-full object-cover" /></div>} />
     {error && <p role="status" className="mt-2 text-[12px] text-(--ink-2)">Card details unavailable.</p>}
   </div>;

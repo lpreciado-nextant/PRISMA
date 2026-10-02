@@ -1,6 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { SolutionStatus, SpecializationArea } from "../types";
 import { AREAS } from "../data/catalogueMetadata";
+import type { SubmissionState } from "../lib/submissionState";
+import { Icon } from "./Icon";
 
 const STATUS_COLOR: Record<SolutionStatus, string> = {
   "Idea / concept": "var(--idea)",
@@ -27,6 +29,25 @@ export function StatusPill({ status }: { status: SolutionStatus }) {
   );
 }
 
+const SUBMISSION_COLOR: Record<SubmissionState, string> = {
+  Draft: "var(--ink-3)",
+  "Pending review": "var(--accent)",
+  "Changes requested": "var(--proto)",
+  Published: "var(--live)",
+  Retired: "var(--ink-3)",
+};
+
+/** Review state of an owned submission; deliberately text-weight, separate from the maturity pill on the poster. */
+export function SubmissionStatus({ state }: { state: SubmissionState }) {
+  const color = SUBMISSION_COLOR[state];
+  return (
+    <span className="inline-flex items-center gap-2 text-[13px] font-semibold" style={{ color }}>
+      {state === "Changes requested" ? <Icon name="alert" size={14} /> : <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />}
+      {state}
+    </span>
+  );
+}
+
 /** `short` shows the area initials (AI, DS, IBO) where space is tight; the full name stays in the tooltip and for screen readers. */
 export function AreaTag({ area, size = "sm", short = false }: { area: SpecializationArea; size?: "xs" | "sm" | "md"; short?: boolean }) {
   const meta = AREAS[area];
@@ -49,11 +70,14 @@ export function Chip({
   onClick,
   active = false,
   title,
+  pressed,
 }: {
   children: ReactNode;
   onClick?: () => void;
   active?: boolean;
   title?: string;
+  /** Exposes a toggle state for filter chips; removable chips leave it unset. */
+  pressed?: boolean;
 }) {
   const className =
     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12.5px] font-medium transition-colors duration-200";
@@ -77,7 +101,7 @@ export function Chip({
     );
   }
   return (
-    <button type="button" onClick={onClick} className={`${className} cursor-pointer hover:brightness-110`} style={style} title={title}>
+    <button type="button" onClick={onClick} aria-pressed={pressed} className={`${className} cursor-pointer hover:brightness-110`} style={style} title={title}>
       {children}
     </button>
   );

@@ -1,11 +1,21 @@
 import { useRef, useState } from "react";
 import type { Solution } from "../types";
-import { SolutionCard } from "../components/SolutionCard";
+import { SolutionCard, type CardManagement } from "../components/SolutionCard";
+import { Chip } from "../components/Badges";
 import { Icon } from "../components/Icon";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { OverflowMenu } from "../components/OverflowMenu";
+import { FeedbackPanel } from "../components/FeedbackPanel";
 import { navigate } from "../lib/router";
+import { submissionState } from "../lib/submissionState";
 
-export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number) => React.ReactNode }) {
+const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published"] as const;
+type Filter = typeof FILTERS[number];
+const matches = (solution: Solution, filter: Filter) => filter === "All" || submissionState(solution) === filter;
+
+export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode }) {
+  const [filter, setFilter] = useState<Filter>("All");
+  const [feedbackTarget, setFeedbackTarget] = useState<Solution | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Solution | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
@@ -24,6 +34,21 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       setDeleting(false);
     }
   };
+  const edit = (solution: Solution) => onEdit ? onEdit(solution) : navigate(`/submit/${solution.id}`);
+  // Connected Pending review and Published records are not edited in place: they are withdrawn from their submission page.
+  const editable = (solution: Solution) => !connected || solution.publicationStatus === "Draft";
+  const manage = (solution: Solution): CardManagement => {
+    const name = solution.name || "Untitled solution";
+    return {
+      onFeedback: submissionState(solution) === "Changes requested" && solution.reviewComments ? () => setFeedbackTarget(solution) : undefined,
+      actions: <>
+        {editable(solution) && <button type="button" aria-label={`Edit ${name}`} onClick={() => edit(solution)} className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1 text-[13px] font-semibold" style={{ color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 40%, transparent)", background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}><Icon name="edit" size={14} />Edit</button>}
+        {onDelete && <OverflowMenu label={`More actions for ${name}`} items={[{ label: "Delete submission", icon: "trash", onSelect: () => { setDeleteError(""); setDeleteTarget(solution); } }]} />}
+      </>,
+    };
+  };
+  const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
+  const visible = entries.filter(({ solution }) => matches(solution, filter));
   return <div className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
     <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-5" style={{ borderColor: "var(--glass-edge)" }}>
       <div>
@@ -37,16 +62,27 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     {!entries.length ? <div className="py-20 text-center">
       <h2 className="text-[20px]">No submissions yet</h2>
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>No saved drafts or submitted solutions.</p>
-    </div> : <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      {entries.map(({ solution }, index) => <article key={solution.id} className="min-w-0">
-        {renderCard ? renderCard(solution, index) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />}
-        <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-          <button className="inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px] font-semibold" style={{ borderColor: "var(--glass-edge)" }} onClick={() => onEdit ? onEdit(solution) : navigate(`/submit/${solution.id}`)}><Icon name="file" />{connected && solution.publicationStatus !== "Draft" ? "View submission" : "Edit submission"}</button>
-          {onDelete && <button type="button" aria-label={`Delete ${solution.name}`} title="Delete submission" className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-lg border" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }} onClick={() => { setDeleteError(""); setDeleteTarget(solution); }}><Icon name="trash" /></button>}
-        </div>
-        {solution.reviewComments && <div className="mt-3 border-l-2 pl-3" style={{ borderColor: "var(--proto)" }}><h2 className="text-[13px] font-semibold">Librarian feedback</h2><p className="mt-1 whitespace-pre-wrap break-words text-[14px]" style={{ color: "var(--ink-2)" }}>{solution.reviewComments}</p></div>}
-      </article>)}
-    </div>}
+    </div> : <>
+      <div role="group" aria-label="Filter by status" className="mt-5 flex flex-wrap items-center gap-2">
+        {FILTERS.map(option => {
+          const total = count(option);
+          return <Chip key={option} active={filter === option} pressed={filter === option} onClick={() => setFilter(option)}>
+            {option === "Changes requested" && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--proto)" }} />}
+            {option}
+            <span className="font-mono text-[11px] opacity-75">{total}</span>
+          </Chip>;
+        })}
+      </div>
+      {!visible.length ? <div className="py-16 text-center">
+        <h2 className="text-[20px]">No submissions in this status</h2>
+        <button type="button" className="mt-3 cursor-pointer text-[14px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => setFilter("All")}>Show all submissions</button>
+      </div> : <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0">
+          {renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />}
+        </article>)}
+      </div>}
+    </>}
+    {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} onClose={() => setFeedbackTarget(null)} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
     {deleteTarget && <ConfirmDialog title="Delete submission?" confirmLabel={deleting ? "Deleting..." : "Delete submission"} busy={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete}>
       <p className="break-words text-[14px]">Permanently delete "{deleteTarget.name}" and its attached media from {connected ? "Dataverse" : "this browser"}? This cannot be undone.{deleteTarget.publicationStatus === "Published" ? " It will also be removed from the library and published access revoked." : ""}</p>
       {deleteError && <p role="alert" className="mt-3 text-[14px]">{deleteError}</p>}

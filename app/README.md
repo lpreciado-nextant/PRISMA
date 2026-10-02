@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
 **Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API, plug-in tracing and on-demand contributor screens were deployed and published on 2026-09-30, followed the same day by graph card thumbnails, shared detail reads and blur-only glass. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-02
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -22,7 +22,7 @@ The point of this PoC is the **experience**, not the data. Everything renders fr
 | Searchable Person field by name/email, keyboard selection and duplicate prevention | `src/views/SubmitView.tsx` |
 | Captioned screenshot gallery (`nx_solutionimage`) on the detail page | `src/views/DetailView.tsx` |
 | Six-step safety-first form, required detail images, optional thumbnail and local media | `src/views/SubmitView.tsx` |
-| My submissions, inspection, editing and confirmed owner-only deletion; no welcome page | `src/views/MySubmissionsView.tsx`, `src/App.tsx` |
+| My submissions workspace (status filters, Edit + ••• delete menu, librarian feedback panel), inspection, editing and confirmed owner-only deletion; no welcome page | `src/views/MySubmissionsView.tsx`, `src/App.tsx` |
 | Browser-persisted drafts/media and publish/return lifecycle | `src/lib/submissions.ts` |
 | Librarian queue, inspection, required return comments and explicit approval | `src/views/ReviewView.tsx` |
 | Searchable tag pickers with case-insensitive technology deduplication | `src/views/SubmitView.tsx` |

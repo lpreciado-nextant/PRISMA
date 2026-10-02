@@ -1,6 +1,6 @@
 # Contribution & review workflow
 
-**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain · **Last updated:** 2026-10-01
+**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain; My submissions redesigned as a status-filtered workspace · **Last updated:** 2026-10-02
 **Source:** [End-to-end design §3.1](../design/end-to-end-design.md#31-contribution--publication) · Roles: [Contributor, Librarian](../design/end-to-end-design.md#2-users-and-roles)
 
 ## Lifecycle
@@ -93,6 +93,8 @@ Guided multi-step form with draft saving at every step. **Friction budget: under
 
 On submit the record moves to *Pending review*. Production will notify the librarian (Power Automate); the PoC does not. Contributors inspect and edit their records at `#/my-submissions`, with editing at `#/submit/:id`. **Save draft & close** is available at every step and permits incomplete fields without publishing or entering the review queue. Drafts open directly in the editor; pending and published records can also be edited. The library remains the first screen; no welcome page. The local librarian workspace is available at `#/review`.
 
+**My submissions** is a management workspace shared by both apps. Status chips (All, Draft, Pending review, Changes requested, Published, each with its count) only change which cards show; Changes requested is a Draft whose last outcome was a return, and the chip carries a subtle amber dot while any exist. Each card keeps its maturity pill on the poster and shows the review state in its own band above the footer: grey Draft, blue Pending review, amber warning Changes requested, green Published. The whole card opens the record (its title is the open button, so card controls never nest inside it). The footer holds **Edit** plus a **•••** menu containing **Delete submission**; connected Pending review and Published cards omit Edit because they are withdrawn from their submission page. A returned card shows **View feedback**, which opens a right-side panel with the solution name, the librarian's full comment and **Edit solution**; the comment is not printed on the card. Neither app stores a feedback date or reviewer name, so the panel shows "Librarian" alone.
+
 In the local PoC, **My submissions** also offers deletion of the current user's saved records in any publication state. Confirmation names the record and warns that deletion is permanent; published records are also removed from the library. The IndexedDB transaction checks the stored owner before removing the complete record and its embedded media. The UI removes the card only after commit; failure leaves it available for retry. Cancellation changes nothing. This is browser-local ownership checking, not production authorization; no Dataverse deletion policy or permissions are provisioned by this feature.
 
 Connected **My submissions** uses the same confirmation and card interaction with a separate controlled Dataverse deletion contract: caller ownership, displayed exact version, publication-share revocation and parent/child/media/session cleanup. Shared references remain intact. An uncertain response requires refresh before another attempt. Privileged Draft deletion passed both backend smoke and browser Cancel/confirm/refresh checks; all-state policy tests do not replace pending least-privilege acceptance.
@@ -122,7 +124,7 @@ Dedicated `reviewOutcome` (None / Changes requested / Approved) and `reviewComme
 
 Legacy browser records carrying the former `changesRequested` envelope key are normalized on load. Their feedback is copied from Library Notes without deleting the original notes; unmarked notes are not assumed to be feedback. The new shape persists on the next explicit save. No live Dataverse migration occurs.
 
-Approval adds the local record to the published catalogue. Return comments appear in My submissions and the editor. The queue is a simulated librarian surface available to local evaluators, not role enforcement. Production authorization still requires Dataverse security. Present mode blocks review and contributor routes and removes internal notes before rendering published records.
+Approval adds the local record to the published catalogue. Return comments appear in the My submissions feedback panel and the editor. The queue is a simulated librarian surface available to local evaluators, not role enforcement. Production authorization still requires Dataverse security. Present mode blocks review and contributor routes and removes internal notes before rendering published records.
 
 Detailed steps in the [librarian runbook](../operations/librarian-runbook.md). At review the librarian enforces:
 
