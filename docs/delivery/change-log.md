@@ -1,12 +1,13 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-01
+**Status:** Living · **Last updated:** 2026-10-02
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Mostly |
 |---|---|---|
+| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | Mostly Proposed; required fields and review look and feel Live |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | Live; hosted UI not yet checked |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity | Mostly Proposed; three In code |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | All Proposed — nothing built yet |
@@ -14,6 +15,8 @@ One entry per meeting or working session, newest first. Each entry lists the fee
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | Mostly Live; one Proposed, one Dropped |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
+- Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
+- Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Top 3 shelf vs. Newest First default: how a solution should be visible in both without the shelf crowding out new content ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Relative date buckets (Today / This Week / Last Week / 2 Weeks Ago / Last Month / Last Year) vs. the compact `createdon` age tag ("3d/2w/4mo/1yr") in code since `64c1ac2` ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Demo viewing: full-screen is now in code as the primary pattern (Pop out stays for hosted URLs); confirm, and whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
@@ -56,6 +59,48 @@ When a decision above gets resolved, delete its bullet here and update the match
 ```
 
 ---
+
+## 2026-10-01 — Feedback session with Natalia and Andrés: governance, capabilities and review
+
+**Attendees:** Natalia, Andrés
+
+### Feedback
+
+- Publishing needs a formal approval workflow and governance model: who owns, submits, reviews, approves and maintains each solution, and what quality bar content must meet.
+- The approver should be the Capability Owner for the solution, and PRISMA should use the official capability framework the organization is defining.
+- Capture lessons learned and insights (blockers, recommendations, implementation notes), not just the solution itself.
+- Track how solutions were built: tools used and whether AI contributed, with analytics later.
+- Adoption needs a rollout plan, a user guide, training material and in-form guidance for classifying solutions.
+- Redefine which submission fields are required, and improve the look and feel of the librarian review.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| **High** · Define the approval process (Librarian role); proposed approver is the Capability Owner | Proposed | Today the PRISMA Librarian role approves ([runbook](../operations/librarian-runbook.md)). Capability Owner as approver depends on the next row; who sees the approver is [decision log Q17](decision-log.md) |
+| **High** · Associate each solution with its Capability Owner | Proposed | `nx_capability` has no owner today; [decision log Q15](decision-log.md) |
+| **High** · Align capabilities with the official organization framework | Proposed | Capabilities are governed reference data ([reference-data governance](../data_model/reference-data-governance.md)); load the official list when it is defined |
+| **High** · Define the content governance model (ownership, submission, review, approval, maintenance) | Proposed | Builds on [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [content health](../operations/content-health.md) runbook |
+| **High** · Define content quality standards | Proposed | The review checklist's Review points list today's publication requirements; quality criteria beyond completeness still to define |
+| **High** · Capture lessons learned and insights | Proposed | New content (blockers, recommendations, implementation notes); needs a schema decision |
+| **Medium** · Adoption strategy; user guide; training videos and onboarding | Proposed | Rollout and enablement material, outside the app |
+| **Medium** · Contextual guidance in forms for classifying solutions and capabilities | Proposed | Builds on the step introductions and field hints already in the submit flow |
+| **Medium** · Content curation: may Capability Owners correct metadata before publication? | Proposed | Today librarians cannot edit contributor content; they return it with comments |
+| **Medium** · Track tools used to build the solution (Copilot, Cowork, GitHub Copilot, …) and whether AI was used | Proposed | New fields; needs a schema decision |
+| **Medium** · Review whether one capability per solution is enough | Proposed | `nx_capability` is a single lookup today ([SchemaV2](../data_model/SchemaV2.md)) |
+| **Medium** · Retrieve roles from Azure AD instead of manual entry | Proposed | Evaluate against the contributor and client role fields |
+| **Medium** · Effort metadata: whether to capture and show minimum effort estimates | Proposed | Continues the open effort decision from [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) |
+| **Low** · Adoption analytics (usage, contribution rates, capability coverage) and AI tool analytics | Proposed | Note: analytics dashboards are out of scope for v1 (AGENTS.md); confirm before building |
+| Redefine required fields in the submission form | Live | One legend per step ("* Required to submit for review. To save a draft, only the solution name is needed."), the same accessible asterisk on every required field and "(optional)" on the rest. `98b88a7`, published 2026-10-02 ([app README](../../app/README.md#required-and-optional-field-marks-2026-10-02)) |
+| Improve the librarian review look and feel | Live | Review panel (status → checklist → one decision at a time), Review points, review queue filters and state-coloured cards, "Waiting for corrections" and Published blocks. `5460e95`, `ee8dc31`, `e2ca558`, published 2026-10-02 ([runbook](../operations/librarian-runbook.md)). Sending a published record back for changes and a retire reason are In code on `feature/published-changes`, waiting for the signed plug-in ([decision log Q18](decision-log.md)) |
+
+### Open decisions
+
+- Who approves: the PRISMA Librarian role, the Capability Owner, or both; and who may see the approver's name (Q15, Q17)
+- Whether Capability Owners may edit metadata before publication
+- Schema for lessons learned, tools used and AI usage
+- One capability per solution, or several
+- Whether adoption and AI-tool analytics fit v1 scope
 
 ## 2026-10-01 — Working session: Top 3 save counts and card sizing
 
