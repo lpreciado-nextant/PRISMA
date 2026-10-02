@@ -9,12 +9,13 @@ One entry per meeting or working session, newest first. Each entry lists the fee
 |---|---|---|
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | Mostly Proposed; required fields and review look and feel Live |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | Live; hosted UI not yet checked |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity | Mostly Proposed; three In code |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | Mostly Proposed; three In code |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | All Proposed — nothing built yet |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | All Live |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | Mostly Live; one Proposed, one Dropped |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
+- Presentation download format and contents (PR-027); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Top 3 shelf vs. Newest First default: how a solution should be visible in both without the shelf crowding out new content ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
@@ -156,12 +157,18 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-024 "What It Does" optimization | Proposed | Medium priority |
 | PR-025 "Why It Matters" enhancement | Proposed | Medium priority |
 | PR-026 Business-value-first ordering | Proposed | Medium priority |
+| PR-027 Download a presentation with each solution's material | Proposed | Added 2026-10-02 from the meeting notes. A per-solution deck (summary, value, screenshots, links to demos) for CSMs to take into client conversations. Must use present-mode-safe content only (redacted context, no builder credits or internal notes) |
+| PR-028 Library filter by demo | Proposed | Added 2026-10-02. Narrow the library to solutions that have a demo (attachment or linked asset), and possibly by demo type |
+| PR-029 Remove Allocation from contributor effort | Proposed | Added 2026-10-02. Calendar-mode effort asks for start date, end date and Allocation (%); removing it changes how hours are derived, so it touches [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) and the open effort decision from [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) |
+| PR-030 Solution-to-Project as true N:N in the app | Proposed | Added 2026-10-02. Dataverse already models Solution ↔ Project as a native N:N ([SchemaV2](../data_model/SchemaV2.md)), but the connected form allows only one project ("Project (choose one)", `projectIds.length <= 1` in `DraftsView.tsx`/`DraftGraphEditor.tsx`). Allow several projects and show them on the detail page; check the graph plug-in accepts more than one |
 
 ### Open decisions
 
 - How a solution stays visible in the main feed while the Top 3 shelf is also shown (PR-018/PR-019) — no mechanism agreed yet.
 - Exact relative-date bucket wording and thresholds (PR-017) vs. the shorter age format already shipped.
 - Scope of the tag-contrast pass (PR-020/021/022): specialization-area badges only, or all tag/category types.
+- Presentation download (PR-027): format (PowerPoint or PDF), template, and which fields and media it includes.
+- Without Allocation (PR-029), how calendar-mode effort is calculated, or whether calendar mode stays at all.
 
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
