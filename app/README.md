@@ -469,6 +469,10 @@ The setting takes effect in the hosted app after publishing. See the [Microsoft 
 
 ## Connected PRISMA target
 
+### Published-record changes and retire reason (2026-10-02)
+
+Luis, who holds the signing certificate, fast-forwarded `origin/main` to `feature/published-changes` (`69b42ac`), pushed the signed plug-in and then published the connected app. The deployment details (bundle, version link) were not recorded here. On a published record the review panel's **Need to change it?** offers **Request changes** (back to Draft + Changes requested with required comments) and **Retire from library** with a required reason; owners see either text in My submissions. The user confirmed in the published app that Request changes works.
+
 ### Required and optional field marks (2026-10-02)
 
 At the user's request, from `origin/main` `98b88a7` (lint, both builds, 87 connected, 39 PoC and 31 UI tests passed; no newer teammate commits on `origin`), the connected app was published to the same app and solution ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1790979899196), bundle `index-BlKHM9Sl.js`; three push attempts failed on intermittent DNS for the environment API host before one succeeded). Each submission step with fields explains the required asterisk; every required field uses the same accessible mark, and optional fields say "(optional)". No plug-in, schema or PoC data change. The hosted app has not been checked yet.

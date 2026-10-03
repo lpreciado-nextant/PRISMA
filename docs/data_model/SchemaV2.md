@@ -307,8 +307,8 @@ At submit and publication, synchronously validate authored name (not the reserve
 | Submit | Contributor with edit rights on Draft/Pending review/Published record; Librarian | Pending review after full validation; Client Safe Reviewed false; retain latest review outcome/comments |
 | Return | Librarian, Pending review only | Draft; Review Outcome Changes requested; nonblank Review Comments (maximum 4000); both safety booleans false |
 | Approve | Librarian, Pending review only | Full validation plus independent client-safe confirmation; Published; Client Safe Reviewed true; Review Outcome Approved; replace Review Comments, or clear when blank |
-| Request changes (published) | Librarian, Published only | Implemented 2026-10-02, plug-in not yet deployed. Same result as Return: Draft; Review Outcome Changes requested; nonblank Review Comments (maximum 4000); both safety booleans false; reader shares revoked |
-| Retire | Librarian, Published only | Retired; nonblank reason (maximum 4000) replaces Review Comments, Review Outcome unchanged; Client Safe Reviewed false; reader shares revoked. Reason required since 2026-10-02 (plug-in not yet deployed) |
+| Request changes (published) | Librarian, Published only | Live since 2026-10-02. Same result as Return: Draft; Review Outcome Changes requested; nonblank Review Comments (maximum 4000); both safety booleans false; reader shares revoked |
+| Retire | Librarian, Published only | Retired; nonblank reason (maximum 4000) replaces Review Comments, Review Outcome unchanged; Client Safe Reviewed false; reader shares revoked. Reason required since 2026-10-02 (live) |
 
 The Changes requested queue is `Publication Status = Draft AND Review Outcome = Changes requested`. After resubmission the latest outcome may still be Changes requested, but the record belongs in Pending review. An edited formerly approved record may retain outcome Approved while being Draft/Pending and not client-safe-reviewed. Approval is determined only by the current publication/safety fields. Read-only opening of an editor changes nothing. Retirement/reactivation is a separate librarian operation, not an implicit save/submit path.
 
