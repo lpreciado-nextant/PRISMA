@@ -1,6 +1,6 @@
 # Demo assets
 
-**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain; asset purpose sections (ADR-0011) in code, awaiting the plug-in deploy. · **Last updated:** 2026-10-06
+**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain; asset purpose sections and Demo filter (ADR-0011) live 2026-10-06. · **Last updated:** 2026-10-06
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**

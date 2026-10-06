@@ -7,7 +7,8 @@ import { Icon } from "./Icon";
 import { Poster, PosterTint } from "./Poster";
 
 const HIDDEN_KEY = "prisma.top10.hidden";
-const LIMIT = 10;
+/** Agreed 2026-10-06 (PR-018): the shelf is a Top 5, though `nx_GetTopFavorites` still ranks ten. */
+const LIMIT = 5;
 
 function readFlag(key: string): boolean {
   try { return localStorage.getItem(key) === "true"; } catch { return false; }
@@ -21,7 +22,7 @@ type Favorite = { saved: boolean; pending?: boolean; onToggle: () => void };
 /**
  * "Most saved by the team" ranking, Netflix Top 10 style: horizontal cards (the
  * thumbnail left; the title beside a corner "♥ 12" on top, the summary centred below) with a
- * large gradient rank numeral behind each one. Shows the top ten in a carousel.
+ * large gradient rank numeral behind each one. Shows the top five in a carousel.
  * Order and the "♥ 12" save counts come from the caller.
  */
 export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: {

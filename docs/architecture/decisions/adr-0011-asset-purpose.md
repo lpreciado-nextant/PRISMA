@@ -1,6 +1,6 @@
 # ADR-0011 — Asset purpose on demo assets
 
-**Status:** Accepted. Column created in `PRISMA_Dev` 2026-10-06; plug-in change pushed (`b613493`), awaiting signed deploy; app changes (sectioned Media step, Demo facet, grouped solution page) in code, to publish after the plug-in. No backfill: existing rows are test data to be deleted.
+**Status:** Accepted. Column created in `PRISMA_Dev` 2026-10-06; plug-in (`b613493`) deployed and connected app (`6d39c65`) published 2026-10-06; verified by the user with a new solution. No backfill: existing rows are test data to be deleted.
 **Date:** 2026-10-06
 **Last updated:** 2026-10-06
 

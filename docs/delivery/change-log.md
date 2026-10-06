@@ -11,16 +11,16 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 |---|---|---|
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 13% — 2 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 65% — 9 Live, 1 In code, 1 Done in Dataverse / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 14% — 2 Live / 14 |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 77% — 11 Live, 1 In code / 15 |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 21% — 3 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
-- Top 3 shelf vs. new-content visibility (PR-018); manual contrast sign-off (PR-020); One-Liner standardization, still a generic field (PR-023); presentation download format and contents (PR-027); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
+- One-Liner standardization, still a generic field (PR-023); presentation download format and contents (PR-027); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
-- Demo viewing (PR-004/005/006): full-screen is now in code as the primary pattern (Pop out stays for hosted URLs); confirm, and whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Demo viewing (PR-006): full screen (PR-004) and new-tab links (PR-005) are live; whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Workstream/project mapping (PR-013) — not scoped, future release only; the time-tracking row (PR-012) was resolved as the library time filter ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Favorites ranking: whether to also count views/demo requests, and visibility in present mode ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux))
@@ -131,7 +131,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 
 **Attendees:** Sebastian, …
-**Progress:** 65% — 9 Live, 1 In code, 1 Done in Dataverse, 4 Proposed / 15
+**Progress:** 77% — 11 Live, 1 In code, 3 Proposed / 15
 
 ### Feedback
 
@@ -155,9 +155,9 @@ When a decision above gets resolved, delete its bullet here and update the match
 |---|---|---|
 | PR-016 Published date on solution cards | 🟢 Live | Shipped as a compact age label ("3d/2w/4mo/1yr") with full date on hover, in `64c1ac2`, verified ancestor of every subsequent publish |
 | PR-017 Relative date labels (Today/This Week/Last Week/2 Weeks Ago/Last Month/Last Year) | 🟢 Live | `64c1ac2` ships only the shorter age format; the literal exact-bucket wording was never built — a lighter solution was accepted in its place |
-| PR-018 Keep Top 3 featured section | Proposed | Shelf already exists ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux)); still not decided whether it needs to change to avoid crowding out new content |
+| PR-018 Keep Top 3 featured section | In code | Shelf already exists ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux)). Decided 2026-10-06: keep it as a general **Top 5** (it showed up to ten). App-only change: `TopTenRow` shows the first five of the `nx_GetTopFavorites` ranking, which still returns up to ten; no plug-in deploy. New content stays visible through the default Newest-first sort (PR-019) and the "Added within" time filter |
 | PR-019 New-content visibility in default view | 🟢 Live | `LibraryView.tsx` default sort is `"newest"` (by `createdon`); confirmed no separate mechanism exists or was asked for beyond that |
-| PR-020 Tag color accessibility | In code | Contrast targets (≥4.7:1) are documented in the [design system](../design/design-system.md#design-tokens) and an automated axe-core pass found no violations, but [accessibility.md](../design/accessibility.md) itself flags manual contrast verification on glass surfaces as still pending |
+| PR-020 Tag color accessibility | 🟢 Live | Contrast targets (≥4.7:1) are documented in the [design system](../design/design-system.md#design-tokens), the stronger tag fills are published (PR-021/022) and an automated axe-core pass found no violations. Accepted as live by the user on 2026-10-06; the manual contrast check on glass surfaces stays on the [accessibility](../design/accessibility.md) checklist |
 | PR-021 Enhanced tag styling (fills/borders/stronger colors) | 🟢 Live | `64c1ac2` raises the specialization-area `AreaTag` tint from 11% to 17%; no other tag/badge type received equivalent treatment |
 | PR-022 Dark-mode tag readability review | 🟢 Live | Same commit (`7b83ef4`) already credited as Live under [2026-10-01 — Top 3 save counts and card sizing](#2026-10-01--working-session-top-3-save-counts-and-card-sizing); not separate work |
 | PR-023 One-Liner standardization | Proposed | The "One-line summary" field (200-char max) predates this session by a week (`d027276`, 2026-09-22); no standardization work followed |
@@ -165,14 +165,12 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-025 "Why It Matters" enhancement | 🟢 Live | `448d02b` (published 2026-10-06): the detail panel "Why it matters" is now titled "Business value", matching the `businessValue` field and the form label |
 | PR-026 Business-value-first ordering | 🟢 Live | Accepted 2026-10-06 as covered by the "What the solution does" / "Business value" pairing (`448d02b`); no separate reordering of the detail page |
 | PR-027 Download a presentation with each solution's material | Proposed | Added 2026-10-02 from the meeting notes. A per-solution deck (summary, value, screenshots, links to demos) for CSMs to take into client conversations. Must use present-mode-safe content only (redacted context, no builder credits or internal notes) |
-| PR-028 Library filter by demo | Done in Dataverse | Added 2026-10-02. Clarified 2026-10-06: CSMs mean a **demo video**, and a solution can have several. Decided in [ADR-0011](../architecture/decisions/adr-0011-asset-purpose.md): new choice `nx_demoasset.nx_assetpurpose` (Demo video · Interactive demo · Supporting material), set by the section of the submit Media step a file goes in. Column created 2026-10-06. Plug-in change written and tested (format default on new attachments, optional purpose on links and media metadata, `demoVideos`/`interactiveDemos` in the catalogue graph); pushed in `b613493`, awaiting Luis's signed deploy. No backfill: the 14 existing assets are test data to be deleted. App in code: Media step in three sections (Demo videos · Interactive demo · Supporting material), a **Demo** facet (Demo video, Interactive demo) in the library filters, solution page grouped by purpose with the first demo video as main demo. Publish the app only after the plug-in deploy ([demo assets](../workflows/demo-assets.md#purpose-demo-video-interactive-demo-supporting-material)) |
+| PR-028 Library filter by demo | 🟢 Live | Added 2026-10-02. Clarified 2026-10-06: CSMs mean a **demo video**, and a solution can have several. Decided in [ADR-0011](../architecture/decisions/adr-0011-asset-purpose.md): new choice `nx_demoasset.nx_assetpurpose` (Demo video · Interactive demo · Supporting material), set by the section of the submit Media step a file goes in. Column created 2026-10-06. Plug-in change written and tested (format default on new attachments, optional purpose on links and media metadata, `demoVideos`/`interactiveDemos` in the catalogue graph); pushed in `b613493` and deployed by Luis 2026-10-06 (`nx_GetCatalogueGraph` returns `purposes: true`). No backfill: the 14 existing assets are test data to be deleted. App `6d39c65` published 2026-10-06: Media step in three sections (Demo videos · Interactive demo · Supporting material), a **Demo** facet (Demo video, Interactive demo) in the library filters, solution page grouped by purpose with the first demo video as main demo. Verified by the user in the hosted app with a new solution ([demo assets](../workflows/demo-assets.md#purpose-demo-video-interactive-demo-supporting-material)) |
 | PR-029 Remove Allocation from contributor effort | Proposed | Added 2026-10-02. Calendar-mode effort asks for start date, end date and Allocation (%); removing it changes how hours are derived, so it touches [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) and the open effort decision from [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) |
 | PR-030 Solution-to-Project as true N:N in the app | 🟢 Live | Added 2026-10-02. Dataverse already models Solution ↔ Project as a native N:N ([SchemaV2](../data_model/SchemaV2.md)). 2026-10-06: the connected form's "Projects" picker now keeps every selection (no more last-one-wins, multi-project alert or Save/Continue/Submit block). No plug-in change needed: `nx_SaveDraftGraph` already syncs up to 100 project links and `nx_GetPublishedDetail` returns all of them; the detail page already lists them under "Delivered for · N". Published in `fa2ebf4` |
 
 ### Open decisions
 
-- How a solution stays visible in the main feed while the Top 3 shelf is also shown, and whether PR-018 needs to change to avoid crowding out new content.
-- Manual contrast verification on glass surfaces (PR-020) — automated checks pass, but [accessibility.md](../design/accessibility.md) marks manual sign-off pending.
 - One-Liner standardization (PR-023): still a generic pre-existing field, no dedicated content-design work done yet.
 - Presentation download (PR-027): format (PowerPoint or PDF), template, and which fields and media it includes.
 - Without Allocation (PR-029), how calendar-mode effort is calculated, or whether calendar mode stays at all.
@@ -180,7 +178,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 14% — 2 Live, 12 Proposed / 14
+**Progress:** 21% — 3 Live, 11 Proposed / 14
 
 ### Feedback
 
@@ -205,7 +203,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-002 Tool URL field | Proposed | High priority |
 | PR-003 Prototype URL field | Proposed | High priority |
 | PR-004 Full-screen demo/prototype view | 🟢 Live | 2026-10-01: Full screen button in every viewer (browser full screen, or the stage expanded over the PRISMA chrome when the Power Apps host forbids it). In Local Play the host granted full screen and the demo filled the monitor. See [Demo assets](../workflows/demo-assets.md#viewer-routes) |
-| PR-005 Open demo/prototype in a new tab | Proposed | High priority |
+| PR-005 Open demo/prototype in a new tab | 🟢 Live | Every published solution page has **Copy link** (Luis, `e6f4c92` and `7237ea3`, 2026-09-30): a play link carrying `?route=/s/{id}` that opens that solution directly, in a new tab or for a colleague, with the usual sign-in and access checks ([ADR-0003](../architecture/decisions/adr-0003-hash-routing.md)). Hosted demo URLs also keep **Pop out** (new tab) in the viewer |
 | PR-006 Demo modal/popup view | Proposed | Medium priority. Likely redundant with full-screen/new-tab — see open decisions |
 | PR-007 Reduce chrome around the demo viewer | Proposed | High priority |
 | PR-008 User feedback capture (comments/suggestions) | Proposed | Medium priority |
@@ -214,11 +212,11 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-011 Complexity classification (Small / Medium / Large) | Proposed | Medium priority. Alternative or complement to duration bands above |
 | PR-012 Time-tracking system integration | 🟢 Live | Resolved 2026-10-06 as a time filter in the library: an "Added: …" picker beside "Sort by" with Any time / Last 30 days / Last 3 months / Last 6 months / Last 12 months, each showing how many solutions it leaves. Filters on creation date (`createdon`), months counted as calendar months back from today; kept in the URL (`added=3m`). `6e0b314`, `8a7b544`, published 2026-10-06 ([design system](../design/design-system.md#library-page)). Integration with an external time-tracking system is not part of this |
 | PR-013 Solution-to-workstream/project mapping | Proposed | Low priority · Backlog. Prerequisite if an external time-tracking integration is ever pursued |
-| PR-014 Media display standardization (video/image/HTML/demo) | Proposed | Medium priority |
+| PR-014 Media display standardization (video/image/HTML/demo) | Proposed | Medium priority. Not closed by asset purpose (PR-028), which organizes assets (same three sections in the form, solution page and filter) but does not change how they look. Already shared: video, HTML, documents and links open in one viewer (`ViewerFrame`) with Full screen (PR-004). Remaining gap: the PoC shows the first demo video inline on the solution page, while the connected app lists every asset as a row to click; images keep their own gallery and lightbox |
 
 ### Open decisions
 
-- Full-screen vs. new tab vs. modal/popup (PR-004/005/006): whether to build all three or pick one primary demo-viewing pattern.
+- Modal/popup (PR-006): full screen (PR-004) and new-tab links (PR-005) are live; whether a modal is still wanted.
 - How effort is represented going forward (PR-010/011) — duration bands, Small/Medium/Large complexity, or both — and whether this replaces or sits alongside the hours-based model in ADR-0007.
 - Whether and when workstream/project mapping (PR-013) gets scoped for a future release.
 
