@@ -523,3 +523,15 @@ test("the favorites heart sits beside the card button, never inside it, and hide
   assert.doesNotMatch(render(card.SolutionCard, { solution, present: true, index: 0, favoritable: true }), /favorites/);
   assert.doesNotMatch(render(card.SolutionCard, { solution, present: false, index: 0 }), /favorites/);
 });
+
+test("owner status panel tints by state, keeps actions on the right and shows the librarian's words", async () => {
+  const { SubmissionStatusPanel } = await server.ssrLoadModule("/src/components/SubmissionStatusPanel.tsx");
+  const pending = render(SubmissionStatusPanel, { state: "Pending review", actions: createElement("button", null, "Withdraw & edit") });
+  assert.match(pending, /var\(--accent\)/);
+  assert.match(pending, /Waiting for a librarian/);
+  assert.match(pending, /sm:ml-auto[^>]*><button>Withdraw &amp; edit<\/button>/);
+  const returned = render(SubmissionStatusPanel, { state: "Changes requested", feedback: "Add screenshots" });
+  assert.match(returned, /var\(--proto\)/);
+  assert.match(returned, /Librarian feedback[\s\S]*Add screenshots/);
+  assert.doesNotMatch(render(SubmissionStatusPanel, { state: "Published" }), /Note from the librarian/);
+});

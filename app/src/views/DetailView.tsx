@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { AssetType, DemoAsset, Solution } from "../types";
 import { AREAS, BUSINESS_CALENDARS } from "../data/catalogueMetadata";
 import { AreaTag, Chip, StatusPill } from "../components/Badges";
+import { outlinedStatusButton, SubmissionStatusPanel } from "../components/SubmissionStatusPanel";
+import { submissionState } from "../lib/submissionState";
 import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
@@ -107,8 +109,8 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
         <Icon name="chevronLeft" size={15} />
         {backLabel ?? (onEdit ? "My submissions" : "Back to the library")}
       </button>
-      {onEdit && <button className="ml-4 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[13px]" style={{ borderColor: "var(--glass-edge)" }} onClick={onEdit}><Icon name="file" />Edit submission</button>}
-      {onEdit && <p className="mt-3 text-[13px]" style={{ color: "var(--proto)" }}>{solution.publicationStatus}{!connected && ". Local preview only."}</p>}
+      {onEdit && <SubmissionStatusPanel state={submissionState(solution)} feedback={solution.reviewComments || undefined} local={!connected}
+        actions={<button type="button" className={outlinedStatusButton} onClick={onEdit}><Icon name="edit" size={16} />Edit submission</button>} />}
       {reviewActions}
       {catalogueOnly && <p className="mt-4 text-[14px]" role="status" style={{ color: "var(--ink-2)" }}>Contributor details, media and delivery history are not loaded.</p>}
 

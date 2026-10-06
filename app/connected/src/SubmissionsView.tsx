@@ -5,6 +5,8 @@ import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { MySubmissionsView } from "../../src/views/MySubmissionsView";
 import { DetailView } from "../../src/views/DetailView";
 import { ReviewPanel, ReviewQueue } from "../../src/components/ReviewQueue";
+import { outlinedStatusButton, statusButton, SubmissionStatusPanel } from "../../src/components/SubmissionStatusPanel";
+import { submissionState } from "../../src/lib/submissionState";
 import { reviewChecklist } from "../../src/lib/reviewChecklist";
 import type { Solution } from "../../src/types";
 import { navigate } from "../../src/lib/router";
@@ -142,7 +144,7 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
   const thumbnail = state.media.find(item => item.kind === "thumbnail" && item.complete);
   const solution: Solution = { ...submissionSolution(state.record, names), technologies: graph.technologyIds.map(id => names[id] ?? "Unavailable technology"), industries: graph.industryIds.map(id => names[id] ?? "Unavailable industry"), projects: graph.projectIds.map(id => ({ id, projectName: names[id] ?? `Untitled project (${id.slice(0, 8)})` })), assets: state.media.filter(item => item.kind === "attachment" && item.complete).map(mediaAsset) };
   const effort = { contributors: graph.contributors.map((person, index) => contributorCredit(person, core.maturity, names[person.personId] ?? "Unavailable consultant", state.graph.hours[index], emails[person.personId])), totalHours: state.graph.hours.some(hours => hours === null) ? null : Math.round(state.graph.hours.reduce<number>((total, hours) => total + (hours ?? 0), 0) * 100) / 100 };
-  return <DetailView solution={solution} present={false} connected effort={effort} backLabel={review ? "Review queue" : "My submissions"} onBack={() => navigate(review ? "/review" : "/my-submissions")} onEdit={!review && status === 125060003 ? () => navigate(`/submit?draft=${id}`) : undefined}
+  return <DetailView solution={solution} present={false} connected effort={effort} backLabel={review ? "Review queue" : "My submissions"} onBack={() => navigate(review ? "/review" : "/my-submissions")}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={
       <>{review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
@@ -157,18 +159,20 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
         onReturn={() => void transition("return")} onApprove={() => void transition("approve")}
         onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
-      </ReviewPanel> : <section aria-label="Submission status" className="mt-5 border-y border-(--glass-edge) py-5">
-        <p className="eyebrow">Contributor workspace</p><h2 className="mt-2 text-[20px]">{PUBLICATIONS[state.record.publication]}</h2>
+      </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
+          {status === 125060003 ? <><button type="button" className={outlinedStatusButton} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="edit" size={16} />Edit draft</button>
+            <button type="button" className={statusButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" size={16} />Submit for review</button></>
+          : <button type="button" className={outlinedStatusButton} onClick={() => setConfirmation("withdraw")}><Icon name="edit" size={16} />Withdraw &amp; edit</button>}
+        </fieldset>}>
+        <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-(--ink-2)">
+          <span className="inline-flex items-center gap-1.5" style={core.safetyAcknowledged ? undefined : { color: "var(--proto)" }}><Icon name={core.safetyAcknowledged ? "shield" : "alert"} size={14} />{core.safetyAcknowledged ? "Safety acknowledged" : "Safety acknowledgment required"}</span>
+          {state.record.cleared && <><span aria-hidden="true">·</span><span>Cleared for presentation</span></>}
+        </p>
         {mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
         {error && <div role="alert" className="my-4"><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></div>}
-        {state.record.comments && <section className="my-4 border-l-2 border-(--proto) pl-3"><h3 className="text-[14px] font-semibold">Latest review comments</h3><p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{state.record.comments}</p></section>}
-        <p className="mb-4 text-[14px]">{core.safetyAcknowledged ? "Safety acknowledged" : "Safety acknowledgment required"}{state.record.cleared ? " · Cleared for presentation" : ""}</p>
-        {missing && status === 125060003 && <p role="status" className="mb-4 text-[14px]">Complete the summary, capability, contributor effort, redacted context when needed, detail images and safety acknowledgment before submitting.</p>}
-        <fieldset disabled={busy || uncertain} className="min-w-0 space-y-4">
-          {!review && status === 125060003 && <div className="flex flex-wrap gap-3"><button className={button} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="file" />Edit draft</button><button className={button} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" />Submit for review</button></div>}
-          {!review && status !== 125060003 && <button className={button} onClick={() => setConfirmation("withdraw")}><Icon name="file" />Withdraw &amp; edit</button>}
-        </fieldset>{busy && <LoadingState className="mt-4" label="Updating submission..." />}
-      </section>}
+        {missing && status === 125060003 && <p role="status" className="mt-3 flex items-start gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} className="mt-0.5 shrink-0" />Complete the summary, capability, contributor effort, redacted context when needed, detail images and safety acknowledgment before submitting.</p>}
+        {busy && <LoadingState className="mt-4" label="Updating submission..." />}
+      </SubmissionStatusPanel>}
         {confirmation && <ConfirmDialog title={CONFIRMATIONS[confirmation].title} confirmLabel={CONFIRMATIONS[confirmation].label} onCancel={() => setConfirmation(null)} onConfirm={() => { setConfirmation(null); void transition(confirmation); }}>
           <p className="mb-3 font-semibold text-(--ink)">{core.name}</p>
           <p>{CONFIRMATIONS[confirmation].body}</p>

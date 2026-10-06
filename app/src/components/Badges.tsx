@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { SolutionStatus, SpecializationArea } from "../types";
 import { AREAS } from "../data/catalogueMetadata";
-import type { SubmissionState } from "../lib/submissionState";
+import { SUBMISSION_COLOR, type SubmissionState } from "../lib/submissionState";
 import { Icon } from "./Icon";
 
 const STATUS_COLOR: Record<SolutionStatus, string> = {
@@ -30,14 +30,6 @@ export function StatusPill({ status }: { status: SolutionStatus }) {
     </span>
   );
 }
-
-const SUBMISSION_COLOR: Record<SubmissionState, string> = {
-  Draft: "var(--ink-3)",
-  "Pending review": "var(--accent)",
-  "Changes requested": "var(--proto)",
-  Published: "var(--live)",
-  Retired: "var(--ink-3)",
-};
 
 /** Review state of an owned submission; deliberately text-weight, separate from the maturity pill on the poster. */
 export function SubmissionStatus({ state }: { state: SubmissionState }) {
