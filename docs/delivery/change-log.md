@@ -11,7 +11,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 |---|---|---|
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 13% — 2 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 37% — 5 Live, 1 In code / 15 |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 40% — 5 Live, 2 In code / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 7% — 1 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 83% — 5 Live, 1 Proposed / 6 (1 Dropped excluded) |
@@ -131,7 +131,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 
 **Attendees:** Sebastian, …
-**Progress:** 37% — 5 Live, 1 In code, 9 Proposed / 15
+**Progress:** 40% — 5 Live, 2 In code, 8 Proposed / 15
 
 ### Feedback
 
@@ -161,8 +161,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-021 Enhanced tag styling (fills/borders/stronger colors) | 🟢 Live | `64c1ac2` raises the specialization-area `AreaTag` tint from 11% to 17%; no other tag/badge type received equivalent treatment |
 | PR-022 Dark-mode tag readability review | 🟢 Live | Same commit (`7b83ef4`) already credited as Live under [2026-10-01 — Top 3 save counts and card sizing](#2026-10-01--working-session-top-3-save-counts-and-card-sizing); not separate work |
 | PR-023 One-Liner standardization | Proposed | The "One-line summary" field (200-char max) predates this session by a week (`d027276`, 2026-09-22); no standardization work followed |
-| PR-024 "What It Does" optimization | Proposed | Same pre-existing `whatItDoes` field (`d027276`, 2026-09-22); no conciseness/optimization work followed |
-| PR-025 "Why It Matters" enhancement | Proposed | Same pre-existing `businessValue` field (`d027276`, 2026-09-22); no enhancement work followed |
+| PR-024 "What It Does" optimization | Proposed | Same pre-existing `whatItDoes` field (`d027276`, 2026-09-22). 2026-10-06: detail panel and form label renamed to "What the solution does" (paired with "Business value"); conciseness of the content itself still not addressed |
+| PR-025 "Why It Matters" enhancement | In code | 2026-10-06: the detail panel "Why it matters" is now titled "Business value", matching the `businessValue` field and the form label, so it reads as the benefit next to "What the solution does". Not yet published |
 | PR-026 Business-value-first ordering | Proposed | Not yet defined |
 | PR-027 Download a presentation with each solution's material | Proposed | Added 2026-10-02 from the meeting notes. A per-solution deck (summary, value, screenshots, links to demos) for CSMs to take into client conversations. Must use present-mode-safe content only (redacted context, no builder credits or internal notes) |
 | PR-028 Library filter by demo | Proposed | Added 2026-10-02. Narrow the library to solutions that have a demo (attachment or linked asset), and possibly by demo type |

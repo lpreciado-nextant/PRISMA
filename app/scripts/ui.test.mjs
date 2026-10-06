@@ -219,7 +219,7 @@ test("both adapters consume the shared form and review surfaces", async () => {
 test("story section contains only the two narrative fields in both adapters", async () => {
   const html = render(form.StoryFields, { whatItDoes: "Actions and results", businessValue: "Business benefit", onChange: noop });
   assert.match(html, /What does it do, and why does it matter\?/);
-  assert.match(html, /What it does/);
+  assert.match(html, /What the solution does/);
   assert.match(html, /Business value/);
   assert.equal((html.match(/<textarea/g) ?? []).length, 2);
   const { readFile } = await import("node:fs/promises");

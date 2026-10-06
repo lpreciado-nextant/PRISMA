@@ -342,7 +342,7 @@ export function SectionCard({ level = 2, icon, title, description, visibility, c
 export function StoryFields({ whatItDoes, businessValue, onChange, nested = false, children }: { whatItDoes: string; businessValue: string; onChange: (key: "whatItDoes" | "businessValue", value: string) => void; nested?: boolean; children?: ReactNode }) {
   const Shell = nested ? NamedSection : StepShell;
   return <Shell title="What does it do, and why does it matter?">
-    <Field label="What it does" optional hint="What a user does in it, and what they get out of it."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={whatItDoes} onChange={event => onChange("whatItDoes", event.target.value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
+    <Field label="What the solution does" optional hint="What a user does in it, and what they get out of it."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={whatItDoes} onChange={event => onChange("whatItDoes", event.target.value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
     <Field label="Business value" optional hint="The problem it solves and why that matters. Add real numbers only if you have them."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={businessValue} onChange={event => onChange("businessValue", event.target.value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
     {children}
   </Shell>;

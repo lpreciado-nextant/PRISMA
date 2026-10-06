@@ -164,7 +164,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
       </section>
 
       <div className="mt-6">
-        <Panel title="What it does">
+        <Panel title="What the solution does">
           <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.whatItDoes}</p>
         </Panel>
       </div>
@@ -196,7 +196,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
       )}
 
       <div className="mt-6">
-        <Panel title="Why it matters">
+        <Panel title="Business value">
           <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.businessValue}</p>
         </Panel>
       </div>

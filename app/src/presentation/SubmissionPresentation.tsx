@@ -41,8 +41,8 @@ const chapters = [
     label: "What & why", title: "Make the story travel without its builder.",
     summary: "A CSM needs to explain the solution confidently, even when they were not part of the project.",
     points: [
-      ["What it does", "Describe the actions a user takes and the result they see. Keep the language concrete."],
-      ["Why it matters", "Connect the experience to a business problem. Include measurable outcomes only when they are known."],
+      ["What the solution does", "Describe the actions a user takes and the result they see. Keep the language concrete."],
+      ["Business value", "Connect the experience to a business problem. Include measurable outcomes only when they are known."],
       ["Ready for a conversation", "These descriptions supply the solution detail page and searchable catalogue text."],
     ],
     tryIt: "Rewrite the business value in one sentence. Your edits remain when you move between chapters.",
