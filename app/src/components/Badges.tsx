@@ -14,13 +14,15 @@ const STATUS_COLOR: Record<SolutionStatus, string> = {
 
 export function StatusPill({ status }: { status: SolutionStatus }) {
   const color = STATUS_COLOR[status];
+  // Opaque so the label stays legible on any thumbnail; the same pill is used everywhere for consistency.
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-medium tracking-[0.1em] uppercase backdrop-blur-md"
+      className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] font-medium tracking-[0.1em] uppercase"
       style={{
         color,
-        borderColor: `color-mix(in srgb, ${color} 35%, transparent)`,
-        background: `color-mix(in srgb, ${color} 12%, transparent)`,
+        borderColor: `color-mix(in srgb, ${color} 45%, var(--ground))`,
+        background: `color-mix(in srgb, ${color} 14%, var(--ground))`,
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.18)",
       }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
