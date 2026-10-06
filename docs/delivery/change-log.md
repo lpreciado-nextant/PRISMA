@@ -14,7 +14,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 67% — 9 Live, 1 In code / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 14% — 2 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
-| [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 83% — 5 Live, 1 Proposed / 6 (1 Dropped excluded) |
+| [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
 - Top 3 shelf vs. new-content visibility (PR-018); manual contrast sign-off (PR-020); One-Liner standardization, still a generic field (PR-023); presentation download format and contents (PR-027); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
@@ -251,7 +251,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-09-23 — Data model update: Specialization Area, roles, client role, favorites
 
-**Progress:** 83% — 5 Live, 1 Proposed / 6 (1 Dropped excluded)
+**Progress:** 100% — 6 Live / 6 (1 Dropped excluded)
 
 ### Feedback
 
@@ -270,7 +270,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | New column `nx_solution.nx_clientrole` (Client Role, 14 values) | Done in Dataverse · 🟢 **Live** | Client role picker on connected drafts and plugin read/write, deployed on 2026-09-28. The PRISMA library filters by it ("Target client role"), in present mode too. Its exact meaning is still open |
 | New table `nx_solutionfavorite` (per-person favorites) | Done in Dataverse · 🟢 **Live** | Delete Cascade from Solution, RemoveLink from Consultant. `FavoriteApi` (`nx_SetFavorite`, `nx_GetMyFavorites`) sets `nx_user` server-side; roles get User-depth Read only. Hearts and "My favorites" in the connected app. Deployed and republished on 2026-09-28; the user verified save and remove in the hosted app |
 | Schema docs synced with Dataverse | 🟢 Live | Updated [SchemaV2](../data_model/SchemaV2.md), the example values, the legacy companion and reference-data governance (`23fe769`) |
-| Top ranking (favorites, unique views, demo requests) | Proposed | The suggested first phase ranks by favorites only, which needs no new table. Views need a private `nx_solutionview` table. Not built |
+| Top ranking (favorites, unique views, demo requests) | 🟢 Live | Live as a favorites-only ranking: `nx_GetTopFavorites` and the Top 10 shelf with save counts ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux), [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing)). Unique views and demo requests are not counted; views would need a private `nx_solutionview` table (open decision under 2026-09-28/29) |
 | Lead CSM as a lookup on `nx_solution` (`nx_leadcsm`) | Dropped | Replaced by `nx_solutioncontributor.nx_role` |
 
 ### Open decisions
