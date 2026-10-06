@@ -303,6 +303,15 @@ if (command == "inspect-asset-columns")
     var assets = client.RetrieveMultiple(new QueryExpression("nx_demoasset") { ColumnSet = new ColumnSet("nx_assettype", "nx_assetpurpose") }).Entities;
     foreach (var group in assets.GroupBy(row => (Type: row.GetAttributeValue<OptionSetValue>("nx_assettype")?.Value, Purpose: row.GetAttributeValue<OptionSetValue>("nx_assetpurpose")?.Value)).OrderBy(group => group.Key.Type))
         Console.WriteLine($"assets: type={group.Key.Type?.ToString() ?? "none"}; purpose={group.Key.Purpose?.ToString() ?? "none"}; rows={group.Count()}");
+    // Whether the deployed plug-in reports demo counts (ADR-0011). Read-only Custom API call.
+    var graphJson = (string)client.Execute(new OrganizationRequest("nx_GetCatalogueGraph") { ["Present"] = false }).Results["ResultJson"];
+    using (var graphDocument = JsonDocument.Parse(graphJson))
+    {
+        var root = graphDocument.RootElement;
+        var deployed = root.TryGetProperty("purposes", out var purposes) && purposes.GetBoolean();
+        var solutions = root.GetProperty("solutions").EnumerateArray().ToList();
+        Console.WriteLine($"nx_GetCatalogueGraph: purposes={deployed}; solutions={solutions.Count}; with demo video={solutions.Count(entry => entry.TryGetProperty("demoVideos", out var count) && count.GetInt32() > 0)}; with interactive demo={solutions.Count(entry => entry.TryGetProperty("interactiveDemos", out var count) && count.GetInt32() > 0)}");
+    }
     return;
 }
 if (command == "assign-acceptance") { AssignAcceptance(client, args.Skip(1).ToArray()); return; }
