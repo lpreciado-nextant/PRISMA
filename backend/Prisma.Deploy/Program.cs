@@ -292,6 +292,17 @@ if (command == "inspect-asset-columns")
             Console.WriteLine($"nx_demoasset.{name}: editable={editable}; type={attribute.AttributeType}; maxLength={(attribute as StringAttributeMetadata)?.MaxLength ?? (attribute as MemoAttributeMetadata)?.MaxLength}; maxSizeKB={(attribute as FileAttributeMetadata)?.MaxSizeInKB}; managed={attribute.IsManaged}");
         }
     }
+    // Asset Purpose (ADR-0011): the column, its local options, and how many assets carry each purpose. Read-only.
+    foreach (var editable in new[] { false, true })
+    {
+        var purpose = ((RetrieveAttributeResponse)client.Execute(new RetrieveAttributeRequest { EntityLogicalName = "nx_demoasset", LogicalName = "nx_assetpurpose", RetrieveAsIfPublished = editable })).AttributeMetadata as PicklistAttributeMetadata
+            ?? throw new InvalidOperationException("nx_demoasset.nx_assetpurpose is not a choice column.");
+        Console.WriteLine($"nx_demoasset.nx_assetpurpose: editable={editable}; schema={purpose.SchemaName}; required={purpose.RequiredLevel?.Value}; global={purpose.OptionSet?.IsGlobal}; default={purpose.DefaultFormValue}; managed={purpose.IsManaged}");
+        foreach (var option in purpose.OptionSet?.Options ?? new OptionMetadataCollection()) Console.WriteLine($"  {option.Value} {option.Label?.UserLocalizedLabel?.Label}");
+    }
+    var assets = client.RetrieveMultiple(new QueryExpression("nx_demoasset") { ColumnSet = new ColumnSet("nx_assettype", "nx_assetpurpose") }).Entities;
+    foreach (var group in assets.GroupBy(row => (Type: row.GetAttributeValue<OptionSetValue>("nx_assettype")?.Value, Purpose: row.GetAttributeValue<OptionSetValue>("nx_assetpurpose")?.Value)).OrderBy(group => group.Key.Type))
+        Console.WriteLine($"assets: type={group.Key.Type?.ToString() ?? "none"}; purpose={group.Key.Purpose?.ToString() ?? "none"}; rows={group.Count()}");
     return;
 }
 if (command == "assign-acceptance") { AssignAcceptance(client, args.Skip(1).ToArray()); return; }

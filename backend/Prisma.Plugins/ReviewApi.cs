@@ -228,6 +228,12 @@ namespace Prisma.Plugins
                         var update = new Entity(MediaPolicy.Table(kind), Guid.Parse(edit.Id)) { ["nx_sortorder"] = edit.SortOrder };
                         if (kind != "attachment") update["nx_caption"] = edit.Caption;
                         else if (edit.Caption.Length != 0) throw MediaPolicy.Invalid("Captions are supported for images only.");
+                        if (edit.Purpose != null)
+                        {
+                            if (kind != "attachment") throw MediaPolicy.Invalid("Only attachments have a purpose.");
+                            var type = server.Retrieve("nx_demoasset", update.Id, new ColumnSet("nx_assettype")).GetAttributeValue<OptionSetValue>("nx_assettype").Value;
+                            update["nx_assetpurpose"] = new OptionSetValue(AssetPurposePolicy.Validated(edit.Purpose, type));
+                        }
                         server.Update(update);
                     }
                     var latest = caller.Retrieve("nx_solution", identifier, new ColumnSet(false));

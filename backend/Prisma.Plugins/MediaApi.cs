@@ -33,6 +33,75 @@ namespace Prisma.Plugins
         [DataMember(Name = "sortOrder")] public int SortOrder { get; set; }
         [DataMember(Name = "linkedAsset", EmitDefaultValue = false)] public LinkedAssetInput LinkedAsset { get; set; }
         [DataMember(Name = "storage", EmitDefaultValue = false)] public string Storage { get; set; }
+        /// <summary>Attachments only: what the asset is for (ADR-0011). Client-safe.</summary>
+        [DataMember(Name = "purpose", EmitDefaultValue = false)] public string Purpose { get; set; }
+    }
+
+    /// <summary>
+    /// `nx_demoasset.nx_assetpurpose` (ADR-0011): what an attachment is for, independent of its format. New rows default
+    /// from the format; a client may choose another purpose only where the format allows it.
+    /// </summary>
+    public static class AssetPurposePolicy
+    {
+        public const int DemoVideo = 125060000;
+        public const int InteractiveDemo = 125060001;
+        public const int SupportingMaterial = 125060002;
+        private const int Html = 125060000, Video = 125060001, Slide = 125060002, PowerBi = 125060003, Desktop = 125060004, Hosted = 125060007, PowerApps = 125060008;
+
+        public static string Name(int purpose)
+        {
+            switch (purpose)
+            {
+                case DemoVideo: return "Demo video";
+                case InteractiveDemo: return "Interactive demo";
+                case SupportingMaterial: return "Supporting material";
+                default: throw MediaPolicy.Invalid("Unsupported asset purpose.");
+            }
+        }
+
+        public static int Choice(string name)
+        {
+            switch (name)
+            {
+                case "Demo video": return DemoVideo;
+                case "Interactive demo": return InteractiveDemo;
+                case "Supporting material": return SupportingMaterial;
+                default: throw MediaPolicy.Invalid("Unsupported asset purpose.");
+            }
+        }
+
+        /// <summary>Video is a demo video; HTML and every link type is interactive; one-pagers/slides/PDF are supporting material.</summary>
+        public static int Default(int assetType)
+        {
+            switch (assetType)
+            {
+                case Video: return DemoVideo;
+                case Html: case PowerBi: case Desktop: case Hosted: case PowerApps: return InteractiveDemo;
+                case Slide: return SupportingMaterial;
+                default: throw MediaPolicy.Invalid("Unsupported asset type.");
+            }
+        }
+
+        /// <summary>A demo video must be a video and an interactive demo HTML or a link; anything may be supporting material.</summary>
+        public static bool Allowed(int purpose, int assetType)
+        {
+            Name(purpose);
+            return purpose == SupportingMaterial || (purpose == DemoVideo ? assetType == Video : assetType != Video && assetType != Slide);
+        }
+
+        public static int Validated(string name, int assetType)
+        {
+            var purpose = Choice(name);
+            if (!Allowed(purpose, assetType)) throw MediaPolicy.Invalid("That purpose does not fit this kind of file.");
+            return purpose;
+        }
+
+        /// <summary>The stored purpose, or the format default for rows saved before the column existed.</summary>
+        public static int Effective(Entity asset)
+        {
+            var stored = asset.GetAttributeValue<OptionSetValue>("nx_assetpurpose");
+            return stored != null ? stored.Value : Default(asset.GetAttributeValue<OptionSetValue>("nx_assettype").Value);
+        }
     }
 
     [DataContract]
@@ -44,6 +113,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "externalUrl", IsRequired = true)] public string ExternalUrl { get; set; }
         [DataMember(Name = "allowsEmbedding", IsRequired = true)] public bool AllowsEmbedding { get; set; }
         [DataMember(Name = "embedHint", IsRequired = true)] public string EmbedHint { get; set; }
+        /// <summary>Optional; omitted, a new link is an interactive demo and an edited link keeps its purpose.</summary>
+        [DataMember(Name = "purpose", EmitDefaultValue = false)] public string Purpose { get; set; }
     }
 
     public static class LinkedAssetPolicy
@@ -74,7 +145,8 @@ namespace Prisma.Plugins
         public static LinkedAssetInput Validate(LinkedAssetInput value)
         {
             if (value == null || value.Name == null || value.EmbedHint == null || value.ExternalUrl == null) throw MediaPolicy.Invalid("Missing linked asset fields.");
-            Choice(value.AssetType);
+            var type = Choice(value.AssetType);
+            if (value.Purpose != null) AssetPurposePolicy.Validated(value.Purpose, type);
             if (value.Id != null) ContributorPolicy.Identifier(value.Id);
             value.Name = value.Name.Trim(); value.EmbedHint = value.EmbedHint.Trim(); value.ExternalUrl = value.ExternalUrl.Trim();
             if (value.Name.Length == 0 || value.Name.Length > 100 || value.Name.Any(char.IsControl) || value.EmbedHint.Length > 200) throw MediaPolicy.Invalid("Asset name or note exceeds its limit.");
@@ -99,7 +171,7 @@ namespace Prisma.Plugins
             {
                 var bytes = Encoding.UTF8.GetBytes(json);
                 using (var reader = JsonReaderWriterFactory.CreateJsonReader(bytes, new XmlDictionaryReaderQuotas { MaxDepth = 8, MaxStringContentLength = 4000 }))
-                    DraftGraph.CheckFields(XElement.Load(reader), "id", "name", "assetType", "externalUrl", "allowsEmbedding", "embedHint");
+                    DraftGraph.CheckFields(XElement.Load(reader), "id", "name", "assetType", "externalUrl", "allowsEmbedding", "embedHint", "purpose");
                 using (var stream = new MemoryStream(bytes)) return Validate((LinkedAssetInput)new DataContractJsonSerializer(typeof(LinkedAssetInput)).ReadObject(stream));
             }
             catch (Exception error) when (error is SerializationException || error is XmlException || error is ArgumentException) { throw MediaPolicy.Invalid("Invalid linked asset payload."); }
@@ -112,6 +184,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "id", IsRequired = true)] public string Id { get; set; }
         [DataMember(Name = "caption", IsRequired = true)] public string Caption { get; set; }
         [DataMember(Name = "sortOrder", IsRequired = true)] public int SortOrder { get; set; }
+        /// <summary>Optional, attachments only: moves the asset to another purpose its format allows.</summary>
+        [DataMember(Name = "purpose", EmitDefaultValue = false)] public string Purpose { get; set; }
     }
 
     [DataContract]
@@ -181,7 +255,7 @@ namespace Prisma.Plugins
                 {
                     var root = XElement.Load(reader);
                     if ((string)root.Attribute("type") != "array") throw Invalid("Media metadata must be an array.");
-                    foreach (var item in root.Elements()) DraftGraph.CheckFields(item, "id", "caption", "sortOrder");
+                    foreach (var item in root.Elements()) DraftGraph.CheckFields(item, "id", "caption", "sortOrder", "purpose");
                 }
                 using (var stream = new MemoryStream(bytes)) items = (MediaMetadata[])new DataContractJsonSerializer(typeof(MediaMetadata[])).ReadObject(stream);
             }
@@ -189,7 +263,7 @@ namespace Prisma.Plugins
             if (items == null || items.Length > 13) throw Invalid("Too many media records.");
             var identifiers = new HashSet<Guid>();
             foreach (var item in items)
-                if (item == null || !identifiers.Add(ContributorPolicy.Identifier(item.Id)) || item.Caption == null || item.Caption.Length > 200 || item.SortOrder < 0 || item.SortOrder > 12)
+                if (item == null || !identifiers.Add(ContributorPolicy.Identifier(item.Id)) || item.Caption == null || item.Caption.Length > 200 || item.SortOrder < 0 || item.SortOrder > 12 || (item.Purpose != null && AssetPurposePolicy.Choice(item.Purpose) < 0))
                     throw Invalid("Invalid caption, order or duplicate media identifier.");
             return items;
         }
@@ -321,7 +395,12 @@ namespace Prisma.Plugins
                 [kind != "attachment" ? "nx_solutionimagename" : "nx_demoassetid1"] = name,
                 ["nx_sortorder"] = sessions.Count == 0 ? 1 : sessions.Count + 1
             };
-            if (kind == "attachment") target["nx_assettype"] = new OptionSetValue(mime == "text/html" ? 125060000 : mime.StartsWith("video/", StringComparison.Ordinal) ? 125060001 : 125060002);
+            if (kind == "attachment")
+            {
+                var type = mime == "text/html" ? 125060000 : mime.StartsWith("video/", StringComparison.Ordinal) ? 125060001 : 125060002;
+                target["nx_assettype"] = new OptionSetValue(type);
+                target["nx_assetpurpose"] = new OptionSetValue(AssetPurposePolicy.Default(type));
+            }
             target.Id = server.Create(target);
             var session = new Entity("nx_uploadsession") {
                 ["nx_name"] = (blockSize == MediaPolicy.MaxBlobBlockSize ? MediaPolicy.MaxBlobSessionPrefix : blockSize == MediaPolicy.BlobBlockSize ? MediaPolicy.BlobSessionPrefix : blockSize == MediaPolicy.LargeBlockSize ? MediaPolicy.LargeSessionPrefix : blockSize == MediaPolicy.OptimizedBlockSize ? MediaPolicy.OptimizedSessionPrefix : "PRISMA upload ") + target.Id.ToString("N"), ["nx_parentid"] = parent.Id.ToString("D"),
@@ -363,9 +442,16 @@ namespace Prisma.Plugins
                 ["nx_demoassetid1"] = value.Name, ["nx_assettype"] = new OptionSetValue(LinkedAssetPolicy.Choice(value.AssetType)),
                 ["nx_externalurl"] = value.ExternalUrl.Length == 0 ? null : value.ExternalUrl, ["nx_allowsembedding"] = value.AllowsEmbedding, ["nx_embedhint"] = value.EmbedHint
             };
+            var type = LinkedAssetPolicy.Choice(value.AssetType);
+            if (value.Purpose != null) target["nx_assetpurpose"] = new OptionSetValue(AssetPurposePolicy.Validated(value.Purpose, type));
+            else if (existing == null) target["nx_assetpurpose"] = new OptionSetValue(AssetPurposePolicy.Default(type));
             if (existing != null)
             {
-                target.Id = Guid.Parse(value.Id); server.Update(target);
+                target.Id = Guid.Parse(value.Id);
+                // An edited link keeps its purpose, so its (possibly changed) type must still fit it.
+                if (value.Purpose == null && !AssetPurposePolicy.Allowed(AssetPurposePolicy.Effective(server.Retrieve("nx_demoasset", target.Id, new ColumnSet("nx_assetpurpose", "nx_assettype"))), type))
+                    throw MediaPolicy.Invalid("That purpose does not fit this kind of file.");
+                server.Update(target);
                 server.Update(new Entity("nx_uploadsession", existing.Id) { ["nx_filename"] = value.Name });
                 return;
             }
@@ -470,7 +556,7 @@ namespace Prisma.Plugins
         public static MediaSnapshot Snapshot(IOrganizationService service, Entity row)
         {
             var kind = row.GetAttributeValue<string>("nx_kind");
-            var target = service.Retrieve(MediaPolicy.Table(kind), Guid.Parse(row.GetAttributeValue<string>("nx_targetid")), kind == "attachment" ? new ColumnSet("nx_sortorder", "nx_assettype", "nx_externalurl", "nx_allowsembedding", "nx_embedhint") : new ColumnSet("nx_sortorder", "nx_caption"));
+            var target = service.Retrieve(MediaPolicy.Table(kind), Guid.Parse(row.GetAttributeValue<string>("nx_targetid")), kind == "attachment" ? new ColumnSet("nx_sortorder", "nx_assettype", "nx_assetpurpose", "nx_externalurl", "nx_allowsembedding", "nx_embedhint") : new ColumnSet("nx_sortorder", "nx_caption"));
             return Snapshot(row, target);
         }
 
@@ -484,6 +570,7 @@ namespace Prisma.Plugins
                 NextBlock = row.GetAttributeValue<int>("nx_nextblock"), Complete = row.GetAttributeValue<bool>("nx_complete"),
                 Caption = target.GetAttributeValue<string>("nx_caption") ?? "", SortOrder = Math.Min(12, target.GetAttributeValue<int>("nx_sortorder")),
                 Storage = BlobMedia.IsBlob(row) ? BlobMedia.Storage : null,
+                Purpose = row.GetAttributeValue<string>("nx_kind") == "attachment" && target.Contains("nx_assettype") ? AssetPurposePolicy.Name(AssetPurposePolicy.Effective(target)) : null,
                 LinkedAsset = linked ? LinkedAssetPolicy.Validate(new LinkedAssetInput { Name = row.GetAttributeValue<string>("nx_filename"), AssetType = LinkedAssetPolicy.Type(target.GetAttributeValue<OptionSetValue>("nx_assettype").Value), ExternalUrl = target.GetAttributeValue<string>("nx_externalurl") ?? "", AllowsEmbedding = target.GetAttributeValue<bool>("nx_allowsembedding"), EmbedHint = target.GetAttributeValue<string>("nx_embedhint") ?? "" }) : null
             };
         }

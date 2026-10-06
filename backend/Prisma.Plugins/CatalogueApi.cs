@@ -25,6 +25,9 @@ namespace Prisma.Plugins
         [DataMember(Name = "industries")] public List<string> Industries { get; set; }
         [DataMember(Name = "contributors", EmitDefaultValue = false)] public List<string> Contributors { get; set; }
         [DataMember(Name = "thumbnail", EmitDefaultValue = false)] public MediaSnapshot Thumbnail { get; set; }
+        /// <summary>How many demo videos and interactive demos the solution has (ADR-0011); real whenever `purposes` is true.</summary>
+        [DataMember(Name = "demoVideos")] public int DemoVideos { get; set; }
+        [DataMember(Name = "interactiveDemos")] public int InteractiveDemos { get; set; }
     }
 
     [DataContract]
@@ -33,6 +36,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "solutions")] public CatalogueEntry[] Solutions { get; set; }
         /// <summary>Tells the client an entry without a thumbnail has none, rather than coming from an older plug-in.</summary>
         [DataMember(Name = "thumbnails")] public bool Thumbnails { get; set; }
+        /// <summary>Tells the client the demo counts are real, rather than missing from an older plug-in.</summary>
+        [DataMember(Name = "purposes")] public bool Purposes { get; set; }
     }
 
     /// <summary>Groups bulk tag and credit rows by visible solution. Rows for any other solution are ignored.</summary>
@@ -80,7 +85,15 @@ namespace Prisma.Plugins
                 // The same order as the published detail's media, whose first thumbnail the card used before.
                 if (thumbnails.TryGetValue(entry.Key, out candidates)) entry.Value.Thumbnail = candidates.OrderBy(item => item.SortOrder).ThenBy(item => item.Id).First();
             }
-            return new CatalogueGraphResult { Solutions = entries.Values.ToArray(), Thumbnails = true };
+            return new CatalogueGraphResult { Solutions = entries.Values.ToArray(), Thumbnails = true, Purposes = true };
+        }
+
+        public void Asset(Guid solution, int purpose)
+        {
+            CatalogueEntry entry;
+            if (!entries.TryGetValue(solution, out entry)) return;
+            if (purpose == AssetPurposePolicy.DemoVideo) entry.DemoVideos++;
+            else if (purpose == AssetPurposePolicy.InteractiveDemo) entry.InteractiveDemos++;
         }
 
         public void Thumbnail(Guid solution, MediaSnapshot snapshot)
@@ -149,6 +162,12 @@ namespace Prisma.Plugins
                     graph.Contributor(row.GetAttributeValue<EntityReference>("nx_solution").Id, Aliased(row, "cr6b0_consultantname") as string);
             }
             Thumbnails(caller, factory.CreateOrganizationService(null), visible, graph);
+            // Read as the caller, so only demo assets the caller may open are counted.
+            var assets = new QueryExpression("nx_demoasset") { ColumnSet = new ColumnSet("nx_solution", "nx_assettype", "nx_assetpurpose") };
+            Visible(assets.AddLink("nx_solution", "nx_solution", "nx_solutionid").LinkCriteria, present);
+            assets.AddOrder("nx_demoassetid", OrderType.Ascending);
+            foreach (var row in Rows(caller, assets))
+                if (row.Contains("nx_assettype")) graph.Asset(row.GetAttributeValue<EntityReference>("nx_solution").Id, AssetPurposePolicy.Effective(row));
             tracing?.Trace("Catalogue graph returned {0} solutions (present: {1}).", graph.Count, present);
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(graph.Build());
         }
