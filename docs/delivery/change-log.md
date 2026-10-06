@@ -11,7 +11,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 |---|---|---|
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 13% — 2 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 77% — 11 Live, 1 In code / 15 |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 80% — 12 Live / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 21% — 3 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
@@ -131,7 +131,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 
 **Attendees:** Sebastian, …
-**Progress:** 77% — 11 Live, 1 In code, 3 Proposed / 15
+**Progress:** 80% — 12 Live, 3 Proposed / 15
 
 ### Feedback
 
@@ -155,7 +155,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 |---|---|---|
 | PR-016 Published date on solution cards | 🟢 Live | Shipped as a compact age label ("3d/2w/4mo/1yr") with full date on hover, in `64c1ac2`, verified ancestor of every subsequent publish |
 | PR-017 Relative date labels (Today/This Week/Last Week/2 Weeks Ago/Last Month/Last Year) | 🟢 Live | `64c1ac2` ships only the shorter age format; the literal exact-bucket wording was never built — a lighter solution was accepted in its place |
-| PR-018 Keep Top 3 featured section | In code | Shelf already exists ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux)). Decided 2026-10-06: keep it as a general **Top 5** (it showed up to ten). App-only change: `TopTenRow` shows the first five of the `nx_GetTopFavorites` ranking, which still returns up to ten; no plug-in deploy. New content stays visible through the default Newest-first sort (PR-019) and the "Added within" time filter |
+| PR-018 Keep Top 3 featured section | 🟢 Live | Shelf already exists ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux)). Decided 2026-10-06: keep it as a general **Top 5** (it showed up to ten). App-only change: `TopTenRow` shows the first five of the `nx_GetTopFavorites` ranking, which still returns up to ten; no plug-in deploy. New content stays visible through the default Newest-first sort (PR-019) and the "Added within" time filter. Published 2026-10-06 (`2fa9773`) and confirmed by the user |
 | PR-019 New-content visibility in default view | 🟢 Live | `LibraryView.tsx` default sort is `"newest"` (by `createdon`); confirmed no separate mechanism exists or was asked for beyond that |
 | PR-020 Tag color accessibility | 🟢 Live | Contrast targets (≥4.7:1) are documented in the [design system](../design/design-system.md#design-tokens), the stronger tag fills are published (PR-021/022) and an automated axe-core pass found no violations. Accepted as live by the user on 2026-10-06; the manual contrast check on glass surfaces stays on the [accessibility](../design/accessibility.md) checklist |
 | PR-021 Enhanced tag styling (fills/borders/stronger colors) | 🟢 Live | `64c1ac2` raises the specialization-area `AreaTag` tint from 11% to 17%; no other tag/badge type received equivalent treatment |
