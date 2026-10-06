@@ -12,7 +12,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 13% — 2 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 67% — 9 Live, 1 In code / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 7% — 1 Live / 14 |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 14% — 2 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 83% — 5 Live, 1 Proposed / 6 (1 Dropped excluded) |
 
@@ -20,9 +20,9 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 - Top 3 shelf vs. new-content visibility (PR-018); manual contrast sign-off (PR-020); One-Liner standardization, still a generic field (PR-023); presentation download format and contents (PR-027); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
-- Demo viewing: full-screen is now in code as the primary pattern (Pop out stays for hosted URLs); confirm, and whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
-- Effort: duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
-- Time-tracking integration and workstream/project mapping — not scoped, future release only ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Demo viewing (PR-004/005/006): full-screen is now in code as the primary pattern (Pop out stays for hosted URLs); confirm, and whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Workstream/project mapping (PR-013) — not scoped, future release only; the time-tracking row (PR-012) was resolved as the library time filter ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Favorites ranking: whether to also count views/demo requests, and visibility in present mode ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux))
 - Specialization areas: max per solution, whether a "primary" area is needed ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
 - `nx_clientrole`: meaning, required at submit?, shown in present mode? ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
@@ -180,7 +180,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 7% — 1 Live / 14
+**Progress:** 14% — 2 Live, 12 Proposed / 14
 
 ### Feedback
 
@@ -201,26 +201,26 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| External resource / repository links (incl. Marketing Kit) | Proposed | High priority. Store a URL instead of requiring upload |
-| Tool URL field | Proposed | High priority |
-| Prototype URL field | Proposed | High priority |
-| Full-screen demo/prototype view | 🟢 Live | 2026-10-01: Full screen button in every viewer (browser full screen, or the stage expanded over the PRISMA chrome when the Power Apps host forbids it). In Local Play the host granted full screen and the demo filled the monitor. See [Demo assets](../workflows/demo-assets.md#viewer-routes) |
-| Open demo/prototype in a new tab | Proposed | High priority |
-| Demo modal/popup view | Proposed | Medium priority. Likely redundant with full-screen/new-tab — see open decisions |
-| Reduce chrome around the demo viewer | Proposed | High priority |
-| User feedback capture (comments/suggestions) | Proposed | Medium priority |
-| Solution rating / usefulness score | Proposed | Low priority |
-| Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the maturity-based effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
-| Complexity classification (Small / Medium / Large) | Proposed | Medium priority. Alternative or complement to duration bands above |
-| Time-tracking system integration | Proposed | Low priority · Backlog |
-| Solution-to-workstream/project mapping | Proposed | Low priority · Backlog. Prerequisite if time-tracking integration is pursued |
-| Media display standardization (video/image/HTML/demo) | Proposed | Medium priority |
+| PR-001 External resource / repository links (incl. Marketing Kit) | Proposed | High priority. Store a URL instead of requiring upload |
+| PR-002 Tool URL field | Proposed | High priority |
+| PR-003 Prototype URL field | Proposed | High priority |
+| PR-004 Full-screen demo/prototype view | 🟢 Live | 2026-10-01: Full screen button in every viewer (browser full screen, or the stage expanded over the PRISMA chrome when the Power Apps host forbids it). In Local Play the host granted full screen and the demo filled the monitor. See [Demo assets](../workflows/demo-assets.md#viewer-routes) |
+| PR-005 Open demo/prototype in a new tab | Proposed | High priority |
+| PR-006 Demo modal/popup view | Proposed | Medium priority. Likely redundant with full-screen/new-tab — see open decisions |
+| PR-007 Reduce chrome around the demo viewer | Proposed | High priority |
+| PR-008 User feedback capture (comments/suggestions) | Proposed | Medium priority |
+| PR-009 Solution rating / usefulness score | Proposed | Low priority |
+| PR-010 Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the maturity-based effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
+| PR-011 Complexity classification (Small / Medium / Large) | Proposed | Medium priority. Alternative or complement to duration bands above |
+| PR-012 Time-tracking system integration | 🟢 Live | Resolved 2026-10-06 as a time filter in the library: an "Added: …" picker beside "Sort by" with Any time / Last 30 days / Last 3 months / Last 6 months / Last 12 months, each showing how many solutions it leaves. Filters on creation date (`createdon`), months counted as calendar months back from today; kept in the URL (`added=3m`). `6e0b314`, `8a7b544`, published 2026-10-06 ([design system](../design/design-system.md#library-page)). Integration with an external time-tracking system is not part of this |
+| PR-013 Solution-to-workstream/project mapping | Proposed | Low priority · Backlog. Prerequisite if an external time-tracking integration is ever pursued |
+| PR-014 Media display standardization (video/image/HTML/demo) | Proposed | Medium priority |
 
 ### Open decisions
 
-- Full-screen vs. new tab vs. modal/popup: whether to build all three or pick one primary demo-viewing pattern.
-- How effort is represented going forward — duration bands, Small/Medium/Large complexity, or both — and whether this replaces or sits alongside the hours-based model in ADR-0007.
-- Whether and when time-tracking integration and workstream/project mapping get scoped for a future release.
+- Full-screen vs. new tab vs. modal/popup (PR-004/005/006): whether to build all three or pick one primary demo-viewing pattern.
+- How effort is represented going forward (PR-010/011) — duration bands, Small/Medium/Large complexity, or both — and whether this replaces or sits alongside the hours-based model in ADR-0007.
+- Whether and when workstream/project mapping (PR-013) gets scoped for a future release.
 
 ## 2026-09-28 / 29 — Working sessions: integration, favorites ranking and library UX
 
