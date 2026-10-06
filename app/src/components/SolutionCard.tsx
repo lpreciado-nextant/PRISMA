@@ -2,7 +2,7 @@ import type { Solution } from "../types";
 import type { KeyboardEvent, ReactNode } from "react";
 import { AreaTag, Chip, StatusPill, SubmissionStatus } from "./Badges";
 import { Icon } from "./Icon";
-import { Poster } from "./Poster";
+import { Poster, PosterTint } from "./Poster";
 import { navigate } from "../lib/router";
 import { initials } from "../lib/powerContext";
 import { solutionAreas } from "../lib/areas";
@@ -71,13 +71,15 @@ export function SolutionCard({
     >
       {/* 16:9 keeps the image generous and every card the same height; callers' posters fill it. */}
       <div className="card-poster relative aspect-[16/9] overflow-hidden">
-        {poster ?? <Poster
-          id={solution.id}
-          name={solution.name}
-          area={solution.specializationArea}
-          src={solution.thumbnail}
-          className="h-full w-full"
-        />}
+        <PosterTint solution={solution}>
+          {poster ?? <Poster
+            id={solution.id}
+            name={solution.name}
+            area={solution.specializationArea}
+            src={solution.thumbnail}
+            className="h-full w-full"
+          />}
+        </PosterTint>
         <div className="absolute top-3 left-3">
           <StatusPill status={solution.status} />
         </div>

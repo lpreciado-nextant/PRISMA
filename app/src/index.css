@@ -674,6 +674,46 @@
     background: color-mix(in srgb, var(--sa-ibo) 10%, transparent);
   }
 
+  /* Gallery thumbnails: a desaturated image under a colour-blend wash of the
+     card's area, so the grid reads as a few calm hues; hover/focus restores it. */
+  .poster-tint {
+    position: relative;
+    display: block;
+    height: 100%;
+    width: 100%;
+    isolation: isolate;
+  }
+  .poster-tint img {
+    filter: grayscale(1) contrast(1.04);
+    transition: filter 0.5s var(--ease-sheet);
+  }
+  .poster-tint::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--tint);
+    mix-blend-mode: color;
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.5s var(--ease-sheet);
+  }
+  .group:hover .poster-tint img,
+  .group:focus-visible .poster-tint img,
+  .group:focus-within .poster-tint img {
+    filter: none;
+  }
+  .group:hover .poster-tint::after,
+  .group:focus-visible .poster-tint::after,
+  .group:focus-within .poster-tint::after {
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .poster-tint img,
+    .poster-tint::after {
+      transition: none;
+    }
+  }
+
   /* Catalogue images always have an edge: a hairline under them, and in the
      light theme an inner ring, so a white screenshot never merges into the card. */
   .card-poster {

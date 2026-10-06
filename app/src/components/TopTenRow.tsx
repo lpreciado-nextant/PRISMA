@@ -4,7 +4,7 @@ import { solutionAreas } from "../lib/areas";
 import { navigate } from "../lib/router";
 import { FavoriteButton } from "./FavoriteButton";
 import { Icon } from "./Icon";
-import { Poster } from "./Poster";
+import { Poster, PosterTint } from "./Poster";
 
 const HIDDEN_KEY = "prisma.top10.hidden";
 const LIMIT = 10;
@@ -98,7 +98,9 @@ export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: 
                 {/* The whole card opens the solution; the heart sits above this stretched button. */}
                 <button type="button" onClick={() => openSolution(solution)} className="absolute inset-0 z-[1] cursor-pointer rounded-[inherit]" aria-label={`Number ${rank}: ${solution.name} — ${solution.summary}`} />
                 <span className="top-card-image">
-                  {renderPoster?.(solution) ?? <Poster id={solution.id} name={solution.name} area={area} src={solution.thumbnail} className="h-full w-full" />}
+                  <PosterTint solution={solution}>
+                    {renderPoster?.(solution) ?? <Poster id={solution.id} name={solution.name} area={area} src={solution.thumbnail} className="h-full w-full" />}
+                  </PosterTint>
                 </span>
                 <span className="top-card-body">
                   {/* The title (up to two lines) sits level with the corner heart; the summary centres below. */}

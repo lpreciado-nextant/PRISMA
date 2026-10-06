@@ -1,6 +1,6 @@
 # Design system
 
-**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 10 shelf, imagery and text-contrast rules; glass rendering budget (refraction removed); collapsible Refine panel on small screens · **Last updated:** 2026-10-01
+**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 10 shelf, imagery and text-contrast rules; glass rendering budget (refraction removed); collapsible Refine panel on small screens; area-tinted gallery thumbnails · **Last updated:** 2026-10-06
 **Reference implementation:** [`app/src/index.css`](../../app/src/index.css) and the component set in [`app/src/components/`](../../app/src/components/)
 
 The HTML prototype established the visual language; the code app PoC evolved it into the **liquid-glass system** and is the current reference. The production app matches the PoC.
@@ -46,6 +46,8 @@ Light and dark themes are both first-class. Theme logic lives in [`app/src/lib/t
 **Text contrast.** Secondary (`--ink-2`) and tertiary (`--ink-3`) text are grey, not black, but always pass WCAG AA: light `#3b4852` (7.9:1 or more) and `#56646f` (5.1:1 or more) on the ground and cards; dark `#b8c4ce` (10.4:1) and `#909eaa` (6.8:1). Keep new greys at or above these ratios.
 
 **White screenshots in the light theme.** A white thumbnail on a white card dissolves, so in the light theme catalogue cards take a pale steel-blue sheet, and every card, list-row and Top 3 image has a hairline edge and a faint inner ring. The dark theme keeps its dark glass.
+
+**Area-tinted gallery thumbnails.** In the grid, list and Top 10 shelf, thumbnails are desaturated under a colour-blend wash of the solution's first specialization area (the one that sets the card colour), so the gallery reads as a few calm hues instead of arbitrary screenshot colours. Hover or keyboard focus restores the original image; the detail page and viewer always show it untinted. Implemented by `PosterTint` in `Poster.tsx` and `.poster-tint` in `index.css`.
 
 ## Motion
 

@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Solution } from "../types";
 import { AreaTag, Chip, StatusPill } from "./Badges";
 import { Icon } from "./Icon";
-import { Poster } from "./Poster";
+import { Poster, PosterTint } from "./Poster";
 import { FavoriteButton } from "./FavoriteButton";
 import { navigate } from "../lib/router";
 import { solutionAreas } from "../lib/areas";
@@ -36,7 +36,9 @@ export function SolutionRow({ solution, present, index, onOpen, poster, favorita
         className={`solution-row solution-card glass glass-lite lift group flex min-w-0 cursor-pointer items-center gap-4 rounded-[16px] p-2.5 [overflow-wrap:anywhere] ${showHeart ? "pr-16" : "pr-4"}`}
       >
         <div className="card-poster aspect-[16/9] w-[132px] shrink-0 overflow-hidden rounded-[10px]">
-          {poster ?? <Poster id={solution.id} name={solution.name} area={solution.specializationArea} src={solution.thumbnail} className="h-full w-full" />}
+          <PosterTint solution={solution}>
+            {poster ?? <Poster id={solution.id} name={solution.name} area={solution.specializationArea} src={solution.thumbnail} className="h-full w-full" />}
+          </PosterTint>
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap gap-1.5">{solutionAreas(solution).map((area) => <AreaTag key={area} area={area} size="xs" />)}</div>

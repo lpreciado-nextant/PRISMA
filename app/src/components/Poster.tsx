@@ -1,5 +1,14 @@
-import type { SpecializationArea } from "../types";
+import type { CSSProperties, ReactNode } from "react";
+import type { Solution, SpecializationArea } from "../types";
 import { AREAS } from "../data/catalogueMetadata";
+import { solutionAreas } from "../lib/areas";
+
+/** Gallery thumbnails take a monochrome wash of the solution's first (card-colour) area; hover restores the original. */
+export function PosterTint({ solution, children }: { solution: Pick<Solution, "specializationArea" | "specializationAreas">; children: ReactNode }) {
+  const area = solutionAreas(solution)[0] ?? solution.specializationArea;
+  const tint = AREAS[area]?.cssVar ?? "var(--accent)";
+  return <div className="poster-tint" style={{ "--tint": tint } as CSSProperties}>{children}</div>;
+}
 
 /**
  * Stands in for the Dataverse Thumbnail image column: renders the uploaded
