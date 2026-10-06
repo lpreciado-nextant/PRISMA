@@ -11,13 +11,13 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 |---|---|---|
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 13% — 2 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 40% — 5 Live, 2 In code / 15 |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 57% — 8 Live, 1 In code / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 7% — 1 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 83% — 5 Live, 1 Proposed / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
-- Top 3 shelf vs. new-content visibility (PR-018); manual contrast sign-off (PR-020); One-Liner/What It Does/Why It Matters content design, still generic fields (PR-023/024/025); business-value-first ordering, not yet defined (PR-026); presentation download format and contents (PR-027); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
+- Top 3 shelf vs. new-content visibility (PR-018); manual contrast sign-off (PR-020); One-Liner standardization, still a generic field (PR-023); presentation download format and contents (PR-027); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Demo viewing: full-screen is now in code as the primary pattern (Pop out stays for hosted URLs); confirm, and whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
@@ -131,7 +131,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 
 **Attendees:** Sebastian, …
-**Progress:** 40% — 5 Live, 2 In code, 8 Proposed / 15
+**Progress:** 57% — 8 Live, 1 In code, 6 Proposed / 15
 
 ### Feedback
 
@@ -161,9 +161,9 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-021 Enhanced tag styling (fills/borders/stronger colors) | 🟢 Live | `64c1ac2` raises the specialization-area `AreaTag` tint from 11% to 17%; no other tag/badge type received equivalent treatment |
 | PR-022 Dark-mode tag readability review | 🟢 Live | Same commit (`7b83ef4`) already credited as Live under [2026-10-01 — Top 3 save counts and card sizing](#2026-10-01--working-session-top-3-save-counts-and-card-sizing); not separate work |
 | PR-023 One-Liner standardization | Proposed | The "One-line summary" field (200-char max) predates this session by a week (`d027276`, 2026-09-22); no standardization work followed |
-| PR-024 "What It Does" optimization | Proposed | Same pre-existing `whatItDoes` field (`d027276`, 2026-09-22). 2026-10-06: detail panel and form label renamed to "What the solution does" (paired with "Business value"); conciseness of the content itself still not addressed |
-| PR-025 "Why It Matters" enhancement | In code | 2026-10-06: the detail panel "Why it matters" is now titled "Business value", matching the `businessValue` field and the form label, so it reads as the benefit next to "What the solution does". Not yet published |
-| PR-026 Business-value-first ordering | Proposed | Not yet defined |
+| PR-024 "What It Does" optimization | 🟢 Live | `448d02b` (published 2026-10-06): detail panel and form label renamed to "What the solution does", paired with "Business value" so the two read as "what it does / what you gain"; accepted as sufficient |
+| PR-025 "Why It Matters" enhancement | 🟢 Live | `448d02b` (published 2026-10-06): the detail panel "Why it matters" is now titled "Business value", matching the `businessValue` field and the form label |
+| PR-026 Business-value-first ordering | 🟢 Live | Accepted 2026-10-06 as covered by the "What the solution does" / "Business value" pairing (`448d02b`); no separate reordering of the detail page |
 | PR-027 Download a presentation with each solution's material | Proposed | Added 2026-10-02 from the meeting notes. A per-solution deck (summary, value, screenshots, links to demos) for CSMs to take into client conversations. Must use present-mode-safe content only (redacted context, no builder credits or internal notes) |
 | PR-028 Library filter by demo | Proposed | Added 2026-10-02. Narrow the library to solutions that have a demo (attachment or linked asset), and possibly by demo type |
 | PR-029 Remove Allocation from contributor effort | Proposed | Added 2026-10-02. Calendar-mode effort asks for start date, end date and Allocation (%); removing it changes how hours are derived, so it touches [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) and the open effort decision from [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) |
@@ -173,8 +173,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 - How a solution stays visible in the main feed while the Top 3 shelf is also shown, and whether PR-018 needs to change to avoid crowding out new content.
 - Manual contrast verification on glass surfaces (PR-020) — automated checks pass, but [accessibility.md](../design/accessibility.md) marks manual sign-off pending.
-- One-Liner standardization, "What It Does" optimization, and "Why It Matters" enhancement (PR-023/024/025): still generic pre-existing fields, no dedicated content-design work done yet.
-- Business-value-first ordering (PR-026): not yet defined.
+- One-Liner standardization (PR-023): still a generic pre-existing field, no dedicated content-design work done yet.
 - Presentation download (PR-027): format (PowerPoint or PDF), template, and which fields and media it includes.
 - Without Allocation (PR-029), how calendar-mode effort is calculated, or whether calendar mode stays at all.
 
