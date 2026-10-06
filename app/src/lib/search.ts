@@ -1,5 +1,25 @@
 import type { Solution, SpecializationArea } from "../types";
 import { solutionAreas } from "./areas.ts";
+import { created } from "./sort.ts";
+
+/** Rolling "added within" windows over the creation date the sort uses. */
+export type AddedWindow = "any" | "7d" | "30d" | "90d" | "1y";
+export const ADDED_WINDOWS: readonly AddedWindow[] = ["any", "7d", "30d", "90d", "1y"];
+export const ADDED_LABELS: Record<AddedWindow, string> = {
+  any: "Any time",
+  "7d": "Last 7 days",
+  "30d": "Last 30 days",
+  "90d": "Last 90 days",
+  "1y": "Last 12 months",
+};
+const ADDED_DAYS: Record<Exclude<AddedWindow, "any">, number> = { "7d": 7, "30d": 30, "90d": 90, "1y": 365 };
+
+/** Undated solutions only match "Any time". */
+export function addedWithin(s: Solution, window: AddedWindow, now = Date.now()): boolean {
+  if (window === "any") return true;
+  const time = created(s);
+  return time !== 0 && now - time <= ADDED_DAYS[window] * 86_400_000;
+}
 
 export interface Filters {
   q: string;
@@ -9,6 +29,8 @@ export interface Filters {
   industries: string[];
   /** Target client roles (`nx_role`). Single-valued per solution, so these match any-of. */
   roles: string[];
+  /** How recently the solution was created. */
+  added: AddedWindow;
 }
 
 export const EMPTY_FILTERS: Filters = {
@@ -18,6 +40,7 @@ export const EMPTY_FILTERS: Filters = {
   technologies: [],
   industries: [],
   roles: [],
+  added: "any",
 };
 
 function haystack(s: Solution): string {
@@ -65,7 +88,8 @@ function matchesFacets(s: Solution, f: Filters): boolean {
     f.capabilities.every((c) => s.capabilities.includes(c)) &&
     f.technologies.every((t) => s.technologies.includes(t)) &&
     f.industries.every((i) => s.industries.includes(i)) &&
-    (f.roles.length === 0 || (s.clientRole !== undefined && f.roles.includes(s.clientRole)))
+    (f.roles.length === 0 || (s.clientRole !== undefined && f.roles.includes(s.clientRole))) &&
+    addedWithin(s, f.added)
   );
 }
 
@@ -95,6 +119,13 @@ export function facetCounts(all: Solution[], f: Filters, key: FacetKey): Map<str
     }
   }
   return new Map([...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])));
+}
+
+/** Count per window with the window's own selection removed, like `facetCounts`. */
+export function addedCounts(all: Solution[], f: Filters): Map<AddedWindow, number> {
+  const base = all.filter((s) => matchesFacets(s, { ...f, added: "any" }) && matchesQuery(s, f.q));
+  const now = Date.now();
+  return new Map(ADDED_WINDOWS.map((window) => [window, base.filter((s) => addedWithin(s, window, now)).length]));
 }
 
 export function areaCounts(all: Solution[], f: Filters): Map<SpecializationArea | "all", number> {
@@ -129,12 +160,14 @@ export function filtersToQuery(f: Filters): Record<string, string | undefined> {
     tech: f.technologies.length ? f.technologies.join("~") : undefined,
     ind: f.industries.length ? f.industries.join("~") : undefined,
     role: f.roles.length ? f.roles.join("~") : undefined,
+    added: f.added === "any" ? undefined : f.added,
   };
 }
 
 export function filtersFromQuery(params: URLSearchParams): Filters {
   const list = (key: string) => (params.get(key) ? params.get(key)!.split("~") : []);
   const area = params.get("area");
+  const added = params.get("added") as AddedWindow | null;
   return {
     q: params.get("q") ?? "",
     area: area === "ai" || area === "data" || area === "ibo" ? area : "all",
@@ -142,5 +175,6 @@ export function filtersFromQuery(params: URLSearchParams): Filters {
     technologies: list("tech"),
     industries: list("ind"),
     roles: list("role"),
+    added: added && ADDED_WINDOWS.includes(added) ? added : "any",
   };
 }

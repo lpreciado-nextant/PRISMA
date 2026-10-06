@@ -80,3 +80,26 @@ test("the CSM is a contributor row with nx_role = CSM and adds no effort in the 
     assert.equal(calculateEffort(csms[0], BUSINESS_CALENDARS.find((calendar) => calendar.id === csms[0].calendarId)).hours, 0);
   }
 });
+
+test("the added-within window filters on creation date, counts each window and round-trips the URL", async () => {
+  const { filterSolutions, addedCounts, filtersFromQuery, filtersToQuery, EMPTY_FILTERS } = await import("./search.ts");
+  const day = 86_400_000;
+  const at = (daysAgo: number) => new Date(Date.now() - daysAgo * day).toISOString();
+  const list = [
+    { ...SOLUTIONS[0], id: "fresh", createdOn: at(3) },
+    { ...SOLUTIONS[0], id: "month", createdOn: at(20) },
+    { ...SOLUTIONS[0], id: "old", createdOn: at(200) },
+    { ...SOLUTIONS[0], id: "undated", createdOn: undefined, dateAdded: "" },
+  ];
+  const ids = (added: "any" | "7d" | "30d" | "90d" | "1y") => filterSolutions(list, { ...EMPTY_FILTERS, added }).map((solution) => solution.id);
+  assert.deepEqual(ids("7d"), ["fresh"]);
+  assert.deepEqual(ids("30d"), ["fresh", "month"]);
+  assert.deepEqual(ids("1y"), ["fresh", "month", "old"]);
+  assert.equal(ids("any").length, 4);
+  const counts = addedCounts(list, { ...EMPTY_FILTERS, added: "7d" });
+  assert.deepEqual([...counts.values()], [4, 1, 2, 2, 3]);
+  const query = new URLSearchParams(Object.entries(filtersToQuery({ ...EMPTY_FILTERS, added: "30d" })).filter((entry): entry is [string, string] => entry[1] !== undefined));
+  assert.equal(query.get("added"), "30d");
+  assert.equal(filtersFromQuery(query).added, "30d");
+  assert.equal(filtersFromQuery(new URLSearchParams("added=bogus")).added, "any");
+});

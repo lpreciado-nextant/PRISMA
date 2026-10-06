@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Icon } from "./Icon";
 
-export function SelectPicker<Value extends string>({ label, value, options, onChange, getLabel = (option) => option, placeholder, compact = false, getButtonLabel }: {
+export function SelectPicker<Value extends string>({ label, value, options, onChange, getLabel = (option) => option, placeholder, compact = false, getButtonLabel, getHint }: {
   label: string;
   /** Shown greyed out, like an input placeholder, while no value is chosen. */
   placeholder?: string;
@@ -13,6 +13,8 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
   compact?: boolean;
   /** Text on the closed button when it differs from the option label, e.g. "Sort by: Newest". */
   getButtonLabel?: (value: Value) => string;
+  /** Secondary text beside an option, e.g. how many results it leaves. */
+  getHint?: (value: Value) => string;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -88,6 +90,7 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
                 onClick={(event) => { event.preventDefault(); select(option); }}
               >
                 <span className="min-w-0 font-semibold">{getLabel(option)}</span>
+                {getHint && <span className="ml-auto font-mono text-[11px]" style={{ color: "var(--ink-3)" }}>{getHint(option)}</span>}
                 <span className="w-4 shrink-0">{option === value && <Icon name="check" />}</span>
               </li>
             ))}

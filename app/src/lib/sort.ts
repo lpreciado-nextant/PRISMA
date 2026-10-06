@@ -5,7 +5,7 @@ export const SORT_ORDERS: readonly SortOrder[] = ["newest", "oldest"];
 export const SORT_LABELS: Record<SortOrder, string> = { newest: "Newest first", oldest: "Oldest first" };
 
 /** When the solution was created: Dataverse `createdon`, never Modified On. The PoC mock falls back to its date added. */
-function created(solution: Solution): number {
+export function created(solution: Solution): number {
   const time = Date.parse(solution.createdOn ?? solution.dateAdded ?? "");
   return Number.isNaN(time) ? 0 : time;
 }

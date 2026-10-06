@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import type { Solution } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
-import { activeChips, activeFacetCount, areaCounts, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
+import { activeChips, activeFacetCount, ADDED_LABELS, ADDED_WINDOWS, addedCounts, areaCounts, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
 import { Chip } from "../components/Badges";
 import { FacetPanel, FacetRail } from "../components/FacetRail";
 import { Icon } from "../components/Icon";
@@ -55,6 +55,7 @@ export function LibraryView({
   // Sorting and layout apply to the Solution Library grid only; the Top 3 keeps its own ranking.
   const results = useMemo(() => sortSolutions(filterSolutions(catalogue, filters), sort), [catalogue, filters, sort]);
   const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
+  const added = useMemo(() => addedCounts(catalogue, filters), [catalogue, filters]);
   const chips = activeChips(filters);
   // Live proof under the hero line, from the catalogue this person can see.
   const stats = useMemo(() => {
@@ -66,7 +67,7 @@ export function LibraryView({
     ];
   }, [catalogue]);
   // Searching or filtering goes straight to results: the shelf must not push the grid down.
-  const showFeatured = !!featured && !present && !filters.q.trim() && filters.area === "all" && chips.length === 0;
+  const showFeatured = !!featured && !present && !filters.q.trim() && filters.area === "all" && filters.added === "any" && chips.length === 0;
 
   return (
     <div className="mx-auto w-full max-w-[1340px] px-4 pb-24 sm:px-6">
@@ -169,7 +170,7 @@ export function LibraryView({
             <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
               {/* Same type and colour (the wordmark's "P") as the Top 3 title. */}
               <h2 className="text-[clamp(1.3rem,2vw,1.65rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em", color: "var(--brand-p)" }}>Solution Library</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   ref={refineToggle}
                   type="button"
@@ -195,6 +196,16 @@ export function LibraryView({
                   getLabel={(order) => SORT_LABELS[order]}
                   getButtonLabel={(order) => `Sort by: ${order === "newest" ? "Newest" : "Oldest"}`}
                   onChange={(order) => { setSort(order); remember(SORT_KEY, order); }}
+                />
+                <SelectPicker
+                  compact
+                  label="Added within"
+                  value={filters.added}
+                  options={ADDED_WINDOWS}
+                  getLabel={(window) => ADDED_LABELS[window]}
+                  getButtonLabel={(window) => `Added: ${ADDED_LABELS[window]}`}
+                  getHint={(window) => String(added.get(window) ?? 0)}
+                  onChange={(window) => onFilters({ ...filters, added: window })}
                 />
                 <div className="view-toggle" role="group" aria-label="Layout">
                   {(["grid", "list"] as const).map((option) => (
@@ -325,6 +336,7 @@ function EmptyState({
 }) {
   const chips = activeChips(filters);
   const mostRestrictive = chips.at(-1);
+  const windowed = !mostRestrictive && filters.added !== "any";
 
   return (
     <div className="glass glass-sheen animate-scale-in grid place-items-center rounded-[22px] px-6 py-20 text-center">
@@ -333,7 +345,9 @@ function EmptyState({
       <p className="mt-2 max-w-[44ch] text-[15px]" style={{ color: "var(--ink-2)" }}>
         {mostRestrictive
           ? `The narrowest filter right now is “${mostRestrictive.value}”. Dropping it usually brings the shelf back.`
-          : "Try a broader search term, or switch back to all areas."}
+          : windowed
+            ? `Nothing was added in the ${ADDED_LABELS[filters.added].toLowerCase()}. Widening the time range usually brings the shelf back.`
+            : "Try a broader search term, or switch back to all areas."}
       </p>
       <button
         type="button"
@@ -346,7 +360,7 @@ function EmptyState({
                     (v) => v !== mostRestrictive.value,
                   ),
                 }
-              : EMPTY_FILTERS,
+              : windowed ? { ...filters, added: "any" } : EMPTY_FILTERS,
           )
         }
         className="mt-6 cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold"
@@ -356,7 +370,7 @@ function EmptyState({
           color: "var(--on-accent)",
         }}
       >
-        {mostRestrictive ? `Remove “${mostRestrictive.value}”` : "Reset the view"}
+        {mostRestrictive ? `Remove “${mostRestrictive.value}”` : windowed ? "Show any time" : "Reset the view"}
       </button>
     </div>
   );
