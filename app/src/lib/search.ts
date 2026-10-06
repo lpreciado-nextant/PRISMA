@@ -3,22 +3,30 @@ import { solutionAreas } from "./areas.ts";
 import { created } from "./sort.ts";
 
 /** Rolling "added within" windows over the creation date the sort uses. */
-export type AddedWindow = "any" | "7d" | "30d" | "90d" | "1y";
-export const ADDED_WINDOWS: readonly AddedWindow[] = ["any", "7d", "30d", "90d", "1y"];
+export type AddedWindow = "any" | "30d" | "3m" | "6m" | "1y";
+export const ADDED_WINDOWS: readonly AddedWindow[] = ["any", "30d", "3m", "6m", "1y"];
 export const ADDED_LABELS: Record<AddedWindow, string> = {
   any: "Any time",
-  "7d": "Last 7 days",
   "30d": "Last 30 days",
-  "90d": "Last 90 days",
+  "3m": "Last 3 months",
+  "6m": "Last 6 months",
   "1y": "Last 12 months",
 };
-const ADDED_DAYS: Record<Exclude<AddedWindow, "any">, number> = { "7d": 7, "30d": 30, "90d": 90, "1y": 365 };
+const ADDED_MONTHS: Record<Exclude<AddedWindow, "any" | "30d">, number> = { "3m": 3, "6m": 6, "1y": 12 };
+
+/** Start of a window: 30 days back, or the same day N calendar months back. */
+function windowStart(window: Exclude<AddedWindow, "any">, now: number): number {
+  if (window === "30d") return now - 30 * 86_400_000;
+  const start = new Date(now);
+  start.setMonth(start.getMonth() - ADDED_MONTHS[window]);
+  return start.getTime();
+}
 
 /** Undated solutions only match "Any time". */
 export function addedWithin(s: Solution, window: AddedWindow, now = Date.now()): boolean {
   if (window === "any") return true;
   const time = created(s);
-  return time !== 0 && now - time <= ADDED_DAYS[window] * 86_400_000;
+  return time !== 0 && time >= windowStart(window, now);
 }
 
 export interface Filters {
