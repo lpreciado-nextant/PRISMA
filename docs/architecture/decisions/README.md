@@ -18,7 +18,7 @@ Decisions with lasting consequences are recorded here as short ADRs. Open questi
 | [0008](adr-0008-controlled-submission-transitions.md) | Controlled submission transitions | Accepted; deployed, acceptance pending |
 | [0009](adr-0009-mediated-media-and-publication-access.md) | Mediated media and publication access | Accepted; deployed, least-privilege verification pending |
 | [0010](adr-0010-attachments-in-blob-through-plugins.md) | Uploaded attachments in Azure Blob through Dataverse plug-ins | Accepted for pilot; deployed and enabled 2026-09-29, non-admin acceptance pending |
-| [0011](adr-0011-asset-purpose.md) | Asset purpose on demo assets | Accepted; column created 2026-10-06, backfill/plug-in/app pending |
+| [0011](adr-0011-asset-purpose.md) | Asset purpose on demo assets | Accepted; column created 2026-10-06; plug-in awaiting deploy; app in code |
 
 ## Template
 

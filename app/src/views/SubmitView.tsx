@@ -20,6 +20,7 @@ import type { AppUser } from "../lib/powerContext";
 import { calculateEffort, usesDirectHours } from "../lib/effort";
 import { MAX_AREAS, solutionAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
+import { assetPurpose, purposeAllows } from "../lib/assetPurpose";
 import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, Field, StatusField } from "../components/SubmissionForm";
 import { SelectPicker } from "../components/SelectPicker";
 import { ImageFramer } from "../components/ImageFramer";
@@ -37,7 +38,6 @@ interface Draft {
   capabilities: string[];
   technologies: string[];
   industries: string[];
-  assetType: AssetType;
   assets: DemoAsset[];
   thumbnail: string;
   images: { id: string; src: string; caption: string }[];
@@ -58,7 +58,6 @@ const EMPTY_DRAFT: Draft = {
   capabilities: [],
   technologies: [],
   industries: [],
-  assetType: "Self-contained HTML file",
   assets: [],
   thumbnail: "",
   images: [],
@@ -399,17 +398,17 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             images={draft.images.map(image => ({ id: image.id, caption: image.caption, preview: <img src={image.src} alt="" className="h-full w-full object-cover" /> }))}
             onCaption={(id, caption) => set("images", draft.images.map(image => image.id === id ? { ...image, caption } : image))} onRemoveImage={id => set("images", draft.images.filter(image => image.id !== id))}
             imageUpload={<UploadZone multiple onBusyChange={imageBusyChanged} onFiles={sources => setDraft(current => ({ ...current, images: [...current.images, ...sources.slice(0, MAX_GALLERY - current.images.length).map(src => ({ id: crypto.randomUUID(), src, caption: "" }))] }))} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once" />}
-            format={draft.assetType} onFormat={value => set("assetType", value)} attachments={draft.assets} onRemoveAttachment={id => set("assets", draft.assets.filter(asset => asset.id !== id))}
-            onAttachment={async file => {
-                  const type = draft.assetType;
+            attachments={draft.assets.map(asset => ({ ...asset, purpose: assetPurpose(asset) }))} onRemoveAttachment={id => set("assets", draft.assets.filter(asset => asset.id !== id))}
+            onAttachment={async (file, purpose) => {
+                  // The format comes from the file, the purpose from the section it was added to.
                   const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
-                  const allowed = type === "Self-contained HTML file" ? ["html", "htm"] : type === "Video walkthrough only" ? ["mp4", "webm"] : ["pdf", "ppt", "pptx"];
+                  const type: AssetType | undefined = ["html", "htm"].includes(extension) ? "Self-contained HTML file" : ["mp4", "webm"].includes(extension) ? "Video walkthrough only" : ["pdf", "ppt", "pptx"].includes(extension) ? "Client-ready one-pager / slide" : undefined;
                   const maxSizeMb = type === "Video walkthrough only" ? 500 : 25;
-                  if (!allowed.includes(extension) || !file.size || file.size > maxSizeMb * 1024 * 1024) { setUploadError(`Choose a supported, non-empty file of ${maxSizeMb} MB or less.`); return; }
+                  if (!type || !purposeAllows(purpose, type) || !file.size || file.size > maxSizeMb * 1024 * 1024) { setUploadError(`Choose a supported, non-empty file of ${maxSizeMb} MB or less for ${purpose.toLowerCase()}.`); return; }
                   setUploading(true);
                   setUploadError("");
                   try {
-                    const asset: DemoAsset = { id: crypto.randomUUID(), name: file.name, assetType: type, allowsEmbedding: type !== "Client-ready one-pager / slide", sortOrder: draft.assets.length + 1 };
+                    const asset: DemoAsset = { id: crypto.randomUUID(), name: file.name, assetType: type, purpose, allowsEmbedding: type !== "Client-ready one-pager / slide", sortOrder: draft.assets.length + 1 };
                     if (type === "Self-contained HTML file") asset.htmlContent = await file.text();
                     else asset.fileData = await readDataUrl(file);
                     setDraft((current) => ({ ...current, assets: [...current.assets, asset].slice(0, 6) }));

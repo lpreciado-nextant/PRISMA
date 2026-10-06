@@ -1,6 +1,6 @@
 # Demo assets
 
-**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain. · **Last updated:** 2026-10-01
+**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain; asset purpose sections (ADR-0011) in code, awaiting the plug-in deploy. · **Last updated:** 2026-10-06
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
@@ -17,6 +17,18 @@ Connected submissions use a single Media step for **images, videos, one-pagers/s
 | Video walkthrough | Play inline in the viewer | Download |
 | Desktop app or script | Not runnable in-app; show saved demo arrangements and state that no request was sent | Contact the builder; optional video |
 | Client-ready one-pager / slide | Download | — |
+
+## Purpose: demo video, interactive demo, supporting material
+
+Every attachment has a **purpose** (`nx_assetpurpose`, [ADR-0011](../architecture/decisions/adr-0011-asset-purpose.md)), separate from its format. The Media step has one section per purpose, and the section a file is added to sets it; nobody picks it from a list:
+
+| Section | Accepts | Shown as |
+|---|---|---|
+| **Demo videos** (recommended, any number) | MP4/WebM | Client-ready walkthroughs; the first one is the solution page's main demo |
+| **Interactive demo** | Self-contained HTML; in the connected app also links (hosted app, Power Apps, Power BI, desktop arrangements) | Something to click through; the main demo when there is no demo video |
+| **Supporting material** | PDF/PPT/PPTX, videos that are not client demos; connected links (e.g. a marketing kit) | Background for the conversation |
+
+Six attachments in total. Each section keeps its own order. The solution page lists the remaining assets under "Demo videos", "Interactive demos" and "Supporting material". The library's **Demo** filter offers "Demo video" and "Interactive demo" (solutions with at least one), in present mode too; the connected app reads it from the catalogue graph's per-solution counts. Rows saved before the column existed read their format default (video → demo video, HTML/links → interactive demo, documents → supporting material).
 
 ## Rules
 

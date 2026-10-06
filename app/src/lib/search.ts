@@ -1,6 +1,7 @@
 import type { Solution, SpecializationArea } from "../types";
 import { solutionAreas } from "./areas.ts";
 import { created } from "./sort.ts";
+import { solutionDemos } from "./assetPurpose.ts";
 
 /** Rolling "added within" windows over the creation date the sort uses. */
 export type AddedWindow = "any" | "30d" | "3m" | "6m" | "1y";
@@ -37,6 +38,8 @@ export interface Filters {
   industries: string[];
   /** Target client roles (`nx_role`). Single-valued per solution, so these match any-of. */
   roles: string[];
+  /** Demo kinds the solution must offer (Demo video, Interactive demo; ADR-0011). */
+  demos: string[];
   /** How recently the solution was created. */
   added: AddedWindow;
 }
@@ -48,6 +51,7 @@ export const EMPTY_FILTERS: Filters = {
   technologies: [],
   industries: [],
   roles: [],
+  demos: [],
   added: "any",
 };
 
@@ -97,6 +101,7 @@ function matchesFacets(s: Solution, f: Filters): boolean {
     f.technologies.every((t) => s.technologies.includes(t)) &&
     f.industries.every((i) => s.industries.includes(i)) &&
     (f.roles.length === 0 || (s.clientRole !== undefined && f.roles.includes(s.clientRole))) &&
+    f.demos.every((d) => (solutionDemos(s) as string[]).includes(d)) &&
     addedWithin(s, f.added)
   );
 }
@@ -105,10 +110,11 @@ export function filterSolutions(all: Solution[], f: Filters): Solution[] {
   return all.filter((s) => matchesFacets(s, f) && matchesQuery(s, f.q));
 }
 
-export type FacetKey = "capabilities" | "technologies" | "industries" | "roles";
+export type FacetKey = "demos" | "capabilities" | "technologies" | "industries" | "roles";
 
 function facetValues(s: Solution, key: FacetKey): string[] {
   if (key === "roles") return s.clientRole ? [s.clientRole] : [];
+  if (key === "demos") return solutionDemos(s);
   return s[key];
 }
 
@@ -148,11 +154,12 @@ export function areaCounts(all: Solution[], f: Filters): Map<SpecializationArea 
 }
 
 export function activeFacetCount(f: Filters): number {
-  return f.capabilities.length + f.technologies.length + f.industries.length + f.roles.length;
+  return f.demos.length + f.capabilities.length + f.technologies.length + f.industries.length + f.roles.length;
 }
 
 export function activeChips(f: Filters): { key: FacetKey; value: string }[] {
   return [
+    ...f.demos.map((value) => ({ key: "demos" as const, value })),
     ...f.capabilities.map((value) => ({ key: "capabilities" as const, value })),
     ...f.technologies.map((value) => ({ key: "technologies" as const, value })),
     ...f.industries.map((value) => ({ key: "industries" as const, value })),
@@ -168,6 +175,7 @@ export function filtersToQuery(f: Filters): Record<string, string | undefined> {
     tech: f.technologies.length ? f.technologies.join("~") : undefined,
     ind: f.industries.length ? f.industries.join("~") : undefined,
     role: f.roles.length ? f.roles.join("~") : undefined,
+    demo: f.demos.length ? f.demos.join("~") : undefined,
     added: f.added === "any" ? undefined : f.added,
   };
 }
@@ -183,6 +191,7 @@ export function filtersFromQuery(params: URLSearchParams): Filters {
     technologies: list("tech"),
     industries: list("ind"),
     roles: list("role"),
+    demos: list("demo").filter((value) => value === "Demo video" || value === "Interactive demo"),
     added: added && ADDED_WINDOWS.includes(added) ? added : "any",
   };
 }

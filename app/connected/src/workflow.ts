@@ -1,3 +1,4 @@
+import type { AssetPurpose } from "../../src/lib/assetPurpose.ts";
 import { MATURITY_OPTIONS, snapshot, type SavedDraft } from "./drafts.ts";
 import type { Solution } from "../../src/types.ts";
 import { parseGraph, type GraphSnapshot, type Contributor } from "./draftGraph.ts";
@@ -10,8 +11,8 @@ export type Submission = { core: SavedDraft; areaIds: string[]; publication: num
 export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean };
 export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; hours: number | null; email?: string; effort?: Contributor }[]; totalHours: number; projects: string[]; media: MediaItem[]; libraryNotes?: string };
 export function mediaAsset(item: MediaItem, index: number): Solution["assets"][number] {
-  if (item.linkedAsset) return { id: item.id, ...item.linkedAsset, sortOrder: item.sortOrder ?? index };
-  return { id: item.id, name: item.name, assetType: item.mime === "text/html" ? "Self-contained HTML file" : item.mime.startsWith("video/") ? "Video walkthrough only" : "Client-ready one-pager / slide", allowsEmbedding: item.mime === "text/html" || item.mime.startsWith("video/"), sortOrder: index };
+  if (item.linkedAsset) return { id: item.id, ...item.linkedAsset, sortOrder: item.sortOrder ?? index, ...(item.purpose ? { purpose: item.purpose } : {}) };
+  return { id: item.id, name: item.name, assetType: item.mime === "text/html" ? "Self-contained HTML file" : item.mime.startsWith("video/") ? "Video walkthrough only" : "Client-ready one-pager / slide", allowsEmbedding: item.mime === "text/html" || item.mime.startsWith("video/"), sortOrder: index, ...(item.purpose ? { purpose: item.purpose } : {}) };
 }
 export function submissionSolution(record: Submission, names: Record<string, string>): Solution {
   const core = record.core;
@@ -33,14 +34,15 @@ export type WorkflowApi = {
   transition: (id: string, version: string, action: string, comments: string, cleared: boolean) => Promise<unknown>;
   published: (id: string, present: boolean) => Promise<unknown>;
 };
-export async function saveLinkedAsset(api: Pick<WorkflowApi, "transition">, saved: Pick<SavedDraft, "id" | "rowVersion">, media: MediaItem[], input: LinkedAssetInput, signal: AbortSignal, assetId?: string) {
+/** `purpose` is sent only when given; omitted, a new link is an interactive demo and an edited link keeps its purpose. */
+export async function saveLinkedAsset(api: Pick<WorkflowApi, "transition">, saved: Pick<SavedDraft, "id" | "rowVersion">, media: MediaItem[], input: LinkedAssetInput, signal: AbortSignal, assetId?: string, purpose?: AssetPurpose) {
   signal.throwIfAborted();
   const value = validateLinkedAsset(input);
   if (assetId && !media.some(item => item.id === assetId && item.linkedAsset)) throw new Error("Linked asset is not in this draft.");
-  const next = await mediaRequest(api.transition(saved.id, saved.rowVersion, "asset", JSON.stringify({ ...value, ...(assetId ? { id: assetId } : {}) }), false), signal);
+  const next = await mediaRequest(api.transition(saved.id, saved.rowVersion, "asset", JSON.stringify({ ...value, ...(assetId ? { id: assetId } : {}), ...(purpose ? { purpose } : {}) }), false), signal);
   const changed = next.media.filter(item => assetId ? item.id === assetId : !media.some(previous => previous.id === item.id));
   if (next.id !== saved.id || next.rowVersion === saved.rowVersion || next.media.length !== media.length + (assetId ? 0 : 1)
-    || changed.length !== 1 || JSON.stringify(changed[0].linkedAsset) !== JSON.stringify(value)
+    || changed.length !== 1 || JSON.stringify(changed[0].linkedAsset) !== JSON.stringify(value) || (purpose !== undefined && changed[0].purpose !== purpose)
     || media.some(previous => !next.media.some(item => item.id === previous.id))) throw new Error("Linked asset save was not confirmed. Reopen the draft before retrying.");
   return next;
 }

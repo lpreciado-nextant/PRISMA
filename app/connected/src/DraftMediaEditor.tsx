@@ -6,11 +6,11 @@ import { ImageFramer } from "../../src/components/ImageFramer";
 import { LocalVideoPreview, VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
 import { ProtectedImage } from "./ProtectedImage";
 import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/components/SubmissionForm";
-import type { AssetType } from "../../src/types";
 import { mediaApi, downloadMedia, workflowApi, transferApi } from "./dataSource";
 import { transferVideo, type PlaybackMode } from "./mediaTransfer";
 import { StreamingVideo } from "./StreamingVideo";
-import { imageDataUrl, mediaRequest, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
+import { imageDataUrl, mediaRequest, saveMediaCaptions, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
+import { defaultPurpose, type AssetPurpose } from "../../src/lib/assetPurpose";
 import type { SavedDraft } from "./drafts";
 import { mediaAsset, saveLinkedAsset } from "./workflow";
 import type { LinkedAssetInput } from "../../src/lib/linkedAssets";
@@ -32,7 +32,6 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   const [framing, setFraming] = useState<File | null>(null);
   const [localVideo, setLocalVideo] = useState<File | null>(null);
   const [removeTarget, setRemoveTarget] = useState<MediaItem | null>(null);
-  const [format, setFormat] = useState<AssetType>("Self-contained HTML file");
   const operation = useRef<AbortController | null>(null);
   useEffect(() => {
     if (busy) return;
@@ -59,7 +58,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [busy]);
-  const mutate = async (files: File[], kind: MediaKind, remove?: MediaItem, resume?: MediaItem) => {
+  const mutate = async (files: File[], kind: MediaKind, remove?: MediaItem, resume?: MediaItem, purpose?: AssetPurpose) => {
     if (operation.current || blocked || uncertain || !state || state.rowVersion !== saved.rowVersion) return;
     const controller = new AbortController();
     operation.current = controller;
@@ -106,6 +105,12 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
           ? await transferVideo(mediaApi, transferApi, next, file!, controller.signal, setState, setHashing, resume?.sessionId, () => { started = true; })
         : await uploadMedia(mediaApi, { id: saved.id, rowVersion: version, uploadProtocol: next.uploadProtocol, maxBlockSize: next.maxBlockSize, blobBlockSize: next.blobBlockSize, maxBlobBlockSize: next.maxBlobBlockSize }, file!, kind, controller.signal, setState);
       if (next.id !== saved.id || next.rowVersion === version) throw new Error("Unconfirmed media update.");
+      // The plug-in files a new attachment under its format's purpose; move it when it was added to another section.
+      const added = !remove && kind === "attachment" ? next.media.find(item => item.kind === "attachment" && item.complete && !state.media.some(previous => previous.id === item.id)) : undefined;
+      if (added && purpose && purpose !== (added.purpose ?? defaultPurpose(mediaAsset(added, 0).assetType))) {
+        setState(next);
+        next = await saveMediaPurpose(mediaApi, next, next.media, added.id, purpose, controller.signal);
+      }
       setState(next);
       setPreview(null);
       onVersion(next.rowVersion);
@@ -121,13 +126,13 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       setBusy(false);
     }
   };
-  const selectVideo = (file: File) => { if (/\.(mp4|webm)$/i.test(file.name)) setUploadFile(file); void mutate([file], "attachment"); };
+  const selectAttachment = (file: File, purpose: AssetPurpose) => { if (/\.(mp4|webm)$/i.test(file.name)) setUploadFile(file); void mutate([file], "attachment", undefined, undefined, purpose); };
   const pauseUpload = () => {
     operation.current?.abort();
     setUncertain(true); setError("Upload paused. Reopen the draft to check confirmed progress before resuming.");
   };
   const disabled = blocked || busy || preparing || uncertain || !state || state.rowVersion !== saved.rowVersion;
-  const saveLink = async (input: LinkedAssetInput, id?: string) => {
+  const saveLink = async (input: LinkedAssetInput, id: string | undefined, purpose: AssetPurpose) => {
     if (disabled || operation.current || !state) throw new Error("Media unavailable. Reopen the draft.");
     const controller = new AbortController(); operation.current = controller; setBusy(true); setError("");
     try {
@@ -135,7 +140,9 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       const captionsSaved = await saveMediaCaptions(mediaApi, checkpoint, checkpoint.media, captions, controller.signal);
       if (captionsSaved) { checkpoint = captionsSaved; setState(checkpoint); onVersion(checkpoint.rowVersion); }
       onCaptions({});
-      const next = await saveLinkedAsset(workflowApi, checkpoint, checkpoint.media, input, controller.signal, id);
+      // Only a purpose other than what the plug-in would keep is sent: new links default to interactive demo, edited links keep theirs.
+      const current = id ? checkpoint.media.find(item => item.id === id)?.purpose ?? "Interactive demo" : "Interactive demo";
+      const next = await saveLinkedAsset(workflowApi, checkpoint, checkpoint.media, input, controller.signal, id, purpose !== current ? purpose : undefined);
       setState(next); onVersion(next.rowVersion); setPreview(null);
     } catch {
       if (!controller.signal.aborted) { setUncertain(true); setError("Asset save was not confirmed. Reopen the draft before retrying."); }
@@ -165,7 +172,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   const remove = (id: string) => setRemoveTarget(state?.media.find(item => item.id === id) ?? null);
   const open = (id: string) => setPreview(state?.media.find(item => item.id === id && item.complete) ?? null);
   return <section className={embedded ? "min-w-0" : "mt-12 border-t border-(--glass-edge) pt-8"}>
-    <SubmissionMedia capabilities={capabilities} disabled={disabled} attachmentDisabled={uploadDisabled} format={format} onFormat={setFormat} onAttachment={selectVideo} onPreparationBusy={setPreparing}
+    <SubmissionMedia capabilities={capabilities} disabled={disabled} attachmentDisabled={uploadDisabled} onAttachment={selectAttachment} onPreparationBusy={setPreparing}
       onLinkedAsset={saveLink} onLinkedPending={setLinkedPending}
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
@@ -174,7 +181,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}
       imageUpload={<ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once" />}
-      attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, linkedAsset: item.linkedAsset, status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
+      attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, linkedAsset: item.linkedAsset, purpose: item.purpose ?? defaultPurpose(mediaAsset(item, 0).assetType), status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
     {error && <p role="alert" className="mb-4 text-[14px]">{error}</p>}
     {uncertain && !busy && onReopen && <button type="button" className={button} onClick={onReopen}><Icon name="file" />Reopen saved draft</button>}
     {!state && !error && <LoadingState label="Loading media..." />}

@@ -234,3 +234,12 @@ test("graph thumbnails reach the catalogue, and only a marked graph confirms a s
   assert.throws(() => parseCatalogueGraph(marked([{ ...graphEntry, thumbnail: { ...thumbnail, received: 5 } }]), false), /thumbnail/);
   assert.throws(() => parseCatalogueGraph(marked([{ ...graphEntry, thumbnail: { ...thumbnail, id: "x" } }]), false), /media record/);
 });
+test("the catalogue graph reports demo kinds only when the plug-in counts purposes", () => {
+  const counted = (demoVideos: unknown, interactiveDemos: unknown) => ({ success: true, data: { ResultJson: JSON.stringify({ solutions: [{ ...graphEntry, demoVideos, interactiveDemos }], purposes: true }) } });
+  assert.deepEqual(parseCatalogueGraph(counted(2, 0), false).get(solutionId)?.demoKinds, ["Demo video"]);
+  assert.deepEqual(parseCatalogueGraph(counted(0, 1), false).get(solutionId)?.demoKinds, ["Interactive demo"]);
+  assert.deepEqual(parseCatalogueGraph(counted(0, 0), false).get(solutionId)?.demoKinds, []);
+  assert.equal(parseCatalogueGraph(graphResult([graphEntry]), false).get(solutionId)?.demoKinds, undefined);
+  assert.throws(() => parseCatalogueGraph(counted(-1, 0), false), /demoVideos/);
+  assert.throws(() => parseCatalogueGraph(counted(1, undefined), false), /interactiveDemos/);
+});

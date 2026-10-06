@@ -9,14 +9,14 @@ export function MediaGuidance({ capabilities }: { capabilities: string[] }) {
     {!isAgent && !isData && !isWorkflow && <p>Show the experience and its business outcome. Use screenshots or explanatory diagrams that a client can understand without technical context.</p>}
   </div>;
 }
-import { useContext, useEffect, useId, useState, type ReactNode } from "react";
+import { useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 import { SectionCardsContext } from "./sectionCards";
 import { OptionalMark, RequiredLegend, RequiredMark } from "./RequiredMark";
 import { LoadingState, ProgressRail } from "./LoadingState";
 import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
-import type { AssetType } from "../types";
+import type { AssetPurpose } from "../lib/assetPurpose";
 import { LINK_ASSET_TYPES, validateLinkedAsset, type LinkedAssetInput, type LinkAssetType } from "../lib/linkedAssets";
 import { useVideoPreparation } from "../lib/useVideoPreparation";
 import { LocalVideoPreview } from "./ViewerFrame";
@@ -127,23 +127,32 @@ export function ImageUploadZone({ line, sub, multiple, disabled, onFiles, childr
   </label>;
 }
 
-export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, format, onFormat, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
+export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
   capabilities: string[]; thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
   images: { id: string; preview: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
-  format: AssetType; onFormat: (format: AssetType) => void; onAttachment: (file: File) => void;
-  attachments: { id: string; name: string; status?: ReactNode; linkedAsset?: LinkedAssetInput }[]; onRemoveAttachment: (id: string) => void;
-  onLinkedAsset?: (input: LinkedAssetInput, id?: string) => Promise<void>; onLinkedPending?: (pending: boolean) => void;
+  /** A file added to one of the three sections; the section sets its purpose (ADR-0011). Videos arrive after compression. */
+  onAttachment: (file: File, purpose: AssetPurpose) => void;
+  attachments: { id: string; name: string; purpose: AssetPurpose; status?: ReactNode; linkedAsset?: LinkedAssetInput }[]; onRemoveAttachment: (id: string) => void;
+  onLinkedAsset?: (input: LinkedAssetInput, id: string | undefined, purpose: AssetPurpose) => Promise<void>; onLinkedPending?: (pending: boolean) => void;
   onPreviewThumbnail?: () => void; onPreviewImage?: (id: string) => void; onPreviewAttachment?: (id: string) => void;
   onReorderImages?: (ids: string[]) => void; onReorderAttachments?: (ids: string[]) => void;
   onPreparationBusy?: (busy: boolean) => void;
   disabled?: boolean; attachmentDisabled?: boolean; local?: boolean; children?: ReactNode;
 }) {
-  const [editing, setEditing] = useState<string | null>(null);
+  // One link editor at a time: a new link in a section, or an existing link being edited.
+  const [linkEditor, setLinkEditor] = useState<{ purpose: AssetPurpose; type: LinkAssetType; id?: string } | null>(null);
   const [linkedDirty, setLinkedDirty] = useState(false);
-  const preparation = useVideoPreparation(onAttachment, onPreparationBusy);
+  // The section a video was added to, carried through compression.
+  const videoPurpose = useRef<AssetPurpose>("Demo video");
+  const preparation = useVideoPreparation(file => onAttachment(file, videoPurpose.current), onPreparationBusy);
   useEffect(() => { onLinkedPending?.(linkedDirty); return () => onLinkedPending?.(false); }, [linkedDirty, onLinkedPending]);
-  const linked = LINK_ASSET_TYPES.includes(format as LinkAssetType);
-  const edited = attachments.find(item => item.id === editing);
+  const full = attachments.length >= 6;
+  const addFile = (file: File, purpose: AssetPurpose) => {
+    if (/\.(mp4|webm)$/i.test(file.name)) { videoPurpose.current = purpose; void preparation.select(file); }
+    else onAttachment(file, purpose);
+  };
+  // Sections keep their own order; the saved order lists them section by section.
+  const reorderSection = (purpose: AssetPurpose, ids: string[]) => onReorderAttachments?.(ATTACHMENT_SECTIONS.flatMap(section => section.purpose === purpose ? ids : attachments.filter(item => item.purpose === section.purpose).map(item => item.id)));
   return <StepShell title="Media">
     <fieldset disabled={preparation.busy} className="flex min-w-0 flex-col gap-5">
     <div className="border-l-2 border-(--accent) pl-4 text-[14px] text-(--ink-2)"><MediaGuidance capabilities={capabilities} /><p className="mt-2">Remove confidential data and client identifiers from every attachment before uploading.</p></div>
@@ -156,12 +165,34 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
         <p id={`caption-hint-${image.id}`} className="px-3 pb-3 text-[12px] text-(--ink-3)">Describe the screen or result shown.</p>
       </MediaReorderItem>)}</div>}{images.length < 6 && imageUpload}</div>
     </div>
-    <fieldset disabled={disabled || linkedDirty || !!editing} className="min-w-0 disabled:opacity-60"><Field label="Additional media format"><SelectPicker label="Additional media format" value={format} options={["Self-contained HTML file", "Video walkthrough only", "Client-ready one-pager / slide", ...(onLinkedAsset ? LINK_ASSET_TYPES : [])]} onChange={value => { if (!editing && !linkedDirty) onFormat(value); }} /></Field></fieldset>
-    {onLinkedAsset && (linked || edited?.linkedAsset) ? <LinkedAssetEditor key={editing ?? format} type={edited?.linkedAsset?.assetType ?? format as LinkAssetType} initial={edited?.linkedAsset} disabled={disabled || attachmentDisabled || (!editing && attachments.length >= 6)} onPending={setLinkedDirty}
-      onSave={async value => { await onLinkedAsset(value, editing ?? undefined); setEditing(null); }} onCancel={() => { setEditing(null); onFormat("Self-contained HTML file"); }} /> : <Field label="Attach additional media" hint={`Optional. MP4/WebM videos up to 500 MB each; HTML and PDF/PPT/PPTX documents up to 25 MB each. Up to 6 additional files. The first file is shown as the main demo on the solution page.${local ? " Local preview only." : ""}`}>
-      <input type="file" className="max-w-full rounded-lg text-[14px] text-(--ink-2) file:mr-3 file:min-h-10 file:cursor-pointer file:rounded-lg file:border file:border-(--glass-edge) file:bg-(--accent) file:px-4 file:py-2.5 file:text-[14px] file:font-semibold file:text-(--on-accent) hover:file:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40 disabled:file:cursor-not-allowed" disabled={disabled || attachmentDisabled || attachments.length >= 6} accept={format === "Self-contained HTML file" ? ".html,.htm" : format === "Video walkthrough only" ? ".mp4,.webm" : ".pdf,.ppt,.pptx"} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) { if (format === "Video walkthrough only") void preparation.select(file); else onAttachment(file); } }} />
-    </Field>}
-    <ul className="space-y-4">{attachments.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={attachments.map(entry => entry.id)} label={item.name} group="attachments" disabled={disabled || attachmentDisabled || linkedDirty || !!editing} onReorder={onReorderAttachments} className="min-w-0 border-b border-(--glass-edge) pb-3"><div className="flex min-w-0 flex-wrap items-center gap-3"><Icon name="file" className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{item.linkedAsset.assetType}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!editing || linkedDirty} title="Edit asset" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (linkedDirty) return; setEditing(item.id); onFormat(item.linkedAsset!.assetType); }}><Icon name="file" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview attachment" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editing === item.id} title="Remove attachment" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></div></MediaReorderItem>)}</ul>
+    <div className="flex min-w-0 flex-col gap-4">
+      <div><p className="text-[13.5px] font-semibold">Demos and material<OptionalMark /></p><p className="mt-0.5 text-[12px] text-(--ink-3)">Add each file where it belongs, so CSMs can tell a client demo from background material. Up to 6 in total.{local ? " Local preview only." : ""}</p></div>
+      {ATTACHMENT_SECTIONS.map(section => {
+        const items = attachments.filter(item => item.purpose === section.purpose);
+        const links = !!onLinkedAsset && section.links;
+        const editor = linkEditor?.purpose === section.purpose ? linkEditor : null;
+        const edited = editor?.id ? items.find(item => item.id === editor.id) : undefined;
+        const locked = disabled || attachmentDisabled || linkedDirty || !!linkEditor;
+        return <section key={section.purpose} aria-labelledby={`media-${section.key}`} className="min-w-0 rounded-[14px] border border-(--glass-edge) p-4" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <h3 id={`media-${section.key}`} className="text-[14.5px] font-semibold">{section.title}</h3>
+            <span className="font-mono text-[11px] text-(--ink-3)">{items.length}</span>
+            {section.recommended && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>Recommended</span>}
+          </div>
+          <p className="mt-1 text-[12.5px] text-(--ink-2)">{links ? section.hint : section.fileHint}</p>
+          {!!items.length && <ul className="mt-3 space-y-3">{items.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={items.map(entry => entry.id)} label={item.name} group={`attachments-${section.key}`} disabled={locked} onReorder={onReorderAttachments ? ids => reorderSection(section.purpose, ids) : undefined} className="min-w-0 border-b border-(--glass-edge) pb-3 last:border-b-0 last:pb-0"><div className="flex min-w-0 flex-wrap items-center gap-3"><Icon name={item.linkedAsset ? "link" : section.purpose === "Demo video" ? "play" : "file"} className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{item.linkedAsset.assetType}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!linkEditor || linkedDirty} title="Edit link" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (!linkedDirty) setLinkEditor({ purpose: section.purpose, type: item.linkedAsset!.assetType, id: item.id }); }}><Icon name="edit" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editor?.id === item.id} title="Remove" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></div></MediaReorderItem>)}</ul>}
+          {editor && onLinkedAsset ? <div className="mt-3"><LinkedAssetEditor key={editor.id ?? editor.type} type={edited?.linkedAsset?.assetType ?? editor.type} initial={edited?.linkedAsset} disabled={disabled || attachmentDisabled || (!editor.id && full)} onPending={setLinkedDirty}
+            onSave={async value => { await onLinkedAsset(value, editor.id, section.purpose); setLinkEditor(null); }} onCancel={() => setLinkEditor(null)} /></div>
+          : <div className="mt-3 flex flex-wrap items-center gap-3">
+            <label className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--accent) ${locked || full ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:brightness-110"}`} style={section.recommended ? { background: "var(--accent)", color: "var(--on-accent)" } : { border: "1px solid var(--glass-edge)" }}>
+              <input type="file" className="sr-only" aria-label={`Upload ${section.upload.toLowerCase()}`} disabled={locked || full} accept={section.accept} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) addFile(file, section.purpose); }} />
+              <Icon name="plus" size={16} />{section.upload}
+            </label>
+            {links && <SelectPicker compact label={`Add a link to ${section.title.toLowerCase()}`} value={"" as LinkAssetType | ""} placeholder="Add a link" options={LINK_ASSET_TYPES} getLabel={type => type || "Add a link"} getButtonLabel={() => "Add a link"} onChange={type => { if (type && !locked && !full) setLinkEditor({ purpose: section.purpose, type }); }} />}
+          </div>}
+        </section>;
+      })}
+    </div>
     </fieldset>
     {preparation.progress && <div className="min-w-0 border-t border-(--glass-edge) pt-4">
       <LoadingState label={preparation.progress.phase === "loading" ? "Loading video compressor..." : preparation.progress.phase === "checking" ? "Checking compressed video..." : preparation.progress.percent === undefined ? "Compressing video..." : `Compressing video: ${preparation.progress.percent}%`} progress={preparation.progress.phase === "encoding" ? preparation.progress.percent : undefined} />
@@ -173,6 +204,19 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
     {children}
   </StepShell>;
 }
+
+/** The Media step's attachment sections; the section a file is added to is its purpose (ADR-0011). */
+const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; upload: string; accept: string; hint: string; fileHint: string; links: boolean; recommended?: boolean }[] = [
+  { purpose: "Demo video", key: "demo", title: "Demo videos", upload: "Upload demo video", accept: ".mp4,.webm", links: false, recommended: true,
+    hint: "Walkthroughs a CSM can play for a client, ideally 2–5 minutes each. Add as many as you need. MP4/WebM up to 500 MB.",
+    fileHint: "Walkthroughs a CSM can play for a client, ideally 2–5 minutes each. Add as many as you need. MP4/WebM up to 500 MB." },
+  { purpose: "Interactive demo", key: "interactive", title: "Interactive demo", upload: "Upload HTML file", accept: ".html,.htm", links: true,
+    hint: "Something a CSM can click through: a self-contained HTML file (up to 25 MB) or a link to the app, Power Apps or Power BI report.",
+    fileHint: "Something a CSM can click through: a self-contained HTML file, up to 25 MB." },
+  { purpose: "Supporting material", key: "supporting", title: "Supporting material", upload: "Upload file", accept: ".pdf,.ppt,.pptx,.mp4,.webm", links: true,
+    hint: "Background for the conversation: slides, one-pagers, PDFs (up to 25 MB), videos that are not client demos, or links such as a marketing kit.",
+    fileHint: "Background for the conversation: slides, one-pagers, PDFs (up to 25 MB) or videos that are not client demos." },
+];
 
 function MediaReorderItem({ as: Element = "div", id, ids, label, group, disabled, onReorder, className, children }: {
   as?: "div" | "li"; id: string; ids: string[]; label: string; group: string; disabled: boolean; onReorder?: (ids: string[]) => void; className: string; children: ReactNode;

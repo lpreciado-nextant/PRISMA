@@ -4,6 +4,7 @@ import { activeFacetCount, facetCounts, type FacetKey, type Filters } from "../l
 import { Icon } from "./Icon";
 
 const GROUPS: { key: FacetKey; label: string }[] = [
+  { key: "demos", label: "Demo" },
   { key: "capabilities", label: "Capability" },
   { key: "technologies", label: "Technology" },
   { key: "industries", label: "Industry" },

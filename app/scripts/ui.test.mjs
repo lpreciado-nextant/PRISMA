@@ -288,17 +288,30 @@ test("safety and contributor rows preserve baseline copy and accessible field st
   assert.match(html, /aria-live="polite"/);
 });
 
-test("media uses stacked baseline controls and inline screenshot captions", () => {
-  const html = render(form.SubmissionMedia, { capabilities: [], onRemoveThumbnail: noop, thumbnailUpload: "Thumbnail upload", images: [{ id: "image", caption: "Overview", preview: createElement("img", { src: "data:image/png;base64,AA==", alt: "Overview" }) }], imageUpload: "Image upload", onCaption: noop, onRemoveImage: noop, format: "Self-contained HTML file", onFormat: noop, onAttachment: noop, attachments: [{ id: "html", name: "demo.html" }], onRemoveAttachment: noop });
+test("media files demos, interactive demos and supporting material in their own sections", () => {
+  const props = { capabilities: [], onRemoveThumbnail: noop, thumbnailUpload: "Thumbnail upload", images: [{ id: "image", caption: "Overview", preview: createElement("img", { src: "data:image/png;base64,AA==", alt: "Overview" }) }], imageUpload: "Image upload", onCaption: noop, onRemoveImage: noop, onAttachment: noop, onRemoveAttachment: noop,
+    attachments: [{ id: "video", name: "walkthrough.mp4", purpose: "Demo video" }, { id: "html", name: "demo.html", purpose: "Interactive demo" }, { id: "deck", name: "deck.pdf", purpose: "Supporting material" }] };
+  const html = render(form.SubmissionMedia, props);
   assert.match(html, /Detail screenshots · 1\/6/);
   assert.match(html, /aria-label="Screenshot caption"/);
-  assert.match(html, /aria-label="Remove this screenshot"/);
-  assert.match(html, /accept=".html,.htm"/);
-  assert.match(html, /file:bg-\(--accent\)/);
-  assert.match(html, /file:rounded-lg/);
-  assert.match(html, /focus-visible:outline-offset-2/);
   assert.ok(html.indexOf("Card thumbnail") < html.indexOf("Detail screenshots"));
-  assert.ok(html.indexOf("Detail screenshots") < html.indexOf("Additional media format"));
+  assert.ok(html.indexOf("Detail screenshots") < html.indexOf("Demo videos"));
+  assert.ok(html.indexOf("Demo videos") < html.indexOf("walkthrough.mp4") && html.indexOf("walkthrough.mp4") < html.indexOf("Interactive demo"));
+  assert.ok(html.indexOf("Interactive demo") < html.indexOf("demo.html") && html.indexOf("demo.html") < html.indexOf("Supporting material"));
+  assert.ok(html.indexOf("Supporting material") < html.indexOf("deck.pdf"));
+  assert.match(html, /Recommended/);
+  assert.match(html, /accept=".mp4,.webm"/);
+  assert.match(html, /accept=".html,.htm"/);
+  assert.match(html, /accept=".pdf,.ppt,.pptx,.mp4,.webm"/);
+  assert.match(html, /has-\[:focus-visible\]:outline-offset-2/);
+  // Links are offered only where the caller can save them (connected), and never for demo videos.
+  assert.doesNotMatch(html, /Add a link/);
+  const connected = render(form.SubmissionMedia, { ...props, onLinkedAsset: async () => {} });
+  assert.equal((connected.match(/aria-label="Add a link to /g) ?? []).length, 2);
+  assert.doesNotMatch(connected, /Add a link to demo videos/);
+  // Six attachments in total fill every section.
+  const full = render(form.SubmissionMedia, { ...props, attachments: props.attachments.concat([4, 5, 6].map(index => ({ id: `extra-${index}`, name: `extra-${index}.pdf`, purpose: "Supporting material" }))) });
+  assert.equal((full.match(/aria-label="Upload [^"]*" disabled=""/g) ?? []).length, 3);
 });
 
 test("linked asset editor separates URLs, embedding and desktop arrangements", () => {

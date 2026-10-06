@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { presentCatalogue } from "./catalogue.ts";
 import { SOLUTIONS } from "../data/solutions.ts";
+import type { DemoAsset } from "../types.ts";
 import { matchesQuery } from "./search.ts";
 
 test("present catalogue requires publication, acknowledgment and independent review", () => {
@@ -104,4 +105,27 @@ test("the added-within window filters on creation date, counts each window and r
   assert.equal(query.get("added"), "30d");
   assert.equal(filtersFromQuery(query).added, "30d");
   assert.equal(filtersFromQuery(new URLSearchParams("added=bogus")).added, "any");
+});
+
+test("the demo facet filters on asset purpose, falls back to the format and round-trips the URL", async () => {
+  const { filterSolutions, facetCounts, filtersFromQuery, filtersToQuery, EMPTY_FILTERS } = await import("./search.ts");
+  const asset = (assetType: DemoAsset["assetType"], purpose?: DemoAsset["purpose"]) => ({ id: assetType, name: assetType, assetType, allowsEmbedding: true, sortOrder: 1, ...(purpose ? { purpose } : {}) }) as DemoAsset;
+  const list = [
+    { ...SOLUTIONS[0], id: "video", assets: [asset("Video walkthrough only")] },
+    { ...SOLUTIONS[0], id: "training", assets: [asset("Video walkthrough only", "Supporting material")] },
+    { ...SOLUTIONS[0], id: "html", assets: [asset("Self-contained HTML file", "Interactive demo")] },
+    { ...SOLUTIONS[0], id: "graph", assets: [], demoKinds: ["Demo video" as const] },
+  ];
+  assert.deepEqual(filterSolutions(list, { ...EMPTY_FILTERS, demos: ["Demo video"] }).map(solution => solution.id), ["video", "graph"]);
+  assert.deepEqual(filterSolutions(list, { ...EMPTY_FILTERS, demos: ["Interactive demo"] }).map(solution => solution.id), ["html"]);
+  assert.deepEqual([...facetCounts(list, EMPTY_FILTERS, "demos")], [["Demo video", 2], ["Interactive demo", 1]]);
+  const query = new URLSearchParams(Object.entries(filtersToQuery({ ...EMPTY_FILTERS, demos: ["Demo video"] })).filter((entry): entry is [string, string] => entry[1] !== undefined));
+  assert.equal(query.get("demo"), "Demo video");
+  assert.deepEqual(filtersFromQuery(query).demos, ["Demo video"]);
+  assert.deepEqual(filtersFromQuery(new URLSearchParams("demo=Training")).demos, []);
+});
+
+test("every mock asset carries a purpose its format allows", async () => {
+  const { purposeAllows } = await import("./assetPurpose.ts");
+  for (const asset of SOLUTIONS.flatMap(solution => solution.assets)) assert(asset.purpose && purposeAllows(asset.purpose, asset.assetType), asset.name);
 });

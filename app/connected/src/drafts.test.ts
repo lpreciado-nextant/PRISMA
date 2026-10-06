@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, coreFields, snapshot, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
-import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, uploadMedia, type MediaApi } from "./media.ts";
+import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
@@ -106,6 +106,25 @@ test("linked asset create and edit confirm type and exact versions without file 
   assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, linkedAsset: { ...input, externalUrl: "javascript:alert(1)" } }] })));
   assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, mime: "text/html" }] })), /linked asset/);
   assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, linkedAsset: undefined }] })));
+  // Purpose (ADR-0011): sent only when asked for, confirmed on the returned row, and validated when parsed.
+  const supporting = await saveLinkedAsset({ transition: async (_id, _version, _action, json) => {
+    assert.equal(JSON.parse(json).purpose, "Supporting material");
+    return result({ ...state, media: [{ ...item, purpose: "Supporting material" }] });
+  } }, draft, [], input, signal(), undefined, "Supporting material");
+  assert.equal(mediaAsset(supporting.media[0], 0).purpose, "Supporting material");
+  await assert.rejects(saveLinkedAsset({ transition: async () => result({ ...state, media: [{ ...item, purpose: "Interactive demo" }] }) }, draft, [], input, signal(), undefined, "Supporting material"), /confirmed/);
+  assert.throws(() => parseMedia(result({ ...state, media: [{ ...item, purpose: "Training" }] })), /purpose/);
+});
+
+test("moving an attachment to another purpose keeps captions and order and must be confirmed", async () => {
+  const video = { id: spare, sessionId: spare, kind: "attachment" as const, name: "training.mp4", mime: "video/mp4", size: 10, received: 10, nextBlock: 1, complete: true, sortOrder: 0, caption: "", purpose: "Demo video" as const };
+  const state = { id: draft.id, rowVersion: "90071992547409932", sessionId: null, blockSize: 524288, media: [{ ...video, purpose: "Supporting material" }] };
+  const moved = await saveMediaPurpose({ metadata: async (_id, _version, json) => {
+    assert.deepEqual(JSON.parse(json), [{ id: spare, caption: "", sortOrder: 0, purpose: "Supporting material" }]);
+    return result(state);
+  } }, draft, [video], spare, "Supporting material", signal());
+  assert.equal(moved.media[0].purpose, "Supporting material");
+  await assert.rejects(saveMediaPurpose({ metadata: async () => result({ ...state, media: [video] }) }, draft, [video], spare, "Supporting material", signal()), /confirmed/);
 });
 
 test("draft snapshots, saves and recovery discard retired story properties", async () => {

@@ -4,6 +4,7 @@ import { AREAS, BUSINESS_CALENDARS } from "../data/catalogueMetadata";
 import { AreaTag, Chip, StatusPill } from "../components/Badges";
 import { outlinedStatusButton, SubmissionStatusPanel } from "../components/SubmissionStatusPanel";
 import { submissionState } from "../lib/submissionState";
+import { assetPurpose, type AssetPurpose } from "../lib/assetPurpose";
 import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
@@ -81,11 +82,12 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
 }) {
   const areas = solutionAreas(solution);
   const assets = [...solution.assets].sort((a, b) => a.sortOrder - b.sortOrder);
-  // The first asset in sort order is the main demo, shown above the fold; the list below holds the rest.
-  // Connected mode (onAssetOpen) loads asset content on demand, so it keeps every asset in the list.
-  const mainDemo = catalogueOnly || onAssetOpen ? undefined : assets[0];
+  // The main demo, shown above the fold, is the first demo video, else the first interactive demo (ADR-0011); the
+  // sections below hold the rest. Connected mode (onAssetOpen) loads asset content on demand, so it lists every asset.
+  const mainDemo = catalogueOnly || onAssetOpen ? undefined
+    : assets.find((asset) => assetPurpose(asset) === "Demo video") ?? assets.find((asset) => assetPurpose(asset) === "Interactive demo");
   const inlineDemo = mainDemo && behaviourFor(mainDemo).mode === "viewer" ? mainDemo : undefined;
-  const otherAssets = mainDemo ? assets.slice(1) : assets;
+  const assetSections = ASSET_SECTIONS.map((section) => ({ ...section, items: assets.filter((asset) => asset !== mainDemo && assetPurpose(asset) === section.purpose) })).filter((section) => section.items.length > 0);
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
   const contributions = solution.contributors.map((contributor) => {
     const calendar = BUSINESS_CALENDARS.find((entry) => entry.id === contributor.calendarId);
@@ -211,13 +213,13 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
             </Panel>
           )}
 
-          {!catalogueOnly && otherAssets.length > 0 && <Panel title={mainDemo ? "More demo assets" : "Demo assets"}>
+          {!catalogueOnly && assetSections.map((section) => <Panel key={section.purpose} title={`${mainDemo && assetPurpose(mainDemo) === section.purpose ? `More ${section.title.toLowerCase()}` : section.title} · ${section.items.length}`}>
             <ul className="flex flex-col gap-3">
-              {otherAssets.map((asset) => (
+              {section.items.map((asset) => (
                 <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} onOpen={onAssetOpen} />
               ))}
             </ul>
-          </Panel>}
+          </Panel>)}
 
           {!present && solution.libraryNotes && (
             <div
@@ -389,6 +391,12 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
     </div>
   );
 }
+
+const ASSET_SECTIONS: { purpose: AssetPurpose; title: string }[] = [
+  { purpose: "Demo video", title: "Demo videos" },
+  { purpose: "Interactive demo", title: "Interactive demos" },
+  { purpose: "Supporting material", title: "Supporting material" },
+];
 
 function AssetRow({ solution, asset, basePath, onOpen }: { solution: Solution; asset: DemoAsset; basePath?: string; onOpen?: (asset: DemoAsset) => void }) {
   const behaviour = behaviourFor(asset);

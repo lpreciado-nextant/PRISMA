@@ -1,3 +1,4 @@
+import type { AssetPurpose, DemoKind } from "./lib/assetPurpose";
 /**
  * Shapes mirror the Dataverse schema in docs/data_model so the mock data layer
  * can be swapped for `@microsoft/power-apps` generated services without the UI
@@ -75,6 +76,8 @@ export interface DemoAsset {
   embedHint?: string;
   allowsEmbedding: boolean;
   sortOrder: number;
+  /** `nx_assetpurpose` (ADR-0011). Absent on older rows, which read their format default. */
+  purpose?: AssetPurpose;
 }
 
 /** A gallery row from `nx_solutionimage` — screenshots beyond the card thumbnail. */
@@ -132,6 +135,8 @@ export interface Solution {
   /** Delivery evidence via `nx_solutionproject` — client names, never rendered in present mode. */
   projects?: SolutionProject[];
   assets: DemoAsset[];
+  /** The demo kinds the catalogue reports for this solution (from `nx_GetCatalogueGraph` counts), when assets are not loaded. Not a column. */
+  demoKinds?: DemoKind[];
 }
 
 export interface AreaMeta {
