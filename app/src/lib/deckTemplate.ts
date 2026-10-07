@@ -26,7 +26,7 @@ const PALETTES: Record<DeckVariant, Record<string, string>> = {
 };
 const AREA_KEY: Record<string, string> = { "ai & automation": "ai", "data solutions": "data", "intelligent business operations": "ibo" };
 const MATURITY_KEY: Record<string, string> = { live: "live", "working prototype": "proto", "idea / concept": "idea" };
-const ROW_KINDS: Record<string, number> = { video: 3, interactive: 2 };
+const ROW_KINDS: Record<string, number> = { video: 3, interactive: 2, supporting: 3 };
 
 type Fields = Record<string, string>;
 
@@ -158,6 +158,30 @@ function pictureFor(doc: Document, frame: Element, rId: string, image: DeckImage
   return doc.importNode(new DOMParser().parseFromString(xml, "application/xml").documentElement, true);
 }
 
+/**
+ * The demo cards are laid out as columns. Cards without rows are removed; the remaining ones share the full width,
+ * keeping the template's gap. Buttons stay anchored to the right edge of their card; titles, rows and labels widen.
+ */
+function spreadCards(named: Map<string, Element>): void {
+  const kinds = Object.keys(ROW_KINDS).filter((kind) => named.get(`card_${kind}`));
+  const present = kinds.filter((kind) => named.get(`card_${kind}`)!.parentNode);
+  if (kinds.length < 2 || present.length === kinds.length || !present.length) return;
+  const boxes = kinds.map((kind) => xfrm(named.get(`card_${kind}`)!));
+  const left = boxes[0].x, right = boxes[boxes.length - 1].x + boxes[boxes.length - 1].w, gap = boxes[1].x - (boxes[0].x + boxes[0].w);
+  const width = Math.round((right - left - gap * (present.length - 1)) / present.length);
+  present.forEach((kind, index) => {
+    const card = xfrm(named.get(`card_${kind}`)!);
+    const dx = left + index * (width + gap) - card.x, dw = width - card.w;
+    for (const [name, shape] of named) {
+      if (!shape.parentNode || !(name === `card_${kind}` || name === `${kind}_label` || name.startsWith(`row_${kind}_`))) continue;
+      const box = xfrm(shape);
+      const anchoredRight = /_btn(_text)?$/.test(name), widens = !anchoredRight && !/_(icon|play)$/.test(name);
+      box.off.setAttribute("x", String(box.x + dx + (anchoredRight ? dw : 0)));
+      if (widens) box.ext.setAttribute("cx", String(box.w + dw));
+    }
+  });
+}
+
 export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, fields: Fields, images: Record<string, DeckImage>): Promise<Blob> {
   const zip = await JSZip.loadAsync(template);
   // .potx -> .pptx: PowerPoint opens a template content type as a new untitled copy instead of the file.
@@ -205,17 +229,6 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
       else remove(label);
     }
 
-    for (const shape of Array.from(tree.getElementsByTagNameNS(NS.p, "sp"))) {
-      if (!/\{\{/.test(shape.textContent ?? "")) continue;
-      fillParagraphs(shape, fields);
-      fitText(shape);
-    }
-
-    for (let i = 1; i <= 8; i++) { // unused technology chips
-      const tech = named.get(`tech_${i}`);
-      if (tech && !(tech.textContent ?? "").trim()) { remove(tech); remove(named.get(`tech_chip_${i}`)); }
-    }
-
     for (const [kind, max] of Object.entries(ROW_KINDS)) { // demo rows
       for (let n = 1; n <= max; n++) {
         if (!named.has(`row_${kind}_${n}`)) continue;
@@ -237,7 +250,21 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
         bottoms.push(geometry.y + height);
       }
       if (bottoms.length) xfrm(named.get("demo_note")!).off.setAttribute("y", String(Math.max(...bottoms) + Math.round(0.14 * EMU_IN)));
+      spreadCards(named);
     }
+
+    // Text is filled after the cards are laid out, so a demo title shrinks only when its final box is too small.
+    for (const shape of Array.from(tree.getElementsByTagNameNS(NS.p, "sp"))) {
+      if (!/\{\{/.test(shape.textContent ?? "")) continue;
+      fillParagraphs(shape, fields);
+      fitText(shape);
+    }
+
+    for (let i = 1; i <= 8; i++) { // unused technology chips
+      const tech = named.get(`tech_${i}`);
+      if (tech && !(tech.textContent ?? "").trim()) { remove(tech); remove(named.get(`tech_chip_${i}`)); }
+    }
+
 
     for (const part of ["prisma_link_chip", "prisma_link"]) linkShape(doc, rels, named.get(part), fields.prisma_url ?? "");
     linkFirstRun(doc, rels, named.get("csm_email"), fields.csm_email ?? "");

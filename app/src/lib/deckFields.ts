@@ -44,6 +44,7 @@ export interface DeckInput {
   /** Readable titles and links for the demos; titles come from the app, never from file names. */
   videos?: DeckDemo[];
   interactives?: DeckDemo[];
+  supporting?: DeckDemo[];
   /** CSM of the solution, when the caller has it (Cleared rows only expose the CSM, never builders). */
   csm?: { name: string; email?: string };
   now?: Date;
@@ -59,6 +60,7 @@ export const CTA_HEADLINE = "Let's build this together";
 export const MAX_TECH = 8;
 export const MAX_VIDEOS = 3;
 export const MAX_INTERACTIVES = 2;
+export const MAX_SUPPORTING = 3;
 export const MAX_SHOTS = 6;
 
 const MATURITY_LABEL: Record<SolutionStatus, string | undefined> = {
@@ -90,7 +92,7 @@ function monthYear(date: Date): string {
 }
 
 export function buildDeckFields(input: DeckInput): DeckFields {
-  const { solution, presenter, prismaUrl, videos = [], interactives = [], csm } = input;
+  const { solution, presenter, prismaUrl, videos = [], interactives = [], supporting = [], csm } = input;
   if (!canExportDeck(solution)) throw new DeckNotExportableError("Only published solutions with Client review = Cleared can be exported.");
   const areaName = AREAS[solution.specializationArea].name;
   const fields: DeckFields = {
@@ -112,12 +114,13 @@ export function buildDeckFields(input: DeckInput): DeckFields {
     csm_email: fit(csm?.email, DECK_LIMITS.csm_email),
   };
   solution.technologies.slice(0, MAX_TECH).forEach((tech, index) => { fields[`tech_${index + 1}`] = fit(tech, DECK_LIMITS.tech); });
-  const demos = (kind: "video" | "interactive", list: DeckDemo[], max: number) => list.filter((demo) => demo.title.trim()).slice(0, max).forEach((demo, index) => {
+  const demos = (kind: "video" | "interactive" | "supporting", list: DeckDemo[], max: number) => list.filter((demo) => demo.title.trim()).slice(0, max).forEach((demo, index) => {
     fields[`${kind}_${index + 1}_title`] = fit(demo.title, DECK_LIMITS.demo_title);
     if (demo.url) fields[`${kind}_${index + 1}_url`] = demo.url;
   });
   demos("video", videos, MAX_VIDEOS);
   demos("interactive", interactives, MAX_INTERACTIVES);
+  demos("supporting", supporting, MAX_SUPPORTING);
   return fields;
 }
 

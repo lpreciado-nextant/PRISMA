@@ -32,6 +32,10 @@ test("fields respect template limits and fall back by slot", () => {
   assert.equal(fields.tech_9, undefined);
   assert.equal(fields.video_1_title, "Walkthrough");
   assert.equal(fields.video_2_title, undefined);
+  const withSupporting = buildDeckFields({ ...input, solution, supporting: [{ title: "One-pager", url: "https://s1" }, { title: "Deck" }, { title: "FAQ" }, { title: "Extra" }] });
+  assert.equal(withSupporting.supporting_1_url, "https://s1");
+  assert.equal(withSupporting.supporting_3_title, "FAQ");
+  assert.equal(withSupporting.supporting_4_title, undefined);
   assert.equal(fields.presentation_date, "OCTOBER 2026");
   assert.equal(fields.prisma_url, "prisma.nextant.com/#/s/1");
 });

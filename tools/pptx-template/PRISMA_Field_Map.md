@@ -17,7 +17,7 @@ Esta versión está hecha sobre la página real de una solución en PRISMA (POC 
 | 2 | What it does | "What the solution does", "Business value", una captura |
 | 3 | See it in action | Hasta 6 capturas |
 | 4 | What it's built on | "At a glance" (área, madurez, industrias, client review, fecha) y "Built on" (tecnologías) |
-| 5 | Walkthroughs and live demos | Demo videos (hasta 3) e Interactive demos (hasta 2) |
+| 5 | Walkthroughs and live demos | Demo videos (hasta 3), Interactive demos (hasta 2) y Supporting material (hasta 3), en tres columnas |
 | 6 | Next step | CSM de la solución y enlace a PRISMA |
 
 ## Campos de texto
@@ -38,11 +38,12 @@ Esta versión está hecha sobre la página real de una solución en PRISMA (POC 
 | `{{tech_1}}` … `{{tech_8}}` | 4 | 20 c/u | Sí (mín. 1) | Built on. Los chips sin uso desaparecen |
 | `{{video_1_title}}` … `_3_title`, `{{video_N_url}}` | 5 | 40 | No | Demo videos |
 | `{{interactive_1_title}}`, `_2_title`, `{{interactive_N_url}}` | 5 | 40 | No | Interactive demos |
+| `{{supporting_1_title}}` … `_3_title`, `{{supporting_N_url}}` | 5 | 40 | No | Supporting material |
 | `{{cta_headline}}` | 6 | 60 | Sí | Texto estándar de Nextant, editable |
 | `{{prisma_url}}` | 6 | 40 | Sí | Enlace a la solución en PRISMA |
 | `{{csm_name}}` `{{csm_email}}` | 6 | 28 / 35 | Sí | CSM (en Forge: Andres Perez) |
 
-Las filas de demos sin título se eliminan solas, y la tarjeta se ajusta a las filas que quedan.
+Las filas de demos sin título se eliminan solas, y la tarjeta se ajusta a las filas que quedan. Una tarjeta sin filas desaparece y las que quedan se reparten todo el ancho (una, dos o tres columnas). Los botones dicen **Play** (videos) y **Open** (interactivos y material de apoyo).
 
 ## Imágenes
 
@@ -64,7 +65,7 @@ Cada imagen llena su marco con esquinas redondeadas (recorte centrado). Las capt
 1. **Títulos de demos:** hoy la app muestra nombres de archivo (`prisma-hosted.webm`, `index.html`). Para la presentación hace falta un título legible por demo.
 2. **Descripción corta:** la de la tarjeta se corta a mitad de frase. Hay que pasar el texto completo.
 3. **Videos y demos protegidos:** viven en el almacenamiento protegido de PRISMA, así que el enlace pide inicio de sesión de Nextant; sirve para que el CSM presente en vivo. Si quieren una presentación que funcione sin conexión, se puede incrustar un video en el `.pptx` (el de 50 MB pesaría mucho).
-4. **Material de apoyo:** la página ya ofrece un `.pptx` o PDF "client-ready" por solución. Esta plantilla complementa eso: genera la presentación a partir de los datos, sin que el builder la arme a mano.
+4. **Material de apoyo:** la diapositiva 5 enlaza hasta 3 materiales de apoyo de la solución (el `.pptx` o PDF "client-ready", por ejemplo), que se abren en PRISMA como los demos. La plantilla genera la presentación a partir de los datos, sin que el builder la arme a mano.
 
 ## Estilo
 

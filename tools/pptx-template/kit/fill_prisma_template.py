@@ -23,7 +23,7 @@ AREA_KEY = {"ai & automation": "ai", "data solutions": "data", "intelligent busi
 MATURITY_KEY = {"live": "live", "working prototype": "proto", "idea / concept": "idea"}
 LINKS = {"prisma_link_chip": "prisma_url", "prisma_link": "prisma_url"}  # whole chip is clickable, text on top too
 TEXT_LINKS = {"csm_email": "csm_email"}  # text run becomes a link
-ROW_KINDS = {"video": 3, "interactive": 2}  # demo rows: video_N_title / video_N_url ...
+ROW_KINDS = {"video": 3, "interactive": 2, "supporting": 3}  # demo rows: video_N_title / video_N_url ...
 
 
 def open_template(path):
@@ -108,6 +108,28 @@ def add_picture_cover(slide, frame, image_path):
     return pic
 
 
+def spread_cards(named):
+    """Cards without rows are gone; the remaining ones share the full width (buttons stay on the right edge)."""
+    kinds = [k for k in ROW_KINDS if f"card_{k}" in named]
+    present = [k for k in kinds if named[f"card_{k}"]._element.getparent() is not None]
+    if len(kinds) < 2 or len(present) == len(kinds) or not present:
+        return
+    cards = [named[f"card_{k}"] for k in kinds]
+    left, right = cards[0].left, cards[-1].left + cards[-1].width
+    gap = cards[1].left - (cards[0].left + cards[0].width)
+    width = int((right - left - gap * (len(present) - 1)) / len(present))
+    for i, k in enumerate(present):
+        card = named[f"card_{k}"]
+        dx, dw = left + i * (width + gap) - card.left, width - card.width
+        for nm, shp in named.items():
+            if shp._element.getparent() is None or not (nm in (f"card_{k}", f"{k}_label") or nm.startswith(f"row_{k}_")):
+                continue
+            right_anchored = nm.endswith("_btn") or nm.endswith("_btn_text")
+            shp.left = Emu(shp.left + dx + (dw if right_anchored else 0))
+            if not right_anchored and not nm.endswith(("_icon", "_play")):
+                shp.width = Emu(shp.width + dw)
+
+
 def main(template, data_json, out):
     prs, mode = open_template(template)
     data = json.load(open(data_json, encoding="utf8"))
@@ -179,6 +201,7 @@ def main(template, data_json, out):
                     bottoms.append(card_shp.top + card_shp.height)
             if bottoms:
                 named["demo_note"].top = max(bottoms) + Emu(int(0.14 * 914400))
+            spread_cards(named)
         # hyperlinks (chips are clickable shapes so text colour stays readable on the filled chip)
         def to_url(val):
             return val if val.startswith(("http", "mailto:")) else ("mailto:" + val if "@" in val else "https://" + val)

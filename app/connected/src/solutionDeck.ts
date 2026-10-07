@@ -47,7 +47,7 @@ async function deckImage(item: MediaItem, solutionId: string, signal: AbortSigna
 
 export async function downloadSolutionDeck({ solution, media, presenter, csm, link, variant, signal }: DeckRequest): Promise<string> {
   const ready = media.filter(item => item.complete).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  const demos = (purpose: "Demo video" | "Interactive demo"): DeckDemo[] => ready
+  const demos = (purpose: "Demo video" | "Interactive demo" | "Supporting material"): DeckDemo[] => ready
     .filter(item => (item.kind === "attachment" || item.linkedAsset) && assetPurpose(mediaAsset(item, 0)) === purpose)
     .map(item => ({ title: demoTitle(item), url: link(`/s/${solution.id}/demo/${item.id}`) }));
   const fields = buildDeckFields({
@@ -55,6 +55,7 @@ export async function downloadSolutionDeck({ solution, media, presenter, csm, li
     prismaUrl: link(`/s/${solution.id}`) ?? "",
     videos: demos("Demo video"),
     interactives: demos("Interactive demo"),
+    supporting: demos("Supporting material"),
   });
 
   const thumbnail = ready.find(item => item.kind === "thumbnail");
