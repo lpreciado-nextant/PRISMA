@@ -38,7 +38,8 @@ export interface DeckFields {
   [key: string]: string;
 }
 
-export interface DeckDemo { title: string; url?: string }
+/** `action`: the row's button label (Play, Open or Download); the template's own label stays when absent. */
+export interface DeckDemo { title: string; url?: string; action?: "Play" | "Open" | "Download" }
 
 export interface DeckInput {
   solution: Solution;
@@ -124,6 +125,7 @@ export function buildDeckFields(input: DeckInput): DeckFields {
   const demos = (kind: "video" | "interactive" | "supporting", list: DeckDemo[], max: number) => list.filter((demo) => demo.title.trim()).slice(0, max).forEach((demo, index) => {
     fields[`${kind}_${index + 1}_title`] = fit(demo.title, DECK_LIMITS.demo_title);
     if (demo.url) fields[`${kind}_${index + 1}_url`] = demo.url;
+    if (demo.action) fields[`${kind}_${index + 1}_action`] = demo.action;
   });
   demos("video", videos, MAX_VIDEOS);
   demos("interactive", interactives, MAX_INTERACTIVES);

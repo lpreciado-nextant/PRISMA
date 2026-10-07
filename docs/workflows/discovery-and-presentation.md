@@ -60,6 +60,7 @@ Connected PRISMA only. **Download presentation** sits beside Copy link on a publ
 - Text that would overflow its fixed box shrinks (down to 60% of the template size).
 - Every slide carries speaker notes built from the same fields; slide 5's notes list each demo's full link to paste if a button does not open. The slide 6 chip shows the solution name and links the full, untruncated PRISMA URL.
 - Slide 5 lists demo videos (up to 3), interactive demos (up to 2) and supporting material (up to 3) in columns; a kind with nothing is dropped and the rest share the width.
+- Each row's button says what it does: Play (video), Open (HTML, links) or Download (any other file). A file is never linked directly, since that would put a storage URL in the deck; its link opens the PRISMA viewer with `?download=1`, which starts the download once on arrival (the viewer's Download button stays for a blocked one).
 - Demo rows link back to the demo in PRISMA, so they need a Nextant sign-in; the deck is for presenting live, not for sending to clients as a standalone demo. Demo titles use the caption or the file name without its extension until a title field exists ([Q19](../delivery/decision-log.md)).
 
 ## PoC mapping

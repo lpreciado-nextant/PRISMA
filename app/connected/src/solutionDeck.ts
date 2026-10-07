@@ -20,6 +20,12 @@ export interface DeckRequest {
   signal: AbortSignal;
 }
 
+/** What the row's button does: a video plays, HTML and links open, any other file downloads. */
+function demoAction(item: MediaItem): "Play" | "Open" | "Download" {
+  if (item.linkedAsset) return "Open"; // links are hosted apps, Power Apps, Power BI or desktop demos
+  return item.mime.startsWith("video/") ? "Play" : item.mime === "text/html" ? "Open" : "Download";
+}
+
 /** A readable demo title: the caption, else the file name without its extension (decision log: demo titles). */
 const demoTitle = (item: MediaItem) => item.caption?.trim() || item.name.replace(/\.[a-z0-9]{2,5}$/i, "").replace(/[-_]+/g, " ").trim();
 
@@ -49,7 +55,10 @@ export async function downloadSolutionDeck({ solution, media, presenter, csm, li
   const ready = media.filter(item => item.complete).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   const demos = (purpose: "Demo video" | "Interactive demo" | "Supporting material"): DeckDemo[] => ready
     .filter(item => (item.kind === "attachment" || item.linkedAsset) && assetPurpose(mediaAsset(item, 0)) === purpose)
-    .map(item => ({ title: demoTitle(item), url: link(`/s/${solution.id}/demo/${item.id}`) }));
+    .map(item => {
+      const action = demoAction(item);
+      return { title: demoTitle(item), action, url: link(`/s/${solution.id}/demo/${item.id}${action === "Download" ? "?download=1" : ""}`) };
+    });
   const fields = buildDeckFields({
     solution, presenter, csm,
     prismaUrl: link(`/s/${solution.id}`) ?? "",

@@ -210,9 +210,21 @@ function PreparedFileDownload({ file }: { file: File }) {
   // eslint-disable-next-line jsx-a11y/anchor-is-valid -- href is the object URL the effect assigns and revokes.
   return <a ref={link} download={file.name} className={button}><Icon name="download" />Keep upload file for resume</a>;
 }
-export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "submission" }: { item: MediaItem; onClose: () => void; viewerTitle?: string; solutionId?: string; mode?: PlaybackMode }) {
+export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "submission", autoDownload = false }: { item: MediaItem; onClose: () => void; viewerTitle?: string; solutionId?: string; mode?: PlaybackMode; autoDownload?: boolean }) {
   const [content, setContent] = useState<{ url: string; html?: string } | null>(null);
   const [error, setError] = useState(false);
+  const downloaded = useRef(false);
+  // A presentation's link to a file (`?download=1`) starts the download once; the Download button stays for a blocked one.
+  useEffect(() => {
+    if (!autoDownload || downloaded.current || !content || item.kind !== "attachment" || content.html !== undefined || item.mime.startsWith("video/")) return;
+    downloaded.current = true;
+    const link = document.createElement("a");
+    link.href = content.url;
+    link.download = item.name;
+    document.body.append(link);
+    link.click();
+    link.remove();
+  }, [autoDownload, content, item]);
   useEffect(() => {
     if (item.linkedAsset || (solutionId && item.mime === "video/mp4")) return;
     let active = true;

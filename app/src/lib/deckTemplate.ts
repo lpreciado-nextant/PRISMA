@@ -335,8 +335,19 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
     for (const [kind, max] of Object.entries(ROW_KINDS)) { // demo rows
       for (let n = 1; n <= max; n++) {
         if (!named.has(`row_${kind}_${n}`)) continue;
-        const title = fields[`${kind}_${n}_title`], url = fields[`${kind}_${n}_url`];
+        const title = fields[`${kind}_${n}_title`], url = fields[`${kind}_${n}_url`], action = fields[`${kind}_${n}_action`];
         if (!title) for (const [name, shape] of named) { if (name.startsWith(`row_${kind}_${n}`)) remove(shape); }
+        const label = named.get(`row_${kind}_${n}_btn_text`)?.getElementsByTagNameNS(NS.a, "t")[0];
+        if (title && action && label) label.textContent = action;
+        if (title && action === "Download") { // a longer word: the button grows leftwards, the title gives way
+          const grow = Math.round(0.18 * EMU_IN);
+          for (const part of ["btn", "btn_text"]) {
+            const shape = named.get(`row_${kind}_${n}_${part}`);
+            if (shape) { const b = xfrm(shape); b.off.setAttribute("x", String(b.x - grow)); b.ext.setAttribute("cx", String(b.w + grow)); }
+          }
+          const titleShape = named.get(`row_${kind}_${n}_title`);
+          if (titleShape) { const b = xfrm(titleShape); b.ext.setAttribute("cx", String(b.w - grow)); }
+        }
         // The label text box sits exactly over the button and takes the click, so both carry the link.
         else if (url) for (const part of ["btn", "btn_text"]) linkShape(doc, rels, named.get(`row_${kind}_${n}_${part}`), url);
       }

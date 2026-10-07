@@ -9,6 +9,8 @@ const ids = { appId: "cffbecd7-c927-474e-b6ed-6c7957ec74cb", environmentId: "ce0
 test("deep links map known routes to normalized hashes", () => {
   assert.equal(routeHash(`/s/${solution}`), `#/s/${solution}`);
   assert.equal(routeHash(`#/s/${solution.toUpperCase()}/demo/${asset}`), `#/s/${solution}/demo/${asset}`);
+  assert.equal(routeHash(`/s/${solution}/demo/${asset}?download=1`), `#/s/${solution}/demo/${asset}?download=1`);
+  assert.equal(routeHash(`/s/${solution}?download=1`), `#/s/${solution}`, "only a demo route carries the download request");
   assert.equal(routeHash(`/submission/${solution}`), `#/submission/${solution}`);
   assert.equal(routeHash(`/review/${solution}`), `#/review/${solution}`);
   for (const page of ["/review", "/my-submissions", "/favorites", "/submit"]) assert.equal(routeHash(page), `#${page}`);

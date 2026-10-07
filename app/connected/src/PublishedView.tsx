@@ -23,7 +23,7 @@ const MediaPreview = lazy(() => loadViewer().then(module => ({ default: module.M
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px]";
 
-export function PublishedView({ solution, present, assetId, favorite, appLocation }: { solution: Solution; present: boolean; assetId?: string; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void; saves?: number }; appLocation?: AppLocation }) {
+export function PublishedView({ solution, present, assetId, autoDownload = false, favorite, appLocation }: { solution: Solution; present: boolean; assetId?: string; autoDownload?: boolean; favorite?: { saved: boolean; pending?: boolean; onToggle: () => void; saves?: number }; appLocation?: AppLocation }) {
   // The card's recent read renders at once; the fresh read below still decides access.
   const [detail, setDetail] = useState<PublishedDetail | null>(() => publishedDetails.peek(solution.id, present) ?? null);
   const [error, setError] = useState(false);
@@ -46,7 +46,7 @@ export function PublishedView({ solution, present, assetId, favorite, appLocatio
   const asset = detail?.media.find(item => item.id === assetId);
   if (error) return <section className="mx-auto max-w-[1100px] px-6 py-12" role="alert"><h1 className="text-[28px] font-semibold">Detail unavailable</h1><p className="my-4">The solution may have changed or your access may be insufficient.</p><button className={button} onClick={() => { setError(false); setDetail(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></section>;
   if (!detail) return <LoadingState variant="page" label="Loading solution..." />;
-  if (assetId) return asset ? <Suspense fallback={<LoadingState variant="page" label="Loading viewer..." />}><MediaPreview item={asset} solutionId={solution.id} mode={present ? "present" : "published"} viewerTitle={solution.name} onClose={() => navigate(`/s/${solution.id}`)} /></Suspense> : <section className="mx-auto max-w-[1340px] px-4 py-6"><p role="alert" className="mb-4">Asset unavailable.</p><button className={button} onClick={() => navigate(`/s/${solution.id}`)}><Icon name="chevronLeft" />Back to solution</button></section>;
+  if (assetId) return asset ? <Suspense fallback={<LoadingState variant="page" label="Loading viewer..." />}><MediaPreview item={asset} solutionId={solution.id} mode={present ? "present" : "published"} viewerTitle={solution.name} autoDownload={autoDownload} onClose={() => navigate(`/s/${solution.id}`)} /></Suspense> : <section className="mx-auto max-w-[1340px] px-4 py-6"><p role="alert" className="mb-4">Asset unavailable.</p><button className={button} onClick={() => navigate(`/s/${solution.id}`)}><Icon name="chevronLeft" />Back to solution</button></section>;
   const hydrated: Solution = { ...solution, libraryNotes: present ? undefined : detail.libraryNotes, assets: detail.media.filter(item => item.kind === "attachment").map(mediaAsset), projects: present ? [] : detail.projects.map((projectName, index) => ({ id: String(index), projectName })) };
   const maturity = MATURITY_OPTIONS.find(option => option.label === solution.status)!.value;
   const effort = { ...detail, contributors: detail.contributors.map(person => person.effort ? contributorCredit(person.effort, maturity, person.name, person.hours, person.email) : person) };

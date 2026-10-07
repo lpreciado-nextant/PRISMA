@@ -49,7 +49,7 @@ Esta versión está hecha sobre la página real de una solución en PRISMA (POC 
 
 **Notas del orador:** cada diapositiva trae notas con los datos de la solución (qué decir, valor, tecnologías) y, en la 5, la lista de enlaces completos de los demos para pegar en el navegador. Las líneas de demos que no existen se eliminan.
 
-Las filas de demos sin título se eliminan solas, y la tarjeta se ajusta a las filas que quedan. Una tarjeta sin filas desaparece y las que quedan se reparten todo el ancho (una, dos o tres columnas). Los botones dicen **Play** (videos) y **Open** (interactivos y material de apoyo).
+Las filas de demos sin título se eliminan solas, y la tarjeta se ajusta a las filas que quedan. Una tarjeta sin filas desaparece y las que quedan se reparten todo el ancho (una, dos o tres columnas). El botón de cada fila dice lo que hace (`{{kind}_N_action}` desde la app): **Play** para videos, **Open** para HTML y enlaces, **Download** para archivos (PDF, PowerPoint, Word…). Un archivo no se descarga directo desde la presentación: el enlace abre PRISMA (con sesión de Nextant) y la descarga empieza sola al llegar; los archivos protegidos nunca quedan expuestos en el `.pptx`.
 
 ## Imágenes
 
