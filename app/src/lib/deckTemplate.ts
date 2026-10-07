@@ -74,6 +74,40 @@ function fillParagraphs(root: Element, fields: Fields): void {
   }
 }
 
+/** Lines a text needs at `size` pt in a box `width` pt wide; a word longer than a line wraps on its own. */
+export function estimateLines(text: string, width: number, size: number, bold: boolean): number {
+  const perLine = Math.max(1, Math.floor(width / (size * (bold ? 0.6 : 0.52)))); // conservative average glyph widths for Arial bold / Calibri
+  let lines = 0;
+  for (const paragraph of text.split("\n")) {
+    let used = 0;
+    lines += 1;
+    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+      if (used && used + 1 + word.length > perLine) { lines += 1; used = 0; }
+      used += (used ? 1 : 0) + word.length;
+      while (used > perLine) { lines += 1; used -= perLine; }
+    }
+  }
+  return lines;
+}
+
+/**
+ * Fixed boxes do not push their neighbours: a long title would run into the tagline below it. Shrinks the filled
+ * text until the estimate fits the box, down to 60% of the template size. PowerPoint's own autofit only runs on edit.
+ */
+function fitText(shape: Element): void {
+  const runs = Array.from(shape.getElementsByTagNameNS(NS.a, "rPr"));
+  const base = Number(runs[0]?.getAttribute("sz"));
+  const box = shape.getElementsByTagNameNS(NS.a, "ext")[0];
+  if (!base || !box) return;
+  const width = Number(box.getAttribute("cx")) / 12700, height = Number(box.getAttribute("cy")) / 12700; // EMU -> pt
+  const text = Array.from(shape.getElementsByTagNameNS(NS.a, "p")).map((para) => para.textContent ?? "").join("\n");
+  const bold = runs[0].getAttribute("b") === "1";
+  let size = base / 100;
+  while (size > (base / 100) * 0.6 && estimateLines(text, width, size, bold) * size * 1.2 > height) size -= 2;
+  if (size === base / 100) return;
+  for (const el of [...runs, ...Array.from(shape.getElementsByTagNameNS(NS.a, "endParaRPr"))]) el.setAttribute("sz", String(Math.round(size * 100)));
+}
+
 function relsDoc(zip: JSZip, path: string): Promise<Document> {
   return zip.file(path)!.async("string").then((xml) => new DOMParser().parseFromString(xml, "application/xml"));
 }
@@ -171,7 +205,11 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
       else remove(label);
     }
 
-    for (const shape of Array.from(tree.getElementsByTagNameNS(NS.p, "sp"))) fillParagraphs(shape, fields);
+    for (const shape of Array.from(tree.getElementsByTagNameNS(NS.p, "sp"))) {
+      if (!/\{\{/.test(shape.textContent ?? "")) continue;
+      fillParagraphs(shape, fields);
+      fitText(shape);
+    }
 
     for (let i = 1; i <= 8; i++) { // unused technology chips
       const tech = named.get(`tech_${i}`);
