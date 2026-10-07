@@ -1,6 +1,6 @@
 # Discovery & presentation — the CSM hero flow
 
-**Status:** Aligned with client-safe review and maturity-based effort · **Last updated:** 2026-09-30
+**Status:** Aligned with client-safe review and maturity-based effort; presentation download added · **Last updated:** 2026-10-07
 **Source:** [End-to-end design §3.2](../design/end-to-end-design.md#32-discovery--presentation-the-csm-path)
 **Measure:** problem statement → presentable demo in **under two minutes**, unaided (G1). Anything that adds a click to this path needs to earn it.
 
@@ -48,7 +48,17 @@ The CSM's briefing document:
 - Per-person dates, allocation, business calendar and calculated hours, omitted in present mode ([calculation contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort))
 - Internal-only content (library notes) — visible to internal viewers, **never in present mode**
 
-From here: open the demo in the viewer, download the one-pager, [request a live demo](demo-requests.md), or enter [present mode](present-mode.md).
+From here: open the demo in the viewer, download the one-pager, download a presentation, [request a live demo](demo-requests.md), or enter [present mode](present-mode.md).
+
+### Download presentation
+
+Connected PRISMA only. **Download presentation** sits beside Copy link on a published solution and builds a six-slide PRISMA × Nextant `.pptx` from the solution's own fields; the CSM picks the Dark or Light template. Field-to-slide mapping and limits: [`tools/pptx-template/PRISMA_Field_Map.md`](../../tools/pptx-template/PRISMA_Field_Map.md).
+
+- Offered only for published solutions with Client review = Cleared, and never in present mode.
+- Never exports effort hours, builder names, estimated cost, projects or library notes. The CSM (contributor role CSM) is the only person named, with the presenter (the signed-in user).
+- Built in the browser: the deck module, JSZip and the chosen template load only on click, so the hero flow carries no extra weight. Images come through the protected media path; WebP/AVIF are redrawn as PNG.
+- Text that would overflow its fixed box shrinks (down to 60% of the template size).
+- Demo rows link back to the demo in PRISMA, so they need a Nextant sign-in; the deck is for presenting live, not for sending to clients as a standalone demo. Demo titles use the caption or the file name without its extension until a title field exists ([Q19](../delivery/decision-log.md)).
 
 ## PoC mapping
 

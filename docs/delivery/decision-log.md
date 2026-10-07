@@ -1,6 +1,6 @@
 # Decision log — open questions
 
-**Status:** Living; pilot assignments and privileged functional lifecycle verified; Blob pilot transport decided (Q14); cross-account, least-privilege and remaining acceptance open; capability owner (Q15), review date (Q16) and reviewer name (Q17) added 2026-10-02 · **Last updated:** 2026-10-02
+**Status:** Living; pilot assignments and privileged functional lifecycle verified; Blob pilot transport decided (Q14); cross-account, least-privilege and remaining acceptance open; capability owner (Q15), review date (Q16) and reviewer name (Q17) added 2026-10-02; demo titles for the presentation download (Q19) added 2026-10-07 · **Last updated:** 2026-10-07
 **Source:** [End-to-end design §11](../design/end-to-end-design.md#11-open-questions)
 
 Open questions live here until they resolve. Resolutions with lasting technical consequences become an [ADR](../architecture/decisions/README.md); the rest are recorded inline and reflected in the relevant doc.
@@ -25,6 +25,7 @@ Open questions live here until they resolve. Resolutions with lasting technical 
 | Q17 | Show who approved (or returned) a submission? | Product + Platform owner | Open (raised 2026-10-02) | The user wants the approving librarian's name recorded, but visible only to the highest roles, not to everyone. Nothing stores the reviewer today (ADR-0008 keeps latest outcome/comments only). Decide which roles may see it, whether contributors see it, and whether it is part of the parked review date (Q16) or a broader review history. |
 | Q18 | How does a librarian take a published record out of the library? | Product | Resolved and live 2026-10-02 (option B) | Two actions, each with required owner-facing text: **Request changes** (back to Draft + Changes requested, like a return) when something must be fixed, and **Retire from library** with a reason when obsolete or replaced; owners see the text in My submissions. Luis holds the signing certificate; the signed plug-in and then the connected app were deployed 2026-10-02 (signed plug-in by Luis, then the connected app) and confirmed working by the user. |
 | Q16 | Date the latest librarian feedback? | Product | Dropped for now 2026-10-02 | Not needed for now; the implementation branch was deleted. `nx_solution.nx_reviewedon` still exists (created manually, field-secured, unused) and can be deleted or reused if this returns, possibly with the reviewer name (Q17). |
+| Q19 | Readable demo titles for the presentation download? | Product | Open (raised 2026-10-07) | The PRISMA × Nextant deck lists demo videos and interactive demos by title, but assets carry only a file name (`prisma-hosted.webm`, `index.html`). Interim: the caption, else the file name without its extension. Decide whether demo assets get a title column (schema change) or captions become required for demos. See [Download presentation](../workflows/discovery-and-presentation.md#download-presentation). |
 
 ## Resolved
 
