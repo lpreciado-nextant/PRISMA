@@ -13,7 +13,10 @@ import { ProtectedImage } from "./ProtectedImage";
 import { contributorCredit } from "./draftGraph";
 import { MATURITY_OPTIONS } from "./drafts";
 import { CopyLinkButton } from "./CopyLinkButton";
-import type { AppLocation } from "./deepLink";
+import { shareUrl, type AppLocation } from "./deepLink";
+import { DownloadDeckButton } from "./DownloadDeckButton";
+import { canExportDeck } from "../../src/lib/deckFields";
+import { useAppUser } from "../../src/lib/powerContext";
 
 const loadViewer = () => import("./DraftMediaEditor");
 const MediaPreview = lazy(() => loadViewer().then(module => ({ default: module.MediaPreview })));
@@ -25,6 +28,7 @@ export function PublishedView({ solution, present, assetId, favorite, appLocatio
   const [detail, setDetail] = useState<PublishedDetail | null>(() => publishedDetails.peek(solution.id, present) ?? null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const user = useAppUser();
   const mediaAction = useMediaAction(item => navigate(`/s/${solution.id}/demo/${item.id}`), { solutionId: solution.id, mode: present ? "present" : "published" });
   useEffect(() => {
     const controller = new AbortController();
@@ -49,7 +53,12 @@ export function PublishedView({ solution, present, assetId, favorite, appLocatio
   const thumbnail = detail.media.find(item => item.kind === "thumbnail" && item.complete);
   return <DetailView solution={hydrated} present={present} connected effort={effort} imageCount={detail.media.filter(item => item.kind === "image").length}
     favoritable={!!favorite} favorite={favorite}
-    actions={!present && appLocation && <CopyLinkButton appLocation={appLocation} route={`/s/${solution.id}`} />}
+    actions={!present && <>
+      {appLocation && <CopyLinkButton appLocation={appLocation} route={`/s/${solution.id}`} />}
+      {canExportDeck(solution) && <DownloadDeckButton solution={hydrated} media={detail.media} presenter={{ name: user.fullName }}
+        csm={effort.contributors.find(person => "contributorRole" in person && person.contributorRole === "CSM")}
+        link={route => appLocation && shareUrl(appLocation, route)} />}
+    </>}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     gallery={<PublishedGallery media={detail.media} />}
     reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
