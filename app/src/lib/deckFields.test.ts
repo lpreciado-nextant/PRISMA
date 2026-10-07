@@ -26,7 +26,7 @@ test("export never carries effort, builders, cost or client names", () => {
 test("fields respect template limits and fall back by slot", () => {
   const solution: Solution = { ...base, name: "N".repeat(80), summary: "word ".repeat(100), technologies: Array.from({ length: 12 }, (_, i) => `Tech ${i}`), clientSafeReviewed: true, publicationStatus: "Published", status: "Live in production" };
   const fields = buildDeckFields({ ...input, solution, videos: [{ title: "Walkthrough", url: "https://x" }, { title: " " }], interactives: [] });
-  assert.ok(fields.solution_title.length <= 30 && fields.tagline.length <= 170 && fields.tagline.endsWith("…"));
+  assert.ok(fields.solution_title.length <= 60 && fields.tagline.length <= 170 && fields.tagline.endsWith("…"));
   assert.equal(fields.maturity_label, "Live");
   assert.equal(fields.tech_8, "Tech 7");
   assert.equal(fields.tech_9, undefined);
@@ -37,7 +37,8 @@ test("fields respect template limits and fall back by slot", () => {
   assert.equal(withSupporting.supporting_3_title, "FAQ");
   assert.equal(withSupporting.supporting_4_title, undefined);
   assert.equal(fields.presentation_date, "OCTOBER 2026");
-  assert.ok(fields.prisma_url.startsWith("NNNN") && fields.prisma_url.length <= 40, "the chip shows the solution name");
+  assert.equal(fields.prisma_url, "", "the chip reads Explore it live in PRISMA");
+  assert.equal(fields.csm_name, "Ana Pérez", "without a CSM the presenter is the contact");
   assert.equal(fields.prisma_href, "https://prisma.nextant.com/#/s/1", "the link is never truncated");
   assert.equal(fields.tech_list.split(", ").length, 12);
 });

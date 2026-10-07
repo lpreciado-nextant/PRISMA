@@ -55,7 +55,7 @@ export function PublishedView({ solution, present, assetId, favorite, appLocatio
     favoritable={!!favorite} favorite={favorite}
     actions={!present && <>
       {appLocation && <CopyLinkButton appLocation={appLocation} route={`/s/${solution.id}`} />}
-      {canExportDeck(solution) && <DownloadDeckButton solution={hydrated} media={detail.media} presenter={{ name: user.fullName }}
+      {canExportDeck(solution) && <DownloadDeckButton solution={hydrated} media={detail.media} presenter={{ name: user.fullName, email: user.live ? user.userPrincipalName : undefined }}
         csm={effort.contributors.find(person => "contributorRole" in person && person.contributorRole === "CSM")}
         link={route => appLocation && shareUrl(appLocation, route)} />}
     </>}

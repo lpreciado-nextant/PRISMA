@@ -80,7 +80,7 @@ function fillParagraphs(root: Element, fields: Fields, dropEmpty = false): void 
 
 /** Lines a text needs at `size` pt in a box `width` pt wide; a word longer than a line wraps on its own. */
 export function estimateLines(text: string, width: number, size: number, bold: boolean): number {
-  const perLine = Math.max(1, Math.floor(width / (size * (bold ? 0.6 : 0.52)))); // conservative average glyph widths for Arial bold / Calibri
+  const perLine = Math.max(1, Math.floor(width / (size * (bold ? 0.55 : 0.48)))); // average glyph widths for Arial bold / Calibri, measured on rendered slides
   let lines = 0;
   for (const paragraph of text.split("\n")) {
     let used = 0;
@@ -98,7 +98,7 @@ export function estimateLines(text: string, width: number, size: number, bold: b
  * Fixed boxes do not push their neighbours: a long title would run into the tagline below it. Shrinks the filled
  * text until the estimate fits the box, down to 60% of the template size. PowerPoint's own autofit only runs on edit.
  */
-function fitText(shape: Element): void {
+function fitText(shape: Element, floor = 0.6): { size: number; lines: number } | undefined {
   const runs = Array.from(shape.getElementsByTagNameNS(NS.a, "rPr"));
   const base = Number(runs[0]?.getAttribute("sz"));
   const box = shape.getElementsByTagNameNS(NS.a, "ext")[0];
@@ -107,9 +107,13 @@ function fitText(shape: Element): void {
   const text = Array.from(shape.getElementsByTagNameNS(NS.a, "p")).map((para) => para.textContent ?? "").join("\n");
   const bold = runs[0].getAttribute("b") === "1";
   let size = base / 100;
-  while (size > (base / 100) * 0.6 && estimateLines(text, width, size, bold) * size * 1.2 > height) size -= 2;
-  if (size === base / 100) return;
-  for (const el of [...runs, ...Array.from(shape.getElementsByTagNameNS(NS.a, "endParaRPr"))]) el.setAttribute("sz", String(Math.round(size * 100)));
+  while (size > (base / 100) * floor && estimateLines(text, width, size, bold) * size * 1.2 > height) size -= 2;
+  if (size !== base / 100) setSize(shape, size);
+  return { size, lines: estimateLines(text, width, size, bold) };
+}
+
+function setSize(shape: Element, pt: number): void {
+  for (const tag of ["rPr", "endParaRPr"]) for (const el of Array.from(shape.getElementsByTagNameNS(NS.a, tag))) el.setAttribute("sz", String(Math.round(pt * 100)));
 }
 
 function relsDoc(zip: JSZip, path: string): Promise<Document> {
@@ -186,6 +190,118 @@ function spreadCards(named: Map<string, Element>): void {
   });
 }
 
+// ---- Adaptive layout ---------------------------------------------------------------------------------------------
+// The templates are drawn for a full solution. Real ones vary (a short name or a long one, one screenshot or six, one
+// technology or eight), so these steps fit the slides to the content. Measurements are in inches.
+
+type Box = { x?: number; y?: number; w?: number; h?: number };
+const inches = (shape: Element) => { const b = xfrm(shape); return { x: b.x / EMU_IN, y: b.y / EMU_IN, w: b.w / EMU_IN, h: b.h / EMU_IN }; };
+function place(shape: Element | undefined, box: Box): void {
+  if (!shape?.parentNode) return;
+  const b = xfrm(shape), emu = (v: number) => String(Math.round(v * EMU_IN));
+  if (box.x !== undefined) b.off.setAttribute("x", emu(box.x));
+  if (box.y !== undefined) b.off.setAttribute("y", emu(box.y));
+  if (box.w !== undefined) b.ext.setAttribute("cx", emu(box.w));
+  if (box.h !== undefined) b.ext.setAttribute("cy", emu(box.h));
+}
+const textOf = (shape: Element | undefined) => (shape?.textContent ?? "").trim();
+/** Height of `lines` lines at `pt` points, in inches. */
+const linesHeight = (lines: number, pt: number) => (lines * pt * 1.2) / 72;
+/** Width of a short label in the templates' mono font, in inches (`spaced`: the badges' wider letter spacing). */
+const monoWidth = (text: string, pt: number, spaced = false) => text.length * pt * (spaced ? 0.0112 : 0.0084);
+/** A one-line label: never wraps, whatever the width estimate. */
+function noWrap(shape: Element | undefined): void { shape?.getElementsByTagNameNS(NS.a, "bodyPr")[0]?.setAttribute("wrap", "none"); }
+const coverTitle = (named: Map<string, Element>) => named.has("badge_area") ? named.get("Text 1") : undefined; // the cover's only title placeholder
+
+/** Sizes set before the text is filled, so fitting starts from them. */
+function presetSlide(named: Map<string, Element>): void {
+  const title = coverTitle(named);
+  if (title) { place(title, { y: 2.05, h: linesHeight(2, 44) + 0.02 }); setSize(title, 44); } // two lines at most; a long name shrinks
+  if (named.has("tagline")) setSize(named.get("tagline")!, 18);
+  for (const name of ["badge_area_text", "badge_maturity_text"]) if (named.has(name)) { setSize(named.get(name)!, 9); noWrap(named.get(name)); }
+  for (let i = 1; i <= 8; i++) if (named.has(`tech_${i}`)) { setSize(named.get(`tech_${i}`)!, 11); noWrap(named.get(`tech_${i}`)); }
+  noWrap(named.get("prisma_link"));
+}
+
+function layoutSlide(named: Map<string, Element>, fitted: Map<Element, { size: number; lines: number }>, images: Record<string, DeckImage>): void {
+  // Cover: badges as wide as their words, the tagline right under the title whatever its length.
+  if (named.has("badge_area")) {
+    let x = 0.7;
+    for (const kind of ["area", "maturity"]) {
+      const text = named.get(`badge_${kind}_text`), w = monoWidth(textOf(text), 9, true) + 0.06;
+      place(named.get(`badge_${kind}`), { x, y: 1.5, w: 0.34 + w + 0.16, h: 0.32 });
+      place(named.get(`${kind}_dot`), { x: x + 0.16, y: 1.5 + 0.11, w: 0.1, h: 0.1 });
+      place(text, { x: x + 0.34, y: 1.5, w, h: 0.32 });
+      x += 0.34 + w + 0.16 + 0.15;
+    }
+    const title = coverTitle(named), fit = title && fitted.get(title), tagline = named.get("tagline");
+    if (title && fit && tagline) {
+      const h = linesHeight(fit.lines, fit.size);
+      place(title, { h });
+      const y = 2.05 + h + 0.28;
+      place(tagline, { y, h: Math.max(0.4, 6.0 - y) });
+      fitText(tagline, 0.5);
+    }
+  }
+
+  // What it does: cards as tall as their text; the picture matches the column.
+  const description = named.get("description"), value = named.get("business_value");
+  if (description && value && named.has("card_description") && named.has("card_value")) {
+    const d = fitted.get(description), v = fitted.get(value);
+    const dh = d ? linesHeight(d.lines, d.size) : 0.4, vh = v ? linesHeight(v.lines, v.size) : 0.4;
+    const top = 2.45, descCard = 0.57 + dh + 0.32, valueTop = top + descCard + 0.2, valueCard = 0.5 + vh + 0.3;
+    if (valueTop + valueCard <= 6.7) {
+      place(named.get("card_description"), { y: top, h: descCard });
+      place(description, { y: top + 0.57, h: dh + 0.05 });
+      place(named.get("card_value"), { y: valueTop, h: valueCard });
+      place(named.get("value_label"), { y: valueTop + 0.18 });
+      place(value, { y: valueTop + 0.5, h: vh + 0.05 });
+      place(named.get("img_feature_image"), { y: top, h: Math.max(valueTop + valueCard - top, 3.2) });
+    }
+  }
+
+  // Screenshots: a grid for the number there are, instead of fixed small slots.
+  const shots = Array.from({ length: 6 }, (_, i) => `shot_${i + 1}`).filter((key) => named.has(`img_${key}`) && images[key]);
+  if (shots.length) {
+    const left = 0.7, width = 11.93, top = 2.45, height = 4.3, gx = 0.3, gy = 0.25;
+    const cells: { x: number; y: number; w: number; h: number }[] = [];
+    const row = (count: number, w: number, h: number, y: number) => {
+      const start = left + (width - (count * w + (count - 1) * gx)) / 2;
+      for (let i = 0; i < count; i++) cells.push({ x: start + i * (w + gx), y, w, h });
+    };
+    if (shots.length === 1) row(1, Math.min(width, height * 1.78), height, top);
+    else if (shots.length === 2) row(2, (width - gx) / 2, Math.min(height, (width - gx) / 2 / 1.6), top);
+    else if (shots.length === 3) {
+      const side = { w: width - 7.2 - gx, h: (height - gy) / 2 };
+      cells.push({ x: left, y: top, w: 7.2, h: height }, { x: left + 7.2 + gx, y: top, ...side }, { x: left + 7.2 + gx, y: top + side.h + gy, ...side });
+    } else if (shots.length === 4) { const h = (height - gy) / 2; row(2, h * 1.78, h, top); row(2, h * 1.78, h, top + h + gy); }
+    else { const w = (width - 2 * gx) / 3, h = Math.min((height - gy) / 2, w / 1.9); row(3, w, h, top); row(shots.length - 3, w, h, top + h + gy); }
+    shots.forEach((key, i) => place(named.get(`img_${key}`), cells[i]));
+  }
+
+  // Built on: chips as wide as their words, wrapping, in a card as tall as they need.
+  if (named.has("card_tech")) {
+    let x = 1.0, y = 5.0, bottom = y;
+    for (let i = 1; i <= 8; i++) {
+      const text = named.get(`tech_${i}`);
+      if (!text?.parentNode) continue;
+      const w = monoWidth(textOf(text), 11) + 0.04;
+      if (x + w + 0.44 > 12.33 && x > 1.0) { x = 1.0; y += 0.55; }
+      place(named.get(`tech_chip_${i}`), { x, y, w: w + 0.44, h: 0.4 });
+      place(text, { x: x + 0.22, y, w, h: 0.4 });
+      x += w + 0.44 + 0.15; bottom = y + 0.4;
+    }
+    place(named.get("card_tech"), { h: bottom + 0.35 - inches(named.get("card_tech")!).y });
+  }
+
+  // Next step: the PRISMA chip as wide as its words.
+  if (named.has("prisma_link_chip")) {
+    const text = named.get("prisma_link"), w = textOf(text).length * 13 * 0.0085 + 0.2;
+    place(named.get("prisma_link_chip"), { w: w + 0.5 });
+    place(text, { w });
+  }
+}
+
 export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, fields: Fields, images: Record<string, DeckImage>): Promise<Blob> {
   const zip = await JSZip.loadAsync(template);
   // .potx -> .pptx: PowerPoint opens a template content type as a new untitled copy instead of the file.
@@ -216,23 +332,6 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
       if (named.has("badge_maturity_text")) recolour(named.get("badge_maturity_text")!, maturity, { text: true });
     }
 
-    // images: the glass frame stays behind a picture; an unused screenshot slot disappears, other empty frames stay clean
-    for (const [name, frame] of Array.from(named)) {
-      if (!name.startsWith("img_") || name.endsWith("_label")) continue;
-      const key = name.slice(4);
-      const label = named.get(`${name}_label`);
-      const image = images[key];
-      if (image) {
-        mediaCount += 1; usedExt.add(image.ext);
-        const target = `media/deck-${mediaCount}-${safeName(key)}.${image.ext}`;
-        zip.file(`ppt/${target}`, image.bytes);
-        const rId = addRel(rels, REL_IMAGE, `../${target}`);
-        tree.insertBefore(pictureFor(doc, frame, rId, image, nextId++), frame);
-        remove(frame); remove(label);
-      } else if (key.startsWith("shot_")) { remove(frame); remove(label); }
-      else remove(label);
-    }
-
     for (const [kind, max] of Object.entries(ROW_KINDS)) { // demo rows
       for (let n = 1; n <= max; n++) {
         if (!named.has(`row_${kind}_${n}`)) continue;
@@ -258,16 +357,40 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
     }
 
     // Text is filled after the cards are laid out, so a demo title shrinks only when its final box is too small.
+    presetSlide(named);
+    const fitted = new Map<Element, { size: number; lines: number }>();
     for (const shape of Array.from(tree.getElementsByTagNameNS(NS.p, "sp"))) {
       if (!/\{\{/.test(shape.textContent ?? "")) continue;
       fillParagraphs(shape, fields);
-      fitText(shape);
+      const fit = fitText(shape, shape === named.get("tagline") || shapeName(shape) === "Text 1" ? 0.5 : 0.6);
+      if (fit) fitted.set(shape, fit);
     }
 
     for (let i = 1; i <= 8; i++) { // unused technology chips
       const tech = named.get(`tech_${i}`);
       if (tech && !(tech.textContent ?? "").trim()) { remove(tech); remove(named.get(`tech_chip_${i}`)); }
     }
+
+    // Layout before pictures: a picture takes its frame's final box.
+    layoutSlide(named, fitted, images);
+
+    // images: the glass frame stays behind a picture; an unused screenshot slot disappears, other empty frames stay clean
+    for (const [name, frame] of Array.from(named)) {
+      if (!name.startsWith("img_") || name.endsWith("_label")) continue;
+      const key = name.slice(4);
+      const label = named.get(`${name}_label`);
+      const image = images[key];
+      if (image) {
+        mediaCount += 1; usedExt.add(image.ext);
+        const target = `media/deck-${mediaCount}-${safeName(key)}.${image.ext}`;
+        zip.file(`ppt/${target}`, image.bytes);
+        const rId = addRel(rels, REL_IMAGE, `../${target}`);
+        tree.insertBefore(pictureFor(doc, frame, rId, image, nextId++), frame);
+        remove(frame); remove(label);
+      } else if (key.startsWith("shot_")) { remove(frame); remove(label); }
+      else remove(label);
+    }
+
 
 
     for (const part of ["prisma_link_chip", "prisma_link"]) linkShape(doc, rels, named.get(part), fields.prisma_href || fields.prisma_url || "");

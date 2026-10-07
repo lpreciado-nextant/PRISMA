@@ -131,7 +131,7 @@ These come from the design principles and must not regress:
 
 Templates and rules live in `tools/pptx-template/`. Read `PRISMA_Field_Map.md` before touching anything: it defines which solution field fills each slide.
 
-- Fill logic: `app/src/lib/deckFields.ts` (field mapping and export rules) and `app/src/lib/deckTemplate.ts` (browser port of `tools/pptx-template/kit/fill_prisma_template.py`; keep the two in step).
+- Fill logic: `app/src/lib/deckFields.ts` (field mapping and export rules) and `app/src/lib/deckTemplate.ts` (the source of truth: a browser port of `tools/pptx-template/kit/fill_prisma_template.py` plus adaptive layout the kit script does not have; check slides by exporting them with PowerPoint, since the layout uses text-width estimates).
 - Templates: `app/src/assets/deck/PRISMA_Template_Dark.potx` and `PRISMA_Template_Light.potx` are the only versioned copies.
 - Never export effort hours or builder names.
 - Only export solutions with Client review = Cleared.

@@ -12,7 +12,7 @@ import { mediaAsset } from "./workflow";
 export interface DeckRequest {
   solution: Solution;
   media: MediaItem[];
-  presenter: { name: string };
+  presenter: { name: string; email?: string };
   csm?: { name: string; email?: string };
   /** Builds the PRISMA link for a route; demo links reopen the asset in PRISMA (Nextant sign-in required). */
   link: (route: string) => string | undefined;

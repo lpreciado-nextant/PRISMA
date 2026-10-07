@@ -26,7 +26,7 @@ Esta versión está hecha sobre la página real de una solución en PRISMA (POC 
 |-------|-------|--------|-------------|---------------------|
 | `{{area_name}}` | 1, 4 | lista | Sí | Área (AI & Automation, Data Solutions, Intelligent Business Operations) |
 | `{{maturity_label}}` | 1, 4 | lista | Sí | Insignia de madurez (Live, Working prototype, Idea / Concept) |
-| `{{solution_title}}` | 1 | 30 | Sí | Título |
+| `{{solution_title}}` | 1 | 60 | Sí | Título (dos líneas como máximo; un nombre largo achica la letra) |
 | `{{tagline}}` | 1 | 170 | Sí | Descripción corta (completa: en la tarjeta de la app se ve cortada) |
 | `{{presenter_name}}` `{{presenter_role}}` | 1 | 30 / 40 | Sí / No | Usuario que descarga (Entra ID) |
 | `{{presentation_date}}` | 1 | 20 | No | Fecha de descarga |
@@ -44,6 +44,8 @@ Esta versión está hecha sobre la página real de una solución en PRISMA (POC 
 | `prisma_href` | 6, notas | — | Sí | URL completa de la solución en PRISMA, detrás del enlace y en las notas. Nunca se recorta |
 | `{{tech_list}}` | notas 4 | — | No | Tecnologías separadas por comas |
 | `{{csm_name}}` `{{csm_email}}` | 6 | 28 / 35 | Sí | CSM (en Forge: Andres Perez) |
+
+**Acomodo automático (solo en la app):** la portada pone la descripción justo debajo del título y las insignias del ancho de su texto; la diapositiva 2 ajusta las tarjetas al alto del texto; las capturas se reparten según cuántas haya (1 grande, 2 lado a lado, 3 con una principal, 4 en 2×2, 5–6 en 3×2); los chips de tecnología se ajustan a su texto y la tarjeta a sus filas. Si la solución no tiene CSM, el contacto es quien descarga.
 
 **Notas del orador:** cada diapositiva trae notas con los datos de la solución (qué decir, valor, tecnologías) y, en la 5, la lista de enlaces completos de los demos para pegar en el navegador. Las líneas de demos que no existen se eliminan.
 

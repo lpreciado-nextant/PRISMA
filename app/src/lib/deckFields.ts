@@ -43,20 +43,20 @@ export interface DeckDemo { title: string; url?: string }
 export interface DeckInput {
   solution: Solution;
   /** The signed-in user who downloads the deck (Entra ID). */
-  presenter: { name: string; role?: string };
+  presenter: { name: string; role?: string; email?: string };
   /** Absolute link to the solution page in PRISMA. */
   prismaUrl: string;
   /** Readable titles and links for the demos; titles come from the app, never from file names. */
   videos?: DeckDemo[];
   interactives?: DeckDemo[];
   supporting?: DeckDemo[];
-  /** CSM of the solution, when the caller has it (Cleared rows only expose the CSM, never builders). */
+  /** CSM of the solution, when the caller has it (Cleared rows only expose the CSM, never builders). Without one, the presenter is the contact. */
   csm?: { name: string; email?: string };
   now?: Date;
 }
 
 export const DECK_LIMITS: Record<string, number> = {
-  solution_title: 30, tagline: 170, presenter_name: 30, presenter_role: 40, presentation_date: 20,
+  solution_title: 60, tagline: 170, presenter_name: 30, presenter_role: 40, presentation_date: 20,
   description: 520, business_value: 200, industries: 28, client_review: 20, added_date: 12,
   tech: 20, demo_title: 40, cta_headline: 60, prisma_url: 40, csm_name: 28, csm_email: 35,
 };
@@ -114,11 +114,11 @@ export function buildDeckFields(input: DeckInput): DeckFields {
     client_review: "Cleared",
     added_date: fit(solution.dateAdded, DECK_LIMITS.added_date),
     cta_headline: CTA_HEADLINE,
-    prisma_url: fit(solution.name, DECK_LIMITS.prisma_url),
+    prisma_url: "", // the chip reads "Explore it live in PRISMA"; the name is already on the cover
     prisma_href: prismaUrl,
     tech_list: solution.technologies.join(", "),
-    csm_name: fit(csm?.name, DECK_LIMITS.csm_name),
-    csm_email: fit(csm?.email, DECK_LIMITS.csm_email),
+    csm_name: fit(csm?.name || presenter.name, DECK_LIMITS.csm_name),
+    csm_email: fit(csm?.name ? csm.email : presenter.email, DECK_LIMITS.csm_email),
   };
   solution.technologies.slice(0, MAX_TECH).forEach((tech, index) => { fields[`tech_${index + 1}`] = fit(tech, DECK_LIMITS.tech); });
   const demos = (kind: "video" | "interactive" | "supporting", list: DeckDemo[], max: number) => list.filter((demo) => demo.title.trim()).slice(0, max).forEach((demo, index) => {

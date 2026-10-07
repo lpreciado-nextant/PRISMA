@@ -7,6 +7,9 @@ Fill a PRISMA × Nextant solution template (.potx / .pptx) with a solution's dat
 solution.json  = { "fields": { "solution_title": "...", ... },
                    "images": { "cover_image": "path.png", ... } }
 See PRISMA_Field_Map.md for every field. Requires: pip install python-pptx
+
+This is the kit's reference filler. The app's filler (app/src/lib/deckTemplate.ts) is the source of truth and adds
+the adaptive layout (cover stacking, sized cards, screenshot grid, sized chips) that this script does not do.
 """
 import copy, io, json, re, sys, zipfile
 from pptx import Presentation
