@@ -1,6 +1,6 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-06
+**Status:** Living · **Last updated:** 2026-10-07
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
@@ -11,13 +11,13 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 |---|---|---|
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 13% — 2 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 80% — 12 Live / 15 |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 87% — 13 Live / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 21% — 3 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
-- One-Liner standardization, still a generic field (PR-023); presentation download format and contents (PR-027); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
+- One-Liner standardization, still a generic field (PR-023); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Demo viewing (PR-006): full screen (PR-004) and new-tab links (PR-005) are live; whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
@@ -131,7 +131,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 
 **Attendees:** Sebastian, …
-**Progress:** 80% — 12 Live, 3 Proposed / 15
+**Progress:** 87% — 13 Live, 2 Proposed / 15
 
 ### Feedback
 
@@ -164,7 +164,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-024 "What It Does" optimization | 🟢 Live | `448d02b` (published 2026-10-06): detail panel and form label renamed to "What the solution does", paired with "Business value" so the two read as "what it does / what you gain"; accepted as sufficient |
 | PR-025 "Why It Matters" enhancement | 🟢 Live | `448d02b` (published 2026-10-06): the detail panel "Why it matters" is now titled "Business value", matching the `businessValue` field and the form label |
 | PR-026 Business-value-first ordering | 🟢 Live | Accepted 2026-10-06 as covered by the "What the solution does" / "Business value" pairing (`448d02b`); no separate reordering of the detail page |
-| PR-027 Download a presentation with each solution's material | Proposed | Added 2026-10-02 from the meeting notes. A per-solution deck (summary, value, screenshots, links to demos) for CSMs to take into client conversations. Must use present-mode-safe content only (redacted context, no builder credits or internal notes) |
+| PR-027 Download a presentation with each solution's material | 🟢 Live | Added 2026-10-02 from the meeting notes. Resolved 2026-10-07 as a PowerPoint built from the PRISMA × Nextant Dark/Light templates (field map in `tools/pptx-template/`): **Download presentation** beside Copy link on published, Client review = Cleared solutions, never in present mode; six slides (cover, what it does, screenshots, built on, demo links, CSM). No effort hours, builder names, cost, projects or internal notes. Built in the browser, loaded only on click. `30909f9`, `3736fca`, `7ae2a66`, `428bdc7`; connected app published 2026-10-07 ([discovery and presentation](../workflows/discovery-and-presentation.md#download-presentation)). Readable demo titles open as [Q19](decision-log.md) |
 | PR-028 Library filter by demo | 🟢 Live | Added 2026-10-02. Clarified 2026-10-06: CSMs mean a **demo video**, and a solution can have several. Decided in [ADR-0011](../architecture/decisions/adr-0011-asset-purpose.md): new choice `nx_demoasset.nx_assetpurpose` (Demo video · Interactive demo · Supporting material), set by the section of the submit Media step a file goes in. Column created 2026-10-06. Plug-in change written and tested (format default on new attachments, optional purpose on links and media metadata, `demoVideos`/`interactiveDemos` in the catalogue graph); pushed in `b613493` and deployed by Luis 2026-10-06 (`nx_GetCatalogueGraph` returns `purposes: true`). No backfill: the 14 existing assets are test data to be deleted. App `6d39c65` published 2026-10-06: Media step in three sections (Demo videos · Interactive demo · Supporting material), a **Demo** facet (Demo video, Interactive demo) in the library filters, solution page grouped by purpose with the first demo video as main demo. Verified by the user in the hosted app with a new solution ([demo assets](../workflows/demo-assets.md#purpose-demo-video-interactive-demo-supporting-material)) |
 | PR-029 Remove Allocation from contributor effort | Proposed | Added 2026-10-02. Calendar-mode effort asks for start date, end date and Allocation (%); removing it changes how hours are derived, so it touches [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) and the open effort decision from [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) |
 | PR-030 Solution-to-Project as true N:N in the app | 🟢 Live | Added 2026-10-02. Dataverse already models Solution ↔ Project as a native N:N ([SchemaV2](../data_model/SchemaV2.md)). 2026-10-06: the connected form's "Projects" picker now keeps every selection (no more last-one-wins, multi-project alert or Save/Continue/Submit block). No plug-in change needed: `nx_SaveDraftGraph` already syncs up to 100 project links and `nx_GetPublishedDetail` returns all of them; the detail page already lists them under "Delivered for · N". Published in `fa2ebf4` |
@@ -172,7 +172,6 @@ When a decision above gets resolved, delete its bullet here and update the match
 ### Open decisions
 
 - One-Liner standardization (PR-023): still a generic pre-existing field, no dedicated content-design work done yet.
-- Presentation download (PR-027): format (PowerPoint or PDF), template, and which fields and media it includes.
 - Without Allocation (PR-029), how calendar-mode effort is calculated, or whether calendar mode stays at all.
 
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
