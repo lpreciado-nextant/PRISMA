@@ -21,7 +21,7 @@ PALETTES = {  # same values as the PRISMA app tokens
 }
 AREA_KEY = {"ai & automation": "ai", "data solutions": "data", "intelligent business operations": "ibo"}
 MATURITY_KEY = {"live": "live", "working prototype": "proto", "idea / concept": "idea"}
-LINKS = {"prisma_link_chip": "prisma_url"}  # whole chip is clickable
+LINKS = {"prisma_link_chip": "prisma_url", "prisma_link": "prisma_url"}  # whole chip is clickable, text on top too
 TEXT_LINKS = {"csm_email": "csm_email"}  # text run becomes a link
 ROW_KINDS = {"video": 3, "interactive": 2}  # demo rows: video_N_title / video_N_url ...
 
@@ -159,8 +159,10 @@ def main(template, data_json, out):
                     for nm, shp in named.items():
                         if nm.startswith(f"row_{kind}_{n}"):
                             shp._element.getparent().remove(shp._element)
-                elif url:
-                    named[f"row_{kind}_{n}_btn"].click_action.hyperlink.address = url if url.startswith("http") else "https://" + url
+                elif url:  # the label text box sits over the button and takes the click, so both carry the link
+                    for part in ("btn", "btn_text"):
+                        if f"row_{kind}_{n}_{part}" in named:
+                            named[f"row_{kind}_{n}_{part}"].click_action.hyperlink.address = url if url.startswith("http") else "https://" + url
         # size demo cards to the rows in use; hide a card with no rows
         if "demo_note" in named:
             bottoms = []

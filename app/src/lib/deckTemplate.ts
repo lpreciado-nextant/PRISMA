@@ -221,7 +221,8 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
         if (!named.has(`row_${kind}_${n}`)) continue;
         const title = fields[`${kind}_${n}_title`], url = fields[`${kind}_${n}_url`];
         if (!title) for (const [name, shape] of named) { if (name.startsWith(`row_${kind}_${n}`)) remove(shape); }
-        else if (url) linkShape(doc, rels, named.get(`row_${kind}_${n}_btn`), url);
+        // The label text box sits exactly over the button and takes the click, so both carry the link.
+        else if (url) for (const part of ["btn", "btn_text"]) linkShape(doc, rels, named.get(`row_${kind}_${n}_${part}`), url);
       }
     }
     if (named.has("demo_note")) { // size the cards to the rows in use; hide a card with none
@@ -238,7 +239,7 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
       if (bottoms.length) xfrm(named.get("demo_note")!).off.setAttribute("y", String(Math.max(...bottoms) + Math.round(0.14 * EMU_IN)));
     }
 
-    linkShape(doc, rels, named.get("prisma_link_chip"), fields.prisma_url ?? "");
+    for (const part of ["prisma_link_chip", "prisma_link"]) linkShape(doc, rels, named.get(part), fields.prisma_url ?? "");
     linkFirstRun(doc, rels, named.get("csm_email"), fields.csm_email ?? "");
 
     zip.file(path, new XMLSerializer().serializeToString(doc));
