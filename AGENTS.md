@@ -1,7 +1,7 @@
 # AGENTS.md
 
 **Status:** Active guidance for the mock-data PoC, the published Dataverse-connected PRISMA app, its plug-in backend and the Blob media pilot.
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-07
 
 Guidance for coding agents working in the PRISMA repository.
 
@@ -28,6 +28,7 @@ The connected app is a pilot: privileged-account lifecycles have passed, but non
 | `backend/Prisma.Deploy` | .NET 10 deployment utility for Nextant Pulse. Commands are read-only previews unless `--execute` is passed |
 | `infra/media` | Bicep for the Blob media storage (`pilot.bicep` is live; `lab.bicep` is a development lab; `main.bicep` is the private-endpoint production foundation) |
 | `presentation/` | Self-contained walkthrough builds (`npm run build:presentation`) |
+| `tools/pptx-template/` | Solution presentation field map, reference fill script and Forge sample data |
 | `test-data/` | Local, gitignored test media |
 | `docs/README.md` | **Documentation map — start here.** Every project aspect has a dedicated doc |
 | `docs/design/end-to-end-design.md` | Source of truth for scope, users, workflows, principles |
@@ -125,6 +126,15 @@ These come from the design principles and must not regress:
 - **The hero flow is sacred:** search → grid → detail → viewer must stay fast and unobstructed. Anything adding a click to that path needs to earn it.
 - **Accessibility must not regress:** WCAG 2.1 AA — keyboard-navigable, visible focus, `prefers-reduced-motion` respected, semantic landmarks. Checklist in `docs/design/accessibility.md`.
 - **Mock data stays schema-shaped.** `src/data/solutions.ts` and `src/types.ts` mirror the Dataverse schema spec (`nx_solution`, `nx_demoasset`, `nx_solutionimage`, reference tables). If you change one, keep the other and the schema doc consistent.
+
+## Solution presentation (PowerPoint download)
+
+Templates and rules live in `tools/pptx-template/`. Read `PRISMA_Field_Map.md` before touching anything: it defines which solution field fills each slide.
+
+- Fill logic: `app/src/lib/deckFields.ts` (field mapping and export rules) and `app/src/lib/deckTemplate.ts` (browser port of `tools/pptx-template/kit/fill_prisma_template.py`; keep the two in step).
+- Templates: `app/src/assets/deck/PRISMA_Template_Dark.potx` and `PRISMA_Template_Light.potx` are the only versioned copies.
+- Never export effort hours or builder names.
+- Only export solutions with Client review = Cleared.
 
 ## Design system
 

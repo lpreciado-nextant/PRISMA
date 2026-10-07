@@ -1,0 +1,4 @@
+# The app's copy in app/src/assets/deck/ is the only versioned template. Local duplicates, the kit archive and rendered examples stay out of git.
+*.zip
+*.potx
+*.pptx
