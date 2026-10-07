@@ -74,6 +74,8 @@ Cada imagen llena su marco con esquinas redondeadas (recorte centrado). Las capt
 
 ## Developer Kit
 
-`fill_prisma_template.py` (requiere `pip install python-pptx`), las dos plantillas y `forge_sample/` con el JSON de entrada y las imágenes de ejemplo.
+`kit/fill_prisma_template.py` (requiere `pip install python-pptx`) y `kit/forge_sample/` con el JSON de entrada y las imágenes de ejemplo. Las plantillas viven solo en `app/src/assets/deck/` (las usa la app); no hay copias aquí.
 
-`python3 fill_prisma_template.py PRISMA_Template_Dark.potx forge_sample/forge_solution.json salida.pptx`
+Desde `tools/pptx-template/kit`:
+
+`python3 fill_prisma_template.py ../../../app/src/assets/deck/PRISMA_Template_Dark.potx forge_sample/forge_solution.json salida.pptx`
