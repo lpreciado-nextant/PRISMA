@@ -193,6 +193,12 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     return topRanking.flatMap(({ id }) => byId.get(id) ?? []);
   }, [present, state, topRanking]);
   const topSaves = useMemo(() => new Map(topRanking.flatMap(({ id, saves }) => saves === undefined ? [] : [[id, saves] as const])), [topRanking]);
+  // Which published solutions use each technology, so a review can flag a technology no one else uses yet.
+  const technologyUse = useMemo(() => {
+    const use = new Map<string, string[]>();
+    if (state.kind === "ready") for (const entry of state.catalogue) for (const name of entry.technologies) use.set(name, [...(use.get(name) ?? []), entry.id.toLowerCase()]);
+    return use;
+  }, [state]);
   const thumbnails = useMemo(() => new Map(state.kind === "ready" ? state.catalogue.map(entry => [entry.id, entry.cardThumbnail] as const) : []), [state]);
   // Moves a ranked solution's count with the person's own heart until the next ranking read replaces it.
   const shiftTopSaves = (id: string, delta: number) => setTopRanking(current => current.map(entry =>
@@ -253,7 +259,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
         : state.kind === "error" ? <Message title="Catalogue unavailable" message="Check your Dataverse access and connection, then retry." onRetry={onRetry} alert />
         : !present && route.path === "/submit" ? <DraftsView draftId={route.query.get("draft") ?? undefined} owner={user.userPrincipalName} />
         : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
-        : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} />
+        : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} technologyUse={technologyUse} />
         : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
         : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} appLocation={appLocation}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id), saves: topSaves.get(solution.id.toLowerCase()) } : undefined} />

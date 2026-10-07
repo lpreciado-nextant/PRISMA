@@ -13,7 +13,7 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
@@ -327,6 +327,7 @@ if (command == "bind-managed-identity") { BindManagedIdentity(client, args.Skip(
 if (command == "set-blob-config") { SetBlobConfig(client, args.Skip(1).ToArray()); return; }
 if (command == "smoke-blob") { SmokeBlob(client, args.Skip(1).ToArray()); return; }
 if (command == "catalogue-api") { RegisterCatalogueApi(client, args.Skip(1).ToArray()); return; }
+if (command == "technology-duplicates") { TechnologyDuplicates(client); return; }
 
 static void SeedReferenceData(IOrganizationService service, string[] options)
 {
@@ -1242,5 +1243,89 @@ static void SmokeBlob(IOrganizationService service, string[] options)
     {
         Call("nx_TransitionSubmission", ("Action", "delete"), ("Comments", ""), ("Cleared", false));
         Console.WriteLine($"Deleted disposable draft {id}. Blob deletion runs asynchronously; confirm the PRISMA.Media.BlobDeletion system job succeeded.");
+    }
+}
+// Read-only: pairs of active technologies that look like the same thing, with how many solutions use each, so the
+// librarian knows what to merge. Same rules as the submission form (app/src/lib/technologyName.ts): case, accents,
+// spacing and punctuation ignored (C, C# and C++ stay distinct), known aliases, the same words in another order,
+// one or two typos, and one name inside the other.
+static void TechnologyDuplicates(IOrganizationService service)
+{
+    var technologies = new List<(Guid Id, string Name)>();
+    var page = new QueryExpression("nx_technology") { ColumnSet = new ColumnSet("nx_technologyname"), PageInfo = new PagingInfo { Count = 500, PageNumber = 1 } };
+    page.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
+    for (EntityCollection rows; ; page.PageInfo.PageNumber++, page.PageInfo.PagingCookie = rows.PagingCookie)
+    {
+        rows = service.RetrieveMultiple(page);
+        technologies.AddRange(rows.Entities.Select(row => (row.Id, row.GetAttributeValue<string>("nx_technologyname") ?? "")));
+        if (!rows.MoreRecords) break;
+    }
+    var relationship = (ManyToManyRelationshipMetadata)((RetrieveRelationshipResponse)service.Execute(new RetrieveRelationshipRequest { Name = "nx_Solution_nx_Technology_nx_Technology" })).RelationshipMetadata;
+    var technologyColumn = relationship.Entity1LogicalName == "nx_technology" ? relationship.Entity1IntersectAttribute : relationship.Entity2IntersectAttribute;
+    var uses = new Dictionary<Guid, int>();
+    var links = new QueryExpression(relationship.IntersectEntityName) { ColumnSet = new ColumnSet(technologyColumn), PageInfo = new PagingInfo { Count = 5000, PageNumber = 1 } };
+    for (EntityCollection rows; ; links.PageInfo.PageNumber++, links.PageInfo.PagingCookie = rows.PagingCookie)
+    {
+        rows = service.RetrieveMultiple(links);
+        foreach (var row in rows.Entities) { var id = row.GetAttributeValue<Guid>(technologyColumn); uses[id] = uses.GetValueOrDefault(id) + 1; }
+        if (!rows.MoreRecords) break;
+    }
+    Console.WriteLine($"Active technologies: {technologies.Count}; solution links: {uses.Values.Sum()}.");
+    var pairs = new List<(string Left, string Right, string Reason)>();
+    for (var i = 0; i < technologies.Count; i++)
+        for (var j = i + 1; j < technologies.Count; j++)
+        {
+            var reason = TechnologyLookAlike(technologies[i].Name, technologies[j].Name);
+            if (reason == null) continue;
+            string Label((Guid Id, string Name) technology) => $"\"{technology.Name}\" ({uses.GetValueOrDefault(technology.Id)} solutions)";
+            pairs.Add((Label(technologies[i]), Label(technologies[j]), reason));
+        }
+    Console.WriteLine(pairs.Count == 0 ? "No likely duplicates found." : $"Likely duplicates: {pairs.Count}.");
+    foreach (var pair in pairs.OrderBy(pair => pair.Reason).ThenBy(pair => pair.Left)) Console.WriteLine($"  {pair.Left}  ~  {pair.Right}  [{pair.Reason}]");
+    Console.WriteLine("Read-only report. No changes made.");
+}
+
+static string? TechnologyLookAlike(string left, string right)
+{
+    static string Fold(string value) => new string(value.Normalize(System.Text.NormalizationForm.FormKD).Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c) != System.Globalization.UnicodeCategory.NonSpacingMark).ToArray()).ToLowerInvariant();
+    static string Key(string value) => new string(Fold(value).Where(c => char.IsLetterOrDigit(c) || c == '#' || c == '+').ToArray());
+    static string[] Words(string value) => System.Text.RegularExpressions.Regex.Split(Fold(value), @"[^\p{L}\p{N}#+]+").Where(word => word.Length > 0).ToArray();
+    var small = new HashSet<string> { "a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of", "on", "or", "the", "to", "via", "with" };
+    var aliases = new Dictionary<string, string[]> {
+        ["ado"] = new[] { "azuredevops", "vsts" }, ["fabric"] = new[] { "microsoftfabric" }, ["microsoftfoundry"] = new[] { "azureaifoundry", "aifoundry", "azurefoundry" },
+        ["microsoftteams"] = new[] { "teams", "msteams" }, ["dynamics365"] = new[] { "d365", "dynamics", "microsoftdynamics", "microsoftdynamics365" },
+        ["postgresql"] = new[] { "postgres" }, ["nodejs"] = new[] { "node" }, ["net"] = new[] { "dotnet" }, ["typescript"] = new[] { "ts" }, ["javascript"] = new[] { "js" },
+        ["microsoftgraph"] = new[] { "msgraph", "graphapi" }, ["azureopenai"] = new[] { "aoai" }, ["azureaisearch"] = new[] { "cognitivesearch", "azurecognitivesearch" },
+        ["azuredatafactory"] = new[] { "adf" }, ["azurelogicapps"] = new[] { "logicapps" }, ["sqlserver"] = new[] { "mssql", "microsoftsqlserver" }, ["kubernetes"] = new[] { "k8s" },
+        ["powerautomate"] = new[] { "microsoftflow", "msflow" }, ["copilotstudio"] = new[] { "powervirtualagents", "pva" }, ["dataverse"] = new[] { "commondataservice" },
+        ["aws"] = new[] { "amazonwebservices" }, ["go"] = new[] { "golang" }, ["sharepoint"] = new[] { "sharepointonline", "spo" }, ["powerbi"] = new[] { "microsoftpowerbi" }, ["powerapps"] = new[] { "microsoftpowerapps" },
+    };
+    string Canonical(string key) => aliases.FirstOrDefault(entry => entry.Value.Contains(key)).Key ?? key;
+    var (a, b) = (Key(left), Key(right));
+    if (a.Length == 0 || b.Length == 0) return null;
+    if (a == b) return "same name ignoring case, spacing and punctuation";
+    if (Canonical(a) == Canonical(b)) return "known alias";
+    var (wordsA, wordsB) = (Words(left).Where(word => !small.Contains(word)).ToHashSet(), Words(right).Where(word => !small.Contains(word)).ToHashSet());
+    if (wordsA.Count >= 2 && wordsA.SetEquals(wordsB)) return "same words in another order";
+    var shorter = Math.Min(a.Length, b.Length);
+    if (shorter >= 4 && Math.Abs(a.Length - b.Length) <= 2 && Distance(a, b) <= (shorter >= 8 ? 2 : 1)) return "likely typo";
+    if (a + "s" == b || a + "es" == b || b + "s" == a || b + "es" == a) return "singular and plural";
+    var (paddedA, paddedB) = ($" {string.Join(' ', Words(left))} ", $" {string.Join(' ', Words(right))} ");
+    if (shorter >= 2 && (paddedA.Contains(paddedB) || paddedB.Contains(paddedA))) return "one name contains the other";
+    if (shorter >= 5 && (a.Contains(b) || b.Contains(a))) return "one name contains the other";
+    return null;
+
+    static int Distance(string x, string y)
+    {
+        var d = new int[x.Length + 1, y.Length + 1];
+        for (var i = 0; i <= x.Length; i++) d[i, 0] = i;
+        for (var j = 0; j <= y.Length; j++) d[0, j] = j;
+        for (var i = 1; i <= x.Length; i++)
+            for (var j = 1; j <= y.Length; j++)
+            {
+                d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + (x[i - 1] == y[j - 1] ? 0 : 1));
+                if (i > 1 && j > 1 && x[i - 1] == y[j - 2] && x[i - 2] == y[j - 1]) d[i, j] = Math.Min(d[i, j], d[i - 2, j - 2] + 1);
+            }
+        return d[x.Length, y.Length];
     }
 }

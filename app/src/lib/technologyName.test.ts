@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { capitalizeTechnology, checkTechnologyName, technologyKey } from "./technologyName.ts";
+import { capitalizeTechnology, checkTechnologyName, newTechnologies, technologyKey } from "./technologyName.ts";
 
 const listed = ["Power BI", "Power Apps", "Power Automate", "ADO", "Fabric", "Microsoft Teams", "Azure Functions", "Azure AI Search", "PostgreSQL", "Node.js", ".NET", "Python", "SharePoint", "C#", "React"];
 
@@ -58,4 +58,14 @@ test("invalid names are rejected with a reason", () => {
     assert.ok(checkTechnologyName(input, listed).error, input);
   assert.equal(checkTechnologyName("R", listed).error, undefined);
   assert.equal(checkTechnologyName("Dynamics 365", listed).error, undefined);
+});
+
+test("newTechnologies flags names no other published solution uses, with their look-alikes", () => {
+  const labels = ["Azure OpenAI", "Power BI", "Power-BI", "OpenAI on Azure", "Kubernetes"];
+  const used = new Set(["Azure OpenAI", "Power BI", "Kubernetes"]);
+  const result = newTechnologies(["Power BI", "Power-BI", "OpenAI on Azure", "Kubernetes"], used, labels);
+  assert.deepEqual(result.map(entry => entry.name), ["Power-BI", "OpenAI on Azure"]);
+  assert.equal(result[0].similar[0], "Power BI", "an exact variant leads");
+  assert.ok(result[1].similar.includes("Azure OpenAI"));
+  assert.deepEqual(newTechnologies(["Kubernetes"], used, labels), []);
 });

@@ -93,6 +93,10 @@ function similarity(typed: string, label: string) {
     if (edits <= (shorter >= 8 ? 2 : 1)) return edits;
   }
   if ([typedKey + "s", typedKey + "es"].includes(labelKey) || [labelKey + "s", labelKey + "es"].includes(typedKey)) return 1;
+  // The same words in another order ("OpenAI on Azure", "Azure OpenAI"), ignoring small words.
+  const significant = (value: string) => new Set(technologyWords(value).trim().split(" ").filter(word => word && !SMALL_WORDS.has(word)));
+  const [typedSet, labelSet] = [significant(typed), significant(label)];
+  if (typedSet.size >= 2 && typedSet.size === labelSet.size && [...typedSet].every(word => labelSet.has(word))) return 2;
   // Short names only match whole words, so Kubernetes does not suggest .NET.
   const [typedWords, labelWords] = [technologyWords(typed), technologyWords(label)];
   if (shorter >= 2 && (typedWords.includes(labelWords) || labelWords.includes(typedWords))) return 3 + extra / 1000;
@@ -119,4 +123,22 @@ export function checkTechnologyName(input: string, labels: readonly string[]): T
     .sort((left, right) => left.score - right.score || left.label.localeCompare(right.label))
     .slice(0, 4).map(entry => entry.label);
   return { typed, suggested: capitalizeTechnology(typed, labels), similar };
+}
+
+export interface NewTechnology {
+  name: string;
+  /** Existing technologies this one may duplicate, closest first: an exact variant (`existing`) leads. */
+  similar: string[];
+}
+
+/**
+ * Technologies on a submission that no other published solution uses yet, with the existing names they resemble, so a
+ * reviewer can catch "OpenAI on Azure" next to "Azure OpenAI" before it reaches the library filters. Informational only.
+ */
+export function newTechnologies(selected: readonly string[], usedElsewhere: ReadonlySet<string>, labels: readonly string[]): NewTechnology[] {
+  return selected.filter(name => !usedElsewhere.has(name)).map(name => {
+    const others = labels.filter(label => label !== name);
+    const check = checkTechnologyName(name, others);
+    return { name, similar: [...new Set([...(check.existing ? [check.existing] : []), ...check.similar])] };
+  });
 }

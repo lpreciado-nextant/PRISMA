@@ -8,6 +8,7 @@ import { ReviewPanel, ReviewQueue } from "../../src/components/ReviewQueue";
 import { outlinedStatusButton, statusButton, SubmissionStatusPanel } from "../../src/components/SubmissionStatusPanel";
 import { submissionState } from "../../src/lib/submissionState";
 import { reviewChecklist } from "../../src/lib/reviewChecklist";
+import { newTechnologies, type NewTechnology } from "../../src/lib/technologyName";
 import type { Solution } from "../../src/types";
 import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
@@ -74,9 +75,10 @@ export function SubmissionsView({ review }: { review: boolean }) {
   return <ReviewQueue entries={state.entries} connected />;
 }
 
-export function SubmissionView({ id, review }: { id: string; review: boolean }) {
+export function SubmissionView({ id, review, technologyUse }: { id: string; review: boolean; technologyUse?: ReadonlyMap<string, string[]> }) {
   const [state, setState] = useState<SubmissionDetail | null>(null);
   const [names, setNames] = useState<Record<string, string>>({});
+  const [technologyLabels, setTechnologyLabels] = useState<string[]>([]);
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [namesLoaded, setNamesLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -110,7 +112,7 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
         if (table === "people" && !controller.signal.aborted && typeof values[primary] === "string" && typeof values.cr6b0_email === "string") setEmails(current => ({ ...current, [values[primary] as string]: values.cr6b0_email as string }));
         return typeof values[primary] === "string" && typeof values[label] === "string" ? [[values[primary] as string, values[label] as string]] : [];
       }); } catch { return []; }
-    })).then(lists => { if (!controller.signal.aborted) { setNames(Object.fromEntries(lists.flat())); setNamesLoaded(true); } });
+    })).then(lists => { if (!controller.signal.aborted) { setNames(Object.fromEntries(lists.flat())); setTechnologyLabels(lists[2].map(([, label]) => label)); setNamesLoaded(true); } });
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [id, review, attempt]);
   const transition = async (action: string) => {
@@ -159,6 +161,7 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
         onReturn={() => void transition("return")} onApprove={() => void transition("approve")}
         onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
+        {technologyUse && <NewTechnologies items={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologyLabels)} />}
       </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
           {status === 125060003 ? <><button type="button" className={outlinedStatusButton} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="edit" size={16} />Edit draft</button>
             <button type="button" className={statusButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" size={16} />Submit for review</button></>
@@ -179,4 +182,17 @@ export function SubmissionView({ id, review }: { id: string; review: boolean }) 
         </ConfirmDialog>}
       </>
     } />;
+}
+/** Technologies on this submission that no other published solution uses: new names a reviewer checks for duplicates. */
+function NewTechnologies({ items }: { items: NewTechnology[] }) {
+  if (!items.length) return null;
+  return <section aria-label="New technologies" className="mt-4 rounded-xl border border-(--glass-edge) p-4 text-[14px]">
+    <h3 className="font-semibold">New {items.length === 1 ? "technology" : "technologies"}</h3>
+    <p className="mt-1 text-[13px] text-(--ink-2)">No other published solution uses {items.length === 1 ? "this" : "these"} yet. If one repeats an existing technology, request changes and name the existing one.</p>
+    <ul className="mt-2 space-y-1.5">
+      {items.map(item => <li key={item.name}><span className="font-semibold">{item.name}</span>{item.similar.length > 0
+        ? <span style={{ color: "var(--proto)" }}> · similar to {item.similar.join(", ")}</span>
+        : <span className="text-(--ink-2)"> · no similar technology found</span>}</li>)}
+    </ul>
+  </section>;
 }

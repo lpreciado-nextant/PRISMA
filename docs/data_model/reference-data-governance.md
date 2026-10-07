@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-09-30
+**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-10-07
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -18,7 +18,7 @@ The connected app creates technologies through `nx_TransitionSubmission` action 
 
 Before anything is created, the shared technology field (both apps, [technologyName.ts](../../app/src/lib/technologyName.ts)) checks the name against the loaded list:
 
-- **Duplicates:** matching ignores case, accents, spacing and punctuation (`PowerBI`, `power bi` and `Power-BI` all match **Power BI**) but keeps `C`, `C#` and `C++` distinct. Known aliases such as Azure DevOps → **ADO** and Microsoft Fabric → **Fabric** also match. A match selects the existing technology instead of creating one.
+- **Duplicates:** matching ignores case, accents, spacing and punctuation, and the same words in another order (`OpenAI on Azure` suggests **Azure OpenAI**) (`PowerBI`, `power bi` and `Power-BI` all match **Power BI**) but keeps `C`, `C#` and `C++` distinct. Known aliases such as Azure DevOps → **ADO** and Microsoft Fabric → **Fabric** also match. A match selects the existing technology instead of creating one.
 - **Similar names:** likely typos, singular/plural forms and names containing an existing one (Pyhton → Python, Azure Function → Azure Functions) are offered as one-click selections. They don't block creation.
 - **Capitalization:** all-lowercase and all-caps words are corrected (github actions → GitHub Actions, KUBERNETES → Kubernetes, azure database for postgresql → Azure Database for PostgreSQL) using a built-in list of product spellings and the casing of existing labels. Mixed case (`jQuery`, `iOS`) and short acronyms (`AWS`) are kept. The corrected name is shown before adding, and the contributor can choose to keep the name exactly as typed.
 - **Rejected:** lists (commas or semicolons), names with no letters, and placeholders such as N/A, None, Other or TBD.
