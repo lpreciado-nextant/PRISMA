@@ -37,7 +37,9 @@ test("fields respect template limits and fall back by slot", () => {
   assert.equal(withSupporting.supporting_3_title, "FAQ");
   assert.equal(withSupporting.supporting_4_title, undefined);
   assert.equal(fields.presentation_date, "OCTOBER 2026");
-  assert.equal(fields.prisma_url, "prisma.nextant.com/#/s/1");
+  assert.ok(fields.prisma_url.startsWith("NNNN") && fields.prisma_url.length <= 40, "the chip shows the solution name");
+  assert.equal(fields.prisma_href, "https://prisma.nextant.com/#/s/1", "the link is never truncated");
+  assert.equal(fields.tech_list.split(", ").length, 12);
 });
 
 test("image keys and file names", () => {

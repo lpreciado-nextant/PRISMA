@@ -58,6 +58,8 @@ Connected PRISMA only. **Download presentation** sits beside Copy link on a publ
 - Never exports effort hours, builder names, estimated cost, projects or library notes. The CSM (contributor role CSM) is the only person named, with the presenter (the signed-in user).
 - Built in the browser: the deck module, JSZip and the chosen template load only on click, so the hero flow carries no extra weight. Images come through the protected media path; WebP/AVIF are redrawn as PNG.
 - Text that would overflow its fixed box shrinks (down to 60% of the template size).
+- Every slide carries speaker notes built from the same fields; slide 5's notes list each demo's full link to paste if a button does not open. The slide 6 chip shows the solution name and links the full, untruncated PRISMA URL.
+- The button remembers the CSM's last Dark/Light choice in the browser (a convenience only) and states what the download is: PowerPoint, six slides with notes, F5 to present, demo links need a Nextant sign-in.
 - Slide 5 lists demo videos (up to 3), interactive demos (up to 2) and supporting material (up to 3) in columns; a kind with nothing is dropped and the rest share the width.
 - Demo rows link back to the demo in PRISMA, so they need a Nextant sign-in; the deck is for presenting live, not for sending to clients as a standalone demo. Demo titles use the caption or the file name without its extension until a title field exists ([Q19](../delivery/decision-log.md)).
 

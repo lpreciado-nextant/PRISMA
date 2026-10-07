@@ -12,6 +12,7 @@
     "tech_1": "Azure OpenAI",
     "tech_2": "Microsoft Foundry",
     "tech_3": "Azure Functions",
+    "tech_list": "Azure OpenAI, Microsoft Foundry, Azure Functions",
     "industries": "Cross-industry · IT",
     "client_review": "Cleared",
     "added_date": "2026-09-29",
@@ -20,7 +21,8 @@
     "interactive_1_title": "Forge interactive demo",
     "interactive_1_url": "https://example.com/prisma/forge_sample/demo",
     "cta_headline": "Let's build your first agent factory",
-    "prisma_url": "prisma.nextant.com/forge",
+    "prisma_url": "POC Forge",
+    "prisma_href": "https://prisma.nextant.com/forge",
     "csm_name": "Andres Perez",
     "csm_email": ""
   },

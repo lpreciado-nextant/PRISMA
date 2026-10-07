@@ -27,7 +27,12 @@ export interface DeckFields {
   client_review: string;
   added_date: string;
   cta_headline: string;
+  /** Text shown on the slide 6 chip: the solution name. */
   prisma_url: string;
+  /** Full PRISMA link behind the chip and in the notes; never truncated. */
+  prisma_href: string;
+  /** Technologies joined for the speaker notes. */
+  tech_list: string;
   csm_name: string;
   csm_email: string;
   [key: string]: string;
@@ -109,7 +114,9 @@ export function buildDeckFields(input: DeckInput): DeckFields {
     client_review: "Cleared",
     added_date: fit(solution.dateAdded, DECK_LIMITS.added_date),
     cta_headline: CTA_HEADLINE,
-    prisma_url: fit(prismaUrl.replace(/^https?:\/\//, ""), DECK_LIMITS.prisma_url),
+    prisma_url: fit(solution.name, DECK_LIMITS.prisma_url),
+    prisma_href: prismaUrl,
+    tech_list: solution.technologies.join(", "),
     csm_name: fit(csm?.name, DECK_LIMITS.csm_name),
     csm_email: fit(csm?.email, DECK_LIMITS.csm_email),
   };

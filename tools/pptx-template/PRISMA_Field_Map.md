@@ -40,8 +40,12 @@ Esta versión está hecha sobre la página real de una solución en PRISMA (POC 
 | `{{interactive_1_title}}`, `_2_title`, `{{interactive_N_url}}` | 5 | 40 | No | Interactive demos |
 | `{{supporting_1_title}}` … `_3_title`, `{{supporting_N_url}}` | 5 | 40 | No | Supporting material |
 | `{{cta_headline}}` | 6 | 60 | Sí | Texto estándar de Nextant, editable |
-| `{{prisma_url}}` | 6 | 40 | Sí | Enlace a la solución en PRISMA |
+| `{{prisma_url}}` | 6 | 40 | Sí | Texto del enlace a PRISMA: el nombre de la solución |
+| `prisma_href` | 6, notas | — | Sí | URL completa de la solución en PRISMA, detrás del enlace y en las notas. Nunca se recorta |
+| `{{tech_list}}` | notas 4 | — | No | Tecnologías separadas por comas |
 | `{{csm_name}}` `{{csm_email}}` | 6 | 28 / 35 | Sí | CSM (en Forge: Andres Perez) |
+
+**Notas del orador:** cada diapositiva trae notas con los datos de la solución (qué decir, valor, tecnologías) y, en la 5, la lista de enlaces completos de los demos para pegar en el navegador. Las líneas de demos que no existen se eliminan.
 
 Las filas de demos sin título se eliminan solas, y la tarjeta se ajusta a las filas que quedan. Una tarjeta sin filas desaparece y las que quedan se reparten todo el ancho (una, dos o tres columnas). Los botones dicen **Play** (videos) y **Open** (interactivos y material de apoyo).
 

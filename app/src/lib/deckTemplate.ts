@@ -18,6 +18,8 @@ const NS = {
 const REL_IMAGE = `${NS.r}/image`;
 const REL_LINK = `${NS.r}/hyperlink`;
 const EMU_IN = 914400;
+// Demo card geometry (inches), matching slide 5 of the templates: first row offset, row pitch, bottom padding.
+const FIRST_ROW = 0.65, ROW_STEP = 0.9, CARD_PAD = 0.14;
 const TOKEN = /\{\{\s*([a-z0-9_]+)\s*\}\}/g;
 
 const PALETTES: Record<DeckVariant, Record<string, string>> = {
@@ -62,11 +64,13 @@ function recolour(shape: Element, hex: string, where: { fills?: boolean; text?: 
   }
 }
 
-function fillParagraphs(root: Element, fields: Fields): void {
+/** `dropEmpty`: a paragraph whose tokens all resolve to nothing is removed (speaker notes list optional demos line by line). */
+function fillParagraphs(root: Element, fields: Fields, dropEmpty = false): void {
   for (const para of Array.from(root.getElementsByTagNameNS(NS.a, "p"))) {
     const runs = Array.from(para.getElementsByTagNameNS(NS.a, "r"));
     const text = runs.map((run) => run.getElementsByTagNameNS(NS.a, "t")[0]?.textContent ?? "").join("");
     if (!runs.length || !/\{\{/.test(text)) continue;
+    if (dropEmpty && Array.from(text.matchAll(TOKEN)).every(([, key]) => !fields[key])) { remove(para); continue; }
     let out = text.replace(TOKEN, (_, key: string) => fields[key] ?? "");
     out = out.replace(/\s*[·•|\-–—]\s*$/, "").trim(); // an empty trailing field must not leave a dangling separator
     runs[0].getElementsByTagNameNS(NS.a, "t")[0].textContent = out;
@@ -245,7 +249,7 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
         const card = named.get(`card_${kind}`);
         if (!card) continue;
         if (!used) { remove(card); remove(named.get(`${kind}_label`)); continue; }
-        const geometry = xfrm(card), height = Math.round((0.65 + used * 1.12 + 0.12) * EMU_IN);
+        const geometry = xfrm(card), height = Math.round((FIRST_ROW + used * ROW_STEP + CARD_PAD) * EMU_IN);
         geometry.ext.setAttribute("cy", String(height));
         bottoms.push(geometry.y + height);
       }
@@ -266,7 +270,7 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
     }
 
 
-    for (const part of ["prisma_link_chip", "prisma_link"]) linkShape(doc, rels, named.get(part), fields.prisma_url ?? "");
+    for (const part of ["prisma_link_chip", "prisma_link"]) linkShape(doc, rels, named.get(part), fields.prisma_href || fields.prisma_url || "");
     linkFirstRun(doc, rels, named.get("csm_email"), fields.csm_email ?? "");
 
     zip.file(path, new XMLSerializer().serializeToString(doc));
@@ -276,7 +280,7 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
     if (notes) { // speaker notes carry tokens too
       const notesPath = `ppt/${notes.getAttribute("Target")!.replace("../", "")}`;
       const notesDoc = new DOMParser().parseFromString(await zip.file(notesPath)!.async("string"), "application/xml");
-      fillParagraphs(notesDoc.documentElement, fields);
+      fillParagraphs(notesDoc.documentElement, fields, true);
       zip.file(notesPath, new XMLSerializer().serializeToString(notesDoc));
     }
   }

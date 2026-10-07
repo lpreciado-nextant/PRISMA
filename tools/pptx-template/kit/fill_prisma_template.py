@@ -21,7 +21,7 @@ PALETTES = {  # same values as the PRISMA app tokens
 }
 AREA_KEY = {"ai & automation": "ai", "data solutions": "data", "intelligent business operations": "ibo"}
 MATURITY_KEY = {"live": "live", "working prototype": "proto", "idea / concept": "idea"}
-LINKS = {"prisma_link_chip": "prisma_url", "prisma_link": "prisma_url"}  # whole chip is clickable, text on top too
+LINKS = {"prisma_link_chip": "prisma_href", "prisma_link": "prisma_href"}  # whole chip is clickable, text on top too
 TEXT_LINKS = {"csm_email": "csm_email"}  # text run becomes a link
 ROW_KINDS = {"video": 3, "interactive": 2, "supporting": 3}  # demo rows: video_N_title / video_N_url ...
 
@@ -67,10 +67,13 @@ def set_para_text(p, text):
         r._r.getparent().remove(r._r)
 
 
-def fill_text_frame(tf, fields):
+def fill_text_frame(tf, fields, drop_empty=False):
     for p in list(tf.paragraphs):
         txt = para_text(p)
         if not TOKEN.search(txt):
+            continue
+        if drop_empty and not any(fields.get(k) for k in TOKEN.findall(txt)):  # notes list optional demos line by line
+            p._p.getparent().remove(p._p)
             continue
         m = TOKEN.fullmatch(txt.strip())
         val = fields.get(m.group(1)) if m else None
@@ -197,7 +200,7 @@ def main(template, data_json, out):
                         if nm == f"card_{kind}" or nm == f"{kind}_label":
                             shp._element.getparent().remove(shp._element)
                 else:
-                    card_shp.height = Emu(int((0.65 + used * 1.12 + 0.12) * 914400))
+                    card_shp.height = Emu(int((0.65 + used * 0.9 + 0.14) * 914400))  # first row, row pitch, padding
                     bottoms.append(card_shp.top + card_shp.height)
             if bottoms:
                 named["demo_note"].top = max(bottoms) + Emu(int(0.14 * 914400))
@@ -215,7 +218,7 @@ def main(template, data_json, out):
                 shp.text_frame.paragraphs[0].runs[0].hyperlink.address = to_url(val)
         # speaker notes
         if slide.has_notes_slide:
-            fill_text_frame(slide.notes_slide.notes_text_frame, fields)
+            fill_text_frame(slide.notes_slide.notes_text_frame, fields, drop_empty=True)
 
     prs.save(out)
     left = [m for s in prs.slides for sh in s.shapes if sh.has_text_frame for m in TOKEN.findall(sh.text_frame.text)]
