@@ -211,11 +211,11 @@ const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; 
     hint: "Walkthroughs a CSM can play for a client, ideally 2–5 minutes each. Add as many as you need. MP4/WebM up to 500 MB.",
     fileHint: "Walkthroughs a CSM can play for a client, ideally 2–5 minutes each. Add as many as you need. MP4/WebM up to 500 MB." },
   { purpose: "Interactive demo", key: "interactive", title: "Interactive demo", upload: "Upload HTML file", accept: ".html,.htm", links: true,
-    hint: "Something a CSM can click through: a self-contained HTML file (up to 25 MB), or a link to a prototype, web app, Power Apps app or Power BI report. Feel free to add prototypes here.",
-    fileHint: "Something a CSM can click through: a self-contained HTML file, up to 25 MB." },
+    hint: "Add interactive demos or prototypes that allow CSMs to explore the solution firsthand. You can upload a self-contained HTML file (up to 25 MB) or share a link to a prototype, web app, Power Apps app, or Power BI report.",
+    fileHint: "Add interactive demos or prototypes that allow CSMs to explore the solution firsthand. You can upload a self-contained HTML file (up to 25 MB)." },
   { purpose: "Supporting material", key: "supporting", title: "Supporting material", upload: "Upload file", accept: ".pdf,.ppt,.pptx,.mp4,.webm", links: true,
-    hint: "Background for the conversation: slides, one-pagers, PDFs (up to 25 MB), videos that are not client demos, or links to tools, repositories or a marketing kit. Feel free to add the tools behind the solution here.",
-    fileHint: "Background for the conversation: slides, one-pagers, PDFs (up to 25 MB) or videos that are not client demos." },
+    hint: "Add supporting materials that help CSMs understand and present the solution. You can upload slides, one-pagers, PDFs (up to 25 MB), or non-demo videos, and share links to relevant tools, repositories, or marketing resources.",
+    fileHint: "Add supporting materials that help CSMs understand and present the solution. You can upload slides, one-pagers, PDFs (up to 25 MB), or non-demo videos." },
 ];
 
 function MediaReorderItem({ as: Element = "div", id, ids, label, group, disabled, onReorder, className, children }: {
