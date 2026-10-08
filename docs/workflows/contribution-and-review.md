@@ -1,6 +1,6 @@
 # Contribution & review workflow
 
-**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain; My submissions redesigned as a status-filtered workspace; several projects per solution; owner status panel in the review style · **Last updated:** 2026-10-06
+**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain; My submissions redesigned as a status-filtered workspace; several projects per solution; owner status panel in the review style · **Last updated:** 2026-10-08
 **Source:** [End-to-end design §3.1](../design/end-to-end-design.md#31-contribution--publication) · Roles: [Contributor, Librarian](../design/end-to-end-design.md#2-users-and-roles)
 
 ## Lifecycle
@@ -86,7 +86,7 @@ Guided multi-step form with draft saving at every step. **Friction budget: under
 |---|---|---|
 | 1. Before you start | Required safety acknowledgment | Replaces sharing/sample-data classifications; authorized, anonymized client-visible content; not review approval |
 | 2. Define the solution | Name, summary, specialization areas, what it does and business value | Story fields are separate, with examples; optional AI assistance deferred |
-| 3. Solution context | Status (maturity), contributors and effort, client | Direct hours for ideas/prototypes; dates/allocation for demos/production. Starts with "Is this solution associated with a client?" (required): client role, internal name and anonymous context show only on Yes, where name and anonymous context are required; No clears them |
+| 3. Solution context | Status (maturity), contributors and effort, client | Minimum hours required per person at every maturity. Starts with "Is this solution associated with a client?" (required): client role, internal name and anonymous context show only on Yes, where name and anonymous context are required; No clears them |
 | 4. Tag it | Exactly one capability; searchable technologies and industries | Capability required at submit, optional in Draft. New technologies allowed with duplicate, similar-name and capitalization checks ([governance](../data_model/reference-data-governance.md#vocabularies)); other lists governed |
 | 5. Media | One to six required detail images; optional thumbnail, HTML, video and one-pager/slides | Images alone suffice. Capability-specific guidance; permission-dependent formats deferred |
 | 6. Review & submit | Client-visible card and summary | Revalidate safety, identity/effort, anonymous context and required images |
@@ -101,7 +101,7 @@ In the local PoC, **My submissions** also offers deletion of the current user's 
 
 Connected **My submissions** uses the same confirmation and card interaction with a separate controlled Dataverse deletion contract: caller ownership, displayed exact version, publication-share revocation and parent/child/media/session cleanup. Shared references remain intact. An uncertain response requires refresh before another attempt. Privileged Draft deletion passed both backend smoke and browser Cancel/confirm/refresh checks; all-state policy tests do not replace pending least-privilege acceptance.
 
-Builder credit is independent of ownership. Require one or more unique people with complete effort at submit/publication; drafts may be incomplete. Direct mode requires finite nonnegative hours with at most two decimals. Calendar mode retains valid inclusive dates, 0-100% allocation with two decimals, and the applicable US holiday policy. Switching maturity preserves draft values and validates/totals only the active mode. Full contract: [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
+Builder credit is independent of ownership. Require one or more unique people, each with hours, at submit/publication; drafts may be incomplete. At every maturity, hours are the minimum each person needed to work on the solution, including preparation and discovery: finite, nonnegative, at most two decimals. The total is their sum; there are no dates or allocation (retired 2026-10-08). Full contract: [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
 Saving a draft requires an authored, nonblank solution name of at most 100 characters. The save button is disabled without a valid name, and the save operation independently enforces the rule. Legacy `Untitled solution` records reopen as an empty name input and must be named before saving again. Other draft fields can remain incomplete; the temporary session text backup is separate from saved drafts. Name/summary, one capability, contributors, safety, anonymous context and images are revalidated on both submit and approve. Production uses nullable submission-only columns and omits unselected-person rows, rather than manufacturing hours or placeholder people. The PoC retains raw draft editor inputs locally; Dataverse normalization and conditional validation follow the [draft contract](../data_model/SchemaV2.md#draft-and-transition-contract).
 
@@ -110,6 +110,8 @@ Explicit saves persist the complete record and its media in browser-local Indexe
 The editor retains a separate temporary text-only session backup for new forms; it is not the saved submission and excludes media. Opening an existing record restores its last explicit save. The standalone walkthrough remains separate and does not persist submissions. No Dataverse writes or notifications occur.
 
 The Person field searches available people by name or email, case-insensitively. Results exclude people already assigned to another contributor row. Select a result with a pointer or arrow keys followed by Enter; unmatched text is never stored as a person. Escape or leaving the field cancels the search and restores the committed selection. Selected people persist with the draft. This searches the mock people list, not a live directory.
+
+There is no Role picker (retired 2026-10-08). Once a person is selected, a read-only **Level** field shows their consultant-directory level (`cr6b0_consultantlevel`; "Not recorded in the consultant directory" when empty). A contributor whose level names customer success is shown as the solution's CSM; everyone else is a builder. Every contributor, the CSM included, needs minimum hours to submit. A wrong level is corrected in the consultant directory, not in PRISMA ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level)).
 
 ## Editing a published record
 

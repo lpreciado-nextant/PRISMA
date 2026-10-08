@@ -1,18 +1,22 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29, per-solution save counts deployed 2026-10-01; Blob pilot session columns and environment variables specified, not deployed; `nx_solution.nx_reviewedon` created 2026-10-02 but unused; `nx_demoasset.nx_assetpurpose` created 2026-10-06 (ADR-0011) · **Last updated:** 2026-10-06
+**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29, per-solution save counts deployed 2026-10-01; Blob pilot session columns and environment variables specified, not deployed; `nx_solution.nx_reviewedon` created 2026-10-02 but unused; `nx_demoasset.nx_assetpurpose` created 2026-10-06 (ADR-0011); contributor dates/allocation retired in code 2026-10-08 (columns kept, not written; not yet deployed); contributor role `nx_role` retired in code 2026-10-08 for the directory's `cr6b0_consultantlevel` (to be deleted after the plug-in deploy) · **Last updated:** 2026-10-08
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `SpecializationArea`, `Industry` and `Technology` are **native N:N**, while `Capability` is a single-valued lookup. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
+
+**Changed 2026-10-08 (code only, no schema change, not yet deployed):** contributor effort is directly entered minimum hours at every maturity ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md)). `nx_solutioncontributor.nx_startdate`, `nx_enddate` and `nx_allocationpercent` are retired: still in Dataverse, no longer read or written by PRISMA. `nx_effortmode` is written as Direct on every save. The code-based US holiday policy below is gone.
+
+**Changed 2026-10-08 (code only, not yet deployed):** `nx_solutioncontributor.nx_role` is retired. PRISMA no longer reads, writes or validates it; the person's level comes from `cr6b0_consultant.cr6b0_consultantlevel`, and a contributor whose level names customer success is shown as the solution's CSM ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level)). The user deletes the column from Dataverse only after the new plug-ins are deployed.
 
 **Changed in this round (2026-09-23), read back from Nextant Pulse:**
 1. `nx_specializationarea` moved from a 1:N lookup to a **native N:N** with `nx_solution` (`nx_Solution_nx_SpecializationArea_nx_SpecializationArea`). The `nx_solution.nx_specializationarea` lookup column has been **deleted**. See [Known divergences](#known-divergences-from-this-document): no values were carried over, and the plugins still reference the deleted column.
 2. `nx_solution.nx_clientrole` (**Client Role**) added, a local choice.
-3. `nx_solutioncontributor.nx_role` (**Role**: CSM · Consultant) added, a local choice.
+3. `nx_solutioncontributor.nx_role` (**Role**: CSM · Consultant) added, a local choice. Retired in code 2026-10-08.
 4. New table **`nx_solutionfavorite`**: per-person favorite Solutions, linked to `nx_solution` and `cr6b0_consultant`. It is UserOwned. The connected app uses it through two Custom APIs, deployed 2026-09-28. See [its section](#nx_solutionfavorite--per-person-favorites).
 
 **Changed in the previous round (2026-09-21):**
 1. `nx_capability` moved from native N:N to a **1:N** relationship — each `nx_solution` now carries a single `Capability` lookup, same shape as `SpecializationArea`.
-2. `nx_businesscalendar` and `nx_businesscalendarholiday` are **removed**, along with the contributor's `Business Calendar` lookup. US federal holiday exclusions are retained in code for 2020-2035; this overrides the earlier weekday-only proposal. See the updated derivation below.
+2. `nx_businesscalendar` and `nx_businesscalendarholiday` are **removed**, along with the contributor's `Business Calendar` lookup. US federal holiday exclusions were retained in code for 2020-2035, overriding the earlier weekday-only proposal; the whole calendar calculation was retired on 2026-10-08.
 3. Every PRISMA-owned lookup that pointed to the platform `systemuser` table (`Built By` on `nx_solutioncontributor`, `Requested By` on `nx_demorequest`) now points to a new custom table, **`cr6b0_consultant`**. On the pre-existing `cr6b0_project`, `cr6b0_customersuccessmanager` already points there; `cr6b0_deliverymanager` still points at `systemuser` and is out of scope.
 4. `nx_project` is renamed to **`cr6b0_project`** throughout — same pre-existing, fixed-column table, correct name.
 5. `Solution` ↔ `Project` no longer goes through a custom junction table (`nx_solutionproject` is **dropped**); it is now a **native N:N** relationship between `nx_solution` and `cr6b0_project`, since the link carries no attributes of its own.
@@ -110,12 +114,12 @@ erDiagram
         text Name
         lookup Solution FK
         lookup BuiltBy FK
-        choice Role
+        choice Role "retired, unused"
         choice EffortMode
         decimal DirectHours
-        date StartDate
-        date EndDate
-        decimal AllocationPercent
+        date StartDate "retired, unused"
+        date EndDate "retired, unused"
+        decimal AllocationPercent "retired, unused"
     }
     nx_capability {
         guid nx_capabilityid PK
@@ -253,8 +257,8 @@ It carries about thirty columns of its own. The ones PRISMA reads or depends on:
 | Email | `cr6b0_email` | StringType | — | Read for contributor identity in the person picker and published detail |
 | Employee Status | `cr6b0_employeestatus` | BooleanType | — | The person picker lists only `statecode eq 0 and cr6b0_employeestatus eq true` |
 | V-Active | `cr6b0_vactive` | BooleanType | — | Separate activity flag on the table; not the picker filter |
-| Consultant Level | `cr6b0_consultantlevel` | StringType | — | Not read by the app |
-| IsCSM / IsDeliveryManager | `cr6b0_iscsm`, `cr6b0_isdeliverymanager` | BooleanType | — | Role flags owned by the source table, not by PRISMA |
+| Consultant Level | `cr6b0_consultantlevel` | StringType (max 100) | — | Free text maintained in the directory (e.g. "Senior Consultant", "Customer Success Manager II"). Since 2026-10-08 read with the person picker, submission detail and published detail (`level` per credit, omitted in present mode). A level matching customer success marks that contributor as the solution's CSM. PRISMA never writes it |
+| IsCSM / IsDeliveryManager | `cr6b0_iscsm`, `cr6b0_isdeliverymanager` | BooleanType | — | Role flags owned by the source table, not by PRISMA. Not read; the CSM is identified from `cr6b0_consultantlevel` |
 | Specialization Area | `cr6b0_specializationarea` | LookupType | — | Points at a **different** specialization-area table outside this solution — **not** `nx_specializationarea` |
 
 Its remaining columns (hire/end dates, manager aliases, allocation rollups, credentials) belong to the source system and are neither read nor written here. Required levels are whatever the table already enforces; PRISMA sets none.
@@ -331,32 +335,28 @@ One row per person credited on a Solution. User/team-owned, with access aligned 
 | Name *(primary name)* | `nx_contributorname` | StringType | Yes | Auto-generated display label from Solution/person; truncate to 100 characters, never use as identity |
 | Solution | `nx_solution` | LookupType → `nx_solution` | Yes | Parent reusable offering |
 | Built By | `nx_builtby` | LookupType → `cr6b0_consultant` | Yes | One credited person; multiple people require multiple rows |
-| Role | `nx_role` | PicklistType (local) | No | Added 2026-09-23. CSM · Consultant. No default |
-| Effort Mode | `nx_effortmode` | PicklistType (local) | Yes | Direct for Idea / concept and Working prototype; Calendar for Client demo and Live in production. Validate against parent maturity. Retired records retain their last valid mode. |
-| Direct Hours | `nx_directhours` | DecimalType | At submit/publication in Direct mode | Nullable in Draft; finite and nonnegative when supplied. Include preparation/discovery. Zero is valid; empty is not zero |
-| Start Date | `nx_startdate` | DateTimeType (Date Only) | At submit/publication in Calendar mode | Nullable in Draft; inclusive first date |
-| End Date | `nx_enddate` | DateTimeType (Date Only) | At submit/publication in Calendar mode | Nullable in Draft; inclusive last date, not before Start Date at validation |
-| Allocation (%) | `nx_allocationpercent` | DecimalType | At submit/publication in Calendar mode | Nullable in Draft; constant allocation; zero permitted |
+| Role | `nx_role` | PicklistType (local) | No | **Retired 2026-10-08.** Added 2026-09-23 (CSM · Consultant). Not read or written by PRISMA; the user deletes it after the new plug-ins are deployed |
+| Effort Mode | `nx_effortmode` | PicklistType (local) | Yes | Since 2026-10-08 every save writes Direct (125060000). Calendar (125060001) remains only on rows saved earlier and is not read |
+| Direct Hours | `nx_directhours` | DecimalType | At submit/publication | Minimum hours the person needed to work on the solution, including preparation/discovery, at every maturity. Nullable in Draft; finite, nonnegative, at most 1,000,000,000 and two decimals when supplied. Zero is valid; empty is not zero |
+| Start Date | `nx_startdate` | DateTimeType (Date Only) | No | **Retired 2026-10-08.** Still in Dataverse; not read or written by PRISMA. Existing values are left untouched |
+| End Date | `nx_enddate` | DateTimeType (Date Only) | No | **Retired 2026-10-08.** Still in Dataverse; not read or written by PRISMA. Existing values are left untouched |
+| Allocation (%) | `nx_allocationpercent` | DecimalType | No | **Retired 2026-10-08.** Still in Dataverse; not read or written by PRISMA. Existing values are left untouched |
 
-No `Business Calendar` lookup or calendar tables. Calendar mode uses one code-based US federal holiday policy, with no calendar selector — `usBusinessCalendar(2020, 2035)` in `app/src/lib/effort.ts`, called by the connected app in `app/connected/src/draftGraph.ts`. The `BusinessCalendar` type and the `calendarId` field in `app/src/types.ts` are code-level constructs belonging to that function, **not Dataverse columns**; the schema-shaped-mock rule does not apply to them. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
+No `Business Calendar` lookup, calendar tables or holiday policy. Deleting the three retired columns would be a separate, separately approved schema change. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
 
-**Role (`nx_role`)** marks the solution's CSM separately from the consultants who built it. The CSM lives in the same child table, so it is read back with the other contributors. Because of the alternate key below, one person holds one role per Solution. Rules for CSM rows are **not yet defined**: whether they carry effort, how many are allowed, and whether they count toward the contributor minimum (see [Still open](#still-open)).
+**CSM (derived, 2026-10-08).** Nothing role-related is stored per contributor. The person's `cr6b0_consultantlevel` is shown read-only in the form, and a contributor whose level names customer success (`isCustomerSuccessLevel`: case-insensitive, with or without the space, e.g. "CustomerSuccessManager") is listed as the solution's CSM in the detail view and named as the CSM in the PowerPoint download; everyone else is a builder. CSM contributors are ordinary rows: they carry hours and count toward the contributor minimum like anyone else. `nx_role` replaced the dropped `nx_leadcsm` idea on 2026-09-23 and is now itself retired as redundant with the directory level. **Delete it only after the new plug-ins are deployed:** the deployed plug-in still selects `nx_role`, so deleting it first breaks draft graph reads, submission review and published detail. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level).
 
-Alternate key: `(Solution, Built By)` enforces one effort record per person per Solution — deployed as `nx_solutioncontributorkey` (`nx_builtby` + `nx_solution`). Require at least one complete contributor at submit/publication; a 1:N relationship cannot itself enforce a minimum child count. Validate only the active mode: direct hours in Direct mode, or dates/allocation in Calendar mode. Maturity changes preserve draft inputs but change the active mode for every contributor; never use stale inactive values in totals. Conditional validation must be enforced on all production writes, not just the UI.
+Alternate key: `(Solution, Built By)` enforces one effort record per person per Solution — deployed as `nx_solutioncontributorkey` (`nx_builtby` + `nx_solution`). Require at least one contributor at submit/publication, and hours for every contributor; a 1:N relationship cannot itself enforce a minimum child count. Validation must be enforced on all production writes, not just the UI.
 
 **Derived values, not editable columns:**
 
-- `Business Days`: count Monday-Friday dates between Start Date and End Date, **inclusive**, excluding observed nationwide US federal holidays under the [OPM schedule](https://www.opm.gov/policy-data-oversight/pay-leave/federal-holidays/). Calculate holidays in code for supported dates 2020-01-01 through 2035-12-31; reject invalid dates, reversed ranges, and dates outside coverage rather than falling back to weekdays. Date-only arithmetic must not shift with time zone or daylight-saving changes.
-- Apply holiday rules appropriate to each year, including Juneteenth from 2021 onward. Fixed-date holidays on Saturday are observed Friday; those on Sunday are observed Monday. Include observed dates in range even when the holiday's nominal date belongs to an adjacent year (for example, New Year's Day 2022 observed on 2021-12-31). State-specific, company, and regional-only holidays are not included. No calendar records or contributor calendar IDs are stored.
-- `Effort Hours`: for Calendar-mode contributors, `round(Business Days * 8 * AllocationPercent / 100, 2)`. Apply rounding only after the multiplication.
-- In Direct mode, `Effort Hours` equals validated `Direct Hours`; business days do not apply.
-- `Total Effort Hours`: sum the rounded contributor hours, displayed to at most two decimals. Different people working simultaneously contribute separately; this is not elapsed duration. Do not combine their allocations before applying their individual date ranges.
+- `Total Effort Hours`: sum of contributor `Direct Hours`, displayed to at most two decimals. Different people working simultaneously contribute separately; this is not elapsed duration. When any contributor has no hours, the total is unknown and shown as "Incomplete", never as a partial sum.
 
-Example: 2026-09-07 through 2026-09-18 contains ten weekdays minus Labor Day on September 7, giving nine business days. At allocation 50%, the contribution is `9 * 8 * 0.5 = 36 hours`. A second person at 100% over the same nine business days adds 72 hours, for 108 total hours. A same-day non-holiday weekday counts as one; a weekend-only or holiday-only range yields zero.
+Hours are self-reported minimums, not a timesheet, capacity calculation or estimate of deployment lead time. Demo effort is not a production estimate. The app sums loaded contributor data; no Dataverse calculated column or stored total is assumed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
 
-Calendar-mode hours represent capacity; Direct-mode hours represent reported effort. Neither is a timesheet system or an estimate of deployment lead time. Demo effort is not a production estimate. Allocation changes within a person's period and cross-solution over-allocation/capacity checks remain out of scope. The app calculates from loaded contributor data; no Dataverse calculated-column capability or stored total is assumed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
+**Rows from the calendar model:** Client demo and production contributors saved before 2026-10-08 carry `nx_startdate`, `nx_enddate` and `nx_allocationpercent` but a null `nx_directhours`. They read as incomplete effort (published detail returns a null total) until someone enters minimum hours. They were deliberately not backfilled: calendar hours were estimated capacity, not minimum hours required.
 
-**Migration:** create a contributor row for each former `nx_solution.Built By` value. Dates and allocation require explicit confirmation; do not infer them from the old Days/Weeks/Months choice. Keep legacy values during a real migration until backfill is verified, then retire the old lookup/choice and any unused global choice. The PoC's dates and allocations are illustrative, not historical work records. The connected app already applies the code-based 2020-2035 policy. The look-and-feel PoC in `app/src/` still carries a single hardcoded 2026 holiday list for its illustrative totals; that is a PoC data detail, not a schema question, and its calendar identifiers are code-level, not columns to migrate. No live integration or deployment is authorized by this policy change.
+**Migration:** create a contributor row for each former `nx_solution.Built By` value. Hours require explicit confirmation; do not infer them from the old Days/Weeks/Months choice. Keep legacy values during a real migration until backfill is verified, then retire the old lookup/choice and any unused global choice. The PoC's hours are illustrative, not historical work records. No live integration or deployment is authorized by this policy change.
 
 ### `nx_solutionfavorite` — per-person favorites
 
@@ -440,7 +440,7 @@ The "request a live demo" escape hatch, and a signal of which solutions the busi
 | Project Description | `cr6b0_projectdescription` | MemoType | Not read by the app |
 | Project Type | `cr6b0_projecttype` | PicklistType | Source-system choice; PRISMA does not interpret its values |
 | Current Project Status | `cr6b0_currentprojectstatus` | PicklistType | Source-system choice |
-| Project Start / End Date | `cr6b0_projectstartdate`, `cr6b0_projectenddate` | DateTimeType | Delivery dates on the project, unrelated to contributor effort dates |
+| Project Start / End Date | `cr6b0_projectstartdate`, `cr6b0_projectenddate` | DateTimeType | Delivery dates on the project, unrelated to contributor effort |
 | Customer Success Manager | `cr6b0_customersuccessmanager` | LookupType → `cr6b0_consultant` | The person link already aligned with the consultant migration |
 | Delivery Manager | `cr6b0_deliverymanager` | LookupType → `systemuser` | Still points at the platform user table. It belongs to the pre-existing table and is out of scope for the consultant migration — not a leftover to clean up here |
 | Account | `cr6b0_account` | LookupType → `account` | Client of record in the source system |
@@ -506,8 +506,8 @@ Integers, not labels, are what a write must send. Unknown values must fail expli
 | `nx_solution.nx_publicationstatus` | Global | 125060000 Published · 125060001 Retired · 125060002 Pending review · 125060003 Draft |
 | `nx_solution.nx_reviewoutcome` | Local | 125060000 None · 125060001 Changes requested · 125060002 Approved |
 | `nx_solution.nx_clientrole` | Local | 125060000 Chief of Staff · 125060001 Chief Executive Officer (CEO) · 125060002 Chief Information Officer (CIO) · **125060008** Chief Operating Officer (COO) · **125060009** Chief Financial Officer (CFO) · 125060003 Enterprise Architect · 125060004 Solution Architect · 125060005 Product Owner · 125060006 Project Manager · 125060007 Business Unit Leader · 125060010 Operation Manager · 125060011 IT Manager · 125060012 Director · 125060013 Other |
-| `nx_solutioncontributor.nx_effortmode` | Local | 125060000 direct · 125060001 calendar |
-| `nx_solutioncontributor.nx_role` | Local | 125060000 CSM · 125060001 Consultant |
+| `nx_solutioncontributor.nx_effortmode` | Local | 125060000 direct (written on every save since 2026-10-08) · 125060001 calendar (retired; only on older rows) |
+| `nx_solutioncontributor.nx_role` | Local | 125060000 CSM · 125060001 Consultant (column retired 2026-10-08; not read or written) |
 | `nx_demoasset.nx_assetpurpose` | Local | 125060000 Demo video · 125060001 Interactive demo · 125060002 Supporting material |
 | `nx_demoasset.nx_assettype` | Local | 125060000 Self-contained HTML file · 125060001 Video walkthrough only · 125060002 Client-ready one-pager / slide · 125060003 Power BI · 125060004 Desktop app or script · **125060007** Hosted web app (URL) · **125060008** Power Apps |
 | `nx_demorequest.nx_requeststatus` | Local | 125060000 New · 125060001 Acknowledged · 125060002 Scheduled · 125060003 Delivered · 125060004 Declined |
@@ -541,7 +541,8 @@ Reviewed and accepted, not defects:
 - Column lengths in Dataverse are largely 850 (text) and 4000 (multiline); the design lengths above were not applied and are not enforced at the column level.
 - Required levels do not match the Required column above — notably `nx_capability` is `ApplicationRequired` in Dataverse while drafts may leave it empty. `ApplicationRequired` is not enforced on SDK writes, so the draft plugin is unaffected; a model-driven form would be.
 - `cr6b0_consultant` and `cr6b0_project` carry many columns of their own beyond the ones documented above, and `cr6b0_consultant.cr6b0_specializationarea` points to a **different** table of that name, outside this solution. Both are treated as independent, pre-existing tables; the sections above list their identifiers, person links and the columns PRISMA reads, not their full column sets.
-- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` and `nx_solutioncontributor.nx_role` are read and written by connected drafts (deployed 2026-09-28). The published catalogue also reads the system `createdon` for "Newest/Oldest first" (2026-09-29).
+- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` is read and written by connected drafts (deployed 2026-09-28). `nx_solutioncontributor.nx_role` was too until it was retired in code on 2026-10-08. The published catalogue also reads the system `createdon` for "Newest/Oldest first" (2026-09-29).
+- `nx_solutioncontributor.nx_startdate`, `nx_enddate` and `nx_allocationpercent` exist in Dataverse but are retired in code (2026-10-08): PRISMA neither reads nor writes them, and existing values are left in place. Deleting them is a separate, unapproved schema change.
 
 **Open after the 2026-09-23 changes (these are defects, not accepted divergences):**
 
@@ -553,7 +554,7 @@ Reviewed and accepted, not defects:
   - The schema name is lowercase (`nx_solutionfavorite`).
   - `nx_name` is optional (length 850).
 - **`nx_solutionfavorite` is only written through `nx_SetFavorite`.** Roles have User-depth Read only; the plugin binds `nx_user` to the caller. The connected app hides the heart when the favorites list doesn't load, for example for an account without a PRISMA role or without a matching active consultant.
-- **`nx_role` is read and written by the app (deployed 2026-09-28).** The contributor editor has a role selector, `ContributorInput` carries `roleValue`, and `DraftGraph.cs` selects, returns and writes `nx_role`. CSM rows are listed separately from builders on the detail page. Contributor rows saved before the deployment keep a null role until edited.
+- **`nx_role` retired in code (2026-10-08, not yet deployed).** The role selector is gone; `ContributorInput` and `DraftGraph.cs` no longer select, return, write or validate `nx_role`, and a `roleValue` sent by older clients is accepted and ignored. The currently deployed plug-in still selects it, so the column stays until the new plug-ins are deployed; the user then deletes it. Existing values are ignored.
 
 ---
 
@@ -585,7 +586,7 @@ Reviewed and accepted, not defects:
 
 **Dropped from the first v2 draft, and still dropped:** `nx_projectevidence` (no attachments table).
 
-**Removed this round:** `nx_businesscalendar` and `nx_businesscalendarholiday`, not holiday exclusions. `nx_solutioncontributor.Business Days` retains observed US federal holiday exclusions, enforced in code for 2020-2035.
+**Removed this round:** `nx_businesscalendar` and `nx_businesscalendarholiday`, not holiday exclusions; those stayed in code for 2020-2035 until the calendar model itself was retired on 2026-10-08.
 
 **Changed this round:** every lookup to the platform `systemuser` table now points to the new custom table `cr6b0_consultant`. `nx_project` is renamed `cr6b0_project` (same pre-existing table). The `Solution` ↔ `Project` connection is a **native N:N** relationship between `nx_solution` and `cr6b0_project` — no custom junction table, since the link carries no attributes of its own.
 
@@ -603,17 +604,16 @@ Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. Pub
 
 `nx_solutionfavorite` (**deployed 2026-09-28**): Contributor, CSM and Librarian get **Read at User depth only**, with no Create, Write, Delete, Append, Assign or Share. Rows are created and deleted only through `nx_SetFavorite`, and both favorite Custom APIs require `prvReadnx_solutionfavorite`. Each person sees only their own favorites. Nobody, including the Librarian, reads other people's rows directly; aggregate counts go through a server-side operation.
 
-`nx_solutioncontributor`: Contributor create/read/write/delete only where they can manage the parent Solution; CSM read only for published parents; Librarian full access. Present mode omits all contributor data: per-person dates and allocations, builder names, CSM rows and total effort. Present mode is not a security boundary for the bundled mock data.
+`nx_solutioncontributor`: Contributor create/read/write/delete only where they can manage the parent Solution; CSM read only for published parents; Librarian full access. Present mode omits all contributor data: per-person hours, builder names and levels, the CSM and total effort. Present mode is not a security boundary for the bundled mock data.
 
 ## Still open
 
 - Who creates the `Solution`↔`Project` N:N association — the Librarian during triage, or the Contributor who owns the Solution?
 - Specialization areas per solution: is the minimum one at submit? Is there a maximum? Does the UI need a "primary" area for the card color and badge?
 - `nx_clientrole`: what does it represent (the client stakeholder the solution targets?), is it required at submit, and is it shown in present mode?
-- `nx_role` = CSM rows: do they carry effort, is there exactly one per solution, and do they count toward the contributor minimum?
 - `nx_solutionfavorite`: should the ranking count favorites, and who sees the ranking? Who cleans up favorites with an empty `nx_user` after a consultant is deleted?
 
-*(Resolved: `SpecializationArea` cardinality — changed to native N:N on 2026-09-23. `Industry` and `Technology` cardinality — settled as native N:N, multi-valued. `Capability` cardinality — settled as 1:N, single-valued. `cr6b0_project` + `Solution`↔`Project` link — confirmed in scope, native N:N, no junction table. `systemuser` lookups replaced by `cr6b0_consultant`. `nx_businesscalendar`/`nx_businesscalendarholiday` — removed from scope.)*
+*(Resolved: `SpecializationArea` cardinality — changed to native N:N on 2026-09-23. `Industry` and `Technology` cardinality — settled as native N:N, multi-valued. `Capability` cardinality — settled as 1:N, single-valued. `cr6b0_project` + `Solution`↔`Project` link — confirmed in scope, native N:N, no junction table. `systemuser` lookups replaced by `cr6b0_consultant`. `nx_businesscalendar`/`nx_businesscalendarholiday` — removed from scope. `nx_role` CSM rows — retired 2026-10-08: the CSM is derived from `cr6b0_consultantlevel` and is an ordinary contributor. Contributor dates/allocation — retired 2026-10-08 for direct minimum hours; deleting the columns and entering hours for legacy demo/production rows are tracked in the [decision log](../delivery/decision-log.md).)*
 
 ---
 
@@ -675,8 +675,8 @@ graph TD
     TECH1[LangChain] -- N:N --> S1
     TECH2[Power Automate] -- N:N --> S1
 
-    S1 -- 1:N --> SC1["nx_solutioncontributor<br/>Builder 1: dates, allocation"]
-    S1 -- 1:N --> SC2["nx_solutioncontributor<br/>Builder 2: dates, allocation"]
+    S1 -- 1:N --> SC1["nx_solutioncontributor<br/>Builder 1: minimum hours"]
+    S1 -- 1:N --> SC2["nx_solutioncontributor<br/>Builder 2: minimum hours"]
     Builder1[cr6b0_consultant] -- "Built By" --> SC1
     Builder2[cr6b0_consultant] -- "Built By" --> SC2
     S1 -- 1:N --> DA1["nx_demoasset<br/>Self-contained HTML"]

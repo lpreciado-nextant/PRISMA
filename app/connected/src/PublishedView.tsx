@@ -10,12 +10,11 @@ import { mediaAsset, type PublishedDetail } from "./workflow";
 import type { MediaItem } from "./media";
 import { useMediaAction } from "./useMediaAction";
 import { ProtectedImage } from "./ProtectedImage";
-import { contributorCredit } from "./draftGraph";
-import { MATURITY_OPTIONS } from "./drafts";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { shareUrl, type AppLocation } from "./deepLink";
 import { DownloadDeckButton } from "./DownloadDeckButton";
 import { canExportDeck } from "../../src/lib/deckFields";
+import { isCustomerSuccessLevel } from "../../src/lib/consultantLevel";
 import { useAppUser } from "../../src/lib/powerContext";
 
 const loadViewer = () => import("./DraftMediaEditor");
@@ -48,15 +47,14 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
   if (!detail) return <LoadingState variant="page" label="Loading solution..." />;
   if (assetId) return asset ? <Suspense fallback={<LoadingState variant="page" label="Loading viewer..." />}><MediaPreview item={asset} solutionId={solution.id} mode={present ? "present" : "published"} viewerTitle={solution.name} autoDownload={autoDownload} onClose={() => navigate(`/s/${solution.id}`)} /></Suspense> : <section className="mx-auto max-w-[1340px] px-4 py-6"><p role="alert" className="mb-4">Asset unavailable.</p><button className={button} onClick={() => navigate(`/s/${solution.id}`)}><Icon name="chevronLeft" />Back to solution</button></section>;
   const hydrated: Solution = { ...solution, libraryNotes: present ? undefined : detail.libraryNotes, assets: detail.media.filter(item => item.kind === "attachment").map(mediaAsset), projects: present ? [] : detail.projects.map((projectName, index) => ({ id: String(index), projectName })) };
-  const maturity = MATURITY_OPTIONS.find(option => option.label === solution.status)!.value;
-  const effort = { ...detail, contributors: detail.contributors.map(person => person.effort ? contributorCredit(person.effort, maturity, person.name, person.hours, person.email) : person) };
+  const effort = detail;
   const thumbnail = detail.media.find(item => item.kind === "thumbnail" && item.complete);
   return <DetailView solution={hydrated} present={present} connected effort={effort} imageCount={detail.media.filter(item => item.kind === "image").length}
     favoritable={!!favorite} favorite={favorite}
     actions={!present && <>
       {appLocation && <CopyLinkButton appLocation={appLocation} route={`/s/${solution.id}`} />}
       {canExportDeck(solution) && <DownloadDeckButton solution={hydrated} media={detail.media} presenter={{ name: user.fullName, email: user.live ? user.userPrincipalName : undefined }}
-        csm={effort.contributors.find(person => "contributorRole" in person && person.contributorRole === "CSM")}
+        csm={effort.contributors.find(person => isCustomerSuccessLevel(person.level))}
         link={route => appLocation && shareUrl(appLocation, route)} />}
     </>}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}

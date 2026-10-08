@@ -92,7 +92,7 @@ namespace Prisma.Plugins
             if (!parent.GetAttributeValue<bool>("nx_safetyacknowledged")) throw MediaPolicy.Invalid("Renew the safety acknowledgment before submission.");
             if (!string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_clientcontext")) && string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_clientcontextredacted")))
                 throw MediaPolicy.Invalid("Provide redacted client context.");
-            ContributorPolicy.Validate(graph.Graph.Contributors, parent.GetAttributeValue<OptionSetValue>("nx_status").Value, true);
+            ContributorPolicy.Validate(graph.Graph.Contributors, true);
             var images = media.Count(row => row.GetAttributeValue<string>("nx_kind") == "image");
             if (images < 1 || images > 6 || media.Count(row => row.GetAttributeValue<string>("nx_kind") == "attachment") > 6 || media.Count(row => row.GetAttributeValue<string>("nx_kind") == "thumbnail") > 1 || media.Any(row => !row.GetAttributeValue<bool>("nx_complete")))
                 throw MediaPolicy.Invalid("Save one to six detail images and finish or remove all uploads.");

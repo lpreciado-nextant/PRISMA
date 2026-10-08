@@ -1,6 +1,6 @@
 # Discovery & presentation — the CSM hero flow
 
-**Status:** Aligned with client-safe review and maturity-based effort; presentation download added · **Last updated:** 2026-10-07
+**Status:** Aligned with client-safe review and minimum-hours effort; presentation download added; CSM derived from the consultant level (2026-10-08) · **Last updated:** 2026-10-08
 **Source:** [End-to-end design §3.2](../design/end-to-end-design.md#32-discovery--presentation-the-csm-path)
 **Measure:** problem statement → presentable demo in **under two minutes**, unaided (G1). Anything that adds a click to this path needs to earn it.
 
@@ -45,7 +45,7 @@ The CSM's briefing document:
 - The client/context it came from
 - Tags and the asset list ([demo assets](demo-assets.md))
 - Total calculated effort hours, summed across contributors; not elapsed deployment time
-- Per-person dates, allocation, business calendar and calculated hours, omitted in present mode ([calculation contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort))
+- Per-person minimum hours and total effort, omitted in present mode ([effort contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort))
 - Internal-only content (library notes) — visible to internal viewers, **never in present mode**
 
 From here: open the demo in the viewer, download the one-pager, download a presentation, [request a live demo](demo-requests.md), or enter [present mode](present-mode.md).
@@ -55,7 +55,7 @@ From here: open the demo in the viewer, download the one-pager, download a prese
 Connected PRISMA only. **Download presentation** sits beside Copy link on a published solution and builds a six-slide PRISMA × Nextant `.pptx` from the solution's own fields; the CSM picks the Dark or Light template. Field-to-slide mapping and limits: [`tools/pptx-template/PRISMA_Field_Map.md`](../../tools/pptx-template/PRISMA_Field_Map.md).
 
 - Offered only for published solutions with Client review = Cleared, and never in present mode.
-- Never exports effort hours, builder names, estimated cost, projects or library notes. The CSM (contributor role CSM) is the only person named, with the presenter (the signed-in user).
+- Never exports effort hours, builder names, estimated cost, projects or library notes. The CSM (the contributor whose consultant-directory level, `cr6b0_consultantlevel`, names customer success) is the only person named, with the presenter (the signed-in user).
 - Built in the browser: the deck module, JSZip and the chosen template load only on click, so the hero flow carries no extra weight. Images come through the protected media path; WebP/AVIF are redrawn as PNG.
 - Text that would overflow its fixed box shrinks (down to 60% of the template size).
 - Every slide carries speaker notes built from the same fields; slide 5's notes list each demo's full link to paste if a button does not open. The slide 6 chip shows the solution name and links the full, untruncated PRISMA URL.

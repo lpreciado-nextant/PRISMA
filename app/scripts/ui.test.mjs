@@ -280,10 +280,16 @@ test("the client question hides every client field until Yes", () => {
 
 test("safety and contributor rows preserve baseline copy and accessible field structure", () => {
   assert.match(render(form.SubmissionSafety, { accepted: false, onChange: noop }), /Help keep PRISMA content safe/);
-  const html = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), direct: true, value: { directHours: null, allocation: 100, startDate: "", endDate: "" }, onChange: noop, result: { error: "Enter hours", hours: 0, businessDays: 0 } });
+  const html = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), value: null, onChange: noop, result: { error: "Enter hours", hours: 0 } });
   assert.match(html, /<legend[^>]*>Contributor 1/);
   assert.match(html, /sm:col-span-2/);
-  assert.match(html, /Hours contributed/);
+  assert.match(html, /Minimum hours required/);
+  assert.doesNotMatch(html, /Allocation|Start date|business days|>Level</);
+  const selected = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: "Customer Success Manager II", value: 4, onChange: noop, result: { error: "", hours: 4 } });
+  assert.match(selected, />Level</);
+  assert.match(selected, /Customer Success Manager II/);
+  assert.doesNotMatch(selected, /<select|Role/);
+  assert.match(render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: null, value: 4, onChange: noop, result: { error: "", hours: 4 } }), /Not recorded in the consultant directory/);
   assert.doesNotMatch(html, /Remove contributor/);
   assert.match(html, /aria-live="polite"/);
 });

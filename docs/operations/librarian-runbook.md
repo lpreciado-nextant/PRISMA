@@ -1,6 +1,6 @@
 # Librarian runbook
 
-**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into status, context and decision 2026-10-02 · **Last updated:** 2026-10-07
+**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into status, context and decision 2026-10-02 · **Last updated:** 2026-10-08
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
@@ -44,8 +44,8 @@ Review Comments allow up to 4000 characters and are separate from editorial Libr
 - [ ] Client identity stays internal; anonymous context is supplied when a client is named; no identifying details leak through body text or attachments
 - [ ] Exactly one capability is selected; tags are sensible; no duplicate technologies introduced. The connected review panel lists **New technologies** (no other published solution uses them) with the existing ones they resemble; if one repeats an existing technology, request changes and name the existing one
 - [ ] Thumbnail present or the generated poster is acceptable
-- [ ] At least one unique person with credible direct hours for ideas/prototypes or dates/allocation for demos/production
-- [ ] Calendar-mode contributions have covered US dates and valid 0-100% allocation; direct hours are finite and nonnegative, at most two decimals. Check the [schema contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort)
+- [ ] At least one unique person, each with credible minimum hours required (every maturity): finite, nonnegative, at most two decimals. Check the [schema contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort)
+- [ ] Client demo or production solutions saved before 2026-10-08 may show "Incomplete" effort: their contributors have dates/allocation from the retired model but no hours. Ask the owner to enter minimum hours rather than deriving them from the old dates and allocation
 - [ ] Project links, if present, meet [intake criteria](../data_model/SchemaV2.md#intake-triage-not-every-legacy-record-gets-linked-to-a-solution); client engagement names and per-person effort details do not appear in present mode
 
 **Outcomes:** approve client-safe content (Published, Client Safe Reviewed true, Review Outcome Approved), or request changes (Draft, Review Outcome Changes requested, required Review Comments and both safety booleans false). Approval revalidates submission completeness. Acknowledgment and historical outcome alone never grant clearance. The connected app enforces this through [controlled transitions](../architecture/security-model.md#controlled-transitions); the PoC only simulates the role.
@@ -63,7 +63,6 @@ Retire when stale, superseded, or client-sensitive. Retired records leave search
 - Add governed values (capabilities, industries, specialization areas) as the practice evolves — contributors cannot.
 - Periodically merge duplicate technologies ([governance](../data_model/reference-data-governance.md)). Find them with `Prisma.Deploy technology-duplicates` (read-only): it lists look-alike pairs (same name ignoring case and punctuation, known alias, same words in another order, likely typo, one name inside the other) with how many solutions use each. Merging is not automated yet: `DraftGraphGuard` blocks direct tag writes for every account, so it needs a librarian-only merge operation in the plug-ins.
 - Maintain sort orders that drive tab/chip/facet ordering.
-- Review US federal holiday coverage before it runs out: the connected effort calculation covers 2020–2035 in code ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md)); the PoC mock calendar covers only 2026. Do not silently recalculate production history ([calendar stewardship](../data_model/reference-data-governance.md#calendar-stewardship)).
 
 ## Recurring duties
 

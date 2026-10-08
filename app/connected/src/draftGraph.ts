@@ -1,31 +1,20 @@
 import { coreFields, saveDraft, type CoreDraft, type DraftApi, type DraftResult, type SavedDraft } from "./drafts.ts";
 import { readAll, type ReadRows } from "./catalogue.ts";
-import { calculateEffort, usBusinessCalendar } from "../../src/lib/effort.ts";
-import { CONTRIBUTOR_ROLE_VALUES, CONTRIBUTOR_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata.ts";
+import { contributorHours } from "../../src/lib/effort.ts";
 
-const CONTRIBUTOR_ROLE_VALUE_SET = new Set(Object.values(CONTRIBUTOR_ROLE_VALUES));
-
-const calendar = usBusinessCalendar(2020, 2035);
-export function contributorEffort(person: Contributor, maturity: number) {
+export function contributorEffort(person: Contributor) {
   try {
     if (!person.personId) throw new Error("Select a contributor.");
-    if (person.directHours !== null && person.directHours > 1_000_000_000) throw new Error("Hours exceed the supported limit.");
-    const result = calculateEffort({
-      id: person.id ?? "", builtBy: { id: person.personId, name: "", email: "" },
-      effortMode: maturity === 125060001 || maturity === 125060004 ? "direct" : "calendar",
-      directHours: person.directHours ?? undefined, startDate: person.startDate ?? "", endDate: person.endDate ?? "",
-      allocation: person.allocation ?? NaN, calendarId: calendar.id,
-    }, calendar);
-    return { ...result, error: "" };
+    return { hours: contributorHours(person.directHours), error: "" };
   } catch (error) {
-    return { businessDays: 0, hours: 0, error: error instanceof Error ? error.message : "Check contributor effort." };
+    return { hours: 0, error: error instanceof Error ? error.message : "Check contributor effort." };
   }
 }
 
-export type GraphReferences = Record<"people" | "technologies" | "industries" | "projects", { id: string; name: string; email?: string }[] | null>;
+export type GraphReferences = Record<"people" | "technologies" | "industries" | "projects", { id: string; name: string; email?: string; level?: string }[] | null>;
 export function initialContributor(references: GraphReferences, owner: string): DraftGraph {
   const people = references.people?.filter(person => person.email?.trim().toLowerCase() === owner.trim().toLowerCase()) ?? [];
-  return { ...emptyGraph(), contributors: people.length === 1 ? [{ id: null, personId: people[0].id, directHours: null, allocation: 100, startDate: null, endDate: null, roleValue: null }] : [] };
+  return { ...emptyGraph(), contributors: people.length === 1 ? [{ id: null, personId: people[0].id, directHours: null }] : [] };
 }
 export async function loadGraphReferences(read: ReadRows, signal: AbortSignal): Promise<GraphReferences> {
   const definitions = [
@@ -36,13 +25,14 @@ export async function loadGraphReferences(read: ReadRows, signal: AbortSignal): 
   ] as const;
   const lists = await Promise.all(definitions.map(async definition => {
     try {
-      const rows = await readAll(read, definition.table, { select: [definition.id, definition.name, ...(definition.table === "people" ? ["cr6b0_email", "statecode", "cr6b0_employeestatus"] : [])], filter: definition.table === "people" ? "statecode eq 0 and cr6b0_employeestatus eq true" : "statecode eq 0", orderBy: [`${definition.name} asc`] }, signal);
+      const rows = await readAll(read, definition.table, { select: [definition.id, definition.name, ...(definition.table === "people" ? ["cr6b0_email", "cr6b0_consultantlevel", "statecode", "cr6b0_employeestatus"] : [])], filter: definition.table === "people" ? "statecode eq 0 and cr6b0_employeestatus eq true" : "statecode eq 0", orderBy: [`${definition.name} asc`] }, signal);
       return rows.filter(row => definition.table !== "people" || ((row as Record<string, unknown>).statecode === 0 && (row as Record<string, unknown>).cr6b0_employeestatus === true)).map(row => {
         const values = row as Record<string, unknown>;
         const identifier = values[definition.id];
         const title = values[definition.name];
         if (typeof identifier !== "string" || (definition.table !== "projects" && typeof title !== "string")) throw new Error("Invalid reference.");
-        return { id: identifier, name: typeof title === "string" && title.trim() ? title : `Untitled project (${identifier.slice(0, 8)})`, ...(definition.table === "people" && typeof values.cr6b0_email === "string" ? { email: values.cr6b0_email } : {}) };
+        return { id: identifier, name: typeof title === "string" && title.trim() ? title : `Untitled project (${identifier.slice(0, 8)})`, ...(definition.table === "people" && typeof values.cr6b0_email === "string" ? { email: values.cr6b0_email } : {}),
+          ...(definition.table === "people" && typeof values.cr6b0_consultantlevel === "string" && values.cr6b0_consultantlevel.trim() ? { level: values.cr6b0_consultantlevel.trim() } : {}) };
       });
     } catch { return null; }
   }));
@@ -53,12 +43,8 @@ export async function loadGraphReferences(read: ReadRows, signal: AbortSignal): 
 export interface Contributor {
   id: string | null;
   personId: string;
+  /** `nx_directhours`: the minimum hours this person needed to work on the solution, at every maturity. */
   directHours: number | null;
-  startDate: string | null;
-  endDate: string | null;
-  allocation: number | null;
-  /** `nx_solutioncontributor.nx_role` numeric choice value: 125060000 CSM, 125060001 Consultant. */
-  roleValue: number | null;
 }
 export interface DraftGraph {
   contributors: Contributor[];
@@ -75,7 +61,7 @@ export interface GraphApi {
 export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] });
 
 export function isEmptyContributor(person: Contributor): boolean {
-  return !person.id && !person.personId && person.directHours === null && !person.startDate && !person.endDate && (person.allocation === null || person.allocation === 100) && !person.roleValue;
+  return !person.id && !person.personId && person.directHours === null;
 }
 
 export async function persistDraftGraph(coreApi: DraftApi, graphApi: GraphApi, draft: CoreDraft, saved: SavedDraft | undefined, graph: DraftGraph, baseline: DraftGraph, signal: AbortSignal, onConfirmed: (core: SavedDraft, graph: DraftGraph) => void) {
@@ -123,27 +109,15 @@ export function parseGraph(result: DraftResult): GraphSnapshot {
   const contributors = graph.contributors.map(value => {
     const person = object(value);
     if (typeof person.id !== "string" || !guid.test(person.id) || typeof person.personId !== "string" || !guid.test(person.personId)) throw new Error("Invalid contributor identifier.");
-    for (const field of ["directHours", "allocation"]) {
-      const number = person[field];
-      if (number !== null && (typeof number !== "number" || !Number.isFinite(number) || number < 0)) throw new Error("Invalid effort number.");
-    }
-    for (const field of ["startDate", "endDate"]) if (person[field] !== null && (typeof person[field] !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(person[field] as string))) throw new Error("Invalid effort date.");
-    if (person.roleValue !== null && person.roleValue !== undefined && !CONTRIBUTOR_ROLE_VALUE_SET.has(person.roleValue as number)) throw new Error("Invalid contributor role.");
-    return { id: person.id, personId: person.personId, directHours: person.directHours as number | null, allocation: person.allocation as number | null, startDate: person.startDate as string | null, endDate: person.endDate as string | null, roleValue: (person.roleValue as number | null) ?? null };
+    if (person.directHours !== null && (typeof person.directHours !== "number" || !Number.isFinite(person.directHours) || person.directHours < 0)) throw new Error("Invalid effort number.");
+    return { id: person.id, personId: person.personId, directHours: person.directHours as number | null };
   });
   if (new Set(contributors.map(person => person.personId)).size !== contributors.length) throw new Error("Duplicate contributor.");
   return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds) }, hours: data.hours as (number | null)[] };
 }
 export function graphPayload(graph: DraftGraph): string {
   return JSON.stringify({
-    contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours, startDate: person.startDate, endDate: person.endDate, allocation: person.allocation, roleValue: person.roleValue })),
+    contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours })),
     technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds,
   });
-}
-
-export function contributorCredit(person: Contributor, maturity: number, name: string, hours: number | null, email?: string) {
-  const preview = contributorEffort(person, maturity);
-  return { name, hours, email, effortMode: maturity === 125060001 || maturity === 125060004 ? "direct" as const : "calendar" as const,
-    startDate: person.startDate, endDate: person.endDate, allocation: person.allocation, businessDays: preview.error ? null : preview.businessDays,
-    contributorRole: person.roleValue != null ? CONTRIBUTOR_ROLE_BY_VALUE[person.roleValue] : undefined };
 }

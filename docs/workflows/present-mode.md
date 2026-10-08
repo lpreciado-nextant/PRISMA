@@ -1,6 +1,6 @@
 # Present mode
 
-**Status:** Agreed safety-first contract; PoC mirror implemented · **Last updated:** 2026-09-28
+**Status:** Agreed safety-first contract; PoC mirror implemented · **Last updated:** 2026-10-08
 **Source:** [End-to-end design §3.4](../design/end-to-end-design.md#34-present-mode)
 **Principle:** never embarrass a CSM in front of a client. Present mode **restricts** rather than merely hides.
 
@@ -10,7 +10,7 @@ One switch in the masthead, available from any page, flipped before the CSM shar
 
 | Behaviour | Detail |
 |---|---|
-| Suppresses internal-only content | Library notes, publication status, review history, per-person dates, allocation, calendar and effort breakdown, builder names, CSM rows, total effort hours and estimated cost |
+| Suppresses internal-only content | Library notes, publication status, review history, per-person hours and effort breakdown, builder names and levels, the CSM, total effort hours and estimated cost |
 | Restricts the catalogue | Only Published records with Safety Acknowledged and Client Safe Reviewed. Pending or uncleared records are filtered before search/render |
 | Always excludes client identity | Internal client/context and project fields are removed from the catalogue projection. Only the separately authored anonymous context is used; no runtime scrubbing of text or media |
 | Changes the visual treatment | Larger type, minimal chrome, no filter rail by default, full-bleed demo viewer |

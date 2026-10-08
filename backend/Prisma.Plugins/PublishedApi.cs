@@ -13,6 +13,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "name")] public string Name { get; set; }
         [DataMember(Name = "hours")] public decimal? Hours { get; set; }
         [DataMember(Name = "email", EmitDefaultValue = false)] public string Email { get; set; }
+        /// <summary>The consultant's `cr6b0_consultantlevel`; a level naming customer success marks the solution's CSM.</summary>
+        [DataMember(Name = "level", EmitDefaultValue = false)] public string Level { get; set; }
         [DataMember(Name = "effort", EmitDefaultValue = false)] public ContributorInput Effort { get; set; }
     }
 
@@ -22,7 +24,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "id")] public string Id { get; set; }
         [DataMember(Name = "rowVersion")] public string RowVersion { get; set; }
         [DataMember(Name = "contributors")] public PublishedCredit[] Contributors { get; set; }
-        [DataMember(Name = "totalHours")] public decimal TotalHours { get; set; }
+        /// <summary>Null while any contributor has no hours recorded, such as rows saved before allocation was retired.</summary>
+        [DataMember(Name = "totalHours")] public decimal? TotalHours { get; set; }
         [DataMember(Name = "projects")] public string[] Projects { get; set; }
         [DataMember(Name = "media")] public MediaSnapshot[] Media { get; set; }
         [DataMember(Name = "libraryNotes", EmitDefaultValue = false)] public string LibraryNotes { get; set; }
@@ -52,17 +55,16 @@ namespace Prisma.Plugins
             if (parent == null) throw MediaPolicy.Invalid("Published detail is unavailable in this mode.");
             var graph = DraftGraph.Read(caller, parent);
             var credits = new List<PublishedCredit>();
-            var totalHours = 0m;
+            decimal? totalHours = 0m;
             // Present mode is client-facing: no builder names, CSM rows or effort leave the server.
             if (!present)
                 foreach (var person in graph.Graph.Contributors)
                 {
-                    var consultant = caller.Retrieve("cr6b0_consultant", Guid.Parse(person.PersonId), new ColumnSet("cr6b0_consultantname", "cr6b0_email"));
-                    var hours = ContributorPolicy.Hours(person, parent.GetAttributeValue<OptionSetValue>("nx_status").Value);
-                    if (!hours.HasValue) throw MediaPolicy.Invalid("Published contributor effort is incomplete.");
-                    totalHours += hours.Value;
+                    var consultant = caller.Retrieve("cr6b0_consultant", Guid.Parse(person.PersonId), new ColumnSet("cr6b0_consultantname", "cr6b0_email", "cr6b0_consultantlevel"));
+                    var hours = person.DirectHours;
+                    totalHours = hours.HasValue ? totalHours + hours : null;
                     credits.Add(new PublishedCredit { Name = consultant.GetAttributeValue<string>("cr6b0_consultantname") ?? "Consultant", Hours = hours,
-                        Email = consultant.GetAttributeValue<string>("cr6b0_email"), Effort = person });
+                        Email = consultant.GetAttributeValue<string>("cr6b0_email"), Level = Trimmed(consultant.GetAttributeValue<string>("cr6b0_consultantlevel")), Effort = person });
                 }
             var projects = new List<string>();
             if (!present)
@@ -78,5 +80,7 @@ namespace Prisma.Plugins
                 LibraryNotes = present ? null : parent.GetAttributeValue<string>("nx_librarynote")
             });
         }
+
+        private static string Trimmed(string value) { return string.IsNullOrWhiteSpace(value) ? null : value.Trim(); }
     }
 }

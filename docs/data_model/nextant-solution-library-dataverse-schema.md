@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to the two-field story model in v2, including live ownership and private SHA-bound upload sessions; story-column retirement deployed; Specialization Area N:N, Client Role and contributor Role synchronized 2026-09-23; broader acceptance pending · **Last updated:** 2026-09-23
+> **Status:** Maintained companion to the two-field story model in v2, including live ownership and private SHA-bound upload sessions; story-column retirement deployed; Specialization Area N:N, Client Role and contributor Role synchronized 2026-09-23; contributor dates/allocation retired for direct minimum hours 2026-10-08; contributor Role retired for the consultant directory level 2026-10-08; broader acceptance pending · **Last updated:** 2026-10-08
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Proposed new table names below use an `nx_` publisher prefix; confirm the actual publisher prefix before creating components. The fixed `cr6b0_project` and `cr6b0_consultant` names remain as specified in v2.
 
@@ -113,22 +113,20 @@ Required lookups do not automatically inherit Dataverse security. Configure and 
 | Name *(primary name)* | Text (100) | Yes | Solution/person display label, truncated to 100; not an identity key |
 | Solution | Lookup → `nx_solution` | Yes | Parent offering |
 | Built By | Lookup → `cr6b0_consultant` | Yes | One credited person per row |
-| Role (`nx_role`) | Choice — **local**: CSM / Consultant | No | Marks the solution's CSM separately from the building consultants. CSM-row rules still open |
-| Effort Mode | Choice: Direct / Calendar | Yes | Direct for ideas/prototypes; Calendar for demos/production; validate against parent maturity |
-| Direct Hours | Decimal Number (2 decimal places, minimum 0) | At submit/publication in Direct mode | Nullable in Draft; finite, nonnegative when supplied; includes preparation/discovery; zero is valid |
-| Start Date | Date Only | At submit/publication in Calendar mode | Nullable in Draft; inclusive first day |
-| End Date | Date Only | At submit/publication in Calendar mode | Nullable in Draft; inclusive last day, not before Start Date at validation |
-| Allocation (%) | Decimal Number (2 decimal places, 0-100) | At submit/publication in Calendar mode | Nullable in Draft; zero permitted |
+| Role (`nx_role`) | Choice — **local**: CSM / Consultant | No | Retired 2026-10-08; not read or written. The CSM is derived from the person's `cr6b0_consultant.cr6b0_consultantlevel`. Deleted by the user after the new plug-ins are deployed |
+| Effort Mode | Choice: Direct / Calendar | Yes | Written as Direct on every save since 2026-10-08; Calendar only on older rows |
+| Direct Hours | Decimal Number (2 decimal places, minimum 0) | At submit/publication | Minimum hours the person needed to work on the solution, at every maturity, including preparation/discovery. Nullable in Draft; zero is valid |
+| Start Date | Date Only | No | Retired 2026-10-08; still in Dataverse, not read or written |
+| End Date | Date Only | No | Retired 2026-10-08; still in Dataverse, not read or written |
+| Allocation (%) | Decimal Number (2 decimal places, 0-100) | No | Retired 2026-10-08; still in Dataverse, not read or written |
 
-Alternate key: `(Solution, Built By)` prevents duplicate people. Require at least one complete contributor at submit/publication; drafts may omit rows or leave effort inputs null. Validate only the active mode: direct hours, or dates/allocation. Preserve inactive draft inputs on maturity changes, but never total them. Apply the same rules to production writes, not just the UI.
+Alternate key: `(Solution, Built By)` prevents duplicate people. Require at least one contributor, each with hours, at submit/publication; drafts may omit rows or leave hours null. Apply the same rules to production writes, not just the UI.
 
-**Calculation:** count Monday-Friday dates in the inclusive range, excluding observed US federal holidays calculated in code for 2020-2035. No calendar tables, lookup, or selector are required. Reject invalid dates, reversed ranges, and dates outside coverage; use year-appropriate holiday rules and account for observed dates crossing year boundaries, as specified in the [contributor contract](SchemaV2.md#nx_solutioncontributor--builders-and-effort). Person hours = `round(business days * 8 * allocation / 100, 2)`; Solution hours = sum of those rounded person totals. Use date-only arithmetic unaffected by time zones or daylight-saving changes. Weekend-only or holiday-only periods yield zero. Example: September 7-18, 2026 at 50% covers nine business days after excluding Labor Day, giving `9 * 8 * 0.5 = 36 hours`.
+Solution hours = sum of person hours. They are self-reported minimums, not a timesheet, capacity or deployment duration. Full rules, including legacy calendar-model rows: [contributor contract](SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
-In Direct mode, use validated Direct Hours without a calendar. Calendar hours represent capacity; direct hours represent reported effort. Neither is deployment duration or a timesheet. Full calculation and migration rules: [contributor contract](SchemaV2.md#nx_solutioncontributor--builders-and-effort).
+The Person field searches names/emails, excludes already assigned people, and supports keyboard/pointer selection. Only a selected known person is stored; search text is not a person record. The current PoC searches mock people, not a live directory. The selected person's `cr6b0_consultantlevel` is shown read-only; a level naming customer success makes that contributor the solution's CSM. See [contribution workflow](../workflows/contribution-and-review.md).
 
-The Person field searches names/emails, excludes already assigned people, and supports keyboard/pointer selection. Only a selected known person is stored; search text is not a person record. The current PoC searches mock people, not a live directory. See [contribution workflow](../workflows/contribution-and-review.md).
-
-**Migration:** create a contributor row for each former builder, confirm dates/allocation explicitly. Never infer hours from the old Days/Weeks/Months category. App alignment must remove obsolete calendar IDs from mock records and restored drafts without changing their dates, allocations, direct hours, or existing 2026 totals. The app still uses its 2026 in-memory calendar; code-based 2020-2035 support is pending. No real Dataverse migration or deployment has been performed.
+**Migration:** create a contributor row for each former builder and confirm hours explicitly. Never infer hours from the old Days/Weeks/Months category. No real Dataverse migration or deployment has been performed.
 
 ### `nx_demoasset`
 
@@ -225,7 +223,7 @@ Two things have to hold at the platform level, not just in the UI: unpublished r
 
 Contributors can create/read/write/delete `nx_solutioncontributor` rows only where they can manage the parent Solution; CSMs read rows for published parents; Librarians have full access. Builder credit alone grants no rights.
 
-The `Solution`↔`Project` native N:N association privileges match [v2 security](SchemaV2.md#security-model): Contributors create/read/write own, CSMs read for detail context, Librarians full. The existing Project security model remains in force. Present mode omits client engagement names and per-person dates and allocation breakdowns; builder names and total effort remain. Bundled mock data is not protected by present mode. See the [security model](../architecture/security-model.md) for platform requirements.
+The `Solution`↔`Project` native N:N association privileges match [v2 security](SchemaV2.md#security-model): Contributors create/read/write own, CSMs read for detail context, Librarians full. The existing Project security model remains in force. Present mode omits client engagement names, builder names, per-person hours and total effort. Bundled mock data is not protected by present mode. See the [security model](../architecture/security-model.md) for platform requirements.
 
 ## Open for a later pass
 

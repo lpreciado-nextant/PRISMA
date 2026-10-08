@@ -7,7 +7,7 @@ import { presentCatalogue } from "./catalogue.ts";
 
 const solution: Solution = {
   id: "submission", name: "Test solution", summary: "Summary", whatItDoes: "Description", businessValue: "Value",
-  specializationArea: "ai", contributors: [{ id: "contributor", builtBy: { id: "builder", name: "Builder", email: "builder@example.com" }, effortMode: "direct", directHours: 12, startDate: "", endDate: "", allocation: 100, calendarId: "us-federal-2026" }], status: "Working prototype", publicationStatus: "Draft",
+  specializationArea: "ai", contributors: [{ id: "contributor", builtBy: { id: "builder", name: "Builder", email: "builder@example.com" }, directHours: 12 }], status: "Working prototype", publicationStatus: "Draft",
   safetyAcknowledged: true, clientSafeReviewed: false, dateAdded: "2026-09-21", searchKeywords: "",
   capabilities: ["AI & agents"], technologies: [], industries: [], assets: [], images: [{ id: "image", src: "data:image/png;base64,test" }],
 };
@@ -96,8 +96,9 @@ test("named incomplete drafts save, but submit and approval require complete val
     { ...solution, clientContext: "Internal client", clientContextRedacted: "" },
     { ...solution, contributors: [] }, { ...solution, contributors: [...solution.contributors, ...solution.contributors] },
     { ...solution, contributors: [{ ...solution.contributors[0], directHours: undefined }] },
-    { ...solution, status: "Client demo" },
+    { ...solution, status: "Client demo", contributors: [{ ...solution.contributors[0], directHours: undefined }] },
   ];
+  assert.doesNotThrow(() => saveContribution({ ...solution, status: "Live in production" }, "Pending review"));
   for (const candidate of invalid) {
     assert.doesNotThrow(() => saveContribution(candidate, "Draft"));
     assert.throws(() => saveContribution(candidate, "Pending review"));

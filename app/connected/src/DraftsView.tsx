@@ -8,7 +8,7 @@ import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, Submis
 import type { Solution, SpecializationArea } from "../../src/types";
 import { MAX_AREAS } from "../../src/lib/areas";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
-import { AREAS, CLIENT_ROLES, CLIENT_ROLE_VALUES, CLIENT_ROLE_BY_VALUE, CONTRIBUTOR_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata";
+import { AREAS, CLIENT_ROLES, CLIENT_ROLE_VALUES, CLIENT_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata";
 import { DraftGraphEditor } from "./DraftGraphEditor";
 import { DraftMediaEditor } from "./DraftMediaEditor";
 import { draftApi, graphApi, mediaApi, readRows, workflowApi } from "./dataSource";
@@ -239,7 +239,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     specializationArea: selectedAreas[0] ?? "ai", specializationAreas: selectedAreas, status: MATURITY_OPTIONS.find(option => option.value === draft.maturity)?.label as Solution["status"],
     publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
     clientRole: draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : undefined,
-    contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "" }, directHours: person.directHours ?? undefined, startDate: person.startDate ?? "", endDate: person.endDate ?? "", allocation: person.allocation ?? 0, calendarId: "", contributorRole: person.roleValue != null ? CONTRIBUTOR_ROLE_BY_VALUE[person.roleValue] : undefined })),
+    contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "", level: graphReferences.people?.find(option => option.id === person.personId)?.level }, directHours: person.directHours ?? undefined })),
     dateAdded: "", searchKeywords: "", assets: [], capabilities: references.capabilities.filter(option => option.id === draft.capabilityId).map(option => option.name),
     technologies: (graphReferences.technologies ?? []).filter(option => graph.technologyIds.includes(option.id)).map(option => option.name), industries: (graphReferences.industries ?? []).filter(option => graph.industryIds.includes(option.id)).map(option => option.name),
   };
@@ -247,7 +247,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const locked = busy || mediaPending || status === "uncertain" || !!recovery;
   const thumbnail = media.find(item => item.kind === "thumbnail" && item.complete);
   const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person));
-  const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !contributorEffort(person, draft.maturity).error);
+  const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !contributorEffort(person).error);
   const complete = canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
   const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() : step === 2 ? canSave && effortComplete && clientValid : step === 3 ? canSave && !!draft.capabilityId : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
@@ -286,13 +286,13 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
             <StatusField status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
           </NamedSection>
           <NamedSection title="Built by & effort">
-            <DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="contributors" onChange={changeGraph} />
+            <DraftGraphEditor graph={graph} references={graphReferences} section="contributors" onChange={changeGraph} />
           </NamedSection>
           <ClientFields framed value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
             role={draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : ""} roles={CLIENT_ROLES} onRole={value => change("clientRoleValue", value ? CLIENT_ROLE_VALUES[value] : undefined)}
             associated={clientAssociated} onAssociated={setClientAssociated} />
         </StepShell>}
-        {step === 3 && <StepShell title="Tag it"><TagPicker label="Capability (choose one)" required governed options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} maturity={draft.maturity} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
+        {step === 3 && <StepShell title="Tag it"><TagPicker label="Capability (choose one)" required governed options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
       </fieldset>
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}
       {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}

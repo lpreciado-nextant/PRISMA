@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { AssetType, DemoAsset, Solution } from "../types";
-import { AREAS, BUSINESS_CALENDARS } from "../data/catalogueMetadata";
+import { AREAS } from "../data/catalogueMetadata";
 import { AreaTag, Chip, StatusPill } from "../components/Badges";
 import { outlinedStatusButton, SubmissionStatusPanel } from "../components/SubmissionStatusPanel";
 import { submissionState } from "../lib/submissionState";
@@ -8,7 +8,7 @@ import { assetPurpose, type AssetPurpose } from "../lib/assetPurpose";
 import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
-import { calculateEffort } from "../lib/effort";
+import { isCustomerSuccessLevel } from "../lib/consultantLevel";
 import { DemoStage } from "../components/DemoStage";
 import { solutionAreas } from "../lib/areas";
 import { FavoriteButton } from "../components/FavoriteButton";
@@ -72,7 +72,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
   backLabel?: string; actions?: React.ReactNode; reviewActions?: React.ReactNode; assetBasePath?: string;
   catalogueOnly?: boolean;
   connected?: boolean;
-  effort?: { contributors: { name: string; hours: number | null; email?: string; effortMode?: "direct" | "calendar"; startDate?: string | null; endDate?: string | null; allocation?: number | null; businessDays?: number | null; contributorRole?: "CSM" | "Consultant" }[]; totalHours: number | null };
+  effort?: { contributors: { name: string; hours: number | null; email?: string; level?: string }[]; totalHours: number | null };
   gallery?: React.ReactNode;
   poster?: React.ReactNode;
   imageCount?: number;
@@ -89,15 +89,12 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
   const inlineDemo = mainDemo && behaviourFor(mainDemo).mode === "viewer" ? mainDemo : undefined;
   const assetSections = ASSET_SECTIONS.map((section) => ({ ...section, items: assets.filter((asset) => asset !== mainDemo && assetPurpose(asset) === section.purpose) })).filter((section) => section.items.length > 0);
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
-  const contributions = solution.contributors.map((contributor) => {
-    const calendar = BUSINESS_CALENDARS.find((entry) => entry.id === contributor.calendarId);
-    return { ...contributor, calendar, ...calculateEffort(contributor, calendar) };
-  });
-  // nx_role = CSM rows are listed as the solution's CSM, not as builders — in both the mock and connected effort shapes.
-  const csms = contributions.filter((contributor) => contributor.contributorRole === "CSM");
-  const builders = contributions.filter((contributor) => contributor.contributorRole !== "CSM");
-  const effortCsms = effort?.contributors.filter((person) => person.contributorRole === "CSM") ?? [];
-  const effortBuilders = effort?.contributors.filter((person) => person.contributorRole !== "CSM") ?? [];
+  const contributions = solution.contributors.map((contributor) => ({ ...contributor, hours: contributor.directHours ?? 0 }));
+  // Contributors whose directory level names customer success are listed as the solution's CSM, not as builders.
+  const csms = contributions.filter((contributor) => isCustomerSuccessLevel(contributor.builtBy.level));
+  const builders = contributions.filter((contributor) => !isCustomerSuccessLevel(contributor.builtBy.level));
+  const effortCsms = effort?.contributors.filter((person) => isCustomerSuccessLevel(person.level)) ?? [];
+  const effortBuilders = effort?.contributors.filter((person) => !isCustomerSuccessLevel(person.level)) ?? [];
   const totalHours = Math.round(contributions.reduce((total, contributor) => total + contributor.hours, 0) * 100) / 100;
 
   return (
@@ -279,14 +276,10 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
           {!present && !catalogueOnly && (
             <Panel title="Built by & effort">
               <ul className="space-y-4 text-[14px]">
-                {effort ? effortBuilders.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}{person.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {person.contributorRole}</span>}</p>{person.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : person.effortMode === "calendar" && <><p className="text-[12px]">{person.startDate || "Start date missing"} to {person.endDate || "End date missing"}</p><p>{person.allocation === null ? "Allocation missing" : `${person.allocation}% allocation`}{person.businessDays !== null && person.businessDays !== undefined ? ` · ${person.businessDays} business days` : ""}</p><p className="text-[12px] text-(--ink-3)">US federal holidays</p></>}<p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : builders.map((contributor) => (
+                {effort ? effortBuilders.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}{person.level && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {person.level}</span>}</p><p className="text-[12px]">Minimum hours required</p><p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : builders.map((contributor) => (
                   <li key={contributor.id} className="break-words">
-                    <p className="font-semibold"><a href={`mailto:${contributor.builtBy.email}`} style={{ color: "var(--accent)" }}>{contributor.builtBy.name}</a>{contributor.contributorRole && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {contributor.contributorRole}</span>}</p>
-                    {contributor.effortMode === "direct" ? <p className="text-[12px]">Reported hours</p> : <>
-                      <p className="text-[12px]">{contributor.startDate} to {contributor.endDate}</p>
-                      <p>{contributor.allocation}% allocation · {contributor.businessDays} business days</p>
-                      <p className="text-[12px]" style={{ color: "var(--ink-3)" }}>{contributor.calendar?.name}</p>
-                    </>}
+                    <p className="font-semibold"><a href={`mailto:${contributor.builtBy.email}`} style={{ color: "var(--accent)" }}>{contributor.builtBy.name}</a>{contributor.builtBy.level && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {contributor.builtBy.level}</span>}</p>
+                    <p className="text-[12px]">Minimum hours required</p>
                     <p className="font-mono" style={{ color: "var(--accent)" }}>{contributor.hours.toLocaleString()} hours</p>
                   </li>
                 ))}

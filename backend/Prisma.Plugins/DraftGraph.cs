@@ -42,7 +42,7 @@ namespace Prisma.Plugins
             "nx_Solution_nx_SpecializationArea_nx_SpecializationArea"
         };
 
-        public static DraftGraphInput Parse(string json, int maturity)
+        public static DraftGraphInput Parse(string json)
         {
             if (string.IsNullOrWhiteSpace(json) || json.Length > 200000) throw Invalid("Missing or oversized draft graph.");
             DraftGraphInput input;
@@ -55,6 +55,7 @@ namespace Prisma.Plugins
                     CheckFields(root, "contributors", "technologyIds", "industryIds", "projectIds", "areaIds");
                     var contributors = root.Element("contributors");
                     if (contributors != null)
+                        // startDate, endDate, allocation and roleValue are retired; clients built before that still send them, and they are ignored.
                         foreach (var contributor in contributors.Elements()) CheckFields(contributor, "id", "personId", "directHours", "startDate", "endDate", "allocation", "roleValue");
                 }
                 using (var stream = new MemoryStream(bytes)) input = (DraftGraphInput)new DataContractJsonSerializer(typeof(DraftGraphInput)).ReadObject(stream);
@@ -64,7 +65,7 @@ namespace Prisma.Plugins
                 throw Invalid("Invalid draft graph JSON.");
             }
             if (input == null) throw Invalid("Missing draft graph.");
-            ContributorPolicy.Validate(input.Contributors, maturity, false);
+            ContributorPolicy.Validate(input.Contributors, false);
             Identifiers(input.TechnologyIds);
             Identifiers(input.IndustryIds);
             Identifiers(input.ProjectIds);
@@ -91,13 +92,8 @@ namespace Prisma.Plugins
         {
             var contributors = Children(caller, parent.Id).Select(row => new ContributorInput {
                 Id = row.Id.ToString(), PersonId = row.GetAttributeValue<EntityReference>("nx_builtby")?.Id.ToString(),
-                DirectHours = row.Contains("nx_directhours") ? (decimal?)row["nx_directhours"] : null,
-                Allocation = row.Contains("nx_allocationpercent") ? (decimal?)row["nx_allocationpercent"] : null,
-                StartDate = row.Contains("nx_startdate") ? ((DateTime)row["nx_startdate"]).ToString("yyyy-MM-dd") : null,
-                EndDate = row.Contains("nx_enddate") ? ((DateTime)row["nx_enddate"]).ToString("yyyy-MM-dd") : null,
-                RoleValue = row.GetAttributeValue<OptionSetValue>("nx_role")?.Value
+                DirectHours = row.Contains("nx_directhours") ? (decimal?)row["nx_directhours"] : null
             }).ToList();
-            var maturity = parent.GetAttributeValue<OptionSetValue>("nx_status").Value;
             return new DraftGraphSnapshot {
                 Id = parent.Id.ToString(), RowVersion = parent.RowVersion,
                 Graph = new DraftGraphInput {
@@ -107,7 +103,7 @@ namespace Prisma.Plugins
                     ProjectIds = Links(caller, parent.Id, Relationships[2]).Select(identifier => identifier.ToString()).ToList(),
                     AreaIds = AreaIds(caller, parent.Id)
                 },
-                Hours = contributors.Select(person => ContributorPolicy.Hours(person, maturity)).ToList()
+                Hours = contributors.Select(person => person.DirectHours).ToList()
             };
         }
 
@@ -115,7 +111,6 @@ namespace Prisma.Plugins
         {
             var existing = Children(caller, parent.Id).ToDictionary(row => row.Id);
             var retained = new HashSet<Guid>();
-            var maturity = parent.GetAttributeValue<OptionSetValue>("nx_status").Value;
             foreach (var person in input.Contributors)
             {
                 var personId = ContributorPolicy.Identifier(person.PersonId);
@@ -125,10 +120,9 @@ namespace Prisma.Plugins
                 var row = new Entity("nx_solutioncontributor", identifier) {
                     ["nx_contributorname"] = "Contributor " + personId.ToString("D"),
                     ["nx_solution"] = parent.ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId),
-                    ["nx_effortmode"] = new OptionSetValue(ContributorPolicy.Direct(maturity) ? 125060000 : 125060001),
-                    ["nx_directhours"] = person.DirectHours, ["nx_allocationpercent"] = person.Allocation,
-                    ["nx_startdate"] = ContributorPolicy.Date(person.StartDate), ["nx_enddate"] = ContributorPolicy.Date(person.EndDate),
-                    ["nx_role"] = person.RoleValue.HasValue ? new OptionSetValue(person.RoleValue.Value) : null
+                    // Every maturity records direct hours; the retired dates and allocation columns are no longer written.
+                    // The person's role is their cr6b0_consultantlevel in the directory; nx_role is retired and never touched.
+                    ["nx_effortmode"] = new OptionSetValue(125060000), ["nx_directhours"] = person.DirectHours
                 };
                 if (identifier == Guid.Empty) caller.Create(row);
                 else { caller.Update(row); retained.Add(identifier); }
@@ -143,7 +137,7 @@ namespace Prisma.Plugins
         private static List<Entity> Children(IOrganizationService caller, Guid parent)
         {
             var query = new QueryExpression("nx_solutioncontributor") {
-                ColumnSet = new ColumnSet("nx_builtby", "nx_directhours", "nx_startdate", "nx_enddate", "nx_allocationpercent", "nx_role"), TopCount = 101
+                ColumnSet = new ColumnSet("nx_builtby", "nx_directhours"), TopCount = 101
             };
             query.Criteria.AddCondition("nx_solution", ConditionOperator.Equal, parent);
             query.Orders.Add(new OrderExpression("nx_solutioncontributorid", OrderType.Ascending));
@@ -211,7 +205,7 @@ namespace Prisma.Plugins
             if (context.MessageName == DraftGraph.SaveMessage)
             {
                 if (!context.IsInTransaction) throw new InvalidPluginExecutionException("A transaction is required.");
-                var input = DraftGraph.Parse(context.InputParameters["GraphJson"] as string, parent.GetAttributeValue<OptionSetValue>("nx_status").Value);
+                var input = DraftGraph.Parse(context.InputParameters["GraphJson"] as string);
                 caller.Execute(new UpdateRequest {
                     Target = new Entity("nx_solution", identifier) { RowVersion = expected, ["nx_status"] = parent["nx_status"] },
                     ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches

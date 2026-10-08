@@ -33,28 +33,12 @@ export type ClientRole =
 
 export type PublicationStatus = "Draft" | "Pending review" | "Published" | "Retired";
 
-export interface BusinessCalendar {
-  id: string;
-  name: string;
-  startDate: string;
-  endDate: string;
-  holidays: string[];
-}
-
-/** `nx_solutioncontributor.nx_role` local choice: 125060000 CSM · 125060001 Consultant. */
-export type ContributorRole = "CSM" | "Consultant";
-
 export interface SolutionContributor {
   id: string;
-  builtBy: { id: string; name: string; email: string };
-  /** `nx_role` — CSM or Consultant. Optional, no default. Internal only, like the rest of the contributor row. */
-  contributorRole?: ContributorRole;
-  effortMode?: "direct" | "calendar";
+  /** The `cr6b0_consultant` row; `level` is its `cr6b0_consultantlevel`, read from the directory, never entered here. */
+  builtBy: { id: string; name: string; email: string; level?: string };
+  /** `nx_directhours` — the minimum hours this person needed to work on the solution, at every maturity. */
   directHours?: number;
-  startDate: string;
-  endDate: string;
-  allocation: number;
-  calendarId: string;
 }
 
 export type AssetType =

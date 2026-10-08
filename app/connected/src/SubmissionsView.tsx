@@ -20,7 +20,6 @@ import { PublishedGallery } from "./PublishedView";
 import type { MediaItem } from "./media";
 import { useMediaAction } from "./useMediaAction";
 import { ConnectedSolutionCard } from "./ConnectedSolutionCard";
-import { contributorCredit } from "./draftGraph";
 import { ProtectedImage } from "./ProtectedImage";
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px] disabled:opacity-50";
@@ -80,6 +79,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const [names, setNames] = useState<Record<string, string>>({});
   const [technologyLabels, setTechnologyLabels] = useState<string[]>([]);
   const [emails, setEmails] = useState<Record<string, string>>({});
+  const [levels, setLevels] = useState<Record<string, string>>({});
   const [namesLoaded, setNamesLoaded] = useState(false);
   const [error, setError] = useState("");
   const [comments, setComments] = useState("");
@@ -107,9 +107,10 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       ["areas", "nx_specializationareaid", "nx_specializationareaname"], ["capabilities", "nx_capabilityid", "nx_capabilityname"],
     ] as const;
     void Promise.all(definitions.map(async ([table, primary, label]) => {
-      try { return (await readAll(readRows, table, { select: [primary, label, ...(table === "people" ? ["cr6b0_email"] : [])], filter: "statecode eq 0" }, controller.signal)).flatMap(row => {
+      try { return (await readAll(readRows, table, { select: [primary, label, ...(table === "people" ? ["cr6b0_email", "cr6b0_consultantlevel"] : [])], filter: "statecode eq 0" }, controller.signal)).flatMap(row => {
         const values = row as Record<string, unknown>;
         if (table === "people" && !controller.signal.aborted && typeof values[primary] === "string" && typeof values.cr6b0_email === "string") setEmails(current => ({ ...current, [values[primary] as string]: values.cr6b0_email as string }));
+        if (table === "people" && !controller.signal.aborted && typeof values[primary] === "string" && typeof values.cr6b0_consultantlevel === "string" && values.cr6b0_consultantlevel.trim()) setLevels(current => ({ ...current, [values[primary] as string]: (values.cr6b0_consultantlevel as string).trim() }));
         return typeof values[primary] === "string" && typeof values[label] === "string" ? [[values[primary] as string, values[label] as string]] : [];
       }); } catch { return []; }
     })).then(lists => { if (!controller.signal.aborted) { setNames(Object.fromEntries(lists.flat())); setTechnologyLabels(lists[2].map(([, label]) => label)); setNamesLoaded(true); } });
@@ -145,7 +146,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const graph = state.graph.graph;
   const thumbnail = state.media.find(item => item.kind === "thumbnail" && item.complete);
   const solution: Solution = { ...submissionSolution(state.record, names), technologies: graph.technologyIds.map(id => names[id] ?? "Unavailable technology"), industries: graph.industryIds.map(id => names[id] ?? "Unavailable industry"), projects: graph.projectIds.map(id => ({ id, projectName: names[id] ?? `Untitled project (${id.slice(0, 8)})` })), assets: state.media.filter(item => item.kind === "attachment" && item.complete).map(mediaAsset) };
-  const effort = { contributors: graph.contributors.map((person, index) => contributorCredit(person, core.maturity, names[person.personId] ?? "Unavailable consultant", state.graph.hours[index], emails[person.personId])), totalHours: state.graph.hours.some(hours => hours === null) ? null : Math.round(state.graph.hours.reduce<number>((total, hours) => total + (hours ?? 0), 0) * 100) / 100 };
+  const effort = { contributors: graph.contributors.map((person, index) => ({ name: names[person.personId] ?? "Unavailable consultant", hours: state.graph.hours[index], email: emails[person.personId], level: levels[person.personId] })), totalHours: state.graph.hours.some(hours => hours === null) ? null : Math.round(state.graph.hours.reduce<number>((total, hours) => total + (hours ?? 0), 0) * 100) / 100 };
   return <DetailView solution={solution} present={false} connected effort={effort} backLabel={review ? "Review queue" : "My submissions"} onBack={() => navigate(review ? "/review" : "/my-submissions")}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={

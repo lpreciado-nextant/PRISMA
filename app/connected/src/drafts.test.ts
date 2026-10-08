@@ -53,11 +53,11 @@ test("media reorder preserves captions and confirms exact versions and complete 
 
 test("consultant picker requires active employee status on every page, not VActive", async () => {
   const calls: Parameters<Parameters<typeof loadGraphReferences>[0]>[] = [];
-  const person = { cr6b0_consultantid: "active", cr6b0_consultantname: "Active Consultant", cr6b0_email: "active@example.com", statecode: 0, cr6b0_employeestatus: true, cr6b0_vactive: false };
+  const person = { cr6b0_consultantid: "active", cr6b0_consultantname: "Active Consultant", cr6b0_email: "active@example.com", cr6b0_consultantlevel: " CustomerSuccessManager II ", statecode: 0, cr6b0_employeestatus: true, cr6b0_vactive: false };
   const references = await loadGraphReferences(async (table, options) => {
     calls.push([table, options]);
     if (table !== "people") return { success: true, data: [] };
-    if (options.skipToken) return { success: true, data: [{ ...person, cr6b0_consultantid: "second", cr6b0_consultantname: "Second Active" }] };
+    if (options.skipToken) return { success: true, data: [{ ...person, cr6b0_consultantid: "second", cr6b0_consultantname: "Second Active", cr6b0_consultantlevel: null }] };
     return { success: true, skipToken: "next", data: [person,
       { ...person, cr6b0_consultantid: "inactive-employee", cr6b0_employeestatus: false, cr6b0_vactive: true },
       { ...person, cr6b0_consultantid: "inactive-record", statecode: 1 },
@@ -66,10 +66,13 @@ test("consultant picker requires active employee status on every page, not VActi
     ] };
   }, signal());
   assert.deepEqual(references.people?.map(option => option.id), ["active", "second"]);
+  // The level comes from the directory's cr6b0_consultantlevel; nothing is entered per contributor.
+  assert.deepEqual(references.people?.map(option => option.level), ["CustomerSuccessManager II", undefined]);
   for (const [, options] of calls.filter(([table]) => table === "people")) {
     assert.equal(options.filter, "statecode eq 0 and cr6b0_employeestatus eq true");
     assert.ok(options.select?.includes("cr6b0_employeestatus"));
     assert.ok(options.select?.includes("statecode"));
+    assert.ok(options.select?.includes("cr6b0_consultantlevel"));
   }
   assert.equal(initialContributor(references, "active@example.com").contributors.length, 0);
 });
@@ -165,9 +168,14 @@ test("workflow rejects mismatched versions, unknown states and internal presenta
   const published = { id: draft.id, rowVersion: draft.rowVersion, contributors: [], totalHours: 0, projects: ["Internal project"], media: [] };
   assert.throws(() => parsePublished(result(published), draft.id, true), /projection/);
   assert.deepEqual(parsePublished(result(published), draft.id, false), published);
-  const effort = { id: spare, personId: draft.id, directHours: null, startDate: "2026-09-02", endDate: "2026-11-02", allocation: 50, roleValue: null };
+  const effort = { id: spare, personId: draft.id, directHours: 168 };
   const credited = { ...published, contributors: [{ name: "Builder", hours: 168, email: "builder@example.com", effort }], totalHours: 168 };
   assert.deepEqual(parsePublished(result(credited), draft.id, false).contributors[0].effort, effort);
+  const leveled = { ...credited, contributors: [{ ...credited.contributors[0], level: "Senior Consultant" }] };
+  assert.equal(parsePublished(result(leveled), draft.id, false).contributors[0].level, "Senior Consultant");
+  assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: null, level: "Senior Consultant" }] }), draft.id, true), /presentation/);
+  const legacy = { ...published, contributors: [{ name: "Builder", hours: null, effort: { ...effort, directHours: null } }], totalHours: null };
+  assert.equal(parsePublished(result(legacy), draft.id, false).totalHours, null);
   assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: 1 }] }), draft.id, true), /credit/);
   // nx_GetPublishedDetail with Present sends no credits and a zero total; the app must accept that projection.
   assert.deepEqual(parsePublished(result({ ...published, projects: [] }), draft.id, true).contributors, []);
@@ -401,7 +409,7 @@ test("submission cards map live states without inventing a specialization or con
 });
 
 test("owned cards hydrate saved technology chips and reject missing or stale responses", async () => {
-  const graph = { ...emptyGraph(), technologyIds: [spare], contributors: [{ id: draft.id, personId: spare, directHours: 5, startDate: null, endDate: null, allocation: 100 }] };
+  const graph = { ...emptyGraph(), technologyIds: [spare], contributors: [{ id: draft.id, personId: spare, directHours: 5 }] };
   const detail = { record: { core: draft, areaIds: [], publication: 125060003, outcome: 125060000, comments: "", cleared: false }, graph: { id: draft.id, rowVersion: draft.rowVersion, graph, hours: [5] }, media: [], librarian: false };
   const reader: Parameters<typeof loadSubmissionCardDetails>[1] = async (table, query) => {
     assert.match(query.filter ?? "", new RegExp(spare));
@@ -426,7 +434,7 @@ test("wizard creates one named draft and reuses its confirmed identifier", async
 });
 
 test("named drafts ignore untouched contributor placeholders without dropping authored effort", async () => {
-  const placeholder = { id: null, personId: "", directHours: null, startDate: null, endDate: null, allocation: 100, roleValue: null };
+  const placeholder = { id: null, personId: "", directHours: null };
   const graphApi: GraphApi = { read: unusedRead, save: async () => { throw new Error("Unexpected graph write"); } };
   const graph = { ...emptyGraph(), contributors: [placeholder] };
   const saved = await persistDraftGraph(api, graphApi, draft, draft, graph, emptyGraph(), signal(), () => {});
@@ -436,16 +444,13 @@ test("named drafts ignore untouched contributor placeholders without dropping au
   await assert.rejects(persistDraftGraph(api, graphApi, draft, draft, { ...graph, contributors: [{ ...placeholder, directHours: 2 }] }, emptyGraph(), signal(), () => {}), /Select a contributor/);
 });
 
-test("live effort preview matches observed federal holidays and validates active inputs", () => {
-  const person = { id: null, personId: "consultant", directHours: 13.25, allocation: 50, startDate: "2026-07-01", endDate: "2026-07-06", roleValue: null };
-  assert.deepEqual(contributorEffort(person, 125060000), { businessDays: 3, hours: 12, error: "" });
-  assert.equal(contributorEffort({ ...person, startDate: "2021-12-30", endDate: "2022-01-03" }, 125060000).hours, 8);
-  assert.equal(contributorEffort({ ...person, startDate: "2020-06-19", endDate: "2020-06-19" }, 125060000).hours, 4);
-  assert.equal(contributorEffort({ ...person, startDate: "2021-06-18", endDate: "2021-06-18" }, 125060000).hours, 0);
-  assert.equal(contributorEffort(person, 125060004).hours, 13.25);
-  assert.match(contributorEffort({ ...person, directHours: 1.001 }, 125060004).error, /decimal/);
-  assert.match(contributorEffort({ ...person, startDate: "2036-01-01", endDate: "2036-01-01" }, 125060000).error, /coverage/);
-  assert.match(contributorEffort({ ...person, endDate: "2026-06-30" }, 125060000).error, /End date/);
+test("live effort preview takes each person's minimum hours and validates them", () => {
+  const person = { id: null, personId: "consultant", directHours: 13.25 };
+  assert.deepEqual(contributorEffort(person), { hours: 13.25, error: "" });
+  assert.match(contributorEffort({ ...person, directHours: null }).error, /zero or more/);
+  assert.match(contributorEffort({ ...person, directHours: 1.001 }).error, /decimal/);
+  assert.match(contributorEffort({ ...person, directHours: 1_000_000_001 }).error, /limit/);
+  assert.match(contributorEffort({ ...person, personId: "" }).error, /Select a contributor/);
 });
 
 test("delete sends the displayed version and requires an exact acknowledgment", async () => {

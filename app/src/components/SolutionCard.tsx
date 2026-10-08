@@ -4,6 +4,7 @@ import { AreaTag, Chip, StatusPill, SubmissionStatus } from "./Badges";
 import { Icon } from "./Icon";
 import { Poster, PosterTint } from "./Poster";
 import { navigate } from "../lib/router";
+import { isCustomerSuccessLevel } from "../lib/consultantLevel";
 import { initials } from "../lib/powerContext";
 import { solutionAreas } from "../lib/areas";
 import { solutionAge } from "../lib/sort";
@@ -43,7 +44,7 @@ export function SolutionCard({
 }) {
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
   // Present mode never shows builder names, regardless of what the caller passed.
-  const names = present ? [] : contributorNames ?? solution.contributorNames ?? solution.contributors.filter(contributor => contributor.contributorRole !== "CSM").map(contributor => contributor.builtBy.name);
+  const names = present ? [] : contributorNames ?? solution.contributorNames ?? solution.contributors.filter(contributor => !isCustomerSuccessLevel(contributor.builtBy.level)).map(contributor => contributor.builtBy.name);
   const builderNames = names.join(", ");
   const age = solutionAge(solution);
   const publicationStatus = showPublicationStatus && !present ? submissionState(solution) : undefined;

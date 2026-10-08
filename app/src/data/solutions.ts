@@ -1,20 +1,19 @@
 import type { Solution } from "../types";
-import { calculateEffort, usesDirectHours } from "../lib/effort.ts";
-import { BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID } from "./catalogueMetadata.ts";
-export { AREAS, AREA_ORDER, BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID } from "./catalogueMetadata.ts";
+export { AREAS, AREA_ORDER } from "./catalogueMetadata.ts";
 
+/** Mock `cr6b0_consultant` rows; `level` stands in for the directory's `cr6b0_consultantlevel` (illustrative values). */
 export const BUILDERS = [
-  { id: "mparry", name: "Michael Parry", email: "mparry@nextant.com" },
-  { id: "jcastelblanco", name: "Juliana Castelblanco", email: "jcastelblanco@nextant.com" },
-  { id: "lpreciado", name: "Luis David Preciado", email: "lpreciado@nextant.com" },
-  { id: "mcubillos", name: "Mauricio Cubillos", email: "mcubillos@nextant.com" },
+  { id: "mparry", name: "Michael Parry", email: "mparry@nextant.com", level: "Senior Consultant" },
+  { id: "jcastelblanco", name: "Juliana Castelblanco", email: "jcastelblanco@nextant.com", level: "Principal Consultant" },
+  { id: "lpreciado", name: "Luis David Preciado", email: "lpreciado@nextant.com", level: "Consultant II" },
+  { id: "mcubillos", name: "Mauricio Cubillos", email: "mcubillos@nextant.com", level: "Senior Consultant" },
 ];
 
-/** Mock `cr6b0_consultant` rows flagged `cr6b0_iscsm`. They join a solution as contributors with `nx_role` = CSM. */
+/** Mock consultants whose level names customer success; they join a solution as contributors and are listed as its CSM. */
 export const CSMS = [
-  { id: "acontreras", name: "Andrea Contreras", email: "acontreras@nextant.com" },
-  { id: "dwhitfield", name: "Daniel Whitfield", email: "dwhitfield@nextant.com" },
-  { id: "sramirez", name: "Sofía Ramírez", email: "sramirez@nextant.com" },
+  { id: "acontreras", name: "Andrea Contreras", email: "acontreras@nextant.com", level: "Customer Success Manager II" },
+  { id: "dwhitfield", name: "Daniel Whitfield", email: "dwhitfield@nextant.com", level: "Customer Success Manager" },
+  { id: "sramirez", name: "Sofía Ramírez", email: "sramirez@nextant.com", level: "Senior Customer Success Manager" },
 ];
 
 /** Generated stand-in for an `nx_solutionimage` screenshot payload. */
@@ -34,7 +33,7 @@ function shot(label: string, from: string, to: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-const catalogue: Solution[] = [
+export const SOLUTIONS: Solution[] = [
   {
     id: "bso-quota",
     name: "BSO Quota",
@@ -46,10 +45,10 @@ const catalogue: Solution[] = [
     specializationArea: "ai",
     specializationAreas: ["ai", "data"],
     contributors: [
-      { id: "bso-mp", builtBy: BUILDERS[0], contributorRole: "Consultant", startDate: "2026-01-05", endDate: "2026-02-11", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
-      { id: "bso-lp", builtBy: BUILDERS[2], contributorRole: "Consultant", startDate: "2026-01-19", endDate: "2026-02-06", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "bso-mp", builtBy: BUILDERS[0], directHours: 162 },
+      { id: "bso-lp", builtBy: BUILDERS[2], directHours: 56 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "bso-quota-csm", builtBy: CSMS[0], contributorRole: "CSM", startDate: "2026-01-05", endDate: "2026-02-11", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "bso-quota-csm", builtBy: CSMS[0], directHours: 0 },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -103,9 +102,9 @@ const catalogue: Solution[] = [
       "The adoption plan stops being a workbook filled in from memory the night before a review, and the customer answers questions about their own business instead of someone guessing at them.",
     specializationArea: "ai",
     contributors: [
-      { id: "adoption-mp", builtBy: BUILDERS[0], contributorRole: "Consultant", startDate: "2026-02-16", endDate: "2026-03-04", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "adoption-mp", builtBy: BUILDERS[0], directHours: 96 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "adoption-plan-studio-csm", builtBy: CSMS[1], contributorRole: "CSM", startDate: "2026-02-16", endDate: "2026-03-04", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "adoption-plan-studio-csm", builtBy: CSMS[1], directHours: 0 },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -142,9 +141,9 @@ const catalogue: Solution[] = [
       "Status decks disappear and risk surfaces the week it appears rather than at the quarterly review. The check-in is short enough that leads actually complete it, which is the only reason an executive view is ever current.",
     specializationArea: "ibo",
     contributors: [
-      { id: "score-mp", builtBy: BUILDERS[0], contributorRole: "Consultant", startDate: "2026-01-05", endDate: "2026-01-22", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "score-mp", builtBy: BUILDERS[0], directHours: 52 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "project-health-scorecard-csm", builtBy: CSMS[2], contributorRole: "CSM", startDate: "2026-01-05", endDate: "2026-01-22", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "project-health-scorecard-csm", builtBy: CSMS[2], directHours: 0 },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -193,9 +192,9 @@ const catalogue: Solution[] = [
       "Approvers stop reconstructing the allocation impact from a mail thread, nothing stalls invisibly, and finance sees committed demand before the invoice arrives.",
     specializationArea: "ibo",
     contributors: [
-      { id: "caip-jc", builtBy: BUILDERS[1], contributorRole: "Consultant", startDate: "2026-02-09", endDate: "2026-02-27", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "caip-jc", builtBy: BUILDERS[1], directHours: 84 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "caip-budget-csm", builtBy: CSMS[0], contributorRole: "CSM", startDate: "2026-02-09", endDate: "2026-02-27", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "caip-budget-csm", builtBy: CSMS[0], directHours: 0 },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -232,9 +231,9 @@ const catalogue: Solution[] = [
       "A concrete answer to “can you build us something bespoke, hosted, and real?” — with a URL a prospect can open on their own phone.",
     specializationArea: "ai",
     contributors: [
-      { id: "padel-lp", builtBy: BUILDERS[2], contributorRole: "Consultant", startDate: "2026-03-23", endDate: "2026-04-09", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "padel-lp", builtBy: BUILDERS[2], directHours: 112 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "padelscope-csm", builtBy: CSMS[1], contributorRole: "CSM", startDate: "2026-03-23", endDate: "2026-04-09", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "padelscope-csm", builtBy: CSMS[1], directHours: 0 },
     ],
     status: "Live in production",
     publicationStatus: "Published",
@@ -272,10 +271,10 @@ const catalogue: Solution[] = [
       "Staffing decisions stop depending on who the resourcing manager happens to remember, and the reasoning behind a placement survives the conversation.",
     specializationArea: "data",
     contributors: [
-      { id: "kairo-mc", builtBy: BUILDERS[3], contributorRole: "Consultant", startDate: "2026-03-02", endDate: "2026-05-15", allocation: 60, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
-      { id: "kairo-jc", builtBy: BUILDERS[1], contributorRole: "Consultant", startDate: "2026-04-06", endDate: "2026-05-01", allocation: 25, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "kairo-mc", builtBy: BUILDERS[3], directHours: 264 },
+      { id: "kairo-jc", builtBy: BUILDERS[1], directHours: 40 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "kairo-csm", builtBy: CSMS[2], contributorRole: "CSM", startDate: "2026-03-02", endDate: "2026-05-15", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "kairo-csm", builtBy: CSMS[2], directHours: 0 },
     ],
     status: "Live in production",
     publicationStatus: "Published",
@@ -329,9 +328,9 @@ const catalogue: Solution[] = [
     specializationArea: "data",
     specializationAreas: ["data", "ibo"],
     contributors: [
-      { id: "supply-jc", builtBy: BUILDERS[1], contributorRole: "Consultant", startDate: "2026-04-01", endDate: "2026-06-02", allocation: 75, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "supply-jc", builtBy: BUILDERS[1], directHours: 264 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "supply-signal-csm", builtBy: CSMS[0], contributorRole: "CSM", startDate: "2026-04-01", endDate: "2026-06-02", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "supply-signal-csm", builtBy: CSMS[0], directHours: 0 },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -381,9 +380,9 @@ const catalogue: Solution[] = [
       "Close moves from nine days to four, and the exceptions that remain arrive with a hypothesis attached.",
     specializationArea: "data",
     contributors: [
-      { id: "ledger-mc", builtBy: BUILDERS[3], contributorRole: "Consultant", startDate: "2026-07-01", endDate: "2026-07-17", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "ledger-mc", builtBy: BUILDERS[3], directHours: 48 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "ledger-reconciler-csm", builtBy: CSMS[1], contributorRole: "CSM", startDate: "2026-07-01", endDate: "2026-07-17", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "ledger-reconciler-csm", builtBy: CSMS[1], directHours: 0 },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -418,9 +417,9 @@ const catalogue: Solution[] = [
       "First-response time drops from hours to seconds, and the service desk stops spending its morning sorting mail.",
     specializationArea: "ibo",
     contributors: [
-      { id: "intake-lp", builtBy: BUILDERS[2], contributorRole: "Consultant", startDate: "2026-07-20", endDate: "2026-08-05", allocation: 50, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "intake-lp", builtBy: BUILDERS[2], directHours: 52 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "intake-triage-csm", builtBy: CSMS[2], contributorRole: "CSM", startDate: "2026-07-20", endDate: "2026-08-05", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "intake-triage-csm", builtBy: CSMS[2], directHours: 0 },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -468,9 +467,9 @@ const catalogue: Solution[] = [
       "Paperwork that used to land three days late lands before the engineer leaves site, which is the only way the invoice goes out on time.",
     specializationArea: "ibo",
     contributors: [
-      { id: "field-jc", builtBy: BUILDERS[1], contributorRole: "Consultant", startDate: "2026-08-31", endDate: "2026-09-01", allocation: 25, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "field-jc", builtBy: BUILDERS[1], directHours: 4 },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "field-ops-companion-csm", builtBy: CSMS[0], contributorRole: "CSM", startDate: "2026-08-31", endDate: "2026-09-01", allocation: 0, calendarId: DEFAULT_BUSINESS_CALENDAR_ID },
+      { id: "field-ops-companion-csm", builtBy: CSMS[0], directHours: 0 },
     ],
     status: "Idea / concept",
     publicationStatus: "Published",
@@ -497,13 +496,3 @@ const catalogue: Solution[] = [
     ],
   },
 ];
-
-export const SOLUTIONS: Solution[] = catalogue.map((solution) => ({
-  ...solution,
-  contributors: solution.contributors.map((contributor) => usesDirectHours(solution.status) ? {
-    ...contributor,
-    effortMode: "direct",
-    directHours: calculateEffort(contributor, BUSINESS_CALENDARS.find((calendar) => calendar.id === contributor.calendarId)).hours,
-    startDate: "", endDate: "", allocation: 0,
-  } : { ...contributor, effortMode: "calendar" }),
-}));

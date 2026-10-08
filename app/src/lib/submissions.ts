@@ -1,6 +1,5 @@
 import type { Solution } from "../types.ts";
-import { BUSINESS_CALENDARS } from "../data/solutions.ts";
-import { calculateEffort, usesDirectHours } from "./effort.ts";
+import { contributorHours } from "./effort.ts";
 import type { ReviewFacts } from "./reviewChecklist.ts";
 
 export interface SubmissionEntry {
@@ -22,7 +21,7 @@ export function assertSubmissionReady(solution: Solution): void {
   const people = solution.contributors.map((contributor) => contributor.builtBy.id);
   if (!people.length || people.some((person) => !person) || new Set(people).size !== people.length) throw new Error("Select at least one contributor, with no duplicate people.");
   for (const contributor of solution.contributors) {
-    calculateEffort({ ...contributor, effortMode: usesDirectHours(solution.status) ? "direct" : "calendar" }, BUSINESS_CALENDARS.find((calendar) => calendar.id === contributor.calendarId));
+    contributorHours(contributor.directHours);
   }
 }
 
@@ -31,7 +30,7 @@ export function submissionFacts(solution: Solution): ReviewFacts {
   const people = solution.contributors.map((contributor) => contributor.builtBy.id);
   let effort = people.length > 0 && people.every(Boolean) && new Set(people).size === people.length;
   if (effort) try {
-    for (const contributor of solution.contributors) calculateEffort({ ...contributor, effortMode: usesDirectHours(solution.status) ? "direct" : "calendar" }, BUSINESS_CALENDARS.find((calendar) => calendar.id === contributor.calendarId));
+    for (const contributor of solution.contributors) contributorHours(contributor.directHours);
   } catch { effort = false; }
   return {
     summary: !!solution.summary.trim() && solution.summary.length <= 200, capability: solution.capabilities.length === 1 && !!solution.capabilities[0].trim(),

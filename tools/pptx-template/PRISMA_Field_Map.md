@@ -43,7 +43,7 @@ Esta versión está hecha sobre la página real de una solución en PRISMA (POC 
 | `{{prisma_url}}` | 6 | 40 | Sí | Texto del enlace a PRISMA: el nombre de la solución |
 | `prisma_href` | 6, notas | — | Sí | URL completa de la solución en PRISMA, detrás del enlace y en las notas. Nunca se recorta |
 | `{{tech_list}}` | notas 4 | — | No | Tecnologías separadas por comas |
-| `{{csm_name}}` `{{csm_email}}` | 6 | 28 / 35 | Sí | CSM (en Forge: Andres Perez) |
+| `{{csm_name}}` `{{csm_email}}` | 6 | 28 / 35 | Sí | CSM: el colaborador cuyo nivel en el directorio de consultores (`cr6b0_consultantlevel`) dice Customer Success (en Forge: Andres Perez) |
 
 **Acomodo automático (solo en la app):** la portada pone la descripción justo debajo del título y las insignias del ancho de su texto; la diapositiva 2 ajusta las tarjetas al alto del texto; las capturas se reparten según cuántas haya (1 grande, 2 lado a lado, 3 con una principal, 4 en 2×2, 5–6 en 3×2); los chips de tecnología se ajustan a su texto y la tarjeta a sus filas. Si la solución no tiene CSM, el contacto es quien descarga.
 

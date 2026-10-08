@@ -1,6 +1,6 @@
 # Nextant Solution Library — example row per table (SchemaV2)
 
-**Status:** Illustrative companion, aligned with the two-field story model, authored draft names, draft/review fields, code-based US holiday policy and the 2026-09-23 changes (Specialization Area N:N, Client Role, contributor Role) · **Last updated:** 2026-09-23
+**Status:** Illustrative companion, aligned with the two-field story model, authored draft names, draft/review fields, the 2026-09-23 changes (Specialization Area N:N, Client Role), direct minimum hours at every maturity and the CSM derived from Consultant Level instead of the retired contributor Role (2026-10-08) · **Last updated:** 2026-10-08
 **Companion to:** [SchemaV2.md](SchemaV2.md)
 
 One illustrative row per table in the v2 model, all pointing at the same story so the relationships stay traceable: **S1 — Invoice Reconciliation Assistant**, the same example used in SchemaV2's diagrams. GUIDs below are placeholders (`{table}-001` style), not real Dataverse ids. Sample data only — no real client information.
@@ -38,11 +38,13 @@ One illustrative row per table in the v2 model, all pointing at the same story s
 
 ### `cr6b0_consultant`
 
-| cr6b0_consultantid | Name |
-|---|---|
-| con-001 | Juliana Castelblanco |
-| con-002 | Luis Preciado |
-| con-003 | Carlos Mejía |
+| cr6b0_consultantid | Name | Consultant Level *(illustrative)* |
+|---|---|---|
+| con-001 | Juliana Castelblanco | Senior Consultant |
+| con-002 | Luis Preciado | Consultant |
+| con-003 | Carlos Mejía | Customer Success Manager II |
+
+`cr6b0_consultantlevel` is free text owned by the directory. A level naming customer success (con-003) marks that person as the solution's CSM when they are a contributor; PRISMA never writes it.
 
 ---
 
@@ -82,14 +84,14 @@ For a new incomplete draft, require an authored name such as `Solution Name = In
 
 ### `nx_solutioncontributor`
 
-Both rows use **Effort Mode = Calendar** and **Direct Hours = not applicable**, because the parent is a Client demo. Ideas and working prototypes instead require Direct Hours and do not require the Start Date/End Date/Allocation inputs below.
+Every maturity, including this Client demo, uses **Effort Mode = Direct** and **Direct Hours** = the minimum hours each person needed to work on the solution. The retired Start Date, End Date, Allocation (%) and Role columns are left empty on new rows and are not shown. Both people are builders: neither level names customer success.
 
-| nx_solutioncontributorid | Name | Solution | Built By | Role | Effort Mode | Direct Hours | Start Date | End Date | Allocation (%) |
-|---|---|---|---|---|---|---|---|---|---|
-| sc-001 | Invoice Reconciliation Assistant — Juliana Castelblanco | sol-001 | con-001 — Juliana Castelblanco | Consultant | Calendar | — | 2026-09-07 | 2026-09-18 | 50 |
-| sc-002 | Invoice Reconciliation Assistant — Luis Preciado | sol-001 | con-002 — Luis Preciado | Consultant | Calendar | — | 2026-09-08 | 2026-09-18 | 100 |
+| nx_solutioncontributorid | Name | Solution | Built By | Effort Mode | Direct Hours |
+|---|---|---|---|---|---|
+| sc-001 | Invoice Reconciliation Assistant — Juliana Castelblanco | sol-001 | con-001 — Juliana Castelblanco | Direct | 36 |
+| sc-002 | Invoice Reconciliation Assistant — Luis Preciado | sol-001 | con-002 — Luis Preciado | Direct | 72 |
 
-Derived (not stored): sc-001 → 9 business days × 8h × 50% = **36 effort hours**, excluding Labor Day on 2026-09-07; sc-002 → 9 business days × 8h × 100% = **72 effort hours**, since its range starts after Labor Day; `Total Effort Hours` for sol-001 = **108**. Observed US federal holidays are calculated in code under the agreed 2020-2035 policy, with no calendar table or contributor calendar lookup.
+Derived (not stored): `Total Effort Hours` for sol-001 = 36 + 72 = **108**.
 
 ### `nx_demoasset`
 

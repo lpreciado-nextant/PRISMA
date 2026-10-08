@@ -1,6 +1,6 @@
 # PRISMA documentation
 
-**Status:** Living; connected PRISMA pilot published with plug-in backend and Azure Blob media pilot live since 2026-09-29; offline migration tooling and production infrastructure templates remain undeployed · **Last updated:** 2026-09-30
+**Status:** Living; connected PRISMA pilot published with plug-in backend and Azure Blob media pilot live since 2026-09-29; offline migration tooling and production infrastructure templates remain undeployed · **Last updated:** 2026-10-08
 
 Documentation map for the PRISMA — Nextant Solution Library project. The [end-to-end design](design/end-to-end-design.md) is the overview; each aspect below has a dedicated living document.
 
@@ -18,7 +18,7 @@ Documentation map for the PRISMA — Nextant Solution Library project. The [end-
 | | [Infrastructure template runbook](architecture/technical-architecture.md#infrastructure-template-runbook) | Private-storage Bicep foundation, required IT inputs, local checks and undeployed cloud acceptance gates |
 | | [Security model](architecture/security-model.md) | Roles, table privileges, field-level security, present-mode enforcement |
 | | [Decision records](architecture/decisions/README.md) | ADRs — why key technical choices were made |
-| **Data model** | [Dataverse schema spec (v2)](data_model/SchemaV2.md) | Authoritative table specs with live logical names and types, relationships, contributor effort, US calendar and validation |
+| **Data model** | [Dataverse schema spec (v2)](data_model/SchemaV2.md) | Authoritative table specs with live logical names and types, relationships, contributor effort (minimum hours) and validation |
 | | [Legacy schema companion](data_model/nextant-solution-library-dataverse-schema.md) | Original v1 entry point synchronized to the current model; v2 remains authoritative |
 | | [Reference data governance](data_model/reference-data-governance.md) | Governed vs open vocabularies, seeding, merge process |
 | **Workflows** | [Contribution & review](workflows/contribution-and-review.md) | Submission form, draft/review/publish lifecycle, edit rules |

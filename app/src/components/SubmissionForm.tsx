@@ -401,10 +401,10 @@ export function SubmissionReview({ card, attachments, contributors, hours, image
   </StepShell>;
 }
 
-export function ContributorEditor({ direct, children, total, onAdd, addDisabled = false, bare = false }: { direct: boolean; children: ReactNode; total: number | null; onAdd: () => void; addDisabled?: boolean; bare?: boolean }) {
+export function ContributorEditor({ children, total, onAdd, addDisabled = false, bare = false }: { children: ReactNode; total: number | null; onAdd: () => void; addDisabled?: boolean; bare?: boolean }) {
   return <section aria-labelledby={bare ? undefined : "contributors-heading"} aria-label={bare ? "Contributors" : undefined} className={bare ? "min-w-0" : "mt-2 min-w-0 border-t border-(--glass-edge) pt-5"}>
     {!bare && <h3 id="contributors-heading" className="text-[17px] font-semibold">Built by &amp; effort</h3>}
-    <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>{direct ? "Enter each person's hours, including preparation and discovery." : "Estimated capacity: inclusive US business days, excluding federal holidays, multiplied by 8 hours and allocation."}</p>
+    <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>Enter the minimum hours each person needed to work on this solution, including preparation and discovery.</p>
     {children}
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
       <button type="button" disabled={addDisabled} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[13px] font-semibold disabled:opacity-40" onClick={onAdd}><Icon name="plus" size={14} />Add contributor</button>
@@ -413,24 +413,23 @@ export function ContributorEditor({ direct, children, total, onAdd, addDisabled 
   </section>;
 }
 
-type EffortFields = { directHours: number | null; startDate: string; endDate: string; allocation: number | null };
-export function ContributorRow({ index, person, role, direct, value, onChange, onRemove, minDate, maxDate, result }: {
-  index: number; person: ReactNode; role?: ReactNode; direct: boolean; value: EffortFields; onChange: (fields: Partial<EffortFields>) => void;
-  onRemove?: () => void; minDate?: string; maxDate?: string; result: { error: string; hours: number; businessDays: number };
+/** `level` is the selected consultant's directory level; leave it undefined until a person is selected. */
+export function ContributorRow({ index, person, level, value, onChange, onRemove, result }: {
+  index: number; person: ReactNode; level?: string | null; value: number | null; onChange: (directHours: number | null) => void;
+  onRemove?: () => void; result: { error: string; hours: number };
 }) {
   const id = useId();
   return <fieldset className="mt-5 min-w-0 border-b border-(--glass-edge) pb-5" aria-describedby={id}>
     <legend className="mb-3 text-[13px] font-semibold">Contributor {index + 1}</legend>
     <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-      <div className={`min-w-0 ${role ? "" : "sm:col-span-2"}`}>{person}</div>
-      {role && <div className="min-w-0">{role}</div>}
-      {direct ? <Field label="Hours contributed" required><input type="number" className={submissionInputClass} min={0} step={0.01} value={value.directHours ?? ""} onChange={event => onChange({ directHours: event.target.value === "" ? null : Number(event.target.value) })} /></Field> : <>
-        <Field label="Start date" required><input type="date" className={`${submissionInputClass} min-w-0`} min={minDate} max={maxDate} value={value.startDate} onChange={event => onChange({ startDate: event.target.value })} /></Field>
-        <Field label="End date" required><input type="date" className={`${submissionInputClass} min-w-0`} min={value.startDate || minDate} max={maxDate} value={value.endDate} onChange={event => onChange({ endDate: event.target.value })} /></Field>
-        <Field label="Allocation (%)" required><input type="number" className={submissionInputClass} min={0} max={100} step={0.01} value={value.allocation ?? ""} onChange={event => onChange({ allocation: event.target.value === "" ? null : Number(event.target.value) })} /></Field>
-      </>}
+      <div className={`min-w-0 ${level === undefined ? "sm:col-span-2" : ""}`}>{person}</div>
+      {level !== undefined && <div className="min-w-0">
+        <p className="mb-1.5 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Level</p>
+        <p className="py-2.5 text-[15px] text-(--ink-2)">{level || "Not recorded in the consultant directory"}</p>
+      </div>}
+      <Field label="Minimum hours required" required><input type="number" className={submissionInputClass} min={0} step={0.01} value={value ?? ""} onChange={event => onChange(event.target.value === "" ? null : Number(event.target.value))} /></Field>
       <div className="flex min-w-0 items-center justify-between gap-3 sm:col-span-2">
-        <p id={id} aria-live="polite" className={`text-[13px] ${result.error ? "text-(--proto)" : "text-(--ink-2)"}`}>{result.error || `${direct ? "" : `${result.businessDays} business days · `}${result.hours.toLocaleString()} hours`}</p>
+        <p id={id} aria-live="polite" className={`text-[13px] ${result.error ? "text-(--proto)" : "text-(--ink-2)"}`}>{result.error || `${result.hours.toLocaleString()} hours`}</p>
         {onRemove && <button type="button" onClick={onRemove} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-(--glass-edge)" title="Remove contributor" aria-label={`Remove contributor ${index + 1}`}><Icon name="close" size={16} /></button>}
       </div>
     </div>

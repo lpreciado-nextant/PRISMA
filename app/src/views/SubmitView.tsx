@@ -8,8 +8,8 @@ import type {
   SolutionStatus,
   SpecializationArea,
 } from "../types";
-import { AREA_ORDER, AREAS, BUILDERS, CSMS, BUSINESS_CALENDARS, DEFAULT_BUSINESS_CALENDAR_ID, SOLUTIONS } from "../data/solutions";
-import { CLIENT_ROLES, CONTRIBUTOR_ROLES } from "../data/catalogueMetadata";
+import { AREA_ORDER, AREAS, BUILDERS, CSMS, SOLUTIONS } from "../data/solutions";
+import { CLIENT_ROLES } from "../data/catalogueMetadata";
 import { Icon } from "../components/Icon";
 import { LoadingState } from "../components/LoadingState";
 import { SectionCardsContext } from "../components/sectionCards";
@@ -17,12 +17,11 @@ import { TagPicker } from "../components/TagPicker";
 import { SolutionCard } from "../components/SolutionCard";
 import { navigate } from "../lib/router";
 import type { AppUser } from "../lib/powerContext";
-import { calculateEffort, usesDirectHours } from "../lib/effort";
+import { contributorHours } from "../lib/effort";
 import { MAX_AREAS, solutionAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
 import { assetPurpose, purposeAllows } from "../lib/assetPurpose";
-import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, Field, StatusField } from "../components/SubmissionForm";
-import { SelectPicker } from "../components/SelectPicker";
+import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
 import { ImageFramer } from "../components/ImageFramer";
 
 const MAX_GALLERY = 6;
@@ -99,9 +98,9 @@ function loadDraft(draftKey: string): Draft {
     // Drafts saved before specialization areas became N:N carry a single `area`.
     const legacyArea = (parsed as Partial<Draft> & { area?: SpecializationArea }).area;
     if (!parsed.areas?.length) parsed.areas = legacyArea ? [legacyArea] : EMPTY_DRAFT.areas;
-    parsed.contributors = parsed.contributors.map((contributor) => ({
-      ...contributor, calendarId: DEFAULT_BUSINESS_CALENDAR_ID,
-    }));
+    // Drafts saved before allocation was retired carry dates, allocation and a calendar; only the hours remain.
+    // Drafts saved before contributor roles were retired carry `contributorRole`; the level now comes from the directory.
+    parsed.contributors = parsed.contributors.map(({ id, builtBy, directHours }) => ({ id, builtBy, directHours }));
     return parsed;
   } catch {
     return EMPTY_DRAFT;
@@ -142,7 +141,6 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       builtBy: BUILDERS.find((builder) => builder.email === user.userPrincipalName) ?? {
         id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName,
       },
-      startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID,
     }] };
   });
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -198,8 +196,6 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
     }
   };
 
-  const directEffort = usesDirectHours(draft.status);
-  const normalizedContributors = draft.contributors.map((contributor) => ({ ...contributor, effortMode: directEffort ? "direct" as const : "calendar" as const }));
   const builders = [...new Map([
     ...BUILDERS,
     ...CSMS,
@@ -207,15 +203,15 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName },
     ...draft.contributors.map((contributor) => contributor.builtBy),
   ].filter((builder) => builder.id).map((builder) => [builder.email.toLowerCase(), builder])).values()];
-  const contributionResults = normalizedContributors.map((contributor) => {
+  const contributionResults = draft.contributors.map((contributor) => {
     try {
       if (!contributor.builtBy.id) throw new Error("Select a contributor.");
       if (draft.contributors.filter((entry) => entry.builtBy.id === contributor.builtBy.id).length > 1) {
         throw new Error("Each person can only be added once.");
       }
-      return { ...calculateEffort(contributor, BUSINESS_CALENDARS.find((calendar) => calendar.id === contributor.calendarId)), error: "" };
+      return { hours: contributorHours(contributor.directHours), error: "" };
     } catch (error) {
-      return { businessDays: 0, hours: 0, error: error instanceof Error ? error.message : "Check this contributor's effort." };
+      return { hours: 0, error: error instanceof Error ? error.message : "Check this contributor's effort." };
     }
   });
   const contributorsValid = draft.contributors.length > 0 && contributionResults.every((result) => !result.error);
@@ -241,9 +237,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       businessValue: draft.businessValue,
       specializationArea: draft.areas[0] ?? "ai",
       specializationAreas: draft.areas,
-      contributors: draft.contributors.map((contributor) => ({
-        ...contributor, effortMode: usesDirectHours(draft.status) ? "direct" : "calendar",
-      })),
+      contributors: draft.contributors,
       status: draft.status,
       publicationStatus: "Draft",
       safetyAcknowledged: draft.safetyAcknowledged,
@@ -285,7 +279,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   if (submitted) {
     return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => {
       if (initialSolution) { navigate("/submit"); return; }
-      setDraft({ ...EMPTY_DRAFT, contributors: [{ id: crypto.randomUUID(), builtBy: { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName }, startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID }] });
+      setDraft({ ...EMPTY_DRAFT, contributors: [{ id: crypto.randomUUID(), builtBy: { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName } }] });
       setStep(0); setSubmissionId(crypto.randomUUID()); setSubmitted(false); setClientChoice(null); clientStash.current = null;
     }}>is pending review in this local preview. No notification was sent and nothing was published. {onSaveDraft ? "Submissions and media are saved in this browser." : "This walkthrough does not save submissions."}</SubmissionSuccess>;
   }
@@ -361,17 +355,16 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
               <StatusField status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
             </NamedSection>
             <NamedSection title="Built by & effort">
-            <ContributorEditor bare direct={directEffort} total={contributorsValid ? totalHours : null} onAdd={() => set("contributors", [...draft.contributors, {
-              id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" }, startDate: "", endDate: "", allocation: 100, calendarId: DEFAULT_BUSINESS_CALENDAR_ID,
+            <ContributorEditor bare total={contributorsValid ? totalHours : null} onAdd={() => set("contributors", [...draft.contributors, {
+              id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" },
             }])}>
               {draft.contributors.map((contributor, index) => {
-                const calendar = BUSINESS_CALENDARS.find((entry) => entry.id === contributor.calendarId);
                 const result = contributionResults[index];
-                return <ContributorRow key={contributor.id} index={index} direct={directEffort} result={result} minDate={calendar?.startDate} maxDate={calendar?.endDate}
-                  value={{ directHours: contributor.directHours ?? null, allocation: Number.isFinite(contributor.allocation) ? contributor.allocation : null, startDate: contributor.startDate, endDate: contributor.endDate }}
-                  onChange={fields => updateContributor(contributor.id, { ...fields, directHours: fields.directHours === null ? undefined : fields.directHours ?? contributor.directHours, allocation: fields.allocation === null ? NaN : fields.allocation ?? contributor.allocation })}
+                return <ContributorRow key={contributor.id} index={index} result={result}
+                  value={contributor.directHours ?? null}
+                  onChange={directHours => updateContributor(contributor.id, { directHours: directHours ?? undefined })}
                   onRemove={index > 0 ? () => set("contributors", draft.contributors.filter(entry => entry.id !== contributor.id)) : undefined}
-                  role={<Field label="Role" optional hint="Select how this person contributed to the solution."><SelectPicker label={`Contributor ${index + 1} role`} value={contributor.contributorRole ?? ""} options={contributor.contributorRole ? ["", ...CONTRIBUTOR_ROLES] : CONTRIBUTOR_ROLES} onChange={value => updateContributor(contributor.id, { contributorRole: value || undefined })} getLabel={option => option || "No role"} placeholder="e.g. Consultant" /></Field>}
+                  level={contributor.builtBy.id ? contributor.builtBy.level ?? null : undefined}
                   person={<PersonPicker value={contributor.builtBy} options={builders.filter(builder => !draft.contributors.some(entry => entry.id !== contributor.id && entry.builtBy.id === builder.id))} onChange={builtBy => updateContributor(contributor.id, { builtBy })} />} />;
               })}
             </ContributorEditor>
@@ -421,7 +414,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         )}
 
         {step === 5 && safetyValid && (
-          <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.contributorRole ? `${contributor.builtBy.name} (${contributor.contributorRole})` : contributor.builtBy.name).join(", ")} hours={totalHours}
+          <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.builtBy.level ? `${contributor.builtBy.name} (${contributor.builtBy.level})` : contributor.builtBy.name).join(", ")} hours={totalHours}
             images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.clientRole} nextState="Pending review (local)">
             {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution, Solution context (status, effort and the client question), select one capability and add at least one detail image before submitting.</p>}
           </SubmissionReview>

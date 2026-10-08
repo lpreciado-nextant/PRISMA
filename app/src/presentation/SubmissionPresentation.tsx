@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Background } from "../components/Background";
 import { Icon } from "../components/Icon";
-import { BUILDERS, DEFAULT_BUSINESS_CALENDAR_ID, SOLUTIONS } from "../data/solutions";
+import { BUILDERS, SOLUTIONS } from "../data/solutions";
 import { SubmitView } from "../views/SubmitView";
 import prismaMark from "../../public/prisma-mark-v2.svg?raw";
 import "../index.css";
@@ -31,10 +31,10 @@ const chapters = [
     points: [
       ["A card, not a project code", "The name, one-line summary, specialization and maturity become the first impression in the library."],
       ["Credit every contributor", "Search people by name or email. Duplicate contributors are excluded; keep at least one person."],
-      ["Effort fits maturity", "Ideas and prototypes take direct hours. Demos and production use US business days multiplied by 8 hours and allocation. The sample totals 218 hours."],
+      ["Hours, at every maturity", "Each person records the minimum hours they needed to work on the solution, from idea to production. The sample totals 218 hours."],
     ],
-    tryIt: "Switch from Working prototype to Client demo to see dates and allocation. Add a client name and an anonymous description.",
-    boundary: "People are a mock list. Calendar coverage is 2026. Direct hours are reported effort; calendar hours are estimated capacity.",
+    tryIt: "Change a contributor's hours and watch the total update. Add a client name and an anonymous description.",
+    boundary: "People are a mock list. Hours are the minimum time required, not a timesheet or a delivery estimate.",
     output: "Solution identity + contributor rows",
   },
   {
@@ -95,7 +95,7 @@ function seedDraft() {
     assetType: "Self-contained HTML file", assets: [],
     thumbnail: "", images: example.images, safetyAcknowledged: false,
     clientContext: example.clientContext, redacted: example.clientContextRedacted, clientRole: example.clientRole ?? "",
-    contributors: example.contributors.map((contributor) => ({ ...contributor, calendarId: DEFAULT_BUSINESS_CALENDAR_ID })),
+    contributors: example.contributors,
   }));
 }
 

@@ -1,6 +1,6 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-07
+**Status:** Living · **Last updated:** 2026-10-08
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
@@ -9,24 +9,25 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
+| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 50% — 0 Live, 4 In code / 4 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 13% — 2 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 87% — 13 Live / 15 |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 90% — 13 Live, 1 In code / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 21% — 3 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
-- One-Liner standardization, still a generic field (PR-023); effort calculation without Allocation (PR-029) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
+- One-Liner standardization, still a generic field (PR-023) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Demo viewing (PR-006): full screen (PR-004) and new-tab links (PR-005) are live; whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- When to delete the retired date, allocation and `nx_role` contributor columns, after the plug-in deploy ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [Q20](decision-log.md)). Legacy rows without hours are dummy data; no backfill
 - Workstream/project mapping (PR-013) — not scoped, future release only; the time-tracking row (PR-012) was resolved as the library time filter ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Favorites ranking: whether to also count views/demo requests, and visibility in present mode ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux))
 - Specialization areas: max per solution, whether a "primary" area is needed ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
 - `nx_clientrole`: meaning, required at submit?, shown in present mode? ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
-- CSM rows (`nx_role`): effort, cardinality, contributor-minimum counting ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
 
 When a decision above gets resolved, delete its bullet here and update the matching "Open decisions" bullet in that entry (or move it into the [decision log](decision-log.md) if it needs its own record).
 
@@ -63,6 +64,30 @@ When a decision above gets resolved, delete its bullet here and update the match
 ```
 
 ---
+
+## 2026-10-08 — Working session: contributor effort as minimum hours required
+
+**Progress:** 50% — 0 Live, 4 In code / 4
+
+### Feedback
+
+- Allocation is unnecessary; asking for dates and a percentage per person adds work without adding meaning (PR-029).
+- Hours should state the minimum time each person needed to work on the solution, including preparation and discovery, whatever the maturity.
+- The contributor Role picker is redundant: the consultant directory already records each person's role and level (`cr6b0_consultantlevel`).
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| Every maturity takes "Minimum hours required" per person; dates, allocation, effort modes and the US holiday calendar removed | In code | Implements PR-029. `effort.ts` keeps only `contributorHours`; plug-ins write `nx_effortmode` = Direct and `nx_directhours` on every save and ignore `startDate`/`endDate`/`allocation` from older clients. No schema change: the three columns stay, unused. Mock contributors carry their former totals as direct hours (BSO Quota still 218). [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md), [SchemaV2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort). Deploy plug-ins first, then the connected app |
+| Published detail shows "Incomplete" effort instead of failing when a contributor has no hours | In code | `nx_GetPublishedDetail` returns a null `totalHours`. Affects Client demo/production rows saved under the calendar model; not backfilled, since calendar hours were estimated capacity, not minimum hours required |
+| Contributor Role picker removed; the person's directory level is shown read-only and the CSM is derived from it | In code | Submit/draft forms show **Level** (`cr6b0_consultantlevel`, "Not recorded in the consultant directory" when empty). A contributor whose level names customer success (`isCustomerSuccessLevel`) is listed as CSM in detail and passed as CSM to the PowerPoint download, and left out of PoC card builder names; builders show "name · level". `CONTRIBUTOR_ROLES` and `ContributorRole` removed; mock people carry illustrative levels. Connected cards (`CatalogueApi`) unchanged. [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level) |
+| `nx_solutioncontributor.nx_role` retired in the plug-ins; published detail returns each credit's `level` | In code | `ContributorInput`/`DraftGraph` no longer read, write or validate `nx_role`; `roleValue` from older clients is ignored and no longer returned. `nx_GetPublishedDetail` returns `level` (omitted in present mode). Deploy plug-ins, then the connected app; only then the user deletes `nx_role` from Dataverse (the deployed plug-in still selects it) ([Q20](decision-log.md)) |
+
+### Open decisions
+
+- When to delete the retired `nx_startdate`, `nx_enddate`, `nx_allocationpercent` and `nx_role` columns, after the plug-in deploy ([Q20](decision-log.md)). The legacy Client demo/production rows without hours are dummy data (confirmed 2026-10-08); no backfill.
+- Resolved: CSM-row rules from 2026-09-23 lapse; a CSM is an ordinary contributor identified by directory level.
 
 ## 2026-10-01 — Feedback session with Natalia and Andrés: governance, capabilities and review
 
@@ -131,7 +156,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 
 **Attendees:** Sebastian, …
-**Progress:** 87% — 13 Live, 2 Proposed / 15
+**Progress:** 90% — 13 Live, 1 In code, 1 Proposed / 15
 
 ### Feedback
 
@@ -166,13 +191,13 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-026 Business-value-first ordering | 🟢 Live | Accepted 2026-10-06 as covered by the "What the solution does" / "Business value" pairing (`448d02b`); no separate reordering of the detail page |
 | PR-027 Download a presentation with each solution's material | 🟢 Live | Added 2026-10-02 from the meeting notes. Resolved 2026-10-07 as a PowerPoint built from the PRISMA × Nextant Dark/Light templates (field map in `tools/pptx-template/`): **Download presentation** beside Copy link on published, Client review = Cleared solutions, never in present mode; six slides (cover, what it does, screenshots, built on, demo links, CSM). No effort hours, builder names, cost, projects or internal notes. Built in the browser, loaded only on click. `30909f9`, `3736fca`, `7ae2a66`, `428bdc7`; connected app published 2026-10-07 ([discovery and presentation](../workflows/discovery-and-presentation.md#download-presentation)). Readable demo titles open as [Q19](decision-log.md) |
 | PR-028 Library filter by demo | 🟢 Live | Added 2026-10-02. Clarified 2026-10-06: CSMs mean a **demo video**, and a solution can have several. Decided in [ADR-0011](../architecture/decisions/adr-0011-asset-purpose.md): new choice `nx_demoasset.nx_assetpurpose` (Demo video · Interactive demo · Supporting material), set by the section of the submit Media step a file goes in. Column created 2026-10-06. Plug-in change written and tested (format default on new attachments, optional purpose on links and media metadata, `demoVideos`/`interactiveDemos` in the catalogue graph); pushed in `b613493` and deployed by Luis 2026-10-06 (`nx_GetCatalogueGraph` returns `purposes: true`). No backfill: the 14 existing assets are test data to be deleted. App `6d39c65` published 2026-10-06: Media step in three sections (Demo videos · Interactive demo · Supporting material), a **Demo** facet (Demo video, Interactive demo) in the library filters, solution page grouped by purpose with the first demo video as main demo. Verified by the user in the hosted app with a new solution ([demo assets](../workflows/demo-assets.md#purpose-demo-video-interactive-demo-supporting-material)) |
-| PR-029 Remove Allocation from contributor effort | Proposed | Added 2026-10-02. Calendar-mode effort asks for start date, end date and Allocation (%); removing it changes how hours are derived, so it touches [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) and the open effort decision from [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) |
+| PR-029 Remove Allocation from contributor effort | In code | Added 2026-10-02. Resolved 2026-10-08 ([working session](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)): calendar mode goes too. Every maturity takes directly entered minimum hours per person; start date, end date, allocation and the US holiday calendar are removed from the app and plug-ins ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md)). Not deployed: plug-ins first, then the connected app |
 | PR-030 Solution-to-Project as true N:N in the app | 🟢 Live | Added 2026-10-02. Dataverse already models Solution ↔ Project as a native N:N ([SchemaV2](../data_model/SchemaV2.md)). 2026-10-06: the connected form's "Projects" picker now keeps every selection (no more last-one-wins, multi-project alert or Save/Continue/Submit block). No plug-in change needed: `nx_SaveDraftGraph` already syncs up to 100 project links and `nx_GetPublishedDetail` returns all of them; the detail page already lists them under "Delivered for · N". Published in `fa2ebf4` |
 
 ### Open decisions
 
 - One-Liner standardization (PR-023): still a generic pre-existing field, no dedicated content-design work done yet.
-- Without Allocation (PR-029), how calendar-mode effort is calculated, or whether calendar mode stays at all.
+- Allocation (PR-029): resolved 2026-10-08. Calendar mode is retired as well; every maturity takes minimum hours required ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)).
 
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
@@ -207,7 +232,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-007 Reduce chrome around the demo viewer | Proposed | High priority |
 | PR-008 User feedback capture (comments/suggestions) | Proposed | Medium priority |
 | PR-009 Solution rating / usefulness score | Proposed | Low priority |
-| PR-010 Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the maturity-based effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
+| PR-010 Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the minimum-hours effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
 | PR-011 Complexity classification (Small / Medium / Large) | Proposed | Medium priority. Alternative or complement to duration bands above |
 | PR-012 Time-tracking system integration | 🟢 Live | Resolved 2026-10-06 as a time filter in the library: an "Added: …" picker beside "Sort by" with Any time / Last 30 days / Last 3 months / Last 6 months / Last 12 months, each showing how many solutions it leaves. Filters on creation date (`createdon`), months counted as calendar months back from today; kept in the URL (`added=3m`). `6e0b314`, `8a7b544`, published 2026-10-06 ([design system](../design/design-system.md#library-page)). Integration with an external time-tracking system is not part of this |
 | PR-013 Solution-to-workstream/project mapping | Proposed | Low priority · Backlog. Prerequisite if an external time-tracking integration is ever pursued |
@@ -263,16 +288,16 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Change | Status | Notes / next step |
 |---|---|---|
 | Specialization Area from 1:N lookup to native N:N (`nx_Solution_nx_SpecializationArea_nx_SpecializationArea`) | Done in Dataverse · 🟢 **Live** | The old lookup `nx_solution.nx_specializationarea` was **deleted**, which broke the published connected app. On 2026-09-24 the catalogue fix was merged to `main` (`04f76b2`, `7c0196a`) and the connected app was republished. On 2026-09-28 the updated plugins were deployed with the app, so drafts, My submissions and review use the N:N too. Specialization Area behaves like Industry: a solution without an area shows under "All" only. The N:N was added to `PRISMA_Dev` on 2026-09-28. Still to do: tag "Budget Management Solution" with an area |
-| New column `nx_solutioncontributor.nx_role` (CSM · Consultant) | Done in Dataverse · 🟢 **Live** | Contributor role selector, plugin read/write, and CSM listed apart from builders. Integrated from `juli` and deployed on 2026-09-28. Rules for CSM rows are still open (see below) |
+| New column `nx_solutioncontributor.nx_role` (CSM · Consultant) | Done in Dataverse · 🟢 **Live** | Contributor role selector, plugin read/write, and CSM listed apart from builders. Integrated from `juli` and deployed on 2026-09-28. Retired in code on 2026-10-08: the CSM is derived from `cr6b0_consultantlevel` ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)) |
 | New column `nx_solution.nx_clientrole` (Client Role, 14 values) | Done in Dataverse · 🟢 **Live** | Client role picker on connected drafts and plugin read/write, deployed on 2026-09-28. The PRISMA library filters by it ("Target client role"), in present mode too. Its exact meaning is still open |
 | New table `nx_solutionfavorite` (per-person favorites) | Done in Dataverse · 🟢 **Live** | Delete Cascade from Solution, RemoveLink from Consultant. `FavoriteApi` (`nx_SetFavorite`, `nx_GetMyFavorites`) sets `nx_user` server-side; roles get User-depth Read only. Hearts and "My favorites" in the connected app. Deployed and republished on 2026-09-28; the user verified save and remove in the hosted app |
 | Schema docs synced with Dataverse | 🟢 Live | Updated [SchemaV2](../data_model/SchemaV2.md), the example values, the legacy companion and reference-data governance (`23fe769`) |
 | Top ranking (favorites, unique views, demo requests) | 🟢 Live | Live as a favorites-only ranking: `nx_GetTopFavorites` and the Top 10 shelf with save counts ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux), [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing)). Unique views and demo requests are not counted; views would need a private `nx_solutionview` table (open decision under 2026-09-28/29) |
-| Lead CSM as a lookup on `nx_solution` (`nx_leadcsm`) | Dropped | Replaced by `nx_solutioncontributor.nx_role` |
+| Lead CSM as a lookup on `nx_solution` (`nx_leadcsm`) | Dropped | Replaced by `nx_solutioncontributor.nx_role`, itself retired 2026-10-08 for the consultant level |
 
 ### Open decisions
 
 - Specialization areas: the maximum per solution (the app assumes 3), and whether a "primary" area is needed. The current rule is lowest Sort Order.
 - `nx_clientrole`: what it represents, whether it is required at submit, and whether it shows in present mode.
-- CSM rows (`nx_role`): whether they carry effort, whether there is exactly one per solution, and whether they count toward the contributor minimum.
+- CSM rows (`nx_role`): resolved 2026-10-08. `nx_role` is retired; the CSM is derived from the consultant level and is an ordinary contributor with hours ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)).
 - Favorites and ranking: which signals the ranking counts. Visibility: the Top 3 shows every internal user how many people saved each ranked solution (never who), outside present mode.

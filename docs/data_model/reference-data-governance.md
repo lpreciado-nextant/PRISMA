@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-10-07
+**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-10-08
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -77,6 +77,6 @@ The seed pages through existing rows, matches trimmed names case-insensitively, 
 
 `/admin/reference-data` (librarian only) — not yet in the PoC.
 
-## Business days
+## Contributor effort
 
-There are no business-calendar or holiday reference tables and no Librarian-maintained calendar records. `Business Days` on `nx_solutioncontributor` counts Monday-Friday between Start Date and End Date, inclusive, excluding observed US federal holidays calculated in code for 2020-2035; working days are eight hours. Policy changes require a reviewed code change and regression checks, not reference-data editing. Existing 2026 effort totals must remain unchanged when the app adopts multi-year coverage. See [schema v2](SchemaV2.md#nx_solutioncontributor--builders-and-effort) for holiday rules and coverage validation, and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) for the decision history.
+Contributor effort needs no reference data: each person enters the minimum hours they needed, at every maturity. There are no business-calendar or holiday tables, and since 2026-10-08 no holiday policy in code either. See [schema v2](SchemaV2.md#nx_solutioncontributor--builders-and-effort) and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) for the decision history.

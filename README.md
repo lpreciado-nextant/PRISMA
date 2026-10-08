@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library
 
 **Status:** Mock PoC preserved; connected PRISMA pilot published with plug-in backend, favorites and Azure Blob media pilot; privileged lifecycles verified; cross-account and non-admin acceptance remain open. Team responsibilities and planned allocations documented.
-**Last updated:** 2026-09-30
+**Last updated:** 2026-10-08
 
 An internal marketplace for the PoCs, prototypes, demos, and production solutions Nextant builds across its three Specialization Areas — **AI & Automation**, **Data Solutions**, and **Intelligent Business Operations**.
 
@@ -72,7 +72,7 @@ Repository history records Luis's work on the [application foundation](https://g
 
 A guided seven-step submission form with draft saving at every step: what is it → what does it do and why does it matter → tag it → attach the demo → images (card thumbnail + detail screenshots) → safety & sharing → review & submit. Target friction budget is under 10 minutes; beyond that, builders stop submitting and G2 fails.
 
-The first step includes specialization area, capability (both single-valued lookups), and multiple builders, searchable by name or email without duplicates. Ideas and working prototypes use direct hours. For client demos and production, each person has inclusive start/end dates and allocation (0-100%); effort uses Monday-Friday excluding observed US federal holidays, enforced in code for 2020-2035. Hours are previewed per person and summed for the solution; [workflow details](docs/workflows/contribution-and-review.md).
+The first step includes specialization area, capability (both single-valued lookups), and multiple builders, searchable by name or email without duplicates. At every maturity, each person enters the minimum hours they needed to work on the solution, including preparation and discovery; the solution total is their sum; [workflow details](docs/workflows/contribution-and-review.md).
 
 ### Discovery → presentation (the hero flow)
 
@@ -115,7 +115,7 @@ Key decisions:
 
 - **Dataverse is the single source of truth.** No separate search index in v1.
 - **Assets live in Dataverse File and Image columns** — no external blob storage to provision.
-- **Native N:N relationships** for solution↔technology/industry and solution↔project; no hand-built junction tables for these. Capability is single-valued (same shape as specialization area), not a tag. Contributor effort uses a child table with relationship attributes, since that link carries dates and allocation.
+- **Native N:N relationships** for solution↔technology/industry and solution↔project; no hand-built junction tables for these. Capability is single-valued (same shape as specialization area), not a tag. Contributor effort uses a child table with relationship attributes, since that link carries each person's hours.
 - **Client-side search.** At ~40 solutions, the published catalogue loads once per session and searches instantly in memory. Documented ceiling: revisit past a few thousand records.
 - **Present mode and publication status are enforced at the platform level**, not just in the UI. Unpublished records are invisible to CSMs via security roles; `Library Notes` and `Publication Status` carry field-level security.
 
@@ -129,7 +129,7 @@ Existing table: `cr6b0_project`, with fixed columns and its existing Project Own
 
 **12 tables total:** the 11 existing business tables plus private organization-owned `nx_uploadsession` for server-held upload state. Native N:N intersect tables are excluded. The approved empty media-custodian and publication-readers teams and exact schema are documented in [ADR-0009](docs/architecture/decisions/adr-0009-mediated-media-and-publication-access.md).
 
-`nx_solutioncontributor` replaces the single builder lookup and solution-wide effort category. In Calendar mode, one row per Solution/person stores dates and allocation. Person hours = business days × 8 × allocation / 100, rounded to two decimals; total effort sums those rounded hours. `Business Days` counts Monday-Friday between Start Date and End Date, inclusive, excluding observed US federal holidays calculated in code for 2020-2035. There are no calendar tables or contributor calendar lookups; dates outside supported coverage are rejected. These are capacity-based hours, not actual timesheets or deployment lead time. Ideas and working prototypes use directly reported hours instead. See the [schema contract](docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
+`nx_solutioncontributor` replaces the single builder lookup and solution-wide effort category. One row per Solution/person stores the minimum hours that person needed, at every maturity; total effort is their sum. These are self-reported minimums, not timesheets or deployment lead time. The former date, allocation and holiday-calendar model was retired on 2026-10-08; its columns remain in Dataverse unused. See the [schema contract](docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
 
 Vocabulary governance: capabilities, industries, and specialization areas are **governed** (librarian-managed); technologies are **open** (contributors extend inline, librarian merges duplicates). `Capability` is single-valued, same shape as `Specialization Area`, not a tag. Solution narratives consist of What it does and Business value. Industry tags are optional at schema level, with at least one industry or "Cross-industry" expected at review.
 

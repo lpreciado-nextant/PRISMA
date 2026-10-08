@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
 **Status:** Agreed two-field story design; wizard resume, selectable MP4 captions and same-account video acceptance verified; Blob pilot for new attachments approved (ADR-0010), not deployed; production-host and least-privilege gates remain open
-**Last updated:** 2026-10-01
+**Last updated:** 2026-10-08
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
@@ -91,7 +91,7 @@ stateDiagram-v2
 
 1. **Before you start** — Required safety acknowledgment replaces the former sharing and sample-data classifications. Submit only authorized, client-safe descriptions and media using invented or anonymized data. Client identity is allowed only in the dedicated internal field. Acknowledgment is not approval.
 2. **Define the solution** — Name, summary and specialization areas, then the story in exactly two fields: **What it does** for actions/results and **Business value** for the problem and benefit. Optional AI writing assistance is deferred; contributors may paste existing approved wording unchanged.
-3. **Solution context** — Maturity (Status), contributors and effort, then the client. It starts with the required question "Is this solution associated with a client?": the client fields (target client role, internal client name and separately authored anonymous presentation context) show only on **Yes**, and both the name and the anonymous context are then required; **No** clears them so nothing hidden is saved. Credit at least one unique contributor, searchable by name/email. Ideas and working prototypes use direct hours per person; client demos and production use inclusive start/end dates and an allocation percentage, with calculated effort (Monday-Friday excluding observed US federal holidays, enforced in code) previewed per person and in total. Duplicate people are excluded; the PoC searches mock people rather than a live directory.
+3. **Solution context** — Maturity (Status), contributors and effort, then the client. It starts with the required question "Is this solution associated with a client?": the client fields (target client role, internal client name and separately authored anonymous presentation context) show only on **Yes**, and both the name and the anonymous context are then required; **No** clears them so nothing hidden is saved. Credit at least one unique contributor, searchable by name/email. At every maturity each person enters the minimum hours they needed to work on the solution, including preparation and discovery; the total is their sum, previewed as people are added. Duplicate people are excluded; the PoC searches mock people rather than a live directory.
 4. **Tag it** — Search capabilities, technologies and industries. Capabilities/industries remain governed; new technologies are allowed with duplicate, similar-name and capitalization checks ([governance](../data_model/reference-data-governance.md#vocabularies)).
 5. **Media** — Require one to six detail images, with optional captions. Thumbnail remains optional with generated-poster fallback. Optional videos, one-pagers/slides and self-contained HTML share this step. Capability-specific hints explain useful outcomes and confidentiality requirements.
 6. **Review & submit** — Client-visible card preview plus a summary clearly separating internal client identity and anonymous context. Validate acknowledgment, contributor effort, client context and required images again at submit.
@@ -159,7 +159,7 @@ flowchart LR
 
 **Browse** is the alternative for CSMs who don't yet know what they're looking for: three specialization-area tabs, each with a short framing note and a visual card grid. Cards carry a thumbnail, name, one-liner, specialization colour coding, status badge, and a capability badge — enough to triage without clicking.
 
-**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths), total calculated effort hours, the client/context it came from, tags, and the asset list. Per-person dates, allocation, and effort breakdown are internal-only and omitted in present mode, alongside library notes and internal client identity. Present mode uses only the authored anonymous context: builder names, CSM rows, total effort and estimated cost are internal-only too, removed from the catalogue before render and never shown on cards or detail. Direct hours are reported effort; calendar-mode hours are capacity-based, not elapsed deployment time or a timesheet — and client-demo hours carry a warning that production delivery may take longer.
+**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths, shown as "name · level" from the consultant directory), the solution's CSM (the contributor whose directory level names customer success; nothing role-related is entered per contributor), total effort hours (the sum of each person's minimum hours required), the client/context it came from, tags, and the asset list. Per-person hours and the effort breakdown are internal-only and omitted in present mode, alongside library notes and internal client identity. Present mode uses only the authored anonymous context: builder names, the CSM, total effort and estimated cost are internal-only too, removed from the catalogue before render and never shown on cards or detail. Hours are self-reported minimums, not elapsed deployment time or a timesheet — and client-demo hours carry a warning that production delivery may take longer.
 
 ### 3.3 Demo assets
 
@@ -257,13 +257,11 @@ Supports the live-demo handoff (§3.3): solution, requester, client/opportunity 
 
 ### 6.3a Contributors and effort
 
-Replace the single `Built By` lookup and solution-wide `Effort / Time to Deploy` choice with `nx_solutioncontributor`: one row per Solution/person, with a `cr6b0_consultant` lookup, Date Only start/end dates, and allocation (0-100%). Contributor credit does not change record ownership or grant edit access.
+Replace the single `Built By` lookup and solution-wide `Effort / Time to Deploy` choice with `nx_solutioncontributor`: one row per Solution/person, with a `cr6b0_consultant` lookup and that person's hours. Contributor credit does not change record ownership or grant edit access.
 
-Effort Mode follows maturity: Direct for ideas/prototypes, Calendar for client demos/production. Direct Hours is a nonnegative two-decimal input; dates/allocation are not required in Direct mode. Switching maturity preserves draft inputs but validates and totals only the active mode.
+Every maturity uses the same input: the **minimum hours** each person needed to work on the solution, including preparation and discovery. Hours are finite, nonnegative and at most two decimals; every contributor needs them to submit or approve, while drafts may be incomplete. Solution hours are the sum of person hours. There are no dates, allocation, business days or holiday calendar (retired 2026-10-08).
 
-In Calendar mode, `Business Days` counts Monday-Friday within the inclusive date range, excluding observed US federal holidays calculated in code for 2020-2035. There are no calendar tables, calendar lookup, or calendar selector. Apply the federal holiday rules appropriate to each year; state-specific and company holidays are excluded from the policy. Per-person hours = business days × 8 × allocation / 100, rounded to two decimals; solution hours sum those rounded person totals. Reject invalid dates, reversed ranges, and dates outside supported coverage. Existing 2026 mock and restored-draft totals must remain unchanged.
-
-The schema owns the full contract and migration notes; see [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md). The agreed code-based US calendar policy supersedes the weekday-only proposal while retaining the removal of calendar tables. The current mock app still uses its 2026 in-memory calendar; multi-year support and removal of calendar IDs remain pending implementation.
+The schema owns the full contract and the handling of rows saved under the retired calendar model; see [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) and [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
 
 ### 6.4 Reference data governance
 

@@ -312,6 +312,8 @@ namespace Prisma.Plugins.Tests
             Assert.DoesNotContain("email", json);
             Assert.DoesNotContain("effort", json);
             Assert.DoesNotContain("libraryNotes", json);
+            Assert.DoesNotContain("level", json);
+            Assert.Contains("\"level\":\"Customer Success Manager\"", DraftPolicy.Serialize(new PublishedCredit { Name = "CSM", Level = "Customer Success Manager" }));
         }
 
         [Fact]
@@ -404,52 +406,42 @@ namespace Prisma.Plugins.Tests
         public void GraphParserRejectsProtectedFieldsAndAcceptsIncompleteContributors()
         {
             var json = "{\"contributors\":[{\"personId\":\"" + Area + "\",\"directHours\":null}],\"technologyIds\":[],\"industryIds\":[],\"projectIds\":[],\"areaIds\":[\"" + Area + "\"]}";
-            var graph = DraftGraph.Parse(json, 125060004);
+            var graph = DraftGraph.Parse(json);
             Assert.Single(graph.Contributors);
             Assert.Null(graph.Contributors[0].DirectHours);
-            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"directHours\":null", "\"ownerid\":\"fake\""), 125060004));
-            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"projectIds\":[]", "\"projectIds\":[],\"approval\":true"), 125060004));
-            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"technologyIds\":[]", "\"technologyIds\":[\"fake\"]"), 125060004));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"directHours\":null", "\"ownerid\":\"fake\"")));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"projectIds\":[]", "\"projectIds\":[],\"approval\":true")));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"technologyIds\":[]", "\"technologyIds\":[\"fake\"]")));
             Assert.Equal(new[] { Area }, graph.AreaIds);
-            Assert.Empty(DraftGraph.Parse(json.Replace("\"areaIds\":[\"" + Area + "\"]", "\"areaIds\":[]"), 125060004).AreaIds);
-            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace(",\"areaIds\":[\"" + Area + "\"]", ""), 125060004));
-            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"areaIds\":[\"" + Area + "\"]", "\"areaIds\":[\"" + Area + "\",\"" + Area + "\"]"), 125060004));
+            Assert.Empty(DraftGraph.Parse(json.Replace("\"areaIds\":[\"" + Area + "\"]", "\"areaIds\":[]")).AreaIds);
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace(",\"areaIds\":[\"" + Area + "\"]", "")));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"areaIds\":[\"" + Area + "\"]", "\"areaIds\":[\"" + Area + "\",\"" + Area + "\"]")));
         }
 
         [Fact]
-        public void ContributorsPermitIncompleteDraftsButValidateSuppliedInputs()
+        public void ContributorsPermitIncompleteDraftsButRequireMinimumHoursToSubmit()
         {
             var person = new ContributorInput { PersonId = Area };
-            ContributorPolicy.Validate(new[] { person }, 125060004, false);
-            Assert.Null(ContributorPolicy.Hours(person, 125060004));
-            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person }, 125060004, true));
-            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person, person }, 125060004, false));
+            ContributorPolicy.Validate(new[] { person }, false);
+            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person }, true));
+            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person, person }, false));
             person.DirectHours = 0;
-            ContributorPolicy.Validate(new[] { person }, 125060004, true);
-            person.Allocation = 100.001m;
-            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person }, 125060004, false));
+            ContributorPolicy.Validate(new[] { person }, true);
+            foreach (var invalid in new[] { -1m, 1.001m, 1000000000.01m })
+            {
+                person.DirectHours = invalid;
+                Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person }, false));
+            }
         }
 
-        [Theory]
-        [InlineData("2026-07-02", "2026-07-06", 16)]
-        [InlineData("2021-12-31", "2022-01-03", 8)]
-        [InlineData("2020-06-19", "2020-06-19", 8)]
-        [InlineData("2021-06-18", "2021-06-18", 0)]
-        [InlineData("2024-02-29", "2024-02-29", 8)]
-        public void CalendarEffortExcludesObservedFederalHolidays(string start, string end, int expected)
+        [Fact]
+        public void GraphParserIgnoresRetiredDatesAllocationAndRoleFromOlderClients()
         {
-            var person = new ContributorInput { PersonId = Area, StartDate = start, EndDate = end, Allocation = 100 };
-            ContributorPolicy.Validate(new[] { person }, 125060002, true);
-            Assert.Equal((decimal)expected, ContributorPolicy.Hours(person, 125060002));
-        }
-
-        [Theory]
-        [InlineData("2019-12-31")]
-        [InlineData("2036-01-01")]
-        [InlineData("2026-02-30")]
-        public void EffortDatesRespectCoverageAndCalendar(string date)
-        {
-            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Date(date));
+            var json = "{\"contributors\":[{\"personId\":\"" + Area + "\",\"directHours\":12.5,\"startDate\":\"2026-01-01\",\"endDate\":\"2026-01-31\",\"allocation\":150,\"roleValue\":125060000}],\"technologyIds\":[],\"industryIds\":[],\"projectIds\":[],\"areaIds\":[]}";
+            var person = DraftGraph.Parse(json).Contributors[0];
+            Assert.Equal(12.5m, person.DirectHours);
+            Assert.DoesNotContain("allocation", DraftPolicy.Serialize(person));
+            Assert.DoesNotContain("roleValue", DraftPolicy.Serialize(person));
         }
 
         [Fact]
