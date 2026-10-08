@@ -10,6 +10,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | Date | Session | Progress |
 |---|---|---|
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 90% — 4 Live, 1 In code / 5 |
+| [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 19% — 3 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
@@ -24,6 +25,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 - Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Whether to delete the retired `nx_startdate`/`nx_enddate` contributor columns (optional; first remove them from the unused "Information" form) ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08; legacy rows without hours are dummy data, no backfill
 - Workstream/project mapping (PR-013) — not scoped, future release only; the time-tracking row (PR-012) was resolved as the library time filter ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
+- Merging duplicate technologies needs a librarian-only plug-in operation; today only the read-only `technology-duplicates` report exists ([2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review))
 - Favorites ranking: whether to also count views/demo requests, and visibility in present mode ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux))
 - Specialization areas: max per solution, whether a "primary" area is needed ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
 - `nx_clientrole`: meaning, required at submit?, shown in present mode? ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
@@ -89,6 +91,32 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 - Whether to delete the retired `nx_startdate` and `nx_enddate` columns (optional, the user's call): each is still on the unused `nx_solutioncontributor` main form "Information"; remove both fields from it, publish, then delete the columns ([Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08 after the deploy; `nx_effortmode` stays (the plug-in writes Direct on every save). The legacy Client demo/production rows without hours are dummy data (confirmed 2026-10-08); no backfill.
 - Resolved: CSM-row rules from 2026-09-23 lapse; a CSM is an ordinary contributor identified by directory level.
+
+## 2026-10-07 — Working session: presentation download refinements and new-technology review
+
+**Progress:** 100% — 5 Live / 5
+
+### Feedback
+
+- The downloaded presentation must fit each solution's content instead of fixed slots, and every demo button must do what it says.
+- Reviewers should notice a technology no other published solution uses before it becomes a near-duplicate tag.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| Demos slide: three columns (demo videos, interactive demos, supporting material), tighter rows; buttons read Play, Open or Download | 🟢 Live | `b51f479`, `20351d9`, `fb56206`, `1277e51`. Files are never linked straight from the deck: Download opens the PRISMA viewer with `?download=1`, which starts the download on arrival; fill test checks every button is linked. Builds on PR-027; published with the connected app on 2026-10-08 17:12 UTC (`1c89c2d`, Luis); hosted UI not yet checked |
+| Slides adapt to the solution: two-line cover names, cards as tall as their text, screenshot grid for the number there are, chips sized to their words | 🟢 Live | `dc25893`; published with the connected app on 2026-10-08 17:12 UTC (`1c89c2d`, Luis); hosted UI not yet checked |
+| Speaker notes on every slide; slide 6 PRISMA chip links the full URL instead of the 40-character display text | 🟢 Live | `20351d9` (fixes long Power Apps links that were cut and broken); published with the connected app on 2026-10-08 17:12 UTC (`1c89c2d`, Luis); hosted UI not yet checked |
+| Review panel flags **New technologies** (no other published solution uses them) with the existing names they resemble | 🟢 Live | `b210e8a` ([runbook](../operations/librarian-runbook.md)); published with the connected app on 2026-10-08 17:12 UTC (`1c89c2d`, Luis); hosted UI not yet checked |
+| `Prisma.Deploy technology-duplicates`: read-only report of look-alike active technologies and how many solutions use each | 🟢 Live | `b210e8a`. Local command, nothing to deploy; uses the form's duplicate rules ([reference-data governance](../data_model/reference-data-governance.md)) |
+
+### Open decisions
+
+- Merging duplicate technologies is not automated: `DraftGraphGuard` blocks direct tag writes for every account, so it needs a librarian-only plug-in operation.
+- Readable demo titles in the presentation ([Q19](decision-log.md)).
+
+---
 
 ## 2026-10-01 — Feedback session with Natalia and Andrés: governance, capabilities and review
 
@@ -190,7 +218,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-024 "What It Does" optimization | 🟢 Live | `448d02b` (published 2026-10-06): detail panel and form label renamed to "What the solution does", paired with "Business value" so the two read as "what it does / what you gain"; accepted as sufficient |
 | PR-025 "Why It Matters" enhancement | 🟢 Live | `448d02b` (published 2026-10-06): the detail panel "Why it matters" is now titled "Business value", matching the `businessValue` field and the form label |
 | PR-026 Business-value-first ordering | 🟢 Live | Accepted 2026-10-06 as covered by the "What the solution does" / "Business value" pairing (`448d02b`); no separate reordering of the detail page |
-| PR-027 Download a presentation with each solution's material | 🟢 Live | Added 2026-10-02 from the meeting notes. Resolved 2026-10-07 as a PowerPoint built from the PRISMA × Nextant Dark/Light templates (field map in `tools/pptx-template/`): **Download presentation** beside Copy link on published, Client review = Cleared solutions, never in present mode; six slides (cover, what it does, screenshots, built on, demo links, CSM). No effort hours, builder names, cost, projects or internal notes. Built in the browser, loaded only on click. `30909f9`, `3736fca`, `7ae2a66`, `428bdc7`; connected app published 2026-10-07 ([discovery and presentation](../workflows/discovery-and-presentation.md#download-presentation)). Readable demo titles open as [Q19](decision-log.md) |
+| PR-027 Download a presentation with each solution's material | 🟢 Live | Added 2026-10-02 from the meeting notes. Resolved 2026-10-07 as a PowerPoint built from the PRISMA × Nextant Dark/Light templates (field map in `tools/pptx-template/`): **Download presentation** beside Copy link on published, Client review = Cleared solutions, never in present mode; six slides (cover, what it does, screenshots, built on, demo links, CSM). No effort hours, builder names, cost, projects or internal notes. Built in the browser, loaded only on click. `30909f9`, `3736fca`, `7ae2a66`, `428bdc7`; connected app published 2026-10-07 ([discovery and presentation](../workflows/discovery-and-presentation.md#download-presentation)). Readable demo titles open as [Q19](decision-log.md). Refinements: [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) |
 | PR-028 Library filter by demo | 🟢 Live | Added 2026-10-02. Clarified 2026-10-06: CSMs mean a **demo video**, and a solution can have several. Decided in [ADR-0011](../architecture/decisions/adr-0011-asset-purpose.md): new choice `nx_demoasset.nx_assetpurpose` (Demo video · Interactive demo · Supporting material), set by the section of the submit Media step a file goes in. Column created 2026-10-06. Plug-in change written and tested (format default on new attachments, optional purpose on links and media metadata, `demoVideos`/`interactiveDemos` in the catalogue graph); pushed in `b613493` and deployed by Luis 2026-10-06 (`nx_GetCatalogueGraph` returns `purposes: true`). No backfill: the 14 existing assets are test data to be deleted. App `6d39c65` published 2026-10-06: Media step in three sections (Demo videos · Interactive demo · Supporting material), a **Demo** facet (Demo video, Interactive demo) in the library filters, solution page grouped by purpose with the first demo video as main demo. Verified by the user in the hosted app with a new solution ([demo assets](../workflows/demo-assets.md#purpose-demo-video-interactive-demo-supporting-material)) |
 | PR-029 Remove Allocation from contributor effort | 🟢 Live | Added 2026-10-02. Resolved 2026-10-08 ([working session](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)): calendar mode goes too. Every maturity takes directly entered minimum hours per person; start date, end date, allocation and the US holiday calendar are removed from the app and plug-ins ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md)). Deployed 2026-10-08 from `main` `1c89c2d` (signed plug-in 17:11 UTC, then the connected app 17:12 UTC); `nx_allocationpercent` deleted from Dataverse afterwards |
 | PR-030 Solution-to-Project as true N:N in the app | 🟢 Live | Added 2026-10-02. Dataverse already models Solution ↔ Project as a native N:N ([SchemaV2](../data_model/SchemaV2.md)). 2026-10-06: the connected form's "Projects" picker now keeps every selection (no more last-one-wins, multi-project alert or Save/Continue/Submit block). No plug-in change needed: `nx_SaveDraftGraph` already syncs up to 100 project links and `nx_GetPublishedDetail` returns all of them; the detail page already lists them under "Delivered for · N". Published in `fa2ebf4` |
