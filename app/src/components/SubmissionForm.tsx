@@ -208,8 +208,8 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
 /** The Media step's attachment sections; the section a file is added to is its purpose (ADR-0011). */
 const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; upload: string; accept: string; hint: string; fileHint: string; links: boolean; recommended?: boolean }[] = [
   { purpose: "Demo video", key: "demo", title: "Demo videos", upload: "Upload demo video", accept: ".mp4,.webm", links: false, recommended: true,
-    hint: "Walkthroughs a CSM can play for a client, ideally 2–5 minutes each. Add as many as you need. MP4/WebM up to 500 MB.",
-    fileHint: "Walkthroughs a CSM can play for a client, ideally 2–5 minutes each. Add as many as you need. MP4/WebM up to 500 MB." },
+    hint: "Upload video walkthroughs that CSMs can use to demonstrate the solution to clients. Videos should ideally be 2–5 minutes long and highlight key features and capabilities. You can add multiple videos in MP4 or WebM format (up to 500 MB each).",
+    fileHint: "Upload video walkthroughs that CSMs can use to demonstrate the solution to clients. Videos should ideally be 2–5 minutes long and highlight key features and capabilities. You can add multiple videos in MP4 or WebM format (up to 500 MB each)." },
   { purpose: "Interactive demo", key: "interactive", title: "Interactive demo", upload: "Upload HTML file", accept: ".html,.htm", links: true,
     hint: "Add interactive demos or prototypes that allow CSMs to explore the solution firsthand. You can upload a self-contained HTML file (up to 25 MB) or share a link to a prototype, web app, Power Apps app, or Power BI report.",
     fileHint: "Add interactive demos or prototypes that allow CSMs to explore the solution firsthand. You can upload a self-contained HTML file (up to 25 MB)." },
