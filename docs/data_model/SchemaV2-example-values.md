@@ -1,6 +1,6 @@
 # Nextant Solution Library — example row per table (SchemaV2)
 
-**Status:** Illustrative companion, aligned with the two-field story model, authored draft names, draft/review fields, the 2026-09-23 changes (Specialization Area N:N, Client Role), direct minimum hours at every maturity and the CSM derived from Consultant Level instead of the retired contributor Role (2026-10-08) · **Last updated:** 2026-10-08
+**Status:** Illustrative companion, aligned with the two-field story model, authored draft names, draft/review fields, the 2026-09-23 changes (Specialization Area N:N, Client Role), direct minimum hours at every maturity and the CSM derived from Consultant Level instead of the contributor Role (retired and deleted 2026-10-08) · **Last updated:** 2026-10-08
 **Companion to:** [SchemaV2.md](SchemaV2.md)
 
 One illustrative row per table in the v2 model, all pointing at the same story so the relationships stay traceable: **S1 — Invoice Reconciliation Assistant**, the same example used in SchemaV2's diagrams. GUIDs below are placeholders (`{table}-001` style), not real Dataverse ids. Sample data only — no real client information.
@@ -84,7 +84,7 @@ For a new incomplete draft, require an authored name such as `Solution Name = In
 
 ### `nx_solutioncontributor`
 
-Every maturity, including this Client demo, uses **Effort Mode = Direct** and **Direct Hours** = the minimum hours each person needed to work on the solution. The retired Start Date, End Date, Allocation (%) and Role columns are left empty on new rows and are not shown. Both people are builders: neither level names customer success.
+Every maturity, including this Client demo, uses **Effort Mode = Direct** and **Direct Hours** = the minimum hours each person needed to work on the solution. The retired Start Date and End Date columns are left empty on new rows and are not shown; Allocation (%) and Role were deleted from Dataverse on 2026-10-08. Both people are builders: neither level names customer success.
 
 | nx_solutioncontributorid | Name | Solution | Built By | Effort Mode | Direct Hours |
 |---|---|---|---|---|---|

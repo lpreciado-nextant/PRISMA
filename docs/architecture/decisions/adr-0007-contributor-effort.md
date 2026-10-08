@@ -1,6 +1,6 @@
 # ADR-0007 - Contributor-level effort in minimum hours required
 
-**Status:** Accepted; revised 2026-10-08 to directly entered minimum hours at every maturity (calendar/allocation model retired) and to derive the CSM from the consultant directory level (`nx_role` retired). Implemented in code; plug-ins and connected app not yet deployed
+**Status:** Accepted; revised 2026-10-08 to directly entered minimum hours at every maturity (calendar/allocation model retired) and to derive the CSM from the consultant directory level (`nx_role` retired). Deployed 2026-10-08 (plug-ins, then connected app, from `main` `1c89c2d`); `nx_role` and `nx_allocationpercent` deleted from Dataverse the same day; hosted browser verification of the new UI not recorded
 **Date:** 2026-09-18
 **Last updated:** 2026-10-08
 
@@ -18,18 +18,18 @@ There are no dates, allocation, business days, holiday policy or calendar tables
 
 ### CSM from the consultant level
 
-Nothing role-related is entered per contributor. The person's role and level already live in the consultant directory, `cr6b0_consultant.cr6b0_consultantlevel` (free text, e.g. "Senior Consultant", "Customer Success Manager II"), so the contributor choice `nx_solutioncontributor.nx_role` (CSM · Consultant) is retired as redundant. The form shows the selected person's level read-only ("Not recorded in the consultant directory" when empty). A contributor whose level names customer success (`isCustomerSuccessLevel` in [`consultantLevel.ts`](../../../app/src/lib/consultantLevel.ts): case-insensitive, with or without the space, tolerating the one-s misspelling) is the solution's CSM: listed as CSM in the detail view, passed as the CSM to the PowerPoint download, and left out of builder names on PoC cards. Everyone else is a builder, shown as "name · level". A CSM is an ordinary contributor row with hours. PRISMA never writes the directory level, so a wrong level is fixed in the directory, not in PRISMA.
+Nothing role-related is entered per contributor. The person's role and level already live in the consultant directory, `cr6b0_consultant.cr6b0_consultantlevel` (free text, e.g. "Senior Consultant", "Customer Success Manager II"), so the contributor choice `nx_solutioncontributor.nx_role` (CSM · Consultant) is retired as redundant (deleted from Dataverse on 2026-10-08). The form shows the selected person's level read-only ("Not recorded in the consultant directory" when empty). A contributor whose level names customer success (`isCustomerSuccessLevel` in [`consultantLevel.ts`](../../../app/src/lib/consultantLevel.ts): case-insensitive, with or without the space, tolerating the one-s misspelling) is the solution's CSM: listed as CSM in the detail view, passed as the CSM to the PowerPoint download, and left out of builder names on PoC cards. Everyone else is a builder, shown as "name · level". A CSM is an ordinary contributor row with hours. PRISMA never writes the directory level, so a wrong level is fixed in the directory, not in PRISMA.
 
 ## Consequences
 
 - Multiple builders receive credit and independent hours. The legacy effort category is retired.
 - Effort is self-reported and not derivable from other data; review checks it for credibility, not arithmetic.
-- `nx_startdate`, `nx_enddate` and `nx_allocationpercent` remain in Dataverse but are no longer read or written; `nx_effortmode` is written as Direct for every save. Deleting the retired columns is a separate, separately approved schema change.
-- Client demo and production rows saved under the calendar model have dates and allocation but no hours. They show "Incomplete" effort until someone enters minimum hours. They were not backfilled automatically: calendar hours were estimated capacity, a different meaning from minimum hours required.
+- `nx_allocationpercent` was deleted from Dataverse on 2026-10-08. `nx_startdate` and `nx_enddate` remain but are no longer read or written; deleting them is optional and first needs both fields removed from the unused `nx_solutioncontributor` main form "Information" ([Q20](../../delivery/decision-log.md)). `nx_effortmode` stays: the plug-in writes it as Direct on every contributor save, so deleting it would break saves.
+- Client demo and production rows saved under the calendar model have dates but no hours. They show "Incomplete" effort until someone enters minimum hours. They are dummy test data (confirmed 2026-10-08) and were not backfilled: calendar hours were estimated capacity, a different meaning from minimum hours required.
 - Child ownership/sharing and validation need platform enforcement on every production write, not only in the UI.
 - Real migration from the legacy category requires confirmed hours; they cannot be recovered from Days/Weeks/Months.
-- CSM identification depends on directory data quality: a CSM whose level does not name customer success is shown as a builder. The user confirmed on 2026-10-08 that directory levels for CSMs do name customer success. Existing `nx_role` values are ignored.
-- `nx_role` is deleted from Dataverse by the user only after the new plug-ins are deployed; the deployed plug-in still selects it.
+- CSM identification depends on directory data quality: a CSM whose level does not name customer success is shown as a builder. The user confirmed on 2026-10-08 that directory levels for CSMs do name customer success. Existing `nx_role` values were ignored and went with the column.
+- `nx_role` was deleted from Dataverse by the user after the new plug-ins were deployed (no blocking dependencies were reported); the earlier plug-in selected it.
 
 ## Implementation
 
@@ -37,7 +37,7 @@ Nothing role-related is entered per contributor. The person's role and level alr
 
 The mock catalogue gives every contributor `directHours` equal to its former calculated total, so sample totals are unchanged (the BSO Quota sample still totals 218 hours).
 
-Deployment order, when approved: plug-ins first, then the connected app, and only then may the user delete `nx_role`. An older plug-in still demands dates and allocation for Client demo and production submissions, and selects `nx_role` in its column sets: deleting the column first would break draft graph reads, submission review and published detail.
+Deployed 2026-10-08 by Luis (holder of the signing certificate) from `origin/main` `1c89c2d`, in the required order: the signed Release plug-in with `blob-plugin --execute` (assembly updated 17:11 UTC; it no longer references `nx_role`, `nx_allocationpercent` or `nx_startdate`), then the connected app (17:12 UTC). Only then did the user delete `nx_role` and `nx_allocationpercent`: the earlier plug-in selected `nx_role` and demanded dates and allocation, so deleting first would have broken draft graph reads, submission review and published detail. Hosted browser verification of the new UI was not recorded.
 
 ## Decision history
 

@@ -1,6 +1,6 @@
 # Architecture decision records
 
-**Status:** Living; ADR-0010 deployed and enabled for the pilot, ADR-0006 not yet implemented, ADR-0011 deployed, ADR-0007 revision not yet deployed · **Last updated:** 2026-10-08
+**Status:** Living; ADR-0010 deployed and enabled for the pilot, ADR-0006 not yet implemented, ADR-0011 deployed, ADR-0007 revision deployed 2026-10-08 · **Last updated:** 2026-10-08
 
 Decisions with lasting consequences are recorded here as short ADRs. Open questions live in the [decision log](../../delivery/decision-log.md) until they resolve into an ADR or a doc change.
 
@@ -14,7 +14,7 @@ Decisions with lasting consequences are recorded here as short ADRs. Open questi
 | [0004](adr-0004-assets-in-dataverse.md) | Assets in Dataverse File/Image columns | Accepted; superseded for new uploaded attachments by 0010 |
 | [0005](adr-0005-present-mode-server-side-enforcement.md) | Present mode enforced server-side | Accepted |
 | [0006](adr-0006-power-automate-notifications-only.md) | Power Automate for notifications only | Accepted; not yet implemented (no flows exist) |
-| [0007](adr-0007-contributor-effort.md) | Contributor-level effort in minimum hours required | Accepted; revised 2026-10-08 to direct hours at every maturity and a CSM derived from the consultant level, not yet deployed |
+| [0007](adr-0007-contributor-effort.md) | Contributor-level effort in minimum hours required | Accepted; revised 2026-10-08 to direct hours at every maturity and a CSM derived from the consultant level; deployed 2026-10-08 |
 | [0008](adr-0008-controlled-submission-transitions.md) | Controlled submission transitions | Accepted; deployed, acceptance pending |
 | [0009](adr-0009-mediated-media-and-publication-access.md) | Mediated media and publication access | Accepted; deployed, least-privilege verification pending |
 | [0010](adr-0010-attachments-in-blob-through-plugins.md) | Uploaded attachments in Azure Blob through Dataverse plug-ins | Accepted for pilot; deployed and enabled 2026-09-29, non-admin acceptance pending |

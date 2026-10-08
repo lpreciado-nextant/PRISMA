@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Living; connected pilot published; Azure Blob media pilot deployed and enabled 2026-09-29 for new attachments (existing files stay in Dataverse); bulk catalogue graph API deployed and published 2026-09-30; graph card thumbnails deployed in the plug-in 2026-09-30; client read reuse, thumbnail wiring and blur-only glass published 2026-09-30 and checked in the hosted app (privileged account); production cloud foundation, hosted browser matrix and least-privilege acceptance remain open; contributor effort moved to direct minimum hours in code 2026-10-08, not yet deployed · **Last updated:** 2026-10-08
+**Status:** Living; connected pilot published; Azure Blob media pilot deployed and enabled 2026-09-29 for new attachments (existing files stay in Dataverse); bulk catalogue graph API deployed and published 2026-09-30; graph card thumbnails deployed in the plug-in 2026-09-30; client read reuse, thumbnail wiring and blur-only glass published 2026-09-30 and checked in the hosted app (privileged account); production cloud foundation, hosted browser matrix and least-privilege acceptance remain open; contributor effort as direct minimum hours and the CSM from the consultant level deployed 2026-10-08 (contributor `nx_role` and `nx_allocationpercent` deleted) · **Last updated:** 2026-10-08
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
@@ -165,7 +165,7 @@ Each carries an ADR — see [decision records](decisions/README.md).
 | Assets live in Dataverse File and Image columns — no external blob storage | [ADR-0004](decisions/adr-0004-assets-in-dataverse.md) |
 | Present mode is enforced server-side as well as client-side | [ADR-0005](decisions/adr-0005-present-mode-server-side-enforcement.md) |
 | Power Automate for notifications only — no business logic in flows | [ADR-0006](decisions/adr-0006-power-automate-notifications-only.md) |
-| Contributor-level effort as directly entered minimum hours per person at every maturity; dates, allocation and holiday calendar retired 2026-10-08; CSM derived from `cr6b0_consultantlevel`, contributor `nx_role` retired 2026-10-08 | [ADR-0007](decisions/adr-0007-contributor-effort.md) |
+| Contributor-level effort as directly entered minimum hours per person at every maturity; dates, allocation and holiday calendar retired 2026-10-08; CSM derived from `cr6b0_consultantlevel`, contributor `nx_role` retired; deployed and `nx_role`/`nx_allocationpercent` deleted 2026-10-08 | [ADR-0007](decisions/adr-0007-contributor-effort.md) |
 
 ## Azure Blob Storage transition plan
 
@@ -357,9 +357,11 @@ This plan is based on repository implementation and recorded acceptance evidence
 
 ## Contributor data
 
-The current [schema](../data_model/SchemaV2.md) contains 12 tables after the private upload-session extension. `nx_solutioncontributor` carries each person's minimum hours required (`nx_directhours`) and enforces one row per person through the `nx_solutioncontributorkey` alternate key. Its date and allocation columns are retired: still in Dataverse, not read or written. The native Solution-to-Project N:N links existing delivery evidence without changing Project columns/security. The original 11 tables remain UserOwned; the new upload-session table is organization-owned.
+The current [schema](../data_model/SchemaV2.md) contains 12 tables after the private upload-session extension. `nx_solutioncontributor` carries each person's minimum hours required (`nx_directhours`) and enforces one row per person through the `nx_solutioncontributorkey` alternate key. Its date columns are retired: still in Dataverse (on the unused "Information" form), not read or written; `nx_allocationpercent` and `nx_role` were deleted on 2026-10-08. `nx_effortmode` stays because the plug-in writes Direct on every save. The native Solution-to-Project N:N links existing delivery evidence without changing Project columns/security. The original 11 tables remain UserOwned; the new upload-session table is organization-owned.
 
-Hours are validated by `contributorHours` in `app/src/lib/effort.ts` and by the plug-in `ContributorPolicy`; the total is their sum. Published detail returns a null total, shown as "Incomplete", while any contributor lacks hours, such as demo/production rows saved under the retired calendar model ([ADR-0007](decisions/adr-0007-contributor-effort.md)). Person search is local name/email matching in the submission form, not a live-directory query. Production still requires Dataverse services, child ownership/sharing and validation enforcement; no persistence or deployment is implied by this documentation change.
+Hours are validated by `contributorHours` in `app/src/lib/effort.ts` and by the plug-in `ContributorPolicy`; the total is their sum. Published detail returns a null total, shown as "Incomplete", while any contributor lacks hours, such as demo/production rows saved under the retired calendar model ([ADR-0007](decisions/adr-0007-contributor-effort.md)). Person search is local name/email matching in the submission form, not a live-directory query. Production still requires Dataverse services, child ownership/sharing and validation enforcement.
+
+**Deployment (2026-10-08, approved):** Luis, who holds the signing certificate, deployed from `origin/main` `1c89c2d`: the signed Release plug-in with `blob-plugin --execute` (assembly modified 17:11 UTC; it contains `cr6b0_consultantlevel` and no `nx_role`, `nx_allocationpercent` or `nx_startdate`), then the connected app (17:12 UTC). After the deploy the user deleted `nx_solutioncontributor.nx_role` (no blocking dependencies reported) and `nx_allocationpercent`. Hosted browser verification of the new UI was not recorded. Deleting `nx_startdate`/`nx_enddate` is optional ([Q20](../delivery/decision-log.md)).
 
 ## Code app constraints
 

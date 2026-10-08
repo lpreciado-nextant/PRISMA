@@ -2,7 +2,7 @@
 
 > **Legacy entry point, synchronized with v2.** This file retains the original schema layout but now reflects the current tables and contributor-effort model. It is no longer an unchanged historical snapshot. [SchemaV2.md](SchemaV2.md) remains the authoritative specification for implementation, validation and migration rules.
 >
-> **Status:** Maintained companion to the two-field story model in v2, including live ownership and private SHA-bound upload sessions; story-column retirement deployed; Specialization Area N:N, Client Role and contributor Role synchronized 2026-09-23; contributor dates/allocation retired for direct minimum hours 2026-10-08; contributor Role retired for the consultant directory level 2026-10-08; broader acceptance pending · **Last updated:** 2026-10-08
+> **Status:** Maintained companion to the two-field story model in v2, including live ownership and private SHA-bound upload sessions; story-column retirement deployed; Specialization Area N:N, Client Role and contributor Role synchronized 2026-09-23; contributor dates/allocation retired for direct minimum hours and contributor Role retired for the consultant directory level, deployed 2026-10-08; `nx_role` and `nx_allocationpercent` deleted from Dataverse 2026-10-08; broader acceptance pending · **Last updated:** 2026-10-08
 
 This spec assumes the code app talks to Dataverse via the Web API / Power Platform SDK. Proposed new table names below use an `nx_` publisher prefix; confirm the actual publisher prefix before creating components. The fixed `cr6b0_project` and `cr6b0_consultant` names remain as specified in v2.
 
@@ -113,12 +113,12 @@ Required lookups do not automatically inherit Dataverse security. Configure and 
 | Name *(primary name)* | Text (100) | Yes | Solution/person display label, truncated to 100; not an identity key |
 | Solution | Lookup → `nx_solution` | Yes | Parent offering |
 | Built By | Lookup → `cr6b0_consultant` | Yes | One credited person per row |
-| Role (`nx_role`) | Choice — **local**: CSM / Consultant | No | Retired 2026-10-08; not read or written. The CSM is derived from the person's `cr6b0_consultant.cr6b0_consultantlevel`. Deleted by the user after the new plug-ins are deployed |
-| Effort Mode | Choice: Direct / Calendar | Yes | Written as Direct on every save since 2026-10-08; Calendar only on older rows |
+| Effort Mode | Choice: Direct / Calendar | Yes | Written as Direct on every save since 2026-10-08, so the column stays; Calendar is unused, only on older rows |
 | Direct Hours | Decimal Number (2 decimal places, minimum 0) | At submit/publication | Minimum hours the person needed to work on the solution, at every maturity, including preparation/discovery. Nullable in Draft; zero is valid |
-| Start Date | Date Only | No | Retired 2026-10-08; still in Dataverse, not read or written |
-| End Date | Date Only | No | Retired 2026-10-08; still in Dataverse, not read or written |
-| Allocation (%) | Decimal Number (2 decimal places, 0-100) | No | Retired 2026-10-08; still in Dataverse, not read or written |
+| Start Date | Date Only | No | Retired 2026-10-08; still in Dataverse (on the unused "Information" form), not read or written. Deletion optional |
+| End Date | Date Only | No | Retired 2026-10-08; still in Dataverse (on the unused "Information" form), not read or written. Deletion optional |
+
+Deleted 2026-10-08, after the plug-in deploy: Role (`nx_role`, local choice CSM / Consultant; the CSM is now derived from the person's `cr6b0_consultant.cr6b0_consultantlevel`) and Allocation (%) (`nx_allocationpercent`).
 
 Alternate key: `(Solution, Built By)` prevents duplicate people. Require at least one contributor, each with hours, at submit/publication; drafts may omit rows or leave hours null. Apply the same rules to production writes, not just the UI.
 

@@ -1,17 +1,15 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29, per-solution save counts deployed 2026-10-01; Blob pilot session columns and environment variables specified, not deployed; `nx_solution.nx_reviewedon` created 2026-10-02 but unused; `nx_demoasset.nx_assetpurpose` created 2026-10-06 (ADR-0011); contributor dates/allocation retired in code 2026-10-08 (columns kept, not written; not yet deployed); contributor role `nx_role` retired in code 2026-10-08 for the directory's `cr6b0_consultantlevel` (to be deleted after the plug-in deploy) · **Last updated:** 2026-10-08
+**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29, per-solution save counts deployed 2026-10-01; Blob pilot session columns and environment variables specified, not deployed; `nx_solution.nx_reviewedon` created 2026-10-02 but unused; `nx_demoasset.nx_assetpurpose` created 2026-10-06 (ADR-0011); contributor effort as direct minimum hours and the CSM from the directory's `cr6b0_consultantlevel` deployed 2026-10-08; contributor `nx_role` and `nx_allocationpercent` deleted from Dataverse 2026-10-08; `nx_startdate`/`nx_enddate` retired but still present (blocked by the unused "Information" form; deletion optional) · **Last updated:** 2026-10-08
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `SpecializationArea`, `Industry` and `Technology` are **native N:N**, while `Capability` is a single-valued lookup. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
 
-**Changed 2026-10-08 (code only, no schema change, not yet deployed):** contributor effort is directly entered minimum hours at every maturity ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md)). `nx_solutioncontributor.nx_startdate`, `nx_enddate` and `nx_allocationpercent` are retired: still in Dataverse, no longer read or written by PRISMA. `nx_effortmode` is written as Direct on every save. The code-based US holiday policy below is gone.
-
-**Changed 2026-10-08 (code only, not yet deployed):** `nx_solutioncontributor.nx_role` is retired. PRISMA no longer reads, writes or validates it; the person's level comes from `cr6b0_consultant.cr6b0_consultantlevel`, and a contributor whose level names customer success is shown as the solution's CSM ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level)). The user deletes the column from Dataverse only after the new plug-ins are deployed.
+**Changed 2026-10-08 (deployed; two columns deleted):** contributor effort is directly entered minimum hours at every maturity ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md)), and the person's level comes from `cr6b0_consultant.cr6b0_consultantlevel`: a contributor whose level names customer success is shown as the solution's CSM ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level)). The plug-ins and connected app from `main` `1c89c2d` were deployed on 2026-10-08. After that deploy the user deleted `nx_solutioncontributor.nx_role` (redundant with the directory level; no blocking dependencies were reported) and `nx_allocationpercent` (allocation no longer asked) from Dataverse. `nx_startdate` and `nx_enddate` are retired but still present: PRISMA no longer reads or writes them, and each is still on the unused `nx_solutioncontributor` main form "Information", which blocks deletion. `nx_effortmode` stays and is written as Direct on every save. The code-based US holiday policy below is gone.
 
 **Changed in this round (2026-09-23), read back from Nextant Pulse:**
 1. `nx_specializationarea` moved from a 1:N lookup to a **native N:N** with `nx_solution` (`nx_Solution_nx_SpecializationArea_nx_SpecializationArea`). The `nx_solution.nx_specializationarea` lookup column has been **deleted**. See [Known divergences](#known-divergences-from-this-document): no values were carried over, and the plugins still reference the deleted column.
 2. `nx_solution.nx_clientrole` (**Client Role**) added, a local choice.
-3. `nx_solutioncontributor.nx_role` (**Role**: CSM · Consultant) added, a local choice. Retired in code 2026-10-08.
+3. `nx_solutioncontributor.nx_role` (**Role**: CSM · Consultant) added, a local choice. Retired 2026-10-08 and deleted from Dataverse the same day.
 4. New table **`nx_solutionfavorite`**: per-person favorite Solutions, linked to `nx_solution` and `cr6b0_consultant`. It is UserOwned. The connected app uses it through two Custom APIs, deployed 2026-09-28. See [its section](#nx_solutionfavorite--per-person-favorites).
 
 **Changed in the previous round (2026-09-21):**
@@ -111,15 +109,13 @@ erDiagram
     }
     nx_solutioncontributor {
         guid nx_solutioncontributorid PK
-        text Name
-        lookup Solution FK
-        lookup BuiltBy FK
-        choice Role "retired, unused"
-        choice EffortMode
-        decimal DirectHours
-        date StartDate "retired, unused"
-        date EndDate "retired, unused"
-        decimal AllocationPercent "retired, unused"
+        text nx_contributorname
+        lookup nx_solution FK
+        lookup nx_builtby FK
+        choice nx_effortmode "always Direct"
+        decimal nx_directhours
+        date nx_startdate "retired, unused"
+        date nx_enddate "retired, unused"
     }
     nx_capability {
         guid nx_capabilityid PK
@@ -335,16 +331,14 @@ One row per person credited on a Solution. User/team-owned, with access aligned 
 | Name *(primary name)* | `nx_contributorname` | StringType | Yes | Auto-generated display label from Solution/person; truncate to 100 characters, never use as identity |
 | Solution | `nx_solution` | LookupType → `nx_solution` | Yes | Parent reusable offering |
 | Built By | `nx_builtby` | LookupType → `cr6b0_consultant` | Yes | One credited person; multiple people require multiple rows |
-| Role | `nx_role` | PicklistType (local) | No | **Retired 2026-10-08.** Added 2026-09-23 (CSM · Consultant). Not read or written by PRISMA; the user deletes it after the new plug-ins are deployed |
-| Effort Mode | `nx_effortmode` | PicklistType (local) | Yes | Since 2026-10-08 every save writes Direct (125060000). Calendar (125060001) remains only on rows saved earlier and is not read |
+| Effort Mode | `nx_effortmode` | PicklistType (local) | Yes | Since 2026-10-08 every save writes Direct (125060000); the plug-in writes it on every contributor save, so the column must stay. Calendar (125060001) is unused: it remains only on rows saved earlier and is not read |
 | Direct Hours | `nx_directhours` | DecimalType | At submit/publication | Minimum hours the person needed to work on the solution, including preparation/discovery, at every maturity. Nullable in Draft; finite, nonnegative, at most 1,000,000,000 and two decimals when supplied. Zero is valid; empty is not zero |
-| Start Date | `nx_startdate` | DateTimeType (Date Only) | No | **Retired 2026-10-08.** Still in Dataverse; not read or written by PRISMA. Existing values are left untouched |
+| Start Date | `nx_startdate` | DateTimeType (Date Only) | No | **Retired 2026-10-08.** Still in Dataverse; not read or written by PRISMA. Existing values (5 rows, all test data) are left untouched |
 | End Date | `nx_enddate` | DateTimeType (Date Only) | No | **Retired 2026-10-08.** Still in Dataverse; not read or written by PRISMA. Existing values are left untouched |
-| Allocation (%) | `nx_allocationpercent` | DecimalType | No | **Retired 2026-10-08.** Still in Dataverse; not read or written by PRISMA. Existing values are left untouched |
 
-No `Business Calendar` lookup, calendar tables or holiday policy. Deleting the three retired columns would be a separate, separately approved schema change. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
+No `Business Calendar` lookup, calendar tables or holiday policy. `nx_role` and `nx_allocationpercent` were deleted from Dataverse on 2026-10-08, after the deploy. `nx_startdate` and `nx_enddate` cannot be deleted yet: both are on the `nx_solutioncontributor` main form "Information" (systemform `cba8263f-7eea-45c0-b428-a20e5549566d`), which PRISMA doesn't use. Deleting them is optional: remove both fields from that form, publish, then delete the columns ([Q20](../delivery/decision-log.md)). See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
 
-**CSM (derived, 2026-10-08).** Nothing role-related is stored per contributor. The person's `cr6b0_consultantlevel` is shown read-only in the form, and a contributor whose level names customer success (`isCustomerSuccessLevel`: case-insensitive, with or without the space, e.g. "CustomerSuccessManager") is listed as the solution's CSM in the detail view and named as the CSM in the PowerPoint download; everyone else is a builder. CSM contributors are ordinary rows: they carry hours and count toward the contributor minimum like anyone else. `nx_role` replaced the dropped `nx_leadcsm` idea on 2026-09-23 and is now itself retired as redundant with the directory level. **Delete it only after the new plug-ins are deployed:** the deployed plug-in still selects `nx_role`, so deleting it first breaks draft graph reads, submission review and published detail. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level).
+**CSM (derived, 2026-10-08).** Nothing role-related is stored per contributor. The person's `cr6b0_consultantlevel` is shown read-only in the form, and a contributor whose level names customer success (`isCustomerSuccessLevel`: case-insensitive, with or without the space, e.g. "CustomerSuccessManager") is listed as the solution's CSM in the detail view and named as the CSM in the PowerPoint download; everyone else is a builder. CSM contributors are ordinary rows: they carry hours and count toward the contributor minimum like anyone else. `nx_role` replaced the dropped `nx_leadcsm` idea on 2026-09-23; it was retired as redundant with the directory level and deleted from Dataverse on 2026-10-08, after the plug-ins that no longer select it were deployed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level).
 
 Alternate key: `(Solution, Built By)` enforces one effort record per person per Solution — deployed as `nx_solutioncontributorkey` (`nx_builtby` + `nx_solution`). Require at least one contributor at submit/publication, and hours for every contributor; a 1:N relationship cannot itself enforce a minimum child count. Validation must be enforced on all production writes, not just the UI.
 
@@ -354,7 +348,7 @@ Alternate key: `(Solution, Built By)` enforces one effort record per person per 
 
 Hours are self-reported minimums, not a timesheet, capacity calculation or estimate of deployment lead time. Demo effort is not a production estimate. The app sums loaded contributor data; no Dataverse calculated column or stored total is assumed. See [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md).
 
-**Rows from the calendar model:** Client demo and production contributors saved before 2026-10-08 carry `nx_startdate`, `nx_enddate` and `nx_allocationpercent` but a null `nx_directhours`. They read as incomplete effort (published detail returns a null total) until someone enters minimum hours. They were deliberately not backfilled: calendar hours were estimated capacity, not minimum hours required.
+**Rows from the calendar model:** Client demo and production contributors saved before 2026-10-08 carry `nx_startdate` and `nx_enddate` (their allocation values went with the deleted column) but a null `nx_directhours`. They read as incomplete effort (published detail returns a null total) until someone enters minimum hours. They are dummy test data (confirmed 2026-10-08) and were deliberately not backfilled: calendar hours were estimated capacity, not minimum hours required.
 
 **Migration:** create a contributor row for each former `nx_solution.Built By` value. Hours require explicit confirmation; do not infer them from the old Days/Weeks/Months choice. Keep legacy values during a real migration until backfill is verified, then retire the old lookup/choice and any unused global choice. The PoC's hours are illustrative, not historical work records. No live integration or deployment is authorized by this policy change.
 
@@ -506,13 +500,12 @@ Integers, not labels, are what a write must send. Unknown values must fail expli
 | `nx_solution.nx_publicationstatus` | Global | 125060000 Published · 125060001 Retired · 125060002 Pending review · 125060003 Draft |
 | `nx_solution.nx_reviewoutcome` | Local | 125060000 None · 125060001 Changes requested · 125060002 Approved |
 | `nx_solution.nx_clientrole` | Local | 125060000 Chief of Staff · 125060001 Chief Executive Officer (CEO) · 125060002 Chief Information Officer (CIO) · **125060008** Chief Operating Officer (COO) · **125060009** Chief Financial Officer (CFO) · 125060003 Enterprise Architect · 125060004 Solution Architect · 125060005 Product Owner · 125060006 Project Manager · 125060007 Business Unit Leader · 125060010 Operation Manager · 125060011 IT Manager · 125060012 Director · 125060013 Other |
-| `nx_solutioncontributor.nx_effortmode` | Local | 125060000 direct (written on every save since 2026-10-08) · 125060001 calendar (retired; only on older rows) |
-| `nx_solutioncontributor.nx_role` | Local | 125060000 CSM · 125060001 Consultant (column retired 2026-10-08; not read or written) |
+| `nx_solutioncontributor.nx_effortmode` | Local | 125060000 direct (written on every save since 2026-10-08) · 125060001 calendar (unused; only on older rows) |
 | `nx_demoasset.nx_assetpurpose` | Local | 125060000 Demo video · 125060001 Interactive demo · 125060002 Supporting material |
 | `nx_demoasset.nx_assettype` | Local | 125060000 Self-contained HTML file · 125060001 Video walkthrough only · 125060002 Client-ready one-pager / slide · 125060003 Power BI · 125060004 Desktop app or script · **125060007** Hosted web app (URL) · **125060008** Power Apps |
 | `nx_demorequest.nx_requeststatus` | Local | 125060000 New · 125060001 Acknowledged · 125060002 Scheduled · 125060003 Delivered · 125060004 Declined |
 
-`nx_assettype` is not contiguous: 125060005 and 125060006 are unused. `nx_clientrole` is listed in display order, and COO/CFO (125060008/125060009) sit between CIO and Enterprise Architect. Never derive a choice value from its ordinal position. The live `nx_clientrole` label for Director has a trailing space (`"Director "`), so compare labels trimmed, or better, compare values. The two effort-mode labels are lowercase (`direct`, `calendar`) in Dataverse.
+`nx_assettype` is not contiguous: 125060005 and 125060006 are unused. `nx_clientrole` is listed in display order, and COO/CFO (125060008/125060009) sit between CIO and Enterprise Architect. Never derive a choice value from its ordinal position. The live `nx_clientrole` label for Director has a trailing space (`"Director "`), so compare labels trimmed, or better, compare values. The two effort-mode labels are lowercase (`direct`, `calendar`) in Dataverse. The local `nx_solutioncontributor.nx_role` choice (125060000 CSM · 125060001 Consultant) was deleted with its column on 2026-10-08.
 
 ### Relationship schema names
 
@@ -541,8 +534,9 @@ Reviewed and accepted, not defects:
 - Column lengths in Dataverse are largely 850 (text) and 4000 (multiline); the design lengths above were not applied and are not enforced at the column level.
 - Required levels do not match the Required column above — notably `nx_capability` is `ApplicationRequired` in Dataverse while drafts may leave it empty. `ApplicationRequired` is not enforced on SDK writes, so the draft plugin is unaffected; a model-driven form would be.
 - `cr6b0_consultant` and `cr6b0_project` carry many columns of their own beyond the ones documented above, and `cr6b0_consultant.cr6b0_specializationarea` points to a **different** table of that name, outside this solution. Both are treated as independent, pre-existing tables; the sections above list their identifiers, person links and the columns PRISMA reads, not their full column sets.
-- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` is read and written by connected drafts (deployed 2026-09-28). `nx_solutioncontributor.nx_role` was too until it was retired in code on 2026-10-08. The published catalogue also reads the system `createdon` for "Newest/Oldest first" (2026-09-29).
-- `nx_solutioncontributor.nx_startdate`, `nx_enddate` and `nx_allocationpercent` exist in Dataverse but are retired in code (2026-10-08): PRISMA neither reads nor writes them, and existing values are left in place. Deleting them is a separate, unapproved schema change.
+- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` is read and written by connected drafts (deployed 2026-09-28). `nx_solutioncontributor.nx_role` was too until it was retired and deleted on 2026-10-08. The published catalogue also reads the system `createdon` for "Newest/Oldest first" (2026-09-29).
+- `nx_solutioncontributor.nx_startdate` and `nx_enddate` exist in Dataverse but are retired (deployed 2026-10-08): PRISMA neither reads nor writes them, and existing values are left in place. They stay until someone removes them from the unused "Information" main form; deleting them is optional ([Q20](../delivery/decision-log.md)).
+- The generated connected-app model and schema for `nx_solutioncontributor` still list the deleted `nx_role` and `nx_allocationpercent`. The app never queries that table directly (contributors go through the plug-ins), so this is harmless; regenerate the data source with the Power Apps CLI on the next connected-app change.
 
 **Open after the 2026-09-23 changes (these are defects, not accepted divergences):**
 
@@ -554,7 +548,7 @@ Reviewed and accepted, not defects:
   - The schema name is lowercase (`nx_solutionfavorite`).
   - `nx_name` is optional (length 850).
 - **`nx_solutionfavorite` is only written through `nx_SetFavorite`.** Roles have User-depth Read only; the plugin binds `nx_user` to the caller. The connected app hides the heart when the favorites list doesn't load, for example for an account without a PRISMA role or without a matching active consultant.
-- **`nx_role` retired in code (2026-10-08, not yet deployed).** The role selector is gone; `ContributorInput` and `DraftGraph.cs` no longer select, return, write or validate `nx_role`, and a `roleValue` sent by older clients is accepted and ignored. The currently deployed plug-in still selects it, so the column stays until the new plug-ins are deployed; the user then deletes it. Existing values are ignored.
+- **`nx_role` retired and deleted (2026-10-08).** The role selector is gone; `ContributorInput` and `DraftGraph.cs` no longer select, return, write or validate `nx_role`, and a `roleValue` sent by older clients is accepted and ignored. The plug-ins were deployed from `1c89c2d` first; the user then deleted the column (RetrieveDependenciesForDelete reported no blocking dependencies), together with `nx_allocationpercent`.
 
 ---
 
@@ -613,7 +607,7 @@ Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. Pub
 - `nx_clientrole`: what does it represent (the client stakeholder the solution targets?), is it required at submit, and is it shown in present mode?
 - `nx_solutionfavorite`: should the ranking count favorites, and who sees the ranking? Who cleans up favorites with an empty `nx_user` after a consultant is deleted?
 
-*(Resolved: `SpecializationArea` cardinality — changed to native N:N on 2026-09-23. `Industry` and `Technology` cardinality — settled as native N:N, multi-valued. `Capability` cardinality — settled as 1:N, single-valued. `cr6b0_project` + `Solution`↔`Project` link — confirmed in scope, native N:N, no junction table. `systemuser` lookups replaced by `cr6b0_consultant`. `nx_businesscalendar`/`nx_businesscalendarholiday` — removed from scope. `nx_role` CSM rows — retired 2026-10-08: the CSM is derived from `cr6b0_consultantlevel` and is an ordinary contributor. Contributor dates/allocation — retired 2026-10-08 for direct minimum hours; deleting the columns and entering hours for legacy demo/production rows are tracked in the [decision log](../delivery/decision-log.md).)*
+*(Resolved: `SpecializationArea` cardinality — changed to native N:N on 2026-09-23. `Industry` and `Technology` cardinality — settled as native N:N, multi-valued. `Capability` cardinality — settled as 1:N, single-valued. `cr6b0_project` + `Solution`↔`Project` link — confirmed in scope, native N:N, no junction table. `systemuser` lookups replaced by `cr6b0_consultant`. `nx_businesscalendar`/`nx_businesscalendarholiday` — removed from scope. `nx_role` CSM rows — retired and deleted 2026-10-08: the CSM is derived from `cr6b0_consultantlevel` and is an ordinary contributor. Contributor dates/allocation — retired 2026-10-08 for direct minimum hours; `nx_allocationpercent` deleted 2026-10-08, legacy rows are dummy data (no backfill), and optionally deleting `nx_startdate`/`nx_enddate` is tracked in the [decision log](../delivery/decision-log.md).)*
 
 ---
 
