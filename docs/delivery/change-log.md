@@ -252,7 +252,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| PR-001 External resource / repository links (incl. Marketing Kit) | 🟢 Live | Closed 2026-10-08. The connected Media step stores a link instead of an upload: **URL**, Power Apps, Power BI or desktop arrangements, checked live 2026-09-22 ([Demo assets](../workflows/demo-assets.md)). A Marketing Kit or repository goes in as a URL under "Supporting material" (PR-028). The 2026-10-08 change renames the "Hosted web app (URL)" option to **URL** on screen only; the Dataverse choice is unchanged. This rename is in code and not yet published |
+| PR-001 External resource / repository links (incl. Marketing Kit) | 🟢 Live | Closed 2026-10-08. The connected Media step stores a link instead of an upload: **URL**, Power Apps, Power BI or desktop arrangements, checked live 2026-09-22 ([Demo assets](../workflows/demo-assets.md)). A Marketing Kit or repository goes in as a URL under "Supporting material" (PR-028). The 2026-10-08 change renames the "Hosted web app (URL)" option to **URL** on screen only; the Dataverse choice is unchanged. Rename published with the connected app on 2026-10-08 (`6c19f67`); hosted UI not yet checked |
 | PR-002 Tool URL field | Proposed | High priority |
 | PR-003 Prototype URL field | Proposed | High priority |
 | PR-004 Full-screen demo/prototype view | 🟢 Live | 2026-10-01: Full screen button in every viewer (browser full screen, or the stage expanded over the PRISMA chrome when the Power Apps host forbids it). In Local Play the host granted full screen and the demo filled the monitor. See [Demo assets](../workflows/demo-assets.md#viewer-routes) |
