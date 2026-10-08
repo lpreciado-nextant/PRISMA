@@ -14,7 +14,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 19% — 3 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 29% — 4 Live / 14 |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 33% — 4 Live / 12 (2 Dropped excluded) |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
@@ -231,7 +231,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 29% — 4 Live, 10 Proposed / 14
+**Progress:** 33% — 4 Live, 8 Proposed / 12 (2 Dropped excluded)
 
 ### Feedback
 
@@ -253,8 +253,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Change | Status | Notes / next step |
 |---|---|---|
 | PR-001 External resource / repository links (incl. Marketing Kit) | 🟢 Live | Closed 2026-10-08. The connected Media step stores a link instead of an upload: **URL**, Power Apps, Power BI or desktop arrangements, checked live 2026-09-22 ([Demo assets](../workflows/demo-assets.md)). A Marketing Kit or repository goes in as a URL under "Supporting material" (PR-028). The 2026-10-08 change renames the "Hosted web app (URL)" option to **URL** on screen only; the Dataverse choice is unchanged. Rename published with the connected app on 2026-10-08 (`6c19f67`); hosted UI not yet checked |
-| PR-002 Tool URL field | Proposed | High priority |
-| PR-003 Prototype URL field | Proposed | High priority |
+| PR-002 Tool URL field | Dropped | Closed 2026-10-08 as covered by PR-001: no dedicated field; a tool is added as a **URL** link under "Supporting material", whose hint now invites tools, repositories and marketing kits |
+| PR-003 Prototype URL field | Dropped | Closed 2026-10-08 as covered by PR-001: no dedicated field; a prototype is added as a **URL** link under "Interactive demo", whose hint now invites prototypes |
 | PR-004 Full-screen demo/prototype view | 🟢 Live | 2026-10-01: Full screen button in every viewer (browser full screen, or the stage expanded over the PRISMA chrome when the Power Apps host forbids it). In Local Play the host granted full screen and the demo filled the monitor. See [Demo assets](../workflows/demo-assets.md#viewer-routes) |
 | PR-005 Open demo/prototype in a new tab | 🟢 Live | Every published solution page has **Copy link** (Luis, `e6f4c92` and `7237ea3`, 2026-09-30): a play link carrying `?route=/s/{id}` that opens that solution directly, in a new tab or for a colleague, with the usual sign-in and access checks ([ADR-0003](../architecture/decisions/adr-0003-hash-routing.md)). Hosted demo URLs also keep **Pop out** (new tab) in the viewer |
 | PR-006 Demo modal/popup view | Proposed | Medium priority. Likely redundant with full-screen/new-tab — see open decisions |

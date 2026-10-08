@@ -188,7 +188,7 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
               <input type="file" className="sr-only" aria-label={`Upload ${section.upload.toLowerCase()}`} disabled={locked || full} accept={section.accept} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) addFile(file, section.purpose); }} />
               <Icon name="plus" size={16} />{section.upload}
             </label>
-            {links && <SelectPicker compact label={`Add a link to ${section.title.toLowerCase()}`} value={"" as LinkAssetType | ""} placeholder="Add a link" options={LINK_ASSET_TYPES} getLabel={type => type ? assetTypeLabel(type) : "Add a link"} getButtonLabel={() => "Add a link"} onChange={type => { if (type && !locked && !full) setLinkEditor({ purpose: section.purpose, type }); }} />}
+            {links && <SelectPicker compact label={`Add a link to ${section.title.toLowerCase()}`} value={"" as LinkAssetType | ""} placeholder="Add a link" options={LINK_ASSET_TYPES} getLabel={type => type ? assetTypeLabel(type) : "Add a link"} getButtonLabel={() => "Add a link"} buttonIcon="plus" buttonClassName={`inline-flex min-h-10 items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px] font-semibold outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) ${locked || full ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:brightness-110"}`} onChange={type => { if (type && !locked && !full) setLinkEditor({ purpose: section.purpose, type }); }} />}
           </div>}
         </section>;
       })}
@@ -211,10 +211,10 @@ const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; 
     hint: "Walkthroughs a CSM can play for a client, ideally 2–5 minutes each. Add as many as you need. MP4/WebM up to 500 MB.",
     fileHint: "Walkthroughs a CSM can play for a client, ideally 2–5 minutes each. Add as many as you need. MP4/WebM up to 500 MB." },
   { purpose: "Interactive demo", key: "interactive", title: "Interactive demo", upload: "Upload HTML file", accept: ".html,.htm", links: true,
-    hint: "Something a CSM can click through: a self-contained HTML file (up to 25 MB) or a link to the app, Power Apps or Power BI report.",
+    hint: "Something a CSM can click through: a self-contained HTML file (up to 25 MB), or a link to a prototype, web app, Power Apps app or Power BI report. Feel free to add prototypes here.",
     fileHint: "Something a CSM can click through: a self-contained HTML file, up to 25 MB." },
   { purpose: "Supporting material", key: "supporting", title: "Supporting material", upload: "Upload file", accept: ".pdf,.ppt,.pptx,.mp4,.webm", links: true,
-    hint: "Background for the conversation: slides, one-pagers, PDFs (up to 25 MB), videos that are not client demos, or links such as a marketing kit.",
+    hint: "Background for the conversation: slides, one-pagers, PDFs (up to 25 MB), videos that are not client demos, or links to tools, repositories or a marketing kit. Feel free to add the tools behind the solution here.",
     fileHint: "Background for the conversation: slides, one-pagers, PDFs (up to 25 MB) or videos that are not client demos." },
 ];
 

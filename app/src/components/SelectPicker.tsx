@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
 
-export function SelectPicker<Value extends string>({ label, value, options, onChange, getLabel = (option) => option, placeholder, compact = false, getButtonLabel, getHint }: {
+export function SelectPicker<Value extends string>({ label, value, options, onChange, getLabel = (option) => option, placeholder, compact = false, getButtonLabel, getHint, buttonClassName, buttonIcon }: {
   label: string;
   /** Shown greyed out, like an input placeholder, while no value is chosen. */
   placeholder?: string;
@@ -15,6 +15,10 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
   getButtonLabel?: (value: Value) => string;
   /** Secondary text beside an option, e.g. how many results it leaves. */
   getHint?: (value: Value) => string;
+  /** Replaces the compact toolbar look, e.g. to match a neighbouring action button. */
+  buttonClassName?: string;
+  /** Icon before the button text, e.g. a plus for an "Add …" menu. */
+  buttonIcon?: IconName;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -34,9 +38,9 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
         aria-expanded={open}
         aria-controls={open ? `${id}-list` : undefined}
         aria-activedescendant={open ? `${id}-option-${activeIndex}` : undefined}
-        className={compact
+        className={buttonClassName ?? (compact
           ? "toolbar-control flex h-9 cursor-pointer items-center gap-2 rounded-[10px] px-3 text-left text-[13px] font-semibold outline-none"
-          : "flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-(--glass-edge) bg-transparent px-3.5 py-2.5 text-left text-[15px] text-(--ink) outline-none transition-colors duration-200 focus:border-(--accent)"}
+          : "flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border border-(--glass-edge) bg-transparent px-3.5 py-2.5 text-left text-[15px] text-(--ink) outline-none transition-colors duration-200 focus:border-(--accent)")}
         onClick={() => {
           setActiveIndex(Math.max(0, options.indexOf(value)));
           setOpen(!open);
@@ -70,6 +74,7 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
           }
         }}
       >
+        {buttonIcon && <Icon name={buttonIcon} size={16} className="shrink-0" />}
         {!value && placeholder ? <span className="min-w-0 break-words text-(--ink-3)">{placeholder}</span> : <span className="min-w-0 break-words">{(getButtonLabel ?? getLabel)(value)}</span>}
         <Icon name="chevronDown" size={compact ? 14 : undefined} className="shrink-0" />
       </button>
