@@ -1,13 +1,13 @@
 # Design system
 
-**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 5 shelf, imagery and text-contrast rules; glass rendering budget (refraction removed); collapsible Refine panel on small screens; area-tinted gallery thumbnails; library "Added within" time filter; Demo facet and purpose sections in the Media step and solution page · **Last updated:** 2026-10-06
+**Status:** Living, shared loading states aligned across connected and PoC apps; library page, Top 5 shelf, imagery and text-contrast rules; glass rendering budget (refraction removed); collapsible Refine panel on small screens; area-tinted gallery thumbnails; library "Added within" time filter; Demo facet and purpose sections in the Media step and solution page; welcome screen light-refraction loading · **Last updated:** 2026-10-08
 **Reference implementation:** [`app/src/index.css`](../../app/src/index.css) and the component set in [`app/src/components/`](../../app/src/components/)
 
 The HTML prototype established the visual language; the code app PoC evolved it into the **liquid-glass system** and is the current reference. The production app matches the PoC.
 
 ## Identity
 
-- **Wordmark:** PRISMA, central to the identity. The name stands for **P**rototypes, **R**eferences, **I**nteractive **S**olutions, **M**odels, **A**utomations; the welcome screen spells it out under the wordmark (`PrismaAcronym`), with each initial in the brand lavender.
+- **Wordmark:** PRISMA, central to the identity. The name stands for **P**rototypes, **R**eferences, **I**nteractive **S**olutions, **M**odels, **A**utomations. `PrismaAcronym` can spell it out with each initial in the brand lavender; since 2026-10-08 the welcome screen no longer shows it.
 - **Mark gradient:** `--prism-1` to `--prism-5` (gold, mauve, lavender, blue, teal) are the colours of the PRISMA mark, with deeper stops in the light theme. The Top 3 numerals use their own pastel pair, `--rank-from` (purple) and `--rank-to` (blue).
 - **Brand base:** steel blue `#1C567C` (from the Nextant wordmark).
 - **Per-specialization accents** — each Specialization Area carries its own accent colour, applied to cards, tabs, chips, and generated poster placeholders:
@@ -58,7 +58,7 @@ Light and dark themes are both first-class. Theme logic lives in [`app/src/lib/t
 
 Both apps use [`LoadingState`](../../app/src/components/LoadingState.tsx) and the shared tokens in [`index.css`](../../app/src/index.css):
 
-- **Page:** compact prism with glass facets, a display heading and an indeterminate rail when loading replaces the main content. Keep existing back navigation available. The initial welcome screen remains a separate entry experience: "Welcome to" above a large wordmark and its meaning, then one slim rail and one status line ("Signing you in", "Preparing your catalogue", "Your catalogue is ready"). Begin appears only when the catalogue is ready. Connection steps are not shown to people.
+- **Page:** compact prism with glass facets, a display heading and an indeterminate rail when loading replaces the main content. Keep existing back navigation available. The initial welcome screen (connected app) remains a separate entry experience: the logo on its glass facets, the large wordmark, then "Great solutions. One place.", "Discover what Nextant has built." and **Explore the Library**. A thin purple beam (`--sa-ibo`) is the only loading indicator: it grows from the screen's left edge towards the prism, eases to about 92% and waits there with a breathing tip, and touches the prism only when the catalogue is actually ready. Then the logo glows once and four rays (`--sa-ibo`, `--sa-ai`, `--accent`, `--sa-data`) fan out from the opposite face over a faint spectrum wedge, settling at low intensity. The copy and button fade up as soon as the catalogue is ready, without waiting for the rays. On Explore the rays open wide and fade under the existing entry flash. There is no visible status text; a screen-reader-only live region says "Signing you in", "Preparing your catalogue" / "Catalogue ready" (present mode: "Preparing your presentation" / "Presentation ready"). Present mode uses the same screen. Reduced motion shows the beam waiting near the prism, then beam and rays complete, with no travel or glow. Connection steps are not shown to people.
 - **Media:** small prism and status inside the image or preview bounds. Reserve space and retain viewer controls; do not turn a media wait into a full-page blocker.
 - **Inline:** body-sized status with a short rail for saves, reads, buffering and downloads. Known percentages use the shared `ProgressRail`, also used for uploads. Unknown progress never displays a fabricated percentage.
 

@@ -149,30 +149,32 @@ test("media placeholders stay compact and video buffering preserves playback con
   assert.doesNotMatch(video, /aria-valuenow/);
 });
 
-test("welcome reflects actual connection state and withholds Begin until ready", () => {
+test("welcome reflects actual connection state and withholds Explore until ready", () => {
   const connecting = render(welcome.WelcomeScreen, { authenticated: false, present: false });
-  assert.match(connecting, /Welcome to/);
+  assert.match(connecting, /class="prisma-wordmark welcome-wordmark">PRISMA</);
   assert.match(connecting, /src="\.\/prisma-mark-v2.svg"/);
   assert.match(connecting, /role="status" aria-live="polite" aria-atomic="true"/);
-  // One friendly status line and a slim rail; the old Workspace/Catalogue steps were a debugging aid.
-  assert.match(connecting, /Signing you in/);
-  assert.match(connecting, /class="welcome-track"/);
-  assert.match(connecting, /Prototypes, References, Interactive Solutions, Models, Automations/);
-  assert.doesNotMatch(connecting, /<button|type="checkbox"|aria-valuenow|Dataverse|Loading catalogue|welcome-step/);
+  // The beam is the visible indicator; the status line is for screen readers only.
+  assert.match(connecting, /<p class="sr-only" role="status"[^>]*>Signing you in</);
+  assert.match(connecting, /class="welcome-beam" aria-hidden="true"/);
+  assert.match(connecting, /class="welcome-copy" aria-hidden="true"/);
+  assert.doesNotMatch(connecting, /<button|type="checkbox"|aria-valuenow|Dataverse|Loading catalogue|welcome-step|welcome-track|Welcome to/);
   const connected = render(welcome.WelcomeScreen, { authenticated: true, present: false });
   assert.match(connected, /Preparing your catalogue/);
   assert.doesNotMatch(connected, /Signing you in|welcome-step/);
 });
 
-test("welcome exposes Begin on completion and prevents repeated entry during the flash", () => {
+test("welcome exposes Explore the Library on completion and prevents repeated entry during the flash", () => {
   const props = { authenticated: true, present: false, ready: true, onBegin: noop };
   const html = render(welcome.WelcomeScreen, props);
-  assert.match(html, /Your catalogue is ready/);
+  assert.match(html, /Catalogue ready/);
   assert.match(html, /data-ready="true"/);
-  assert.match(html, /<button[^>]*>Begin /);
+  assert.match(html, /Great solutions\. One place\./);
+  assert.match(html, /Discover what Nextant has built\./);
+  assert.match(html, /<button[^>]*>Explore the Library /);
   assert.doesNotMatch(html, /disabled=""|type="checkbox"|aria-current="step"/);
   assert.match(render(welcome.WelcomeScreen, { ...props, entering: true }), /disabled=""/);
-  assert.match(render(welcome.WelcomeScreen, { ...props, present: true }), /Your presentation is ready/);
+  assert.match(render(welcome.WelcomeScreen, { ...props, present: true }), /Presentation ready/);
 });
 
 test("welcome presentation state stays generic and uses presentation status", () => {

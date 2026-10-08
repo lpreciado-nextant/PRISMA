@@ -14,25 +14,35 @@
 @source "./";
 
 .welcome-screen {
+	--welcome-glow: 55%;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	min-height: calc(100svh - var(--sticky-top) - 2rem);
 	padding: 40px 24px;
+	overflow-x: clip;
 	text-align: center;
 	letter-spacing: 0;
+}
+[data-theme="light"] .welcome-screen { --welcome-glow: 32%; }
+
+/* Logo, incoming beam and refracted rays float together, so the light stays on the prism. */
+.welcome-stage {
+	position: relative;
+	flex-shrink: 0;
+	width: 176px;
+	height: 176px;
+	margin-bottom: 24px;
+	animation: welcome-float 6s ease-in-out infinite;
 }
 
 .welcome-emblem {
 	position: relative;
 	display: grid;
 	place-items: center;
-	flex-shrink: 0;
-	width: 176px;
-	height: 176px;
-	margin-bottom: 32px;
-	animation: welcome-float 6s ease-in-out infinite;
+	width: 100%;
+	height: 100%;
 }
 
 .welcome-facet {
@@ -61,78 +71,137 @@
 	height: 104px;
 	filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--accent-deep) 25%, transparent));
 }
+.welcome-screen[data-arrived="true"] .welcome-mark { animation: welcome-illuminate 1.4s ease-out both; }
 
-.welcome-copy { max-width: 760px; }
-.welcome-overline {
-	margin: 0 0 12px;
-	color: var(--ink-2);
-	font-size: 14px;
+/* Incoming beam: from the screen's left edge to the prism's girdle (93px down, 34px left of centre).
+   --welcome-beam (0-1) is driven by WelcomeScreen; the line grows, it does not slide. */
+.welcome-beam {
+	position: absolute;
+	top: 93px;
+	right: calc(50% + 34px);
+	width: calc(50vw - 34px);
+	height: 2px;
+	margin-top: -1px;
+	pointer-events: none;
 }
+.welcome-beam span {
+	position: relative;
+	display: block;
+	width: calc(var(--welcome-beam, 0) * 100%);
+	height: 100%;
+	border-radius: 2px;
+	background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--sa-ibo) 70%, transparent) 30%, var(--sa-ibo));
+	box-shadow: 0 0 10px color-mix(in srgb, var(--sa-ibo) var(--welcome-glow), transparent);
+}
+/* Leading tip: a little brighter, and breathing while the catalogue is still loading. */
+.welcome-beam span::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	right: -4px;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	transform: translateY(-50%);
+	background: radial-gradient(circle, color-mix(in srgb, var(--sa-ibo) 30%, #fff), var(--sa-ibo) 45%, transparent 72%);
+	box-shadow: 0 0 14px 2px color-mix(in srgb, var(--sa-ibo) var(--welcome-glow), transparent);
+	animation: welcome-tip 1.6s ease-in-out infinite;
+}
+.welcome-screen[data-arrived="true"] .welcome-beam span::after { animation: welcome-tip-out 600ms ease-out both; }
 
-.welcome-copy h1 {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
+/* Refracted rays leave the opposite face of the prism and fan out in the brand colours. */
+.welcome-rays {
+	position: absolute;
+	top: 93px;
+	left: calc(50% + 34px);
+	width: min(44vw, 560px);
+	height: 0;
+	pointer-events: none;
+}
+.welcome-rays span {
+	position: absolute;
+	top: -1px;
+	left: 0;
+	width: 100%;
+	height: 2px;
+	border-radius: 2px;
+	transform-origin: 0 50%;
+	transform: rotate(var(--ray-angle)) scaleX(0);
+	opacity: 0;
+	background: linear-gradient(90deg, var(--ray-color), color-mix(in srgb, var(--ray-color) 50%, transparent) 55%, transparent);
+	box-shadow: 0 0 8px color-mix(in srgb, var(--ray-color) var(--welcome-glow), transparent);
+}
+.welcome-rays span:nth-child(2) { --ray-angle: -15deg; --ray-color: var(--sa-ibo); }
+.welcome-rays span:nth-child(3) { --ray-angle: -5deg; --ray-color: var(--sa-ai); }
+.welcome-rays span:nth-child(4) { --ray-angle: 5deg; --ray-color: var(--accent); }
+.welcome-rays span:nth-child(5) { --ray-angle: 15deg; --ray-color: var(--sa-data); }
+/* A faint spectrum wedge behind the rays. */
+.welcome-rays .welcome-fan {
+	--ray-angle: 0deg;
+	top: -150px;
+	height: 300px;
+	border-radius: 0;
+	clip-path: polygon(0 50%, 100% 15%, 100% 85%);
+	background: linear-gradient(180deg, var(--sa-ibo), var(--sa-ai) 35%, var(--accent) 65%, var(--sa-data));
+	box-shadow: none;
+	filter: blur(14px);
+	mask-image: linear-gradient(90deg, #000 20%, transparent);
+}
+.welcome-screen[data-arrived="true"] .welcome-rays span { animation: welcome-ray 1.6s cubic-bezier(.2, .7, .2, 1) both; }
+.welcome-screen[data-arrived="true"] .welcome-rays .welcome-fan { animation-name: welcome-fan; }
+.welcome-screen[data-arrived="true"] .welcome-rays span:nth-child(3),
+.welcome-screen[data-arrived="true"] .welcome-rays span:nth-child(4) { animation-delay: 60ms; }
+.welcome-screen[data-arrived="true"] .welcome-rays span:nth-child(2),
+.welcome-screen[data-arrived="true"] .welcome-rays span:nth-child(5) { animation-delay: 120ms; }
+/* Entering the library: the rays open wide and fade under the flash. */
+.welcome-screen[data-entering="true"] .welcome-rays span { animation: welcome-ray-out 700ms cubic-bezier(.2, .7, .2, 1) both; }
+.welcome-screen[data-entering="true"] .welcome-rays .welcome-fan { animation-name: welcome-fan-out; }
+
+.welcome-title {
 	line-height: 1;
 	letter-spacing: 0;
 	overflow-wrap: anywhere;
 }
 
-.welcome-hello {
-	font-size: clamp(20px, 2.4vw, 26px);
-	font-weight: 500;
-	color: var(--ink-2);
-}
-
 /* The wordmark is the hero of the entry screen. */
-.welcome-copy .welcome-wordmark {
+.welcome-title .welcome-wordmark {
 	display: inline-block;
-	margin-top: 6px;
 	font-size: clamp(3.6rem, 10vw, 6.75rem);
 	letter-spacing: -0.04em;
 }
 
-.welcome-acronym {
-	justify-content: center;
-	margin-top: 18px;
+/* Copy keeps its space while loading, so nothing jumps when it fades up. */
+.welcome-copy {
+	max-width: 760px;
+	margin-top: 20px;
+	opacity: 0;
+	transform: translateY(10px);
+	transition: opacity 600ms ease-out, transform 600ms ease-out;
 }
-
-/* A single slim rail and one friendly status line, instead of connection steps. */
-.welcome-loading {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 14px;
-	width: min(100%, 260px);
-	margin-top: 40px;
-}
-
-.welcome-status {
-	min-height: 24px;
+.welcome-screen[data-ready="true"] .welcome-copy { opacity: 1; transform: none; }
+.welcome-headline {
 	margin: 0;
-	font-size: 15.5px;
-	color: var(--ink-2);
+	font-family: var(--font-display);
+	font-size: clamp(22px, 2.8vw, 30px);
+	font-weight: 600;
+	color: var(--ink);
 }
-
-.welcome-track { width: 100%; height: 3px; border-radius: 3px; background: var(--glass-edge); overflow: hidden; }
-.welcome-track span {
-	display: block;
-	width: 40%;
-	height: 100%;
-	background: linear-gradient(90deg, transparent, var(--accent), var(--sa-data), transparent);
-	animation: welcome-travel 2.8s ease-in-out infinite;
+.welcome-subtitle {
+	margin: 8px 0 0;
+	font-size: 16.5px;
+	color: var(--ink-2);
 }
 
 .welcome-action {
 	min-height: 48px;
-	margin-top: 24px;
+	margin-top: 32px;
 }
 
 .welcome-begin {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 16px;
+	gap: 14px;
 	min-width: 156px;
 	min-height: 48px;
 	padding: 10px 24px;
@@ -144,12 +213,16 @@
 	font-weight: 600;
 	color: var(--ink);
 	cursor: pointer;
+	animation: welcome-rise 600ms 120ms ease-out both;
+	transition: background-color 200ms ease, box-shadow 200ms ease;
 }
-
-.welcome-begin:hover { background: color-mix(in srgb, var(--accent) 28%, var(--glass-bg-2)); }
+.welcome-begin svg { transition: transform 200ms ease; }
+.welcome-begin:hover:not(:disabled) {
+	background: color-mix(in srgb, var(--accent) 28%, var(--glass-bg-2));
+	box-shadow: 0 0 22px color-mix(in srgb, var(--sa-ibo) 30%, transparent);
+}
+.welcome-begin:hover:not(:disabled) svg { transform: translateX(3px); }
 .welcome-begin:disabled { cursor: default; }
-.welcome-screen[data-ready="true"] .welcome-loading { margin-top: 24px; }
-.welcome-screen[data-ready="true"] .welcome-track { display: none; }
 
 .welcome-flash {
 	position: fixed;
@@ -168,16 +241,48 @@
 }
 
 @keyframes welcome-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-@keyframes welcome-travel { from { transform: translateX(-100%); } to { transform: translateX(350%); } }
+@keyframes welcome-tip { 0%, 100% { opacity: .75; transform: translateY(-50%) scale(.85); } 50% { opacity: 1; transform: translateY(-50%) scale(1.15); } }
+@keyframes welcome-tip-out { to { opacity: 0; transform: translateY(-50%) scale(1.6); } }
+@keyframes welcome-illuminate {
+	0% { filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--accent-deep) 25%, transparent)); }
+	25% { filter: drop-shadow(0 0 22px color-mix(in srgb, var(--sa-ibo) 70%, transparent)) brightness(1.12); }
+	100% { filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--accent-deep) 25%, transparent)); }
+}
+@keyframes welcome-ray {
+	0% { opacity: 0; transform: rotate(var(--ray-angle)) scaleX(0); }
+	30% { opacity: 1; }
+	100% { opacity: .55; transform: rotate(var(--ray-angle)) scaleX(1); }
+}
+@keyframes welcome-fan {
+	0% { opacity: 0; transform: scaleX(0); }
+	30% { opacity: .22; }
+	100% { opacity: .1; transform: scaleX(1); }
+}
+@keyframes welcome-ray-out {
+	from { opacity: .55; transform: rotate(var(--ray-angle)) scaleX(1); }
+	to { opacity: 0; transform: rotate(calc(var(--ray-angle) * 1.8)) scaleX(1.5); }
+}
+@keyframes welcome-fan-out {
+	from { opacity: .1; transform: scaleX(1); }
+	to { opacity: 0; transform: scaleX(1.5) scaleY(1.6); }
+}
+@keyframes welcome-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 @media (max-width: 480px) {
 	.welcome-screen { padding: 32px 20px; }
-	.welcome-copy h1 { font-size: 28px; }
-	.welcome-emblem { margin-bottom: 24px; }
+	.welcome-stage { margin-bottom: 16px; }
 }
 
+/* Reduced motion: no travel, glow or fan-out. The beam waits near the prism while loading,
+   then the beam and rays are shown complete. */
 @media (prefers-reduced-motion: reduce) {
-	.welcome-emblem, .welcome-track span { animation: none; }
-	.welcome-track span { width: 100%; }
+	.welcome-stage, .welcome-beam span::after, .welcome-begin { animation: none; }
+	.welcome-copy, .welcome-begin, .welcome-begin svg { transition: none; transform: none; }
+	.welcome-screen[data-arrived="true"] .welcome-mark { animation: none; }
+	.welcome-screen[data-arrived="true"] .welcome-beam span::after { animation: none; opacity: 0; }
+	.welcome-screen[data-arrived="true"] .welcome-rays span,
+	.welcome-screen[data-entering="true"] .welcome-rays span { animation: none; transition: none; opacity: .55; transform: rotate(var(--ray-angle)); }
+	.welcome-screen[data-arrived="true"] .welcome-rays .welcome-fan,
+	.welcome-screen[data-entering="true"] .welcome-rays .welcome-fan { opacity: .1; transform: none; }
 	.welcome-flash { display: none; animation: none; }
 }

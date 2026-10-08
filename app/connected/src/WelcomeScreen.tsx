@@ -1,15 +1,53 @@
-import { type PointerEvent, useRef } from "react";
+import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
-import { PrismaAcronym } from "../../src/components/PrismaAcronym";
+
+// Loading only reports "loading" or "ready", so the beam eases towards 92% of the way and waits there;
+// it touches the prism, and the rays fan out, only once the catalogue is actually ready.
+const HOLD = 0.92;
+const APPROACH_MS = 1200;
+const ARRIVE_MS = 380;
 
 export function WelcomeScreen({ authenticated, present, ready = false, entering = false, onBegin }: {
   authenticated: boolean; present: boolean; ready?: boolean; entering?: boolean; onBegin?: () => void;
 }) {
-  // One friendly line for people; the old Workspace/Catalogue steps were a debugging aid.
-  const status = ready ? (present ? "Your presentation is ready" : "Your catalogue is ready")
+  // No visible status text: the beam is the indicator, and this line keeps it announced.
+  const status = ready ? (present ? "Presentation ready" : "Catalogue ready")
     : !authenticated ? "Signing you in" : present ? "Preparing your presentation" : "Preparing your catalogue";
   const facetRef = useRef<HTMLDivElement>(null);
+  const beamRef = useRef<HTMLDivElement>(null);
   const frame = useRef(0);
+  const beam = useRef({ start: 0, progress: 0 });
+  const [arrived, setArrived] = useState(false);
+
+  useEffect(() => {
+    const line = beamRef.current;
+    if (!line) return;
+    const draw = (value: number) => { beam.current.progress = value; line.style.setProperty("--welcome-beam", value.toFixed(4)); };
+    let id = 0;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      // No travel: the beam waits near the prism, then shows complete with the rays.
+      draw(ready ? 1 : HOLD);
+      if (ready) id = requestAnimationFrame(() => setArrived(true));
+      return () => cancelAnimationFrame(id);
+    }
+    const now = performance.now();
+    if (!beam.current.start) beam.current.start = now;
+    const from = beam.current.progress;
+    const step = (time: number) => {
+      if (!ready) {
+        draw(HOLD * (1 - Math.exp(-(time - beam.current.start) / APPROACH_MS)));
+        id = requestAnimationFrame(step);
+        return;
+      }
+      const t = Math.min(1, (time - now) / ARRIVE_MS);
+      draw(from + (1 - from) * (1 - (1 - t) ** 3));
+      if (t < 1) id = requestAnimationFrame(step);
+      else setArrived(true);
+    };
+    id = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(id);
+  }, [ready]);
+
   function moveHighlight(event: PointerEvent<HTMLElement>) {
     if (event.pointerType !== "mouse" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const section = event.currentTarget;
@@ -28,24 +66,25 @@ export function WelcomeScreen({ authenticated, present, ready = false, entering 
     facetRef.current?.style.removeProperty("--welcome-x");
     facetRef.current?.style.removeProperty("--welcome-y");
   }
-  return <section className="welcome-screen" data-ready={ready} aria-labelledby="welcome-title" onPointerMove={moveHighlight} onPointerLeave={resetHighlight}>
-    <div className="welcome-emblem" aria-hidden="true">
-      <div className="welcome-facet welcome-facet-back glass glass-lite" />
-      <div ref={facetRef} className="welcome-facet welcome-facet-front glass glass-lite" />
-      <img className="welcome-mark" src="./prisma-mark-v2.svg" alt="" width="104" height="104" />
+  return <section className="welcome-screen" data-ready={ready} data-arrived={arrived} data-entering={entering} aria-labelledby="welcome-title" onPointerMove={moveHighlight} onPointerLeave={resetHighlight}>
+    <div className="welcome-stage">
+      <div ref={beamRef} className="welcome-beam" aria-hidden="true"><span /></div>
+      <div className="welcome-rays" aria-hidden="true"><span className="welcome-fan" /><span /><span /><span /><span /></div>
+      <div className="welcome-emblem" aria-hidden="true">
+        <div className="welcome-facet welcome-facet-back glass glass-lite" />
+        <div ref={facetRef} className="welcome-facet welcome-facet-front glass glass-lite" />
+        <img className="welcome-mark" src="./prisma-mark-v2.svg" alt="" width="104" height="104" />
+      </div>
     </div>
-    <div className="welcome-copy">
-      <p className="welcome-overline">Nextant's solution library</p>
-      <h1 id="welcome-title"><span className="welcome-hello">Welcome to</span> <span className="prisma-wordmark welcome-wordmark">PRISMA</span></h1>
-      <PrismaAcronym className="welcome-acronym" />
+    <h1 id="welcome-title" className="welcome-title"><span className="prisma-wordmark welcome-wordmark">PRISMA</span></h1>
+    <div className="welcome-copy" aria-hidden={!ready}>
+      <p className="welcome-headline">Great solutions. One place.</p>
+      <p className="welcome-subtitle">Discover what Nextant has built.</p>
     </div>
-    <div className="welcome-loading">
-      <div className="welcome-track" aria-hidden="true"><span /></div>
-      <p className="welcome-status" role="status" aria-live="polite" aria-atomic="true">{status}{!ready && <span aria-hidden="true">...</span>}</p>
-    </div>
+    <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{status}</p>
     <div className="welcome-action">
       {ready && <button type="button" className="welcome-begin glass" disabled={entering} onClick={onBegin}>
-        Begin <Icon name="arrowRight" size={18} />
+        Explore the Library <Icon name="arrowRight" size={18} />
       </button>}
     </div>
   </section>;
