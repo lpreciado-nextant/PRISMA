@@ -2,6 +2,8 @@ import type { AssetType } from "../types.ts";
 
 export const LINK_ASSET_TYPES = ["Hosted web app (URL)", "Power Apps", "Power BI", "Desktop app or script"] as const satisfies readonly AssetType[];
 export type LinkAssetType = typeof LINK_ASSET_TYPES[number];
+/** Display name for an asset type; the stored Dataverse choice label stays unchanged. */
+export const assetTypeLabel = (type: string) => type === "Hosted web app (URL)" ? "URL" : type;
 export type LinkedAssetInput = { name: string; assetType: LinkAssetType; externalUrl: string; allowsEmbedding: boolean; embedHint: string };
 
 export function validateLinkedAsset(input: LinkedAssetInput): LinkedAssetInput {

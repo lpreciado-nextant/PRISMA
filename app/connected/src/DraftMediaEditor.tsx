@@ -13,7 +13,7 @@ import { imageDataUrl, mediaRequest, saveMediaCaptions, saveMediaOrder, saveMedi
 import { defaultPurpose, type AssetPurpose } from "../../src/lib/assetPurpose";
 import type { SavedDraft } from "./drafts";
 import { mediaAsset, saveLinkedAsset } from "./workflow";
-import type { LinkedAssetInput } from "../../src/lib/linkedAssets";
+import { assetTypeLabel, type LinkedAssetInput } from "../../src/lib/linkedAssets";
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px] disabled:opacity-50";
 
@@ -255,7 +255,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
     const link = item.linkedAsset;
     const embedded = link.assetType === "Hosted web app (URL)" && link.allowsEmbedding;
     const content = embedded ? <iframe title={link.name} src={link.externalUrl} sandbox="allow-scripts allow-forms allow-popups" referrerPolicy="no-referrer" className="h-full min-h-[360px] w-full border-0 bg-white" />
-      : <div className="grid h-full min-h-[360px] place-items-center p-6 text-center"><div><p className="eyebrow">{link.assetType}</p><h2 className="mt-3 text-[22px] font-semibold">{link.name}</h2><p className="mx-auto mt-3 max-w-[48ch] whitespace-pre-wrap break-words text-[15px] text-(--ink-2)">{link.embedHint || "Open the application in a new tab."}</p>{link.externalUrl && <a className={`${button} mt-6`} href={link.externalUrl} target="_blank" rel="noopener noreferrer"><Icon name="external" />Open in new tab</a>}{!link.externalUrl && <p className="mt-4 text-[13px] text-(--ink-3)">No demo request has been sent.</p>}</div></div>;
+      : <div className="grid h-full min-h-[360px] place-items-center p-6 text-center"><div><p className="eyebrow">{assetTypeLabel(link.assetType)}</p><h2 className="mt-3 text-[22px] font-semibold">{link.name}</h2><p className="mx-auto mt-3 max-w-[48ch] whitespace-pre-wrap break-words text-[15px] text-(--ink-2)">{link.embedHint || "Open the application in a new tab."}</p>{link.externalUrl && <a className={`${button} mt-6`} href={link.externalUrl} target="_blank" rel="noopener noreferrer"><Icon name="external" />Open in new tab</a>}{!link.externalUrl && <p className="mt-4 text-[13px] text-(--ink-3)">No demo request has been sent.</p>}</div></div>;
     if (viewerTitle) return <ViewerFrame name={viewerTitle} kind={link.assetType} onClose={onClose} externalUrl={link.externalUrl || undefined} hint={embedded ? link.embedHint : undefined}>{content}</ViewerFrame>;
     return <div className="mt-6 border-t border-(--glass-edge) pt-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="min-w-0 flex-1 break-words text-[18px] font-semibold">{link.name}</h3>{embedded && <a className={button} href={link.externalUrl} target="_blank" rel="noopener noreferrer"><Icon name="external" />Open in new tab</a>}<button className={button} onClick={onClose} aria-label="Close preview"><Icon name="close" /></button></div>{embedded && link.embedHint && <p className="mb-3 break-words text-[13px] text-(--ink-2)">{link.embedHint}</p>}{content}</div>;
   }

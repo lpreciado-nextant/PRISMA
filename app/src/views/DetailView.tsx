@@ -8,6 +8,7 @@ import { assetPurpose, type AssetPurpose } from "../lib/assetPurpose";
 import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
+import { assetTypeLabel } from "../lib/linkedAssets";
 import { isCustomerSuccessLevel } from "../lib/consultantLevel";
 import { DemoStage } from "../components/DemoStage";
 import { solutionAreas } from "../lib/areas";
@@ -430,7 +431,7 @@ function AssetRow({ solution, asset, basePath, onOpen }: { solution: Solution; a
           {asset.name}
         </span>
         <span className="block text-[12.5px]" style={{ color: "var(--ink-3)" }}>
-          {asset.assetType}
+          {assetTypeLabel(asset.assetType)}
           {behaviour.note ? ` · ${behaviour.note}` : ""}
         </span>
       </span>
