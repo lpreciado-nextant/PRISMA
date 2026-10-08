@@ -9,7 +9,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 90% — 4 Live, 1 In code / 5 |
+| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 19% — 3 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
@@ -68,7 +68,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-08 — Working session: contributor effort as minimum hours required
 
-**Progress:** 90% — 4 Live, 1 In code / 5
+**Progress:** 100% — 5 Live / 5
 
 ### Feedback
 
@@ -85,7 +85,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Published detail shows "Incomplete" effort instead of failing when a contributor has no hours | 🟢 Live | `nx_GetPublishedDetail` returns a null `totalHours`. Affects Client demo/production rows saved under the calendar model (dummy data); not backfilled, since calendar hours were estimated capacity, not minimum hours required. Deployed with the plug-ins 2026-10-08 |
 | Contributor Role picker removed; the person's directory level is shown read-only and the CSM is derived from it | 🟢 Live | Submit/draft forms show **Level** (`cr6b0_consultantlevel`, "Not recorded in the consultant directory" when empty). A contributor whose level names customer success (`isCustomerSuccessLevel`) is listed as CSM in detail and passed as CSM to the PowerPoint download, and left out of PoC card builder names; builders show "name · level". `CONTRIBUTOR_ROLES` and `ContributorRole` removed; mock people carry illustrative levels. Connected cards (`CatalogueApi`) unchanged. [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level). Deployed 2026-10-08 from `main` `1c89c2d` by Luis: signed plug-in 17:11 UTC, then the connected app 17:12 UTC; hosted UI check not recorded |
 | `nx_solutioncontributor.nx_role` retired in the plug-ins; published detail returns each credit's `level` | 🟢 Live | `ContributorInput`/`DraftGraph` no longer read, write or validate `nx_role`; `roleValue` from older clients is ignored and no longer returned. `nx_GetPublishedDetail` returns `level` (omitted in present mode). Plug-ins deployed 2026-10-08 17:11 UTC (`1c89c2d`; the deployed assembly no longer references `nx_role`), then the connected app; the user then deleted `nx_role` from Dataverse (no blocking dependencies reported) |
-| "What the solution does" and "Business value" required to submit | In code | Both labels carry the required asterisk (were "(optional)"); the PoC and connected forms need them to continue past **Define the solution** and to submit; the librarian checklist gains "What it does and business value"; `ReviewPolicy.Complete` rejects submit/approve without them, because Dataverse Business Required (`nx_whatitdoes`, `nx_businessvalue`, set by the user 2026-10-08) is enforced only by its own forms. Drafts still save without them. Needs a plug-in deploy (signing certificate: Luis), then the connected app |
+| "What the solution does" and "Business value" required to submit | 🟢 Live | Both labels carry the required asterisk (were "(optional)"); the PoC and connected forms need them to continue past **Define the solution** and to submit; the librarian checklist gains "What it does and business value"; `ReviewPolicy.Complete` rejects submit/approve without them, because Dataverse Business Required (`nx_whatitdoes`, `nx_businessvalue`, set by the user 2026-10-08) is enforced only by its own forms. Drafts still save without them. `5eb7bfa`: signed plug-in pushed by Luis (assembly updated 2026-10-08 18:12 UTC, contains the new submit check), then the connected app published at 18:13 UTC; hosted UI not yet checked |
 
 ### Open decisions
 
