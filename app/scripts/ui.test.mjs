@@ -225,7 +225,7 @@ test("story section contains only the two narrative fields in both adapters", as
   assert.match(html, /Business value/);
   assert.equal((html.match(/<textarea/g) ?? []).length, 2);
   // Both are Business Required in Dataverse (nx_whatitdoes, nx_businessvalue): each label carries the required mark.
-  assert.equal((html.match(/(required)/g) ?? []).length, 2);
+  assert.equal((html.match(/\(required\)/g) ?? []).length, 2);
   assert.doesNotMatch(html, /(optional)|Optional/);
   const { readFile } = await import("node:fs/promises");
   for (const path of ["../src/views/SubmitView.tsx", "../connected/src/DraftsView.tsx"]) {
@@ -261,8 +261,10 @@ test("required and optional fields are marked the same way everywhere, with one 
   assert.match(render(form.Field, { label: "What it does", optional: true, children: createElement("input") }), /What it does<span[^>]*>\(optional\)<\/span>/);
   assert.doesNotMatch(render(form.Field, { label: "Plain", children: createElement("input") }), /required|optional/);
   // The legend explains the asterisk on steps with fields, not on the safety gate or the final review.
-  assert.match(render(form.StepShell, { title: "Tag it" }), /Required to submit for review\. To save a draft, only the solution name is needed\./);
-  for (const title of ["Before you start", "Review & submit"]) assert.doesNotMatch(render(form.StepShell, { title }), /Required to submit/);
+  const legend = render(form.StepShell, { title: "Tag it" });
+  assert.match(legend, /\*<\/span> Required for review/);
+  assert.match(legend, /Only the solution name is needed to save a draft\./);
+  for (const title of ["Before you start", "Review & submit"]) assert.doesNotMatch(render(form.StepShell, { title }), /Required for review|save a draft/);
   assert.match(render(form.StatusField, { status: "a", statuses: [{ value: "a", label: "Idea" }], onStatus: noop }), /Status<span aria-hidden="true"/);
   assert.match(render(form.SubmissionSafety, { accepted: false, onChange: noop }), /unauthorized information\.<span aria-hidden="true"[^>]*> \*/);
 });
@@ -300,7 +302,7 @@ test("safety and contributor rows preserve baseline copy and accessible field st
 });
 
 test("media files demos, interactive demos and supporting material in their own sections", () => {
-  const props = { onRemoveThumbnail: noop, thumbnailUpload: "Thumbnail upload", images: [{ id: "image", caption: "Overview", preview: createElement("img", { src: "data:image/png;base64,AA==", alt: "Overview" }) }], imageUpload: "Image upload", onCaption: noop, onRemoveImage: noop, onAttachment: noop, onRemoveAttachment: noop,
+  const props = { capabilities: [], onRemoveThumbnail: noop, thumbnailUpload: "Thumbnail upload", images: [{ id: "image", caption: "Overview", preview: createElement("img", { src: "data:image/png;base64,AA==", alt: "Overview" }) }], imageUpload: "Image upload", onCaption: noop, onRemoveImage: noop, onAttachment: noop, onRemoveAttachment: noop,
     attachments: [{ id: "video", name: "walkthrough.mp4", purpose: "Demo video" }, { id: "html", name: "demo.html", purpose: "Interactive demo" }, { id: "deck", name: "deck.pdf", purpose: "Supporting material" }] };
   const html = render(form.SubmissionMedia, props);
   assert.match(html, /Detail screenshots · 1\/6/);
@@ -343,7 +345,7 @@ test("linked asset editor separates URLs, embedding and desktop arrangements", (
 });
 
 test("media reordering exposes drag handles and bounded keyboard actions", () => {
-  const props = { onRemoveThumbnail: noop, thumbnailUpload: null, images: [{ id: "first", caption: "", preview: "First" }, { id: "second", caption: "", preview: "Second" }], imageUpload: null, onCaption: noop, onRemoveImage: noop, format: "Self-contained HTML file", onFormat: noop, onAttachment: noop, attachments: [], onRemoveAttachment: noop, onReorderImages: noop };
+  const props = { capabilities: [], onRemoveThumbnail: noop, thumbnailUpload: null, images: [{ id: "first", caption: "", preview: "First" }, { id: "second", caption: "", preview: "Second" }], imageUpload: null, onCaption: noop, onRemoveImage: noop, format: "Self-contained HTML file", onFormat: noop, onAttachment: noop, attachments: [], onRemoveAttachment: noop, onReorderImages: noop };
   const html = render(form.SubmissionMedia, props);
   assert.match(html, /draggable="true"/);
   assert.match(html, /aria-label="Reorder Screenshot 1"/);

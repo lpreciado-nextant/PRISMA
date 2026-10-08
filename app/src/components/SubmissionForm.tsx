@@ -2,6 +2,7 @@ import { useContext, useEffect, useId, useRef, useState, type ReactNode } from "
 import { Icon, type IconName } from "./Icon";
 import { SectionCardsContext } from "./sectionCards";
 import { OptionalMark, RequiredLegend, RequiredMark } from "./RequiredMark";
+import { Notice } from "./Notice";
 import { LoadingState, ProgressRail } from "./LoadingState";
 import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
@@ -56,13 +57,15 @@ export function SubmissionSteps({ step, onStep, disabled = false, steps = SUBMIS
 /** Steps with fields to fill explain the required marker; the safety gate and the final review have none. */
 const NO_FIELDS = new Set(["Before you start", "Review & submit"]);
 
-export function StepShell({ title, lede, children }: { title: string; lede?: string; children: ReactNode }) {
+/** `notices` sit above the step title: guidance to read before the step itself. */
+export function StepShell({ title, lede, notices, children }: { title: string; lede?: string; notices?: ReactNode; children: ReactNode }) {
   const cards = useContext(SectionCardsContext);
   const introduction = lede ?? STEP_INTRODUCTIONS[title];
   const meta = SECTION_META[title];
   const content = <>{!NO_FIELDS.has(title) && <RequiredLegend />}{children}</>;
-  if (cards && meta) return <SectionCard icon={meta.icon} title={title} description={introduction} visibility={meta.visibility}>{content}</SectionCard>;
-  return <section><h2 className="text-[20px] font-semibold">{title}</h2>{introduction && <p className="mt-1 text-[14px] text-(--ink-3)">{introduction}</p>}<div className="mt-6 flex flex-col gap-5">{content}</div></section>;
+  const top = notices && <div className="mb-6 grid gap-1.5">{notices}</div>;
+  if (cards && meta) return <>{top}<SectionCard icon={meta.icon} title={title} description={introduction} visibility={meta.visibility}>{content}</SectionCard></>;
+  return <section>{top}<h2 className="text-[20px] font-semibold">{title}</h2>{introduction && <p className="mt-1 text-[14px] text-(--ink-3)">{introduction}</p>}<div className="mt-6 flex flex-col gap-5">{content}</div></section>;
 }
 
 export function SubmissionFooter({ step, stepCount = SUBMISSION_STEPS.length, nextLabel = "Continue", busy = false, locked = false, canSave, canContinue, canSubmit, onBack, onSave, onContinue, onSubmit }: {
@@ -116,16 +119,19 @@ export function ImageUploadZone({ line, sub, multiple, disabled, onFiles, childr
   </label>;
 }
 
-/** Compact notice at the top of the Media step: tinted border and background, icon and a short heading. */
-function MediaNotice({ icon, tone, title, children }: { icon: IconName; tone: string; title: string; children: ReactNode }) {
-  return <div className="flex items-start gap-3 rounded-xl border px-4 py-3" style={{ borderColor: `color-mix(in srgb, ${tone} 35%, var(--glass-edge))`, background: `color-mix(in srgb, ${tone} 8%, transparent)` }}>
-    <span className="mt-0.5 shrink-0" style={{ color: tone }}><Icon name={icon} size={18} /></span>
-    <div className="min-w-0 text-[13.5px] leading-snug"><p className="font-semibold text-(--ink)">{title}</p><p className="mt-0.5 text-(--ink-2)">{children}</p></div>
-  </div>;
+/** What to show, by capability: AI and data get their own tip; anything else gets the general one. */
+function MediaTips({ capabilities }: { capabilities: string[] }) {
+  const isAgent = capabilities.some(value => /ai|agent/i.test(value));
+  const isData = capabilities.some(value => /data|analytics/i.test(value));
+  return <>
+    {isAgent && <Notice icon="sparkle" tone="var(--sa-ibo)" title="AI & agents">Show a user request, the agent's response and the outcome.</Notice>}
+    {isData && <Notice icon="database" tone="var(--prism-4)" title="Data & analytics">Show a dashboard and the decision it enables.</Notice>}
+    {!isAgent && !isData && <Notice icon="info" tone="var(--accent)" title="What to show">The experience and its business outcome, in visuals a client understands without technical context.</Notice>}
+  </>;
 }
 
-export function SubmissionMedia({ thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
-  thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
+export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
+  capabilities: string[]; thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
   images: { id: string; preview: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
   /** A file added to one of the three sections; the section sets its purpose (ADR-0011). Videos arrive after compression. */
   onAttachment: (file: File, purpose: AssetPurpose) => void;
@@ -150,12 +156,11 @@ export function SubmissionMedia({ thumbnail, onRemoveThumbnail, thumbnailUpload,
   };
   // Sections keep their own order; the saved order lists them section by section.
   const reorderSection = (purpose: AssetPurpose, ids: string[]) => onReorderAttachments?.(ATTACHMENT_SECTIONS.flatMap(section => section.purpose === purpose ? ids : attachments.filter(item => item.purpose === section.purpose).map(item => item.id)));
-  return <StepShell title="Media">
+  return <StepShell title="Media" notices={<>
+    <MediaTips capabilities={capabilities} />
+    <Notice icon="shieldAlert" tone="var(--proto)" title="Before uploading">Remove confidential information, personal data and client identifiers.</Notice>
+  </>}>
     <fieldset disabled={preparation.busy} className="flex min-w-0 flex-col gap-5">
-    <div className="grid gap-3">
-      <MediaNotice icon="info" tone="var(--sa-ai)" title="At least one screenshot is required for review.">You can save your solution as a draft without uploading media. Additional videos, slides, and demos are optional.</MediaNotice>
-      <MediaNotice icon="shieldAlert" tone="var(--proto)" title="Before uploading">Remove confidential information, personal data, and client identifiers from all files.</MediaNotice>
-    </div>
     <div><p className="mb-1.5 text-[13.5px] font-semibold">Card thumbnail</p><p className="mb-2 text-[12px] text-(--ink-3)">The card grid's hero image — without one, the card gets a generated poster</p>
       {thumbnail ? <div className="flex flex-wrap items-center gap-4"><div className="h-24 w-40 shrink-0 overflow-hidden rounded-[12px] border border-(--glass-edge)">{onPreviewThumbnail ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={onPreviewThumbnail} aria-label="Preview thumbnail">{thumbnail}</button> : thumbnail}</div><button type="button" disabled={disabled} onClick={onRemoveThumbnail} className="cursor-pointer rounded-lg border border-(--glass-edge) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink-2) disabled:opacity-40">Remove</button></div> : thumbnailUpload}
     </div>

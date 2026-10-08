@@ -13,6 +13,8 @@ export function TagPicker({ label, options, selected, onChange, governed = false
   /** Marks the picker like the form's other fields. */
   required?: boolean; optional?: boolean;
 }) {
+  // A trailing "(…)" in the label, such as "(choose one)", reads as a note: small and regular weight, like "(optional)".
+  const [, heading = label, note] = /^(.*?)\s*(\([^)]*\))$/.exec(label) ?? [];
   const [query, setQuery] = useState("");
   const [newTag, setNewTag] = useState("");
   const [keepTyped, setKeepTyped] = useState(false);
@@ -44,9 +46,9 @@ export function TagPicker({ label, options, selected, onChange, governed = false
     reset();
   };
   return <fieldset className="min-w-0">
-    <legend className="mb-2 text-[14px] font-semibold">{label}{required ? <RequiredMark /> : optional && <OptionalMark />}</legend>
+    <legend className="mb-2 text-[14px] font-semibold">{heading}{required ? <RequiredMark /> : optional && <OptionalMark />}{note && <span className="ml-1 text-[12px] font-normal text-(--ink-3)">{note}</span>}</legend>
     <p className="mb-2 text-[12px] text-(--ink-2)">{governed ? "Librarian-managed vocabulary" : "Tools, platforms and languages used to build the solution"}</p>
-    <input type="search" className={submissionInputClass} aria-label={`Search ${label.toLowerCase()}`} placeholder={`Search ${label.toLowerCase()}`} value={query} onChange={event => setQuery(event.target.value)} />
+    <input type="search" className={submissionInputClass} aria-label={`Search ${heading.toLowerCase()}`} placeholder={`Search ${heading.toLowerCase()}`} value={query} onChange={event => setQuery(event.target.value)} />
     <div className="mt-3 flex max-h-60 flex-wrap gap-2 overflow-y-auto">
       {filtered.map(value => <Chip key={value} active={selected.includes(value)} onClick={() => onChange(selected.includes(value) ? selected.filter(entry => entry !== value) : [...selected, value])}>{getLabel(value)}</Chip>)}
       {!filtered.length && <p className="text-[13px]">No matching tags.</p>}
