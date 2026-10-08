@@ -270,9 +270,9 @@ The reusable offering — the unit of value shown to a CSM.
 | Column | Logical name | Type | Required | Notes |
 |---|---|---|---|---|
 | Solution Name *(primary name)* | `nx_solutionname` | StringType | Yes | Authored nonblank name required for draft saves; legacy `Untitled solution` is not accepted |
-| One-line Summary | `nx_onelinesummary` | StringType | At submit/publication | Optional column metadata so incomplete drafts can be saved; nonblank at the transition boundary |
-| What It Does | `nx_whatitdoes` | StringType | No |  |
-| Business Value | `nx_businessvalue` | StringType | No |  |
+| One-line Summary | `nx_onelinesummary` | StringType (200) | At submit/publication | Business Required in Dataverse since 2026-10-08, when the user also cut its maximum from 4000 to 200 to match the form and plug-ins (PR-023). Business Required binds only Dataverse forms, so incomplete drafts still save through the plug-ins; nonblank at the transition boundary |
+| What It Does | `nx_whatitdoes` | StringType (4000) | At submit/publication | Business Required in Dataverse since 2026-10-08; drafts may leave it blank, `ReviewPolicy.Complete` requires it for submit and approve |
+| Business Value | `nx_businessvalue` | StringType (4000) | At submit/publication | Business Required in Dataverse since 2026-10-08; same rule as What It Does |
 | Capability | `nx_capability` | LookupType → `nx_capability` | At submit/publication | Single-valued; optional column metadata for Draft, exactly one governed value at submit/publication |
 | Client / Context | `nx_clientcontext` | StringType | No | Freeform for now; revisit as a lookup if reporting by client is needed later. **Internal-only** — never rendered in present mode |
 | Client Context (Redacted) | `nx_clientcontextredacted` | StringType | Conditional | The only context shown in present mode; required at submission when Client / Context is populated. Never infer or scrub names automatically. |

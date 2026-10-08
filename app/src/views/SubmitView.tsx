@@ -216,7 +216,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   });
   const contributorsValid = draft.contributors.length > 0 && contributionResults.every((result) => !result.error);
   const nameValid = Boolean(draft.name.trim()) && draft.name.trim() !== UNTITLED_SOLUTION && draft.name.length <= 100;
-  const detailsValid = nameValid && Boolean(draft.summary.trim()) && draft.areas.length > 0;
+  const detailsValid = nameValid && Boolean(draft.summary.trim()) && Boolean(draft.whatItDoes.trim()) && Boolean(draft.businessValue.trim()) && draft.areas.length > 0;
   const clientValid = clientAssociated === false || (clientAssociated === true && Boolean(draft.clientContext.trim()) && Boolean(draft.redacted.trim()));
   const basicsValid = detailsValid && clientValid && contributorsValid;
   const safetyValid = draft.safetyAcknowledged;

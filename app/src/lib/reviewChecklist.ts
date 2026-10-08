@@ -1,6 +1,8 @@
 /** Facts each adapter derives from its own record shape; the panel only renders them. */
 export type ReviewFacts = {
   summary: boolean;
+  /** What it does and business value: both required (`nx_whatitdoes`, `nx_businessvalue` are Business Required). */
+  story: boolean;
   capability: boolean;
   contributors: boolean;
   images: number;
@@ -16,6 +18,7 @@ export type ReviewCheck = { label: string; done: boolean };
 export function reviewChecklist(facts: ReviewFacts): ReviewCheck[] {
   return [
     { label: "Summary and capability", done: facts.summary && facts.capability },
+    { label: "What it does and business value", done: facts.story },
     { label: "Contributors with complete effort", done: facts.contributors },
     { label: "Detail images (1 to 6)", done: facts.images >= 1 && facts.images <= 6 },
     { label: "All uploads finished", done: facts.uploadsComplete },

@@ -91,7 +91,7 @@ test("named incomplete drafts save, but submit and approval require complete val
   const incomplete = { ...solution, summary: "", capabilities: [], contributors: [], images: [], safetyAcknowledged: false };
   assert.equal(saveContribution(incomplete, "Draft").name, solution.name);
   const invalid: Solution[] = [
-    incomplete, { ...solution, summary: "" },
+    incomplete, { ...solution, summary: "" }, { ...solution, whatItDoes: "" }, { ...solution, businessValue: "  " },
     { ...solution, capabilities: [] }, { ...solution, capabilities: ["AI & agents", "Data platform"] },
     { ...solution, clientContext: "Internal client", clientContextRedacted: "" },
     { ...solution, contributors: [] }, { ...solution, contributors: [...solution.contributors, ...solution.contributors] },
@@ -107,8 +107,8 @@ test("named incomplete drafts save, but submit and approval require complete val
 });
 test("the review checklist reports each publication requirement of a local record", () => {
   const ready = reviewChecklist(submissionFacts(solution));
-  assert.equal(ready.length, 6);
+  assert.equal(ready.length, 7);
   assert.ok(ready.every((check) => check.done));
-  const gaps = reviewChecklist(submissionFacts({ ...solution, capabilities: [], images: [], safetyAcknowledged: false, clientContext: "Bank X", clientContextRedacted: "", contributors: [{ ...solution.contributors[0], directHours: -1 }] }));
-  assert.deepEqual(gaps.filter((check) => !check.done).map((check) => check.label), ["Summary and capability", "Contributors with complete effort", "Detail images (1 to 6)", "Client context anonymized", "Contributor safety acknowledgment"]);
+  const gaps = reviewChecklist(submissionFacts({ ...solution, capabilities: [], images: [], safetyAcknowledged: false, clientContext: "Bank X", clientContextRedacted: "", businessValue: " ", contributors: [{ ...solution.contributors[0], directHours: -1 }] }));
+  assert.deepEqual(gaps.filter((check) => !check.done).map((check) => check.label), ["Summary and capability", "What it does and business value", "Contributors with complete effort", "Detail images (1 to 6)", "Client context anonymized", "Contributor safety acknowledgment"]);
 });

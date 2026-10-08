@@ -14,6 +14,7 @@ export function assertSubmissionReady(solution: Solution): void {
   if (!solution.name.trim() || solution.name.trim() === UNTITLED_SOLUTION || solution.name.length > 100 || !solution.summary.trim() || solution.summary.length > 200) {
     throw new Error("Enter a solution name and summary within their character limits.");
   }
+  if (!solution.whatItDoes.trim() || !solution.businessValue.trim()) throw new Error("Describe what the solution does and its business value.");
   if (solution.capabilities.length !== 1 || !solution.capabilities[0].trim()) throw new Error("Select exactly one capability.");
   if (!solution.safetyAcknowledged) throw new Error("Acknowledge the client-safety requirements.");
   if (solution.clientContext?.trim() && !solution.clientContextRedacted?.trim()) throw new Error("Provide anonymous presentation context for the named client.");
@@ -33,7 +34,7 @@ export function submissionFacts(solution: Solution): ReviewFacts {
     for (const contributor of solution.contributors) contributorHours(contributor.directHours);
   } catch { effort = false; }
   return {
-    summary: !!solution.summary.trim() && solution.summary.length <= 200, capability: solution.capabilities.length === 1 && !!solution.capabilities[0].trim(),
+    summary: !!solution.summary.trim() && solution.summary.length <= 200, story: !!solution.whatItDoes.trim() && !!solution.businessValue.trim(), capability: solution.capabilities.length === 1 && !!solution.capabilities[0].trim(),
     contributors: effort, images: solution.images?.filter((image) => image.src).length ?? 0, uploadsComplete: true,
     safety: solution.safetyAcknowledged, anonymized: !solution.clientContext?.trim() || !!solution.clientContextRedacted?.trim(),
   };

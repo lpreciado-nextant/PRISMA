@@ -9,16 +9,15 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 4 Live / 4 |
+| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 90% — 4 Live, 1 In code / 5 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 19% — 3 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 93% — 14 Live / 15 |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 21% — 3 Live / 14 |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
-- One-Liner standardization, still a generic field (PR-023) ([2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity))
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Demo viewing (PR-006): full screen (PR-004) and new-tab links (PR-005) are live; whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
@@ -67,13 +66,14 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-08 — Working session: contributor effort as minimum hours required
 
-**Progress:** 100% — 4 Live / 4
+**Progress:** 90% — 4 Live, 1 In code / 5
 
 ### Feedback
 
 - Allocation is unnecessary; asking for dates and a percentage per person adds work without adding meaning (PR-029).
 - Hours should state the minimum time each person needed to work on the solution, including preparation and discovery, whatever the maturity.
 - The contributor Role picker is redundant: the consultant directory already records each person's role and level (`cr6b0_consultantlevel`).
+- Every solution must say what it does and its business value: the user made `nx_whatitdoes` and `nx_businessvalue` Business Required in Dataverse, and cut `nx_onelinesummary` from 4000 to the agreed 200 characters (PR-023).
 
 ### Changes
 
@@ -83,6 +83,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Published detail shows "Incomplete" effort instead of failing when a contributor has no hours | 🟢 Live | `nx_GetPublishedDetail` returns a null `totalHours`. Affects Client demo/production rows saved under the calendar model (dummy data); not backfilled, since calendar hours were estimated capacity, not minimum hours required. Deployed with the plug-ins 2026-10-08 |
 | Contributor Role picker removed; the person's directory level is shown read-only and the CSM is derived from it | 🟢 Live | Submit/draft forms show **Level** (`cr6b0_consultantlevel`, "Not recorded in the consultant directory" when empty). A contributor whose level names customer success (`isCustomerSuccessLevel`) is listed as CSM in detail and passed as CSM to the PowerPoint download, and left out of PoC card builder names; builders show "name · level". `CONTRIBUTOR_ROLES` and `ContributorRole` removed; mock people carry illustrative levels. Connected cards (`CatalogueApi`) unchanged. [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level). Deployed 2026-10-08 from `main` `1c89c2d` by Luis: signed plug-in 17:11 UTC, then the connected app 17:12 UTC; hosted UI check not recorded |
 | `nx_solutioncontributor.nx_role` retired in the plug-ins; published detail returns each credit's `level` | 🟢 Live | `ContributorInput`/`DraftGraph` no longer read, write or validate `nx_role`; `roleValue` from older clients is ignored and no longer returned. `nx_GetPublishedDetail` returns `level` (omitted in present mode). Plug-ins deployed 2026-10-08 17:11 UTC (`1c89c2d`; the deployed assembly no longer references `nx_role`), then the connected app; the user then deleted `nx_role` from Dataverse (no blocking dependencies reported) |
+| "What the solution does" and "Business value" required to submit | In code | Both labels carry the required asterisk (were "(optional)"); the PoC and connected forms need them to continue past **Define the solution** and to submit; the librarian checklist gains "What it does and business value"; `ReviewPolicy.Complete` rejects submit/approve without them, because Dataverse Business Required (`nx_whatitdoes`, `nx_businessvalue`, set by the user 2026-10-08) is enforced only by its own forms. Drafts still save without them. Needs a plug-in deploy (signing certificate: Luis), then the connected app |
 
 ### Open decisions
 
@@ -156,7 +157,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 
 **Attendees:** Sebastian, …
-**Progress:** 93% — 14 Live, 1 Proposed / 15
+**Progress:** 100% — 15 Live / 15
 
 ### Feedback
 
@@ -185,7 +186,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-020 Tag color accessibility | 🟢 Live | Contrast targets (≥4.7:1) are documented in the [design system](../design/design-system.md#design-tokens), the stronger tag fills are published (PR-021/022) and an automated axe-core pass found no violations. Accepted as live by the user on 2026-10-06; the manual contrast check on glass surfaces stays on the [accessibility](../design/accessibility.md) checklist |
 | PR-021 Enhanced tag styling (fills/borders/stronger colors) | 🟢 Live | `64c1ac2` raises the specialization-area `AreaTag` tint from 11% to 17%; no other tag/badge type received equivalent treatment |
 | PR-022 Dark-mode tag readability review | 🟢 Live | Same commit (`7b83ef4`) already credited as Live under [2026-10-01 — Top 3 save counts and card sizing](#2026-10-01--working-session-top-3-save-counts-and-card-sizing); not separate work |
-| PR-023 One-Liner standardization | Proposed | The "One-line summary" field (200-char max) predates this session by a week (`d027276`, 2026-09-22); no standardization work followed |
+| PR-023 One-Liner standardization | 🟢 Live | Settled 2026-10-08: the user reduced Dataverse `nx_onelinesummary` from 4000 to **200** characters (Business Required), matching the 200-character limit the form and plug-ins already enforced since `d027276` (2026-09-22). One standard length end to end ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)) |
 | PR-024 "What It Does" optimization | 🟢 Live | `448d02b` (published 2026-10-06): detail panel and form label renamed to "What the solution does", paired with "Business value" so the two read as "what it does / what you gain"; accepted as sufficient |
 | PR-025 "Why It Matters" enhancement | 🟢 Live | `448d02b` (published 2026-10-06): the detail panel "Why it matters" is now titled "Business value", matching the `businessValue` field and the form label |
 | PR-026 Business-value-first ordering | 🟢 Live | Accepted 2026-10-06 as covered by the "What the solution does" / "Business value" pairing (`448d02b`); no separate reordering of the detail page |
@@ -196,7 +197,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ### Open decisions
 
-- One-Liner standardization (PR-023): still a generic pre-existing field, no dedicated content-design work done yet.
+- One-Liner standardization (PR-023): resolved 2026-10-08 as a 200-character one-line summary in Dataverse, the form and the plug-ins.
 - Allocation (PR-029): resolved 2026-10-08 and live the same day. Calendar mode is retired as well; every maturity takes minimum hours required, and `nx_allocationpercent` was deleted ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)).
 
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication

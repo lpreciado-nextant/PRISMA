@@ -140,7 +140,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const reload = () => { setError(""); setState(null); setNamesLoaded(false); setUncertain(false); setPreview(null); setAttempt(current => current + 1); };
   const core = state?.record.core;
   const status = state?.record.publication;
-  const missing = !core || !core.summary.trim() || !core.capabilityId || !core.safetyAcknowledged || (!!core.clientContext.trim() && !core.clientContextRedacted.trim()) || !state?.graph.hours.length || state.graph.hours.some(hours => hours === null) || !state.media.some(item => item.kind === "image" && item.complete) || state.media.some(item => !item.complete);
+  const missing = !core || !core.summary.trim() || !core.whatItDoes.trim() || !core.businessValue.trim() || !core.capabilityId || !core.safetyAcknowledged || (!!core.clientContext.trim() && !core.clientContextRedacted.trim()) || !state?.graph.hours.length || state.graph.hours.some(hours => hours === null) || !state.media.some(item => item.kind === "image" && item.complete) || state.media.some(item => !item.complete);
   if (!state || !core || !namesLoaded || state.record.areaIds.some(area => !["ai", "data", "ibo"].includes(names[area]))) return <section className={shell}><button className={button} onClick={() => navigate(review ? "/review" : "/my-submissions")}><Icon name="chevronLeft" />{review ? "Review queue" : "My submissions"}</button>{error || namesLoaded ? <div role="alert" className="my-6"><p className="mb-3">{error || "Specialization unavailable. Check your reference-data access."}</p><button className={button} onClick={reload}><Icon name="arrowRight" />Reopen</button></div> : <LoadingState variant="page" label="Loading submission..." />}</section>;
   if (preview) return <MediaPreview key={preview.id} item={preview} solutionId={core.id} mode="submission" viewerTitle={core.name} onClose={() => setPreview(null)} />;
   const graph = state.graph.graph;
@@ -152,7 +152,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={
       <>{review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
         solution={solution} checks={reviewChecklist({
-          summary: !!core.summary.trim(), capability: !!core.capabilityId,
+          summary: !!core.summary.trim(), story: !!core.whatItDoes.trim() && !!core.businessValue.trim(), capability: !!core.capabilityId,
           contributors: state.graph.hours.length > 0 && state.graph.hours.every(hours => hours !== null),
           images: state.media.filter(item => item.kind === "image" && item.complete).length, uploadsComplete: state.media.every(item => item.complete),
           safety: core.safetyAcknowledged, anonymized: !core.clientContext.trim() || !!core.clientContextRedacted.trim(),
@@ -174,7 +174,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         </p>
         {mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
         {error && <div role="alert" className="my-4"><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></div>}
-        {missing && status === 125060003 && <p role="status" className="mt-3 flex items-start gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} className="mt-0.5 shrink-0" />Complete the summary, capability, contributor effort, redacted context when needed, detail images and safety acknowledgment before submitting.</p>}
+        {missing && status === 125060003 && <p role="status" className="mt-3 flex items-start gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} className="mt-0.5 shrink-0" />Complete the summary, what it does, business value, capability, contributor effort, redacted context when needed, detail images and safety acknowledgment before submitting.</p>}
         {busy && <LoadingState className="mt-4" label="Updating submission..." />}
       </SubmissionStatusPanel>}
         {confirmation && <ConfirmDialog title={CONFIRMATIONS[confirmation].title} confirmLabel={CONFIRMATIONS[confirmation].label} onCancel={() => setConfirmation(null)} onConfirm={() => { setConfirmation(null); void transition(confirmation); }}>

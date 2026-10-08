@@ -85,7 +85,7 @@ Guided multi-step form with draft saving at every step. **Friction budget: under
 | Step | Collects | Notes |
 |---|---|---|
 | 1. Before you start | Required safety acknowledgment | Replaces sharing/sample-data classifications; authorized, anonymized client-visible content; not review approval |
-| 2. Define the solution | Name, summary, specialization areas, what it does and business value | Story fields are separate, with examples; optional AI assistance deferred |
+| 2. Define the solution | Name, summary, specialization areas, what it does and business value | All five are required to continue and to submit (what it does and business value since 2026-10-08); story fields are separate, with examples; optional AI assistance deferred |
 | 3. Solution context | Status (maturity), contributors and effort, client | Minimum hours required per person at every maturity. Starts with "Is this solution associated with a client?" (required): client role, internal name and anonymous context show only on Yes, where name and anonymous context are required; No clears them |
 | 4. Tag it | Exactly one capability; searchable technologies and industries | Capability required at submit, optional in Draft. New technologies allowed with duplicate, similar-name and capitalization checks ([governance](../data_model/reference-data-governance.md#vocabularies)); other lists governed |
 | 5. Media | One to six required detail images; optional thumbnail, HTML, video and one-pager/slides | Images alone suffice. Capability-specific guidance; permission-dependent formats deferred |

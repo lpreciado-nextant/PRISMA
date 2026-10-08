@@ -248,8 +248,9 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const thumbnail = media.find(item => item.kind === "thumbnail" && item.complete);
   const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person));
   const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !contributorEffort(person).error);
-  const complete = canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
-  const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() : step === 2 ? canSave && effortComplete && clientValid : step === 3 ? canSave && !!draft.capabilityId : step === 4 ? complete : canSave;
+  const storyComplete = !!draft.whatItDoes.trim() && !!draft.businessValue.trim();
+  const complete = canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
+  const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && effortComplete && clientValid : step === 3 ? canSave && !!draft.capabilityId : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;

@@ -89,6 +89,9 @@ namespace Prisma.Plugins
                 || string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_onelinesummary"))
                 || graph.Graph.AreaIds.Count == 0 || parent.GetAttributeValue<EntityReference>("nx_capability") == null)
                 throw MediaPolicy.Invalid("Name, summary, at least one specialization area and capability are required.");
+            // nx_whatitdoes and nx_businessvalue are Business Required in Dataverse, which only its own forms enforce.
+            if (string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_whatitdoes")) || string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_businessvalue")))
+                throw MediaPolicy.Invalid("Describe what the solution does and its business value.");
             if (!parent.GetAttributeValue<bool>("nx_safetyacknowledged")) throw MediaPolicy.Invalid("Renew the safety acknowledgment before submission.");
             if (!string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_clientcontext")) && string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_clientcontextredacted")))
                 throw MediaPolicy.Invalid("Provide redacted client context.");

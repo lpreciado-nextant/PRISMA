@@ -32,7 +32,7 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
-        public void SubmissionRequiresAtLeastOneSpecializationArea()
+        public void SubmissionRequiresSpecializationAreaAndStory()
         {
             var parent = new Entity("nx_solution") { ["nx_solutionname"] = "Named draft", ["nx_onelinesummary"] = "Summary",
                 ["nx_capability"] = new EntityReference("nx_capability", Guid.NewGuid()), ["nx_safetyacknowledged"] = false };
@@ -42,6 +42,12 @@ namespace Prisma.Plugins.Tests
             var media = new System.Collections.Generic.List<Entity>();
             Assert.Contains("specialization", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
             graph.Graph.AreaIds.Add(Area);
+            Assert.Contains("business value", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
+            parent["nx_whatitdoes"] = "Matches invoices.";
+            Assert.Contains("business value", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
+            parent["nx_businessvalue"] = " ";
+            Assert.Contains("business value", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
+            parent["nx_businessvalue"] = "Finance focuses on exceptions.";
             Assert.Contains("safety", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
         }
 

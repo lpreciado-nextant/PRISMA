@@ -37,6 +37,7 @@ Review Comments allow up to 4000 characters and are separate from editorial Libr
 **Checklist before approving:**
 
 - [ ] Name, one-liner, and body text read well and would not embarrass anyone on a client screen
+- [ ] What the solution does and Business value are both filled in (required to submit since 2026-10-08) and say plainly what it does and why it matters; the one-liner is at most 200 characters
 - [ ] New submission contains one to six detail images; images alone are sufficient; thumbnail alone is not
 - [ ] Uploaded HTML files reviewed for active content (sandboxing is defence in depth, not a substitute)
 - [ ] Legacy hosted URLs load; new submissions use images, HTML, video or one-pagers/slides only

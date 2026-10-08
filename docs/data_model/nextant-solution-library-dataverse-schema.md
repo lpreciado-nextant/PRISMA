@@ -66,9 +66,9 @@ Industry tags are native N:N. At least one industry or "Cross-industry" is expec
 | Column | Type | Required | Notes |
 |---|---|---|---|
 | Solution Name *(primary name)* | Single line of text (100) | Yes | Authored nonblank name required for draft saves; legacy `Untitled solution` is not accepted |
-| One-line Summary | Single line of text (200) | At submit/publication | Optional column metadata allows incomplete drafts; nonblank at transition boundary |
-| What It Does | Multiple lines of text (plain, 4000) | No | |
-| Business Value | Multiple lines of text (plain, 4000) | No | |
+| One-line Summary | Single line of text (200) | At submit/publication | Business Required in Dataverse since 2026-10-08 (maximum cut from 4000 to 200); drafts save through the plug-ins; nonblank at transition boundary |
+| What It Does | Multiple lines of text (plain, 4000) | At submit/publication | Business Required since 2026-10-08; drafts may leave it blank |
+| Business Value | Multiple lines of text (plain, 4000) | At submit/publication | Business Required since 2026-10-08; drafts may leave it blank |
 | Capability | Lookup → `nx_capability` | At submit/publication | Single-valued; optional column metadata for Draft |
 | Status | Choice — **global**, single-select | Yes | See `nx_solutionstatus` below — describes the solution's own maturity |
 | Publication Status | Choice — **global**, single-select | Yes | Default Draft; protected controlled-transition write, not contributor-writable directly; only Librarian may request publication |

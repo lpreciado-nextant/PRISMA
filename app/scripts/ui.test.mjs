@@ -222,6 +222,9 @@ test("story section contains only the two narrative fields in both adapters", as
   assert.match(html, /What the solution does/);
   assert.match(html, /Business value/);
   assert.equal((html.match(/<textarea/g) ?? []).length, 2);
+  // Both are Business Required in Dataverse (nx_whatitdoes, nx_businessvalue): each label carries the required mark.
+  assert.equal((html.match(/(required)/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /(optional)|Optional/);
   const { readFile } = await import("node:fs/promises");
   for (const path of ["../src/views/SubmitView.tsx", "../connected/src/DraftsView.tsx"]) {
     const source = await readFile(new URL(path, import.meta.url), "utf8");
