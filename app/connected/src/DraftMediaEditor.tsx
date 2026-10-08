@@ -17,7 +17,7 @@ import { assetTypeLabel, type LinkedAssetInput } from "../../src/lib/linkedAsset
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px] disabled:opacity-50";
 
-export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersion, onBusy, onPending, onReopen, embedded = false, onMedia, capabilities = [] }: { saved: SavedDraft; blocked: boolean; captions: Record<string, string>; onCaptions: (captions: Record<string, string>) => void; onVersion: (version: string) => void; onBusy: (busy: boolean) => void; onPending?: (pending: boolean) => void; onReopen?: () => void; embedded?: boolean; onMedia?: (media: MediaItem[]) => void; capabilities?: string[] }) {
+export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersion, onBusy, onPending, onReopen, embedded = false, onMedia }: { saved: SavedDraft; blocked: boolean; captions: Record<string, string>; onCaptions: (captions: Record<string, string>) => void; onVersion: (version: string) => void; onBusy: (busy: boolean) => void; onPending?: (pending: boolean) => void; onReopen?: () => void; embedded?: boolean; onMedia?: (media: MediaItem[]) => void }) {
   const [state, setState] = useState<MediaState | null>(null);
   const [busy, setBusy] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -172,7 +172,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   const remove = (id: string) => setRemoveTarget(state?.media.find(item => item.id === id) ?? null);
   const open = (id: string) => setPreview(state?.media.find(item => item.id === id && item.complete) ?? null);
   return <section className={embedded ? "min-w-0" : "mt-12 border-t border-(--glass-edge) pt-8"}>
-    <SubmissionMedia capabilities={capabilities} disabled={disabled} attachmentDisabled={uploadDisabled} onAttachment={selectAttachment} onPreparationBusy={setPreparing}
+    <SubmissionMedia disabled={disabled} attachmentDisabled={uploadDisabled} onAttachment={selectAttachment} onPreparationBusy={setPreparing}
       onLinkedAsset={saveLink} onLinkedPending={setLinkedPending}
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}

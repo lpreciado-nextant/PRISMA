@@ -383,7 +383,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         )}
 
         {step === 4 && safetyValid && (
-          <SubmissionMedia capabilities={draft.capabilities} local disabled={mediaBusy} onPreparationBusy={setPreparingVideo}
+          <SubmissionMedia local disabled={mediaBusy} onPreparationBusy={setPreparingVideo}
             onReorderImages={ids => set("images", ids.map(id => draft.images.find(image => image.id === id)!))}
             onReorderAttachments={ids => set("assets", ids.map((id, sortOrder) => ({ ...draft.assets.find(asset => asset.id === id)!, sortOrder })))}
             thumbnail={draft.thumbnail ? <img src={draft.thumbnail} alt="Thumbnail preview" className="h-full w-full object-cover" /> : undefined} onRemoveThumbnail={() => set("thumbnail", "")}

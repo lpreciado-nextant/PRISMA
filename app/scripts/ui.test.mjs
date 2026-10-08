@@ -300,7 +300,7 @@ test("safety and contributor rows preserve baseline copy and accessible field st
 });
 
 test("media files demos, interactive demos and supporting material in their own sections", () => {
-  const props = { capabilities: [], onRemoveThumbnail: noop, thumbnailUpload: "Thumbnail upload", images: [{ id: "image", caption: "Overview", preview: createElement("img", { src: "data:image/png;base64,AA==", alt: "Overview" }) }], imageUpload: "Image upload", onCaption: noop, onRemoveImage: noop, onAttachment: noop, onRemoveAttachment: noop,
+  const props = { onRemoveThumbnail: noop, thumbnailUpload: "Thumbnail upload", images: [{ id: "image", caption: "Overview", preview: createElement("img", { src: "data:image/png;base64,AA==", alt: "Overview" }) }], imageUpload: "Image upload", onCaption: noop, onRemoveImage: noop, onAttachment: noop, onRemoveAttachment: noop,
     attachments: [{ id: "video", name: "walkthrough.mp4", purpose: "Demo video" }, { id: "html", name: "demo.html", purpose: "Interactive demo" }, { id: "deck", name: "deck.pdf", purpose: "Supporting material" }] };
   const html = render(form.SubmissionMedia, props);
   assert.match(html, /Detail screenshots · 1\/6/);
@@ -343,7 +343,7 @@ test("linked asset editor separates URLs, embedding and desktop arrangements", (
 });
 
 test("media reordering exposes drag handles and bounded keyboard actions", () => {
-  const props = { capabilities: [], onRemoveThumbnail: noop, thumbnailUpload: null, images: [{ id: "first", caption: "", preview: "First" }, { id: "second", caption: "", preview: "Second" }], imageUpload: null, onCaption: noop, onRemoveImage: noop, format: "Self-contained HTML file", onFormat: noop, onAttachment: noop, attachments: [], onRemoveAttachment: noop, onReorderImages: noop };
+  const props = { onRemoveThumbnail: noop, thumbnailUpload: null, images: [{ id: "first", caption: "", preview: "First" }, { id: "second", caption: "", preview: "Second" }], imageUpload: null, onCaption: noop, onRemoveImage: noop, format: "Self-contained HTML file", onFormat: noop, onAttachment: noop, attachments: [], onRemoveAttachment: noop, onReorderImages: noop };
   const html = render(form.SubmissionMedia, props);
   assert.match(html, /draggable="true"/);
   assert.match(html, /aria-label="Reorder Screenshot 1"/);

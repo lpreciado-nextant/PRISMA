@@ -1,14 +1,3 @@
-export function MediaGuidance({ capabilities }: { capabilities: string[] }) {
-  const isAgent = capabilities.some((value) => /ai|agent/i.test(value));
-  const isData = capabilities.some((value) => /data|analytics/i.test(value));
-  const isWorkflow = capabilities.some((value) => /workflow|approval/i.test(value));
-  return <div className="space-y-1">
-    {isAgent && <p>AI & agents: show a user request, the agent's response and the outcome. A simple interaction diagram or explanatory slide works too.</p>}
-    {isData && <p>Data & analytics: show a dashboard and the decision it enables. A clear data-source or integration diagram can explain reusable connections.</p>}
-    {isWorkflow && <p>Workflows: show the important before-and-after steps and the result for the user.</p>}
-    {!isAgent && !isData && !isWorkflow && <p>Show the experience and its business outcome. Use screenshots or explanatory diagrams that a client can understand without technical context.</p>}
-  </div>;
-}
 import { useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 import { SectionCardsContext } from "./sectionCards";
@@ -127,8 +116,16 @@ export function ImageUploadZone({ line, sub, multiple, disabled, onFiles, childr
   </label>;
 }
 
-export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
-  capabilities: string[]; thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
+/** Compact notice at the top of the Media step: tinted border and background, icon and a short heading. */
+function MediaNotice({ icon, tone, title, children }: { icon: IconName; tone: string; title: string; children: ReactNode }) {
+  return <div className="flex items-start gap-3 rounded-xl border px-4 py-3" style={{ borderColor: `color-mix(in srgb, ${tone} 35%, var(--glass-edge))`, background: `color-mix(in srgb, ${tone} 8%, transparent)` }}>
+    <span className="mt-0.5 shrink-0" style={{ color: tone }}><Icon name={icon} size={18} /></span>
+    <div className="min-w-0 text-[13.5px] leading-snug"><p className="font-semibold text-(--ink)">{title}</p><p className="mt-0.5 text-(--ink-2)">{children}</p></div>
+  </div>;
+}
+
+export function SubmissionMedia({ thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
+  thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
   images: { id: string; preview: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
   /** A file added to one of the three sections; the section sets its purpose (ADR-0011). Videos arrive after compression. */
   onAttachment: (file: File, purpose: AssetPurpose) => void;
@@ -155,7 +152,10 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
   const reorderSection = (purpose: AssetPurpose, ids: string[]) => onReorderAttachments?.(ATTACHMENT_SECTIONS.flatMap(section => section.purpose === purpose ? ids : attachments.filter(item => item.purpose === section.purpose).map(item => item.id)));
   return <StepShell title="Media">
     <fieldset disabled={preparation.busy} className="flex min-w-0 flex-col gap-5">
-    <div className="border-l-2 border-(--accent) pl-4 text-[14px] text-(--ink-2)"><MediaGuidance capabilities={capabilities} /><p className="mt-2">Remove confidential data and client identifiers from every attachment before uploading.</p></div>
+    <div className="grid gap-3">
+      <MediaNotice icon="info" tone="var(--sa-ai)" title="At least one screenshot is required for review.">You can save your solution as a draft without uploading media. Additional videos, slides, and demos are optional.</MediaNotice>
+      <MediaNotice icon="shieldAlert" tone="var(--proto)" title="Before uploading">Remove confidential information, personal data, and client identifiers from all files.</MediaNotice>
+    </div>
     <div><p className="mb-1.5 text-[13.5px] font-semibold">Card thumbnail</p><p className="mb-2 text-[12px] text-(--ink-3)">The card grid's hero image — without one, the card gets a generated poster</p>
       {thumbnail ? <div className="flex flex-wrap items-center gap-4"><div className="h-24 w-40 shrink-0 overflow-hidden rounded-[12px] border border-(--glass-edge)">{onPreviewThumbnail ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={onPreviewThumbnail} aria-label="Preview thumbnail">{thumbnail}</button> : thumbnail}</div><button type="button" disabled={disabled} onClick={onRemoveThumbnail} className="cursor-pointer rounded-lg border border-(--glass-edge) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink-2) disabled:opacity-40">Remove</button></div> : thumbnailUpload}
     </div>
