@@ -34,6 +34,7 @@ import { Nx_GetTopFavoritesService } from "./generated/services/Nx_GetTopFavorit
 import { Nx_GetCatalogueGraphService } from "./generated/services/Nx_GetCatalogueGraphService";
 import { Nx_GetMyFavoritesService } from "./generated/services/Nx_GetMyFavoritesService";
 import type { FavoriteApi } from "./favorites";
+import type { SuggestionApi } from "./suggestions";
 import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginResumableUploadService";
 import { Nx_GetUploadCheckpointService } from "./generated/services/Nx_GetUploadCheckpointService";
 import { Nx_ReadVideoRangeService } from "./generated/services/Nx_ReadVideoRangeService";
@@ -93,6 +94,12 @@ export const draftApi: DraftApi = {
   list: (page, cookie) => Nx_GetMyCoreDraftsService.nx_GetMyCoreDrafts(page, cookie),
   save: (json, id, version) => Nx_SaveCoreDraftService.nx_SaveCoreDraft(json, id, version),
 };
+
+/**
+ * Wired once nx_SuggestChange and nx_GetSolutionSuggestions are registered and their clients generated
+ * (`pa app add dataverse-api`). Until then suggestions stay off: no button, no panel.
+ */
+export const suggestionApi: SuggestionApi | undefined = undefined;
 
 export const favoriteApi: FavoriteApi = {
   list: () => Nx_GetMyFavoritesService.nx_GetMyFavorites(),

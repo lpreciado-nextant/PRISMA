@@ -150,7 +150,7 @@ namespace Prisma.Plugins
         /// Resolves the signed-in systemuser to their active `cr6b0_consultant` row by email, same rule as the person picker.
         /// Uses the server service: the identity comes from the execution context, never from the client.
         /// </summary>
-        private static Guid ResolveConsultant(IOrganizationService server, Guid userId)
+        internal static Guid ResolveConsultant(IOrganizationService server, Guid userId)
         {
             var user = server.Retrieve("systemuser", userId, new ColumnSet("internalemailaddress"));
             var email = user.GetAttributeValue<string>("internalemailaddress");

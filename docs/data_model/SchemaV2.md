@@ -384,6 +384,19 @@ Alternate key `nx_SolutionUser` (`nx_solutionuser`) = `nx_solution` + `nx_user`,
 - A solution that is later withdrawn or retired keeps its favorite rows, but the reader no longer has access to it, so "My favorites" hides it.
 - **Ranking (`nx_GetTopFavorites`, deployed 2026-09-29; `saves` deployed 2026-10-01):** the server reads every favorite row, keeps rows with a consultant whose Solution is Published and active, and returns up to 10 Solution ids, most people first (ties go to the most recent save, then the id), with `saves`: how many people saved each, in the same order. It never returns who saved a Solution. The detail page of a ranked Solution shows the count in a heart + count chip. It requires `prvReadnx_solutionfavorite`. The library shows it as the Top 10 shelf, outside present mode.
 
+### `nx_solutionsuggestion` — private suggestions
+
+Created 2026-10-13 ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)); plug-in and app in code, not deployed. User-owned. Colleagues send suggestions on a published solution; only its owner, its contributors and the PRISMA Librarian read them. No role has privileges on the table: `nx_SuggestChange` and `nx_GetSolutionSuggestions` read and write it as the server after the caller proves Read on the solution.
+
+| Display name | Logical name | Type | Required | Notes |
+|---|---|---|---|---|
+| Name | `nx_name` | StringType (100) | Primary | Filled by the plug-in ("Suggestion · solution name"); never shown in the app |
+| Solution | `nx_solution` | Lookup → `nx_solution` | Yes | Delete: Cascade All; Assign/Share: Cascade None, so a suggestion keeps its author as owner |
+| Suggestion | `nx_suggestion` | StringType, Text area (1000) | Yes | Trimmed, no control characters |
+| Suggested by | `nx_suggestedby` | Lookup → `cr6b0_consultant` | Yes | Resolved on the server from the caller's email, like favorites; shown as the author's name |
+
+The date shown is `createdon`. There is no status column.
+
 ### `nx_demoasset` — the demo
 
 The curated asset a CSM opens. New submissions offer HTML, video and one-pager/slides, alongside images in `nx_solutionimage`. Legacy URL and desktop types remain readable but are deferred for new submissions. Files stay in Dataverse; no SharePoint storage.

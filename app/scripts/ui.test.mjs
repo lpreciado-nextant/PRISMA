@@ -589,3 +589,18 @@ test("tag pickers show chosen tags first, list only what is left and search only
   assert.match(long, /type="search"[^>]*aria-label="Search technologies"/);
   assert.doesNotMatch(long, /aria-label="Selected technologies"/);
 });
+
+test("suggestions: readers see a private list with author and date; others get a short form", async () => {
+  const ui = await server.ssrLoadModule("/connected/src/SolutionSuggestions.tsx");
+  const empty = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: [] } });
+  assert.match(empty, /Suggestions · 0 · internal only/);
+  assert.match(empty, /No suggestions yet\./);
+  const one = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: [{ id: "a", text: "Add an export to Excel.", author: "Ana Gómez", createdOn: "2026-10-13T15:04:05Z" }] } });
+  assert.match(one, /Ana Gómez<\/span> · <time dateTime="2026-10-13T15:04:05Z">/);
+  assert.match(one, /Add an export to Excel\./);
+  const form = render(ui.SuggestForm, { api: {}, solutionId: "s", onClose: noop, onSent: noop });
+  assert.match(form, /Suggest a change/);
+  assert.match(form, /Only the owner, the contributors and the librarian will see it, with your name\./);
+  assert.match(form, /maxLength="1000"/);
+  assert.match(form, /<button[^>]*disabled=""[^>]*>Send<\/button>/);
+});

@@ -5,7 +5,8 @@ import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { DetailView, GalleryFigure } from "../../src/views/DetailView";
 import { navigate } from "../../src/lib/router";
-import { publishedDetails } from "./dataSource";
+import { publishedDetails, suggestionApi } from "./dataSource";
+import { useSolutionSuggestions } from "./useSolutionSuggestions";
 import { mediaAsset, type PublishedDetail } from "./workflow";
 import type { MediaItem } from "./media";
 import { useMediaAction } from "./useMediaAction";
@@ -28,6 +29,7 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const user = useAppUser();
+  const suggestions = useSolutionSuggestions(suggestionApi, solution.id, !present);
   const mediaAction = useMediaAction(item => navigate(`/s/${solution.id}/demo/${item.id}`), { solutionId: solution.id, mode: present ? "present" : "published" });
   useEffect(() => {
     const controller = new AbortController();
@@ -53,12 +55,14 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
     favoritable={!!favorite} favorite={favorite}
     actions={!present && <>
       {appLocation && <CopyLinkButton appLocation={appLocation} route={`/s/${solution.id}`} />}
+      {suggestions.action}
       {canExportDeck(solution) && <DownloadDeckButton solution={hydrated} media={detail.media} presenter={{ name: user.fullName, email: user.live ? user.userPrincipalName : undefined }}
         csm={effort.contributors.find(person => isCustomerSuccessLevel(person.level))}
         link={route => appLocation && shareUrl(appLocation, route)} />}
     </>}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     gallery={<PublishedGallery media={detail.media} />}
+    panels={suggestions.panel}
     reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
     onAssetOpen={asset => void mediaAction.open(detail.media.find(item => item.id === asset.id))} />;
 }

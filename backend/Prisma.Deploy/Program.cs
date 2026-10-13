@@ -13,7 +13,7 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
@@ -327,6 +327,7 @@ if (command == "bind-managed-identity") { BindManagedIdentity(client, args.Skip(
 if (command == "set-blob-config") { SetBlobConfig(client, args.Skip(1).ToArray()); return; }
 if (command == "smoke-blob") { SmokeBlob(client, args.Skip(1).ToArray()); return; }
 if (command == "catalogue-api") { RegisterCatalogueApi(client, args.Skip(1).ToArray()); return; }
+if (command == "suggestion-api") { RegisterSuggestionApi(client, args.Skip(1).ToArray()); return; }
 if (command == "technology-duplicates") { TechnologyDuplicates(client); return; }
 
 static void SeedReferenceData(IOrganizationService service, string[] options)
@@ -1079,6 +1080,61 @@ static void RegisterCatalogueApi(IOrganizationService service, string[] options)
     if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
     RegisterApi(service, PluginType(service, assembly.Id, "Prisma.Plugins.CatalogueApi"), "nx_GetCatalogueGraph", "prvReadnx_Solution", new[] { ("Present", 0, false) });
     Console.WriteLine("Registered nx_GetCatalogueGraph. Generate its client from app/connected: pa app add dataverse-api --api-name nx_GetCatalogueGraph.");
+}
+
+/// <summary>
+/// Checks the user-created `nx_solutionsuggestion` table against what SuggestionApi expects, then (with --execute)
+/// registers nx_SuggestChange and nx_GetSolutionSuggestions. Both use prvReadnx_Solution: every check happens in
+/// the plug-in, which reads and writes the table as the server, so no role needs a privilege on it.
+/// </summary>
+static void RegisterSuggestionApi(IOrganizationService service, string[] options)
+{
+    if (options.Length > 1 || (options.Length == 1 && options[0] != "--execute")) throw new ArgumentException("Use suggestion-api [--execute]; preview is read-only. Execution requires explicit approval.");
+    var table = ((RetrieveEntityResponse)service.Execute(new RetrieveEntityRequest { LogicalName = "nx_solutionsuggestion", EntityFilters = EntityFilters.Attributes | EntityFilters.Relationships, RetrieveAsIfPublished = true })).EntityMetadata;
+    Console.WriteLine($"nx_solutionsuggestion: schema {table.SchemaName}, ownership {table.OwnershipType}, primary name {table.PrimaryNameAttribute}, primary id {table.PrimaryIdAttribute}.");
+    var problems = new List<string>();
+    if (table.OwnershipType != OwnershipTypes.UserOwned) problems.Add("ownership should be User or team");
+    if (table.PrimaryNameAttribute != "nx_name") problems.Add("primary name column should be nx_name");
+    void Text(string name, int max)
+    {
+        var column = table.Attributes.SingleOrDefault(attribute => attribute.LogicalName == name);
+        if (column is StringAttributeMetadata text) Console.WriteLine($"  {name}: text, max {text.MaxLength}, format {text.FormatName?.Value}, required {text.RequiredLevel?.Value}");
+        else if (column is MemoAttributeMetadata memo) Console.WriteLine($"  {name}: multiline, max {memo.MaxLength}, required {memo.RequiredLevel?.Value}");
+        else { problems.Add(name + " is missing or not text"); return; }
+        var length = column is StringAttributeMetadata s ? s.MaxLength : ((MemoAttributeMetadata)column).MaxLength;
+        if (length < max) problems.Add($"{name} allows only {length} characters; expected {max}");
+    }
+    void Lookup(string name, string target)
+    {
+        var column = table.Attributes.SingleOrDefault(attribute => attribute.LogicalName == name) as LookupAttributeMetadata;
+        if (column == null || !column.Targets.Contains(target)) { problems.Add($"{name} should be a lookup to {target}"); return; }
+        var relationship = table.ManyToOneRelationships.Single(item => item.ReferencingAttribute == name);
+        Console.WriteLine($"  {name}: lookup to {target}, relationship {relationship.SchemaName}, delete {relationship.CascadeConfiguration.Delete}, assign {relationship.CascadeConfiguration.Assign}, share {relationship.CascadeConfiguration.Share}, required {column.RequiredLevel?.Value}");
+    }
+    Text("nx_name", 100);
+    Text("nx_suggestion", 1000);
+    Lookup("nx_solution", "nx_solution");
+    Lookup("nx_suggestedby", "cr6b0_consultant");
+    var solution = table.ManyToOneRelationships.SingleOrDefault(item => item.ReferencingAttribute == "nx_solution");
+    if (solution != null && solution.CascadeConfiguration.Delete != CascadeType.Cascade) problems.Add("deleting a solution should cascade to its suggestions (Delete: Cascade All)");
+    if (solution != null && solution.CascadeConfiguration.Assign != CascadeType.NoCascade) problems.Add("Assign should be Cascade None, so suggestions stay with their author");
+    foreach (var problem in problems) Console.WriteLine("  PROBLEM: " + problem);
+    if (problems.Count > 0) { Console.WriteLine("Fix the table first. No changes made."); return; }
+    var assembly = Find(service, "pluginassembly", "name", "Prisma.Plugins") ?? throw new InvalidOperationException("Existing assembly missing.");
+    if (assembly.Id != Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba")) throw new InvalidOperationException("Unexpected assembly target.");
+    var type = new QueryExpression("plugintype") { ColumnSet = new ColumnSet(false) };
+    type.Criteria.AddCondition("pluginassemblyid", ConditionOperator.Equal, assembly.Id);
+    type.Criteria.AddCondition("typename", ConditionOperator.Equal, "Prisma.Plugins.SuggestionApi");
+    var deployed = service.RetrieveMultiple(type).Entities.Count > 0;
+    var registered = new[] { "nx_SuggestChange", "nx_GetSolutionSuggestions" }.Where(name => Find(service, "customapi", "uniquename", name) != null).ToArray();
+    Console.WriteLine($"Table matches. SuggestionApi in the deployed assembly: {(deployed ? "yes" : "no — push the signed assembly first (blob-plugin --execute)")}. Already registered: {(registered.Length == 0 ? "none" : string.Join(", ", registered))}.");
+    Console.WriteLine("Plan: register nx_SuggestChange (Guid SolutionId, String Text) and nx_GetSolutionSuggestions (Guid SolutionId), each returning String ResultJson, on Prisma.Plugins.SuggestionApi with execute privilege prvReadnx_Solution, in PRISMA_Dev. No roles, data or apps change.");
+    if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
+    if (!deployed) throw new InvalidOperationException("Push the signed assembly containing SuggestionApi first.");
+    var plugin = PluginType(service, assembly.Id, "Prisma.Plugins.SuggestionApi");
+    RegisterApi(service, plugin, "nx_SuggestChange", "prvReadnx_Solution", new[] { ("SolutionId", 12, false), ("Text", 10, false) });
+    RegisterApi(service, plugin, "nx_GetSolutionSuggestions", "prvReadnx_Solution", new[] { ("SolutionId", 12, false) });
+    Console.WriteLine("Registered. Generate the clients from app/connected: pa app add dataverse-api --api-name nx_SuggestChange, then nx_GetSolutionSuggestions.");
 }
 
 static void BlobPlugin(IOrganizationService service, string[] options)
