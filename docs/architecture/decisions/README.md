@@ -19,7 +19,7 @@ Decisions with lasting consequences are recorded here as short ADRs. Open questi
 | [0009](adr-0009-mediated-media-and-publication-access.md) | Mediated media and publication access | Accepted; deployed, least-privilege verification pending |
 | [0010](adr-0010-attachments-in-blob-through-plugins.md) | Uploaded attachments in Azure Blob through Dataverse plug-ins | Accepted for pilot; deployed and enabled 2026-09-29, non-admin acceptance pending |
 | [0011](adr-0011-asset-purpose.md) | Asset purpose on demo assets | Accepted; deployed and published 2026-10-06 |
-| [0012](adr-0012-private-solution-suggestions.md) | Private suggestions on published solutions | Accepted; table created 2026-10-13, code not deployed |
+| [0012](adr-0012-private-solution-suggestions.md) | Private suggestions on published solutions | Accepted; table and plug-in deployed 2026-10-13, APIs not registered |
 
 ## Template
 
