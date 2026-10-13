@@ -1,6 +1,6 @@
 # ADR-0012 — Private suggestions on published solutions
 
-**Status:** Accepted. Table `nx_solutionsuggestion` created in `PRISMA_Dev` 2026-10-13; signed plug-in containing `SuggestionApi` deployed 2026-10-13 22:18 UTC; Custom APIs not yet registered; connected UI shipped switched off.
+**Status:** Accepted. Table `nx_solutionsuggestion` created in `PRISMA_Dev` 2026-10-13; signed plug-in containing `SuggestionApi` deployed 2026-10-13 22:18 UTC; both Custom APIs registered and the connected app published with suggestions on the same day; hosted UI not yet checked.
 **Date:** 2026-10-13
 **Last updated:** 2026-10-13
 

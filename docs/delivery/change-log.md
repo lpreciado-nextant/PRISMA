@@ -14,7 +14,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 25% — 4 Live / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 35% — 4 Live, 1 Done in Dataverse / 12 (2 Dropped excluded) |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 42% — 5 Live / 12 (2 Dropped excluded) |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
@@ -231,7 +231,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 35% — 4 Live, 1 Done in Dataverse, 7 Proposed / 12 (2 Dropped excluded)
+**Progress:** 42% — 5 Live, 7 Proposed / 12 (2 Dropped excluded)
 
 ### Feedback
 
@@ -259,7 +259,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-005 Open demo/prototype in a new tab | 🟢 Live | Every published solution page has **Copy link** (Luis, `e6f4c92` and `7237ea3`, 2026-09-30): a play link carrying `?route=/s/{id}` that opens that solution directly, in a new tab or for a colleague, with the usual sign-in and access checks ([ADR-0003](../architecture/decisions/adr-0003-hash-routing.md)). Hosted demo URLs also keep **Pop out** (new tab) in the viewer |
 | PR-006 Demo modal/popup view | Proposed | Medium priority. Likely redundant with full-screen/new-tab — see open decisions |
 | PR-007 Reduce chrome around the demo viewer | Proposed | High priority |
-| PR-008 User feedback capture (comments/suggestions) | Done in Dataverse | Table `nx_solutionsuggestion` created 2026-10-13; `SuggestionApi` plug-in, `suggestion-api` registration command and the connected button/panel in code ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)). Medium priority. Decided 2026-10-13: private **suggestions** on published solutions, not public comments (no social features in v1). Anyone who can read a published solution, outside present mode and not on their own solution, uses **Suggest a change** on the solution page. Only the owner, the solution's contributors and the PRISMA Librarian read them, in a **Suggestions** panel on the same page, with the author's name and date; no status. Separate from the librarian review. Signed plug-in with `SuggestionApi` deployed 2026-10-13 22:18 UTC; the app ships with suggestions off. Next: `suggestion-api --execute`, client generation, wire `suggestionApi`, publish |
+| PR-008 User feedback capture (comments/suggestions) | 🟢 Live | Live 2026-10-13: `nx_SuggestChange` and `nx_GetSolutionSuggestions` registered by Juliana (Web API, same definition as `Prisma.Deploy suggestion-api`), clients generated and the connected app published with **Suggest a change** and the **Suggestions** panel; hosted UI not yet checked. Table `nx_solutionsuggestion` created 2026-10-13; `SuggestionApi` plug-in, `suggestion-api` registration command and the connected button/panel in code ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)). Medium priority. Decided 2026-10-13: private **suggestions** on published solutions, not public comments (no social features in v1). Anyone who can read a published solution, outside present mode and not on their own solution, uses **Suggest a change** on the solution page. Only the owner, the solution's contributors and the PRISMA Librarian read them, in a **Suggestions** panel on the same page, with the author's name and date; no status. Separate from the librarian review. Signed plug-in with `SuggestionApi` deployed 2026-10-13 22:18 UTC |
 | PR-009 Solution rating / usefulness score | Proposed | Low priority |
 | PR-010 Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the minimum-hours effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
 | PR-011 Complexity classification (Small / Medium / Large) | Proposed | Medium priority. Alternative or complement to duration bands above |

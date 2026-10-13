@@ -1,0 +1,52 @@
+{
+  "name": "nx_SuggestChange",
+  "title": "nx_SuggestChange",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "nx_SuggestChange",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "nx_SuggestChange",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/nx_SuggestChange": {
+          "post": {
+            "operationId": "nx_SuggestChange",
+            "parameters": [
+              {
+                "name": "SolutionId",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              },
+              {
+                "name": "Text",
+                "in": "body",
+                "required": true,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.nx_SuggestChangeResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

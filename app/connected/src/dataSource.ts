@@ -34,6 +34,8 @@ import { Nx_GetTopFavoritesService } from "./generated/services/Nx_GetTopFavorit
 import { Nx_GetCatalogueGraphService } from "./generated/services/Nx_GetCatalogueGraphService";
 import { Nx_GetMyFavoritesService } from "./generated/services/Nx_GetMyFavoritesService";
 import type { FavoriteApi } from "./favorites";
+import { Nx_SuggestChangeService } from "./generated/services/Nx_SuggestChangeService";
+import { Nx_GetSolutionSuggestionsService } from "./generated/services/Nx_GetSolutionSuggestionsService";
 import type { SuggestionApi } from "./suggestions";
 import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginResumableUploadService";
 import { Nx_GetUploadCheckpointService } from "./generated/services/Nx_GetUploadCheckpointService";
@@ -95,11 +97,11 @@ export const draftApi: DraftApi = {
   save: (json, id, version) => Nx_SaveCoreDraftService.nx_SaveCoreDraft(json, id, version),
 };
 
-/**
- * Wired once nx_SuggestChange and nx_GetSolutionSuggestions are registered and their clients generated
- * (`pa app add dataverse-api`). Until then suggestions stay off: no button, no panel.
- */
-export const suggestionApi: SuggestionApi | undefined = undefined;
+/** Private suggestions on published solutions (ADR-0012). Set to undefined to switch the button and panel off. */
+export const suggestionApi: SuggestionApi | undefined = {
+  list: id => Nx_GetSolutionSuggestionsService.nx_GetSolutionSuggestions(id),
+  send: (id, text) => Nx_SuggestChangeService.nx_SuggestChange(id, text),
+};
 
 export const favoriteApi: FavoriteApi = {
   list: () => Nx_GetMyFavoritesService.nx_GetMyFavorites(),

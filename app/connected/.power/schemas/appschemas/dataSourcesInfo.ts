@@ -343,6 +343,32 @@ export const dataSourcesInfo = {
       }
     }
   },
+  "nx_getsolutionsuggestions": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_GetSolutionSuggestions": {
+        "path": "/api/data/v9.2/nx_GetSolutionSuggestions",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "SolutionId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "nx_getsubmission": {
     "tableId": "",
     "version": "",
@@ -719,6 +745,38 @@ export const dataSourcesInfo = {
     "primaryKey": "nx_specializationareaid",
     "dataSourceType": "Dataverse",
     "apis": {}
+  },
+  "nx_suggestchange": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_SuggestChange": {
+        "path": "/api/data/v9.2/nx_SuggestChange",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "SolutionId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "Text",
+            "in": "body",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
   },
   "nx_technologies": {
     "tableId": "",
