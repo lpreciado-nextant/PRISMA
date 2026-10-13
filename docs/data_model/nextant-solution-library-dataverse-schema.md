@@ -35,7 +35,9 @@ Native N:N with `nx_solution` since 2026-09-23: a solution can carry several spe
 
 | Column | Type | Required | Notes |
 |---|---|---|---|
-| Capability *(primary name)* | Single line of text (100) | Yes | "AI & agents", "Planning & analytics", etc. |
+| Capability *(primary name)* | Single line of text (100) | Yes | "Analytics Consulting", "AI & Agent Engineering", etc. |
+| Specialization Area | Lookup → `nx_specializationarea` | No | Added 2026-10-13: the area the capability belongs to |
+| Capability Owner | Lookup → `cr6b0_consultant` | No | Added 2026-10-13: the consultant who owns the capability ([SchemaV2](SchemaV2.md#nx_capability)) |
 | Sort Order | Whole Number | No | Controls chip order |
 
 1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a single lookup column. Drafts may leave it empty. Not a tag, not connected to anything else.

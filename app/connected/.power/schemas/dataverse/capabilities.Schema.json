@@ -160,12 +160,44 @@
           "x-ms-dataverse-primary-name": true,
           "maxLength": 850
         },
+        "nx_capabilityowner": {
+          "type": "string",
+          "title": "Capability Owner",
+          "x-ms-dataverse-attribute": "nx_capabilityowner",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "nx_CapabilityOwner"
+        },
+        "nx_capabilityownername": {
+          "type": "string",
+          "title": "nx_capabilityownername",
+          "x-ms-dataverse-attribute": "nx_capabilityownername",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "nx_CapabilityOwnerName",
+          "x-ms-read-only": true,
+          "maxLength": 850
+        },
         "nx_sortordernumber": {
           "type": "string",
           "title": "Sort Order",
           "x-ms-dataverse-attribute": "nx_sortordernumber",
           "x-ms-dataverse-type": "IntegerType",
           "x-ms-schema-name": "nx_SortOrderNumber"
+        },
+        "nx_specializationarea": {
+          "type": "string",
+          "title": "Specialization Area",
+          "x-ms-dataverse-attribute": "nx_specializationarea",
+          "x-ms-dataverse-type": "LookupType",
+          "x-ms-schema-name": "nx_SpecializationArea"
+        },
+        "nx_specializationareaname": {
+          "type": "string",
+          "title": "nx_specializationareaname",
+          "x-ms-dataverse-attribute": "nx_specializationareaname",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "nx_SpecializationAreaName",
+          "x-ms-read-only": true,
+          "maxLength": 850
         },
         "overriddencreatedon": {
           "type": "string",

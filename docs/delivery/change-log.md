@@ -11,7 +11,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 |---|---|---|
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
-| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 25% — 4 Live / 16 |
+| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 28% — 4 Live, 2 Done in Dataverse / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 42% — 5 Live / 12 (2 Dropped excluded) |
@@ -121,7 +121,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-10-01 — Feedback session with Natalia and Andrés: governance, capabilities and review
 
 **Attendees:** Natalia, Andrés
-**Progress:** 25% — 4 Live / 16
+**Progress:** 28% — 4 Live, 2 Done in Dataverse / 16
 
 ### Feedback
 
@@ -137,8 +137,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Change | Status | Notes / next step |
 |---|---|---|
 | **High** · Define the approval process (Librarian role); proposed approver is the Capability Owner | Proposed | Today the PRISMA Librarian role approves ([runbook](../operations/librarian-runbook.md)). Capability Owner as approver depends on the next row; who sees the approver is [decision log Q17](decision-log.md) |
-| **High** · Associate each solution with its Capability Owner | Proposed | `nx_capability` has no owner today; [decision log Q15](decision-log.md) |
-| **High** · Align capabilities with the official organization framework | Proposed | Capabilities are governed reference data ([reference-data governance](../data_model/reference-data-governance.md)); load the official list when it is defined |
+| **High** · Associate each solution with its Capability Owner | Done in Dataverse | 2026-10-13: `nx_capability.nx_capabilityowner` (lookup to `cr6b0_consultant`) added and filled for 8 of 10 capabilities, so each solution reaches its owner through its capability. PRISMA does not read or show it yet ([decision log Q15](decision-log.md), [SchemaV2](../data_model/SchemaV2.md#nx_capability)) |
+| **High** · Align capabilities with the official organization framework | Done in Dataverse | 2026-10-13: the 10 capabilities were renamed to the framework and each now belongs to a specialization area (`nx_capability.nx_specializationarea`); list in [SchemaV2](../data_model/SchemaV2.md#nx_capability). "Business Aplication Engineering" has a typo in Dataverse. Existing solutions keep their capability; the app shows the new names on its next read |
 | **High** · Define the content governance model (ownership, submission, review, approval, maintenance) | Proposed | Builds on [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [content health](../operations/content-health.md) runbook |
 | **High** · Define content quality standards | Proposed | The review checklist's Review points list today's publication requirements; quality criteria beyond completeness still to define |
 | **High** · Capture lessons learned and insights | 🟢 Live | Columns created 2026-10-13 (`nx_challenges` and `nx_lessonslearned`, both text area, 2000 characters). Signed plug-in deployed by Luis 2026-10-13 22:18 UTC (verified to contain both columns); connected app published from `5c6e00b` the same day with the "Challenges & lessons learned" section in Solution context and the internal panel on the solution page; hosted UI not yet checked. Schema decided 2026-10-13: two optional multiline columns on `nx_solution`, Challenges (`nx_challenges`) and Lessons learned (`nx_lessonslearned`), both **internal-only** like `nx_clientcontext`: the plug-ins omit them when `Present` is true (ADR-0005), the present catalogue query does not select them and the presentation download never exports them. Outside present mode any internal user who can read the solution sees them (no field-level security). Next: create the columns in `PRISMA_Dev`, then plug-ins, connected form ("Solution context" step) and detail section |

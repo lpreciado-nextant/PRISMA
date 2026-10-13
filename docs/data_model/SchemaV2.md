@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29, per-solution save counts deployed 2026-10-01; Blob pilot session columns and environment variables specified, not deployed; `nx_solution.nx_reviewedon` created 2026-10-02 but unused; `nx_demoasset.nx_assetpurpose` created 2026-10-06 (ADR-0011); contributor effort as direct minimum hours and the CSM from the directory's `cr6b0_consultantlevel` deployed 2026-10-08; contributor `nx_role` and `nx_allocationpercent` deleted from Dataverse 2026-10-08; internal `nx_challenges` and `nx_lessonslearned` created and deployed 2026-10-13 (plug-in and connected app `5c6e00b`); `nx_solutionsuggestion` created and live 2026-10-13 (ADR-0012); `nx_startdate`/`nx_enddate` retired but still present (blocked by the unused "Information" form; deletion optional) · **Last updated:** 2026-10-13
+**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29, per-solution save counts deployed 2026-10-01; Blob pilot session columns and environment variables specified, not deployed; `nx_solution.nx_reviewedon` created 2026-10-02 but unused; `nx_demoasset.nx_assetpurpose` created 2026-10-06 (ADR-0011); contributor effort as direct minimum hours and the CSM from the directory's `cr6b0_consultantlevel` deployed 2026-10-08; contributor `nx_role` and `nx_allocationpercent` deleted from Dataverse 2026-10-08; internal `nx_challenges` and `nx_lessonslearned` created and deployed 2026-10-13 (plug-in and connected app `5c6e00b`); `nx_solutionsuggestion` created and live 2026-10-13 (ADR-0012); `nx_capability` gained Specialization Area and Capability Owner lookups and the framework names 2026-10-13; `nx_startdate`/`nx_enddate` retired but still present (blocked by the unused "Information" form; deletion optional) · **Last updated:** 2026-10-13
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `SpecializationArea`, `Industry` and `Technology` are **native N:N**, while `Capability` is a single-valued lookup. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
 
@@ -67,6 +67,8 @@ The [legacy v1 entry point](nextant-solution-library-dataverse-schema.md) was sy
 erDiagram
     nx_specializationarea }o--o{ nx_solution : "tag (N:N)"
     nx_capability |o--o{ nx_solution : "required at submit (1:N)"
+    nx_specializationarea |o--o{ nx_capability : "Specialization Area"
+    cr6b0_consultant |o--o{ nx_capability : "Capability Owner"
     nx_industry }o--o{ nx_solution : "tag (N:N)"
     nx_technology }o--o{ nx_solution : "tag (N:N)"
     nx_solution ||--o{ nx_demoasset : "1:N"
@@ -79,6 +81,8 @@ erDiagram
     cr6b0_consultant ||--o{ cr6b0_project : "Customer Success Manager"
     nx_solution ||--o{ nx_solutionfavorite : "1:N"
     cr6b0_consultant ||--o{ nx_solutionfavorite : "User (saved by)"
+    nx_solution ||--o{ nx_solutionsuggestion : "1:N, cascade delete"
+    cr6b0_consultant ||--o{ nx_solutionsuggestion : "Suggested By"
 
     nx_solution {
         guid nx_solutionid PK
@@ -121,6 +125,8 @@ erDiagram
         guid nx_capabilityid PK
         text Capability
         int SortOrder
+        lookup SpecializationArea FK
+        lookup CapabilityOwner FK
     }
     nx_industry {
         guid nx_industryid PK
@@ -215,14 +221,33 @@ Native N:N with `nx_solution` (since 2026-09-23; it was a 1:N lookup before). A 
 
 ### `nx_capability`
 
-Reintegrated after review — dropped from the first v2 draft, brought back with a narrower scope than v1: it only connects to `nx_solution`, nothing else. As of this round, single-valued rather than N:N.
+Reintegrated after review — dropped from the first v2 draft, brought back with a narrower scope than v1. As of this round, single-valued rather than N:N. **Changed 2026-10-13:** each capability now belongs to a specialization area and can name a Capability Owner, and the list was renamed to the organization's capability framework.
 
 | Column | Logical name | Type | Required | Notes |
 |---|---|---|---|---|
-| Capability *(primary name)* | `nx_capabilityname` | StringType | Yes | "AI & agents", "Planning & analytics", etc. |
+| Capability *(primary name)* | `nx_capabilityname` | StringType | Yes | Governed list below |
 | Sort Order | `nx_sortordernumber` | IntegerType | No | Controls chip order |
+| Specialization Area | `nx_specializationarea` | LookupType → `nx_specializationarea` | No | Added 2026-10-13 (`nx_capability_SpecializationArea_nx_specializationarea`). The area the capability belongs to. Not read by PRISMA yet |
+| Capability Owner | `nx_capabilityowner` | LookupType → `cr6b0_consultant` | No | Added 2026-10-13 (`nx_capability_CapabilityOwner_cr6b0_consultant`). The consultant who owns the capability; proposed approver and reviewer contact ([decision log Q15](../delivery/decision-log.md)). Not read by PRISMA yet |
 
-1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a lookup column on `nx_solution`. Drafts may leave it empty. Not connected to `cr6b0_project`.
+1:N with `nx_solution` — each solution has exactly one capability at submit/publication, set via a lookup column on `nx_solution`. Drafts may leave it empty. Not connected to `cr6b0_project`. The solution's own specialization areas stay a separate N:N; nothing checks that they include the capability's area.
+
+**Live values (2026-10-13), in sort order:**
+
+| Sort | Capability | Area | Capability Owner |
+|---|---|---|---|
+| 10 | Analytics Consulting | data | Lucia Bustillo |
+| 20 | Governance & Security | data | — |
+| 30 | Business Aplication Engineering *(typo in Dataverse: "Aplication")* | ai | Mauricio Cubillos |
+| 40 | Data Modeling & Architecture | data | Juan Pablo Sarmiento |
+| 50 | AI-Enabled Data Solution | data | Antonio Alvarez |
+| 60 | Data Engineering | data | Jorge Isaias Ardila |
+| 70 | Process Automation & Integration | ai | Andres Perez |
+| 80 | AI & Agent Engineering | ai | Shashank Saxena |
+| 90 | AI Transformation | ai | Patricia Méndez |
+| 100 | Responsible AI & Platform Governance | ai | — |
+
+No capability belongs to the `ibo` area yet. Solutions keep their capability lookup through renames; only the displayed name changes.
 
 ### `nx_industry`
 
@@ -573,11 +598,15 @@ Reviewed and accepted, not defects:
 |---|---|---|
 | `nx_specializationarea` | `nx_solution` | Native N:N |
 | `nx_capability` | `nx_solution` | 1:N |
+| `nx_specializationarea` | `nx_capability` | 1:N (Specialization Area) |
+| `cr6b0_consultant` | `nx_capability` | 1:N (Capability Owner) |
 | `nx_industry` | `nx_solution` | Native N:N |
 | `nx_technology` | `nx_solution` | Native N:N |
 | `nx_solution` | `cr6b0_project` | Native N:N |
 | `nx_solution` | `nx_solutioncontributor` | 1:N |
 | `cr6b0_consultant` | `nx_solutioncontributor` | 1:N (Built By) |
+| `nx_solution` | `nx_solutionsuggestion` | 1:N (cascade delete) |
+| `cr6b0_consultant` | `nx_solutionsuggestion` | 1:N (Suggested By) |
 | `nx_solution` | `nx_demoasset` | 1:N |
 | `nx_solution` | `nx_solutionimage` | 1:N |
 | `nx_solution` | `nx_demorequest` | 1:N |

@@ -62,7 +62,7 @@ export const SOLUTIONS: Solution[] = [
     libraryNotes: "Copilot answers are scripted for the demo path — avoid freeform questions on stage.",
     searchKeywords:
       "quota partner MSX MINT WWIC variance copilot excel EMEA sales allocation governance audit",
-    capabilities: ["AI & agents", "Planning & analytics"],
+    capabilities: ["AI & Agent Engineering", "Analytics Consulting"],
     technologies: ["React", "Power Apps code app", "Dataverse", "Fluent 2", "Grounded copilot"],
     industries: ["Technology"],
     projects: [
@@ -116,7 +116,7 @@ export const SOLUTIONS: Solution[] = [
     clientRole: "Chief of Staff",
     searchKeywords:
       "adoption consumption plan agent assistant MSX MSXi Lynx SPM workbook sponsor milestone copilot",
-    capabilities: ["AI & agents", "Planning & analytics"],
+    capabilities: ["AI & Agent Engineering", "Analytics Consulting"],
     technologies: ["Agentic assistant", "Azure OpenAI", "Excel round-trip", "Power Automate"],
     industries: ["Technology", "Professional services"],
     assets: [
@@ -155,7 +155,7 @@ export const SOLUTIONS: Solution[] = [
     clientRole: "Chief Operating Officer (COO)",
     searchKeywords:
       "portfolio delivery RAG health check-in engagement risk fluent dataverse executive scorecard PMO",
-    capabilities: ["Planning & analytics", "Workflow & approvals"],
+    capabilities: ["Analytics Consulting", "Process Automation & Integration"],
     technologies: ["Power Apps code app", "Fluent 2", "Dataverse"],
     industries: ["Cross-industry"],
     images: [
@@ -206,7 +206,7 @@ export const SOLUTIONS: Solution[] = [
     clientRole: "Chief Financial Officer (CFO)",
     searchKeywords:
       "budget request approval GTM programs purchase order finance allocation requester owner react",
-    capabilities: ["Workflow & approvals"],
+    capabilities: ["Process Automation & Integration"],
     technologies: ["React", "Dataverse", "Power Automate", "Role-based views"],
     industries: ["Professional services", "Technology"],
     assets: [
@@ -244,7 +244,7 @@ export const SOLUTIONS: Solution[] = [
     estimatedCost: 9800,
     clientRole: "Chief Executive Officer (CEO)",
     searchKeywords: "padel sport video analysis azure app service computer vision rally tagging",
-    capabilities: ["AI & agents"],
+    capabilities: ["AI & Agent Engineering"],
     technologies: ["Azure App Service", "Python", "Computer vision", "React"],
     industries: ["Sports & entertainment"],
     assets: [
@@ -287,7 +287,7 @@ export const SOLUTIONS: Solution[] = [
     clientRole: "Chief Information Officer (CIO)",
     libraryNotes: "Real headcount figures in the skills matrix — do not screenshot outside present mode.",
     searchKeywords: "talent skills matching resourcing bench staffing people analytics power apps",
-    capabilities: ["AI & agents", "Planning & analytics"],
+    capabilities: ["AI & Agent Engineering", "Analytics Consulting"],
     technologies: ["Power Apps", "Dataverse", "Azure OpenAI"],
     industries: ["Professional services"],
     projects: [
@@ -343,7 +343,7 @@ export const SOLUTIONS: Solution[] = [
     clientRole: "Operation Manager",
     searchKeywords:
       "supply chain fabric lakehouse medallion power bi semantic model shipments ETA logistics",
-    capabilities: ["Data platform", "Planning & analytics"],
+    capabilities: ["Data Engineering", "Analytics Consulting"],
     technologies: ["Microsoft Fabric", "Power BI", "Data Factory", "Semantic model"],
     industries: ["Logistics", "Manufacturing"],
     projects: [
@@ -393,7 +393,7 @@ export const SOLUTIONS: Solution[] = [
     estimatedCost: 22300,
     clientRole: "Chief Financial Officer (CFO)",
     searchKeywords: "finance close reconciliation general ledger journal exceptions audit fabric sql",
-    capabilities: ["Data platform", "Workflow & approvals"],
+    capabilities: ["Data Engineering", "Process Automation & Integration"],
     technologies: ["Azure SQL", "Python", "Power Apps code app"],
     industries: ["Financial services"],
     assets: [
@@ -432,7 +432,7 @@ export const SOLUTIONS: Solution[] = [
     clientRole: "Chief of Staff",
     searchKeywords:
       "service desk intake triage classification copilot studio teams routing queue ITSM shared services",
-    capabilities: ["AI & agents", "Workflow & approvals"],
+    capabilities: ["AI & Agent Engineering", "Process Automation & Integration"],
     technologies: ["Copilot Studio", "Power Automate", "Dataverse", "Teams"],
     industries: ["Retail", "Professional services"],
     projects: [
@@ -481,7 +481,7 @@ export const SOLUTIONS: Solution[] = [
     clientRole: "Operation Manager",
     libraryNotes: "Concept only — no working build yet. Do not show to clients.",
     searchKeywords: "field service offline mobile engineer job sheet PWA utilities voice capture",
-    capabilities: ["Workflow & approvals"],
+    capabilities: ["Process Automation & Integration"],
     technologies: ["React", "PWA", "Dataverse"],
     industries: ["Utilities", "Manufacturing"],
     assets: [

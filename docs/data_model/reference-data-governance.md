@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse · **Last updated:** 2026-10-08
+**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse ; capabilities replaced by the organization framework with area and owner (2026-10-13) · **Last updated:** 2026-10-13
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -43,18 +43,24 @@ Reference data is seeded in Phase 1, before any CSM sees the app ([roadmap](../d
 
 Seeded in **Nextant Pulse** on 2026-09-22 after user approval: 43 additions, bringing the tables to **6 capabilities, 17 industries, and 34 technologies**. Existing names, IDs, owners, sort orders and associations were preserved. No solutions were reclassified; no schema, permissions or app deployment changed. All approved names were read back as active and unique; a repeated preview proposed zero additions.
 
-**Capability is the broad primary classification. Choose exactly one by the solution's principal purpose**, not every feature or technology it contains. Drafts may leave it empty; submission/publication requires it. These are independent of specialization areas, not a new parent-child taxonomy.
+**Capability is the broad primary classification. Choose exactly one by the solution's principal purpose**, not every feature or technology it contains. Drafts may leave it empty; submission/publication requires it.
 
-| Capability | Primary purpose |
-|---|---|
-| AI & agents | An assistant, agent or AI service is the main deliverable |
-| Planning & analytics | Reporting, forecasting, planning or decision support |
-| Workflow & approvals | Process execution, task routing, approvals or operational automation |
-| Data platform | Data ingestion, integration, storage, transformation or governance |
-| Knowledge & search | Finding, organizing or retrieving documents and knowledge |
-| Digital applications & experiences | A portal, business application or user-facing experience not primarily covered above |
+**Changed 2026-10-13:** the six starter capabilities were replaced by the organization's capability framework. Each capability now belongs to a specialization area (`nx_specializationarea`) and can name a **Capability Owner** (`nx_capabilityowner`, a consultant), who owns its definition and is the proposed contact for review ([decision log Q15](../delivery/decision-log.md)). A solution's own areas remain a separate N:N; nothing requires them to include its capability's area.
 
-An approvals application that uses AI is normally **Workflow & approvals**; a document-search solution with an AI-generated answer is normally **Knowledge & search**. Use **AI & agents** when the assistant or agent itself is the principal deliverable. Describe the specific problem and benefit in Business Value.
+| Capability | Area | Capability Owner |
+|---|---|---|
+| Analytics Consulting | data | Lucia Bustillo |
+| Governance & Security | data | — |
+| Business Aplication Engineering *(typo in Dataverse)* | ai | Mauricio Cubillos |
+| Data Modeling & Architecture | data | Juan Pablo Sarmiento |
+| AI-Enabled Data Solution | data | Antonio Alvarez |
+| Data Engineering | data | Jorge Isaias Ardila |
+| Process Automation & Integration | ai | Andres Perez |
+| AI & Agent Engineering | ai | Shashank Saxena |
+| AI Transformation | ai | Patricia Méndez |
+| Responsible AI & Platform Governance | ai | — |
+
+One-line purposes for each capability are still to be written with their owners; until then, pick the capability whose owner you would ask about the solution. Describe the specific problem and benefit in Business Value.
 
 **Industries describe who the solution serves; multiple selections are allowed.** Use Cross-industry for genuinely industry-agnostic solutions instead of tagging every sector. Starter values: Financial services; IT; Manufacturing; Public sector; Cross-industry; Professional services; Healthcare; Life sciences; Retail & consumer goods; Energy & utilities; Telecommunications; Transportation & logistics; Education; Media & entertainment; Real estate & construction; Travel & hospitality; Nonprofit.
 
