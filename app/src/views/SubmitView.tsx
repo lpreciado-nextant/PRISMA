@@ -228,7 +228,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const safetyValid = draft.safetyAcknowledged;
   const mediaValid = draft.images.length > 0 && !mediaBusy;
   const capabilityValid = draft.capabilities.length === 1;
-  const stepValid = safetyValid && (step === 1 ? detailsValid : step === 2 ? clientValid && contributorsValid : step === 3 ? capabilityValid : step === 4 ? mediaValid : true);
+  const stepValid = safetyValid && (step === 1 ? detailsValid : step === 2 ? capabilityValid : step === 3 ? clientValid && contributorsValid : step === 4 ? mediaValid : true);
   const totalHours = Math.round(contributionResults.reduce((total, result) => total + result.hours, 0) * 100) / 100;
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
     set("contributors", draft.contributors.map((contributor) => contributor.id === id ? { ...contributor, ...patch } : contributor));
@@ -357,7 +357,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           </StepShell>
         )}
 
-        {step === 2 && safetyValid && (
+        {step === 3 && safetyValid && (
           <StepShell title="Solution context">
             <NamedSection title="Status">
               <StatusField status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
@@ -382,7 +382,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           </StepShell>
         )}
 
-        {step === 3 && safetyValid && (
+        {step === 2 && safetyValid && (
           <StepShell title="Tag it">
             <TagPicker label="Capability (choose one)" required governed options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(value) => set("capabilities", value.slice(-1))} />
             {!capabilityValid && <p className="text-[13px]" style={{ color: "var(--proto)" }}>Select exactly one capability before submitting.</p>}

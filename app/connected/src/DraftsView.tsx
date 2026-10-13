@@ -250,7 +250,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !contributorEffort(person).error);
   const storyComplete = !!draft.whatItDoes.trim() && !!draft.businessValue.trim();
   const complete = canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
-  const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && effortComplete && clientValid : step === 3 ? canSave && !!draft.capabilityId : step === 4 ? complete : canSave;
+  const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && !!draft.capabilityId : step === 3 ? canSave && effortComplete && clientValid : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;
@@ -282,7 +282,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
           </NamedSection>
           <StoryFields nested whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={change} />
         </StepShell>}
-        {step === 2 && <StepShell title="Solution context">
+        {step === 3 && <StepShell title="Solution context">
           <NamedSection title="Status">
             <StatusField status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
           </NamedSection>
@@ -294,7 +294,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
             associated={clientAssociated} onAssociated={setClientAssociated} />
           <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={change} />
         </StepShell>}
-        {step === 3 && <StepShell title="Tag it"><TagPicker label="Capability (choose one)" required governed options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
+        {step === 2 && <StepShell title="Tag it"><TagPicker label="Capability (choose one)" required governed options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
       </fieldset>
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}
       {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}

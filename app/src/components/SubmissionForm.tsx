@@ -11,7 +11,7 @@ import { LINK_ASSET_TYPES, assetTypeLabel, validateLinkedAsset, type LinkedAsset
 import { useVideoPreparation } from "../lib/useVideoPreparation";
 import { LocalVideoPreview } from "./ViewerFrame";
 
-export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Solution context", "Tag it", "Media", "Review & submit"] as const;
+export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Tag it", "Solution context", "Media", "Review & submit"] as const;
 
 const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> = {
   "Before you start": { icon: "shield" },

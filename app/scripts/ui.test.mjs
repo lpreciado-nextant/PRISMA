@@ -571,3 +571,7 @@ test("challenges and lessons learned are optional, internal and limited to the D
   assert.equal((html.match(/maxLength="2000"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /\(required\)/);
 });
+
+test("tagging comes right after defining the solution; internal context follows it", () => {
+  assert.deepEqual([...form.SUBMISSION_STEPS], ["Before you start", "Define the solution", "Tag it", "Solution context", "Media", "Review & submit"]);
+});
