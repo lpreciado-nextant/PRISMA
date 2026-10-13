@@ -63,7 +63,7 @@ namespace Prisma.Plugins
 
     /// <summary>
     /// Private suggestions on published solutions, separate from the librarian review. Anyone who can read a
-    /// Published, active solution may send one, except its owner. Only the owner, its contributors and the PRISMA
+    /// Published, active solution may send one, its owner included. Only the owner, its contributors and the PRISMA
     /// Librarian may list them. The caller proves Read on the solution; the table itself is read and written as the
     /// server, so no role carries privileges on it and nobody can read another person's suggestions directly.
     /// </summary>
@@ -79,16 +79,15 @@ namespace Prisma.Plugins
             // Throws for a solution the caller cannot read.
             var solution = caller.Retrieve("nx_solution", solutionId, new ColumnSet("nx_solutionname", "nx_publicationstatus", "statecode", "ownerid"));
             var owner = solution.GetAttributeValue<EntityReference>("ownerid")?.Id == context.InitiatingUserId;
-            if (context.MessageName == SuggestionPolicy.SuggestMessage) { Suggest(context, server, solution, owner); return; }
+            if (context.MessageName == SuggestionPolicy.SuggestMessage) { Suggest(context, server, solution); return; }
             if (context.MessageName == SuggestionPolicy.ListMessage) { List(context, server, solution, owner); return; }
             throw new InvalidPluginExecutionException("Invalid PRISMA suggestion registration.");
         }
 
-        private static void Suggest(IPluginExecutionContext context, IOrganizationService server, Entity solution, bool owner)
+        private static void Suggest(IPluginExecutionContext context, IOrganizationService server, Entity solution)
         {
             if (solution.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value != ReviewPolicy.Published || solution.GetAttributeValue<OptionSetValue>("statecode")?.Value != 0)
                 throw new InvalidPluginExecutionException("Only published solutions accept suggestions.");
-            if (owner) throw new InvalidPluginExecutionException("You can't send a suggestion to your own solution.");
             var text = SuggestionPolicy.CleanText(context.InputParameters["Text"] as string);
             var consultantId = FavoriteApi.ResolveConsultant(server, context.InitiatingUserId);
             var id = server.Create(new Entity("nx_solutionsuggestion") {
