@@ -16,7 +16,7 @@ namespace Prisma.Plugins
         public static readonly string[] CoreColumns = {
             "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes", "nx_businessvalue",
             "nx_capability", "nx_status", "nx_clientcontext", "nx_clientcontextredacted", "nx_safetyacknowledged",
-            "nx_clientrole"
+            "nx_clientrole", "nx_challenges", "nx_lessonslearned"
         };
         /// <summary>Live `nx_solution.nx_clientrole` choice values (SchemaV2, 2026-09-23). Optional, no default.</summary>
         public static readonly int[] ClientRoleValues = {
@@ -26,7 +26,9 @@ namespace Prisma.Plugins
         private static readonly Dictionary<string, string> TextColumns = new Dictionary<string, string> {
             { "name", "nx_solutionname" }, { "summary", "nx_onelinesummary" }, { "whatItDoes", "nx_whatitdoes" },
             { "businessValue", "nx_businessvalue" },
-            { "clientContext", "nx_clientcontext" }, { "clientContextRedacted", "nx_clientcontextredacted" }
+            { "clientContext", "nx_clientcontext" }, { "clientContextRedacted", "nx_clientcontextredacted" },
+            // Internal only (never in present mode); both columns are 2000 characters in Dataverse.
+            { "challenges", "nx_challenges" }, { "lessonsLearned", "nx_lessonslearned" }
         };
 
         public static Entity Parse(string json)
@@ -52,7 +54,8 @@ namespace Prisma.Plugins
                 values.TryGetValue(pair.Key, out raw);
                 if (raw != null && !(raw is string)) throw Invalid(pair.Key + " must be text.");
                 var text = ((string)raw ?? "").Trim();
-                var limit = pair.Key == "name" ? 100 : pair.Key == "whatItDoes" || pair.Key == "businessValue" ? 4000 : 200;
+                var limit = pair.Key == "name" ? 100 : pair.Key == "whatItDoes" || pair.Key == "businessValue" ? 4000
+                    : pair.Key == "challenges" || pair.Key == "lessonsLearned" ? 2000 : 200;
                 if (text.Length > limit) throw Invalid(pair.Key + " exceeds " + limit + " characters.");
                 if (pair.Key == "name" && (text.Length == 0 || text.Equals("Untitled solution", StringComparison.OrdinalIgnoreCase)))
                     throw Invalid("Enter an authored solution name.");

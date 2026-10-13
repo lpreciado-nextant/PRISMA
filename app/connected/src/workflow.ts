@@ -25,6 +25,7 @@ export function submissionSolution(record: Submission, names: Record<string, str
     specializationArea: specializationAreas[0] ?? "ai", specializationAreas, status: MATURITY_OPTIONS.find(option => option.value === core.maturity)!.label as Solution["status"], publicationStatus: PUBLICATIONS[record.publication] as Solution["publicationStatus"],
     reviewOutcome: record.outcome === 125060001 ? "Changes requested" : record.outcome === 125060002 ? "Approved" : "None", reviewComments: record.comments,
     safetyAcknowledged: core.safetyAcknowledged, clientSafeReviewed: record.cleared, clientContext: core.clientContext || undefined, clientContextRedacted: core.clientContextRedacted || undefined,
+    challenges: core.challenges || undefined, lessonsLearned: core.lessonsLearned || undefined,
     dateAdded: record.dateAdded ?? "", libraryNotes: record.libraryNotes, searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
   };
 }

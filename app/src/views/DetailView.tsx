@@ -219,6 +219,15 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
             </ul>
           </Panel>)}
 
+          {!present && (solution.challenges || solution.lessonsLearned) && (
+            <Panel title="Challenges & lessons learned · internal only">
+              <dl className="flex flex-col gap-4 text-[15px]">
+                {solution.challenges && <div><dt className="eyebrow mb-1">Challenges</dt><dd className="whitespace-pre-wrap break-words">{solution.challenges}</dd></div>}
+                {solution.lessonsLearned && <div><dt className="eyebrow mb-1">Lessons learned</dt><dd className="whitespace-pre-wrap break-words">{solution.lessonsLearned}</dd></div>}
+              </dl>
+            </Panel>
+          )}
+
           {!present && solution.libraryNotes && (
             <div
               className="glass glass-lite rounded-[20px] p-5"

@@ -21,7 +21,7 @@ import { contributorHours } from "../lib/effort";
 import { MAX_AREAS, solutionAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
 import { assetPurpose, purposeAllows } from "../lib/assetPurpose";
-import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
+import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, LessonsFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
 import { ImageFramer } from "../components/ImageFramer";
 
 const MAX_GALLERY = 6;
@@ -45,6 +45,9 @@ interface Draft {
   redacted: string;
   clientRole: ClientRole | "";
   contributors: SolutionContributor[];
+  /** Internal only; stripped from the present catalogue. */
+  challenges: string;
+  lessonsLearned: string;
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -65,6 +68,8 @@ const EMPTY_DRAFT: Draft = {
   redacted: "",
   clientRole: "",
   contributors: [],
+  challenges: "",
+  lessonsLearned: "",
 };
 
 const DRAFT_KEY = "nsl.draft.v2";
@@ -133,7 +138,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       industries: initialSolution.industries, contributors: initialSolution.contributors,
       thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
-      redacted: initialSolution.clientContextRedacted ?? "", clientRole: initialSolution.clientRole ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
+      redacted: initialSolution.clientContextRedacted ?? "", clientRole: initialSolution.clientRole ?? "",
+      challenges: initialSolution.challenges ?? "", lessonsLearned: initialSolution.lessonsLearned ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
     } : loadDraft(draftKey);
     if (saved.contributors.length) return saved;
     return { ...saved, contributors: [{
@@ -245,6 +251,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       clientContext: draft.clientContext || undefined,
       clientContextRedacted: draft.redacted || undefined,
       clientRole: draft.clientRole || undefined,
+      challenges: draft.challenges.trim() || undefined,
+      lessonsLearned: draft.lessonsLearned.trim() || undefined,
       thumbnail: draft.thumbnail || undefined,
       images: draft.images.map(({ id, src, caption }) => ({ id, src, caption: caption || undefined })),
       dateAdded: initialSolution?.dateAdded ?? new Date().toISOString().slice(0, 10),
@@ -370,6 +378,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             </ContributorEditor>
             </NamedSection>
             <ClientFields framed value={draft} onText={set} role={draft.clientRole} roles={CLIENT_ROLES} onRole={value => set("clientRole", value)} associated={clientAssociated} onAssociated={setClientAssociated} />
+            <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={set} />
           </StepShell>
         )}
 

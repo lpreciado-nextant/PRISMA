@@ -561,3 +561,13 @@ test("owner status panel tints by state, keeps actions on the right and shows th
   assert.match(returned, /Librarian feedback[\s\S]*Add screenshots/);
   assert.doesNotMatch(render(SubmissionStatusPanel, { state: "Published" }), /Note from the librarian/);
 });
+
+test("challenges and lessons learned are optional, internal and limited to the Dataverse length", () => {
+  const html = render(form.LessonsFields, { challenges: "", lessonsLearned: "", onChange: noop });
+  assert.match(html, /Challenges &amp; lessons learned/);
+  assert.match(html, /Internal only: never shown in presentation mode\./);
+  assert.match(html, /Challenges<span[^>]*>\(optional\)/);
+  assert.match(html, /Lessons learned<span[^>]*>\(optional\)/);
+  assert.equal((html.match(/maxLength="2000"/g) ?? []).length, 2);
+  assert.doesNotMatch(html, /\(required\)/);
+});

@@ -87,6 +87,8 @@ namespace Prisma.Plugins
                 BusinessValue = record.GetAttributeValue<string>("nx_businessvalue") ?? "",
                 ClientContext = record.GetAttributeValue<string>("nx_clientcontext") ?? "",
                 ClientContextRedacted = record.GetAttributeValue<string>("nx_clientcontextredacted") ?? "",
+                Challenges = record.GetAttributeValue<string>("nx_challenges") ?? "",
+                LessonsLearned = record.GetAttributeValue<string>("nx_lessonslearned") ?? "",
                 SafetyAcknowledged = record.GetAttributeValue<bool>("nx_safetyacknowledged"),
                 ClientRoleValue = record.GetAttributeValue<OptionSetValue>("nx_clientrole")?.Value
             };
@@ -114,6 +116,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "businessValue")] public string BusinessValue { get; set; }
         [DataMember(Name = "clientContext")] public string ClientContext { get; set; }
         [DataMember(Name = "clientContextRedacted")] public string ClientContextRedacted { get; set; }
+        [DataMember(Name = "challenges")] public string Challenges { get; set; }
+        [DataMember(Name = "lessonsLearned")] public string LessonsLearned { get; set; }
         [DataMember(Name = "safetyAcknowledged")] public bool SafetyAcknowledged { get; set; }
         [DataMember(Name = "clientRoleValue", EmitDefaultValue = false)] public int? ClientRoleValue { get; set; }
     }

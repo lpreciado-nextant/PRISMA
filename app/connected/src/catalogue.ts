@@ -79,7 +79,8 @@ function flag(row: object, key: string): boolean {
 
 export function catalogueQuery(present: boolean): IGetAllOptions {
   return {
-    select: [...SOLUTION_COLUMNS, ...(present ? [] : ["nx_clientcontext", "nx_searchkeywords"])],
+    // Internal-only columns are never requested in present mode.
+    select: [...SOLUTION_COLUMNS, ...(present ? [] : ["nx_clientcontext", "nx_searchkeywords", "nx_challenges", "nx_lessonslearned"])],
     filter: `statecode eq 0 and nx_publicationstatus eq ${PUBLISHED}${present ? " and nx_safetyacknowledged eq true and nx_clientsafereviewed eq true" : ""}`,
     orderBy: ["nx_solutionname asc", "nx_solutionid asc"],
   };
@@ -224,6 +225,8 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       safetyAcknowledged: acknowledged,
       clientSafeReviewed: cleared,
       clientContext: present ? undefined : text(row, "nx_clientcontext") || undefined,
+      challenges: present ? undefined : text(row, "nx_challenges") || undefined,
+      lessonsLearned: present ? undefined : text(row, "nx_lessonslearned") || undefined,
       clientContextRedacted: text(row, "nx_clientcontextredacted") || undefined,
       searchKeywords: present ? "" : text(row, "nx_searchkeywords"),
       dateAdded: text(row, "nx_dateadded").slice(0, 10),

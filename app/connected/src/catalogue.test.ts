@@ -243,3 +243,17 @@ test("the catalogue graph reports demo kinds only when the plug-in counts purpos
   assert.throws(() => parseCatalogueGraph(counted(-1, 0), false), /demoVideos/);
   assert.throws(() => parseCatalogueGraph(counted(1, undefined), false), /interactiveDemos/);
 });
+
+test("challenges and lessons learned are internal: read outside present mode, never requested in it", async () => {
+  for (const field of ["nx_challenges", "nx_lessonslearned"]) {
+    assert(catalogueQuery(false).select!.includes(field));
+    assert(!catalogueQuery(true).select!.includes(field));
+  }
+  const row = { nx_challenges: "Late data access", nx_lessonslearned: "Ask for access first" };
+  const [internal] = await loadCatalogue(reader(row), false, signal());
+  assert.equal(internal.challenges, "Late data access");
+  assert.equal(internal.lessonsLearned, "Ask for access first");
+  const [presented] = await loadCatalogue(reader(row), true, signal());
+  assert.equal(presented.challenges, undefined);
+  assert.equal(presented.lessonsLearned, undefined);
+});

@@ -4,7 +4,7 @@ import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { TagPicker } from "../../src/components/TagPicker";
 import { SolutionCard } from "../../src/components/SolutionCard";
-import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, SolutionDetailsFields, ClientFields, StoryFields, SubmissionReview, StatusField } from "../../src/components/SubmissionForm";
+import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, SolutionDetailsFields, ClientFields, StoryFields, LessonsFields, SubmissionReview, StatusField } from "../../src/components/SubmissionForm";
 import type { Solution, SpecializationArea } from "../../src/types";
 import { MAX_AREAS } from "../../src/lib/areas";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
@@ -237,7 +237,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const preview: Solution = {
     id: saved?.id ?? "preview", name: draft.name, summary: draft.summary, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
     specializationArea: selectedAreas[0] ?? "ai", specializationAreas: selectedAreas, status: MATURITY_OPTIONS.find(option => option.value === draft.maturity)?.label as Solution["status"],
-    publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
+    publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted, challenges: draft.challenges, lessonsLearned: draft.lessonsLearned,
     clientRole: draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : undefined,
     contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "", level: graphReferences.people?.find(option => option.id === person.personId)?.level }, directHours: person.directHours ?? undefined })),
     dateAdded: "", searchKeywords: "", assets: [], capabilities: references.capabilities.filter(option => option.id === draft.capabilityId).map(option => option.name),
@@ -292,6 +292,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
           <ClientFields framed value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
             role={draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : ""} roles={CLIENT_ROLES} onRole={value => change("clientRoleValue", value ? CLIENT_ROLE_VALUES[value] : undefined)}
             associated={clientAssociated} onAssociated={setClientAssociated} />
+          <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={change} />
         </StepShell>}
         {step === 3 && <StepShell title="Tag it"><TagPicker label="Capability (choose one)" required governed options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
       </fieldset>

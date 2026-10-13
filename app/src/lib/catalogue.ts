@@ -5,6 +5,8 @@ export function presentCatalogue(solutions: Solution[]): Solution[] {
     .map((solution) => ({
       ...solution,
       clientContext: undefined,
+      challenges: undefined,
+      lessonsLearned: undefined,
       // Builder credit, CSM rows, effort and cost are internal-only.
       contributors: [],
       contributorNames: undefined,

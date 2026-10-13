@@ -15,6 +15,12 @@ namespace Prisma.Plugins.Tests
             var entity = DraftPolicy.Parse(Input(",\"whatItDoes\":\"Actions\",\"businessValue\":\"Benefits\""));
             Assert.Equal("Actions", entity.GetAttributeValue<string>("nx_whatitdoes"));
             Assert.Equal("Benefits", entity.GetAttributeValue<string>("nx_businessvalue"));
+            var lessons = DraftPolicy.Parse(Input(",\"challenges\":\" Late data access \",\"lessonsLearned\":\"Ask for access first\""));
+            Assert.Equal("Late data access", lessons.GetAttributeValue<string>("nx_challenges"));
+            Assert.Equal("Ask for access first", lessons.GetAttributeValue<string>("nx_lessonslearned"));
+            Assert.Null(DraftPolicy.Parse(Input("")).GetAttributeValue<string>("nx_challenges"));
+            Assert.Contains("nx_challenges", DraftPolicy.CoreColumns);
+            Assert.Contains("nx_lessonslearned", DraftPolicy.CoreColumns);
             Assert.False(entity.Contains("nx_usecase"));
             Assert.DoesNotContain("nx_usecase", DraftPolicy.CoreColumns);
             Assert.DoesNotContain("useCase", DraftPolicy.Serialize(new DraftSnapshot()));
@@ -491,6 +497,8 @@ namespace Prisma.Plugins.Tests
             foreach (var field in new[] { "summary", "clientContext", "clientContextRedacted" })
                 Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"" + field + "\":\"" + new string('x', 201) + "\"")));
             Assert.NotNull(DraftPolicy.Parse(Input(",\"whatItDoes\":\"" + new string('x', 4000) + "\"")));
+            Assert.NotNull(DraftPolicy.Parse(Input(",\"lessonsLearned\":\"" + new string('x', 2000) + "\"")));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"challenges\":\"" + new string('x', 2001) + "\"")));
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse("[]"));
         }
 

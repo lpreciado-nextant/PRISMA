@@ -603,3 +603,17 @@ test("8 MiB requests accept the server's 4 MiB Dataverse fallback but reject oth
   await uploadMedia(api(4194304), initial, new File(["12345"], "shot.png"), "image", signal(), () => {}).catch(() => {});
   assert.deepEqual(kinds, ["attachment:v4", "attachment:v4", "image:v3"]);
 });
+test("challenges and lessons learned round-trip; recoveries saved before they existed still restore", () => {
+  const withLessons = { ...draft, challenges: "Late data access", lessonsLearned: "Ask for access first" };
+  assert.equal(snapshot({ ...withLessons }).lessonsLearned, "Ask for access first");
+  assert.throws(() => snapshot({ ...draft, challenges: undefined }), /Invalid core draft/);
+  const stored = JSON.parse(recoveryPayload("owner@example.com", draft.id, draft.rowVersion, withLessons, emptyGraph(), 2));
+  assert.equal(parseRecovery(JSON.stringify(stored), "owner@example.com", draft.id).draft.challenges, "Late data access");
+  delete stored.draft.challenges;
+  delete stored.draft.lessonsLearned;
+  const restored = parseRecovery(JSON.stringify(stored), "owner@example.com", draft.id).draft;
+  assert.equal(restored.challenges, "");
+  assert.equal(restored.lessonsLearned, "");
+  stored.draft.lessonsLearned = "x".repeat(2001);
+  assert.throws(() => parseRecovery(JSON.stringify(stored), "owner@example.com", draft.id), /recovery text/);
+});

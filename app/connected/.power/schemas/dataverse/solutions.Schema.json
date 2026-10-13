@@ -147,6 +147,7 @@
           "x-ms-dataverse-attribute": "nx_businessvalue",
           "x-ms-dataverse-type": "StringType",
           "x-ms-schema-name": "nx_BusinessValue",
+          "required": true,
           "maxLength": 4000
         },
         "nx_capability": {
@@ -166,6 +167,14 @@
           "x-ms-read-only": true,
           "maxLength": 850
         },
+        "nx_challenges": {
+          "type": "string",
+          "title": "Challenges",
+          "x-ms-dataverse-attribute": "nx_challenges",
+          "x-ms-dataverse-type": "MemoType",
+          "x-ms-schema-name": "nx_Challenges",
+          "maxLength": 2000
+        },
         "nx_clientcontext": {
           "type": "string",
           "title": "ClientContext",
@@ -181,6 +190,73 @@
           "x-ms-dataverse-type": "StringType",
           "x-ms-schema-name": "nx_ClientContextRedacted",
           "maxLength": 4000
+        },
+        "nx_clientrole": {
+          "type": "string",
+          "title": "Client Role",
+          "x-ms-dataverse-attribute": "nx_clientrole",
+          "x-ms-dataverse-type": "PicklistType",
+          "x-ms-schema-name": "nx_ClientRole",
+          "enum": [
+            "Chief of Staff",
+            "Chief Executive Officer (CEO)",
+            "Chief Information Officer (CIO)",
+            "Chief Operating Officer (COO)",
+            "Chief Financial Officer (CFO)",
+            "Enterprise Architect",
+            "Solution Architect",
+            "Product Owner",
+            "Project Manager",
+            "Business Unit Leader",
+            "Operation Manager",
+            "IT Manager",
+            "Director ",
+            "Other"
+          ],
+          "x-ms-enum-values": [
+            125060000,
+            125060001,
+            125060002,
+            125060008,
+            125060009,
+            125060003,
+            125060004,
+            125060005,
+            125060006,
+            125060007,
+            125060010,
+            125060011,
+            125060012,
+            125060013
+          ],
+          "Color": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "x-ms-optionsetmetadataid": "f769a478-67b7-f111-aaac-6045bd049fba",
+          "x-ms-isGlobal": false,
+          "x-ms-optionsetdisplayname": "Client Role",
+          "x-ms-optionSetType": "Picklist"
+        },
+        "nx_clientrolename": {
+          "type": "string",
+          "title": "nx_clientrolename",
+          "x-ms-dataverse-attribute": "nx_clientrolename",
+          "x-ms-dataverse-type": "VirtualType",
+          "x-ms-schema-name": "nx_clientroleName",
+          "x-ms-read-only": true
         },
         "nx_clientsafereviewed": {
           "type": "string",
@@ -252,6 +328,14 @@
           "x-ms-schema-name": "nx_ImageId",
           "x-ms-read-only": true
         },
+        "nx_lessonslearned": {
+          "type": "string",
+          "title": "Lessons Learned",
+          "x-ms-dataverse-attribute": "nx_lessonslearned",
+          "x-ms-dataverse-type": "StringType",
+          "x-ms-schema-name": "nx_LessonsLearned",
+          "maxLength": 2000
+        },
         "nx_librarynote": {
           "type": "string",
           "title": "LibraryNote",
@@ -266,7 +350,8 @@
           "x-ms-dataverse-attribute": "nx_onelinesummary",
           "x-ms-dataverse-type": "StringType",
           "x-ms-schema-name": "nx_OneLineSummary",
-          "maxLength": 4000
+          "required": true,
+          "maxLength": 200
         },
         "nx_publicationstatus": {
           "type": "string",
@@ -312,6 +397,13 @@
           "x-ms-dataverse-type": "StringType",
           "x-ms-schema-name": "nx_reviewcomments",
           "maxLength": 4000
+        },
+        "nx_reviewedon": {
+          "type": "string",
+          "title": "Reviewed On",
+          "x-ms-dataverse-attribute": "nx_reviewedon",
+          "x-ms-dataverse-type": "DateTimeType",
+          "x-ms-schema-name": "nx_ReviewedOn"
         },
         "nx_reviewoutcome": {
           "type": "string",
@@ -406,23 +498,6 @@
           "required": true,
           "maxLength": 850
         },
-        "nx_specializationarea": {
-          "type": "string",
-          "title": "Specialization Area",
-          "x-ms-dataverse-attribute": "nx_specializationarea",
-          "x-ms-dataverse-type": "LookupType",
-          "x-ms-schema-name": "nx_SpecializationArea",
-          "required": true
-        },
-        "nx_specializationareaname": {
-          "type": "string",
-          "title": "nx_specializationareaname",
-          "x-ms-dataverse-attribute": "nx_specializationareaname",
-          "x-ms-dataverse-type": "StringType",
-          "x-ms-schema-name": "nx_SpecializationAreaName",
-          "x-ms-read-only": true,
-          "maxLength": 850
-        },
         "nx_status": {
           "type": "string",
           "title": "Status",
@@ -470,6 +545,7 @@
           "x-ms-dataverse-attribute": "nx_whatitdoes",
           "x-ms-dataverse-type": "StringType",
           "x-ms-schema-name": "nx_WhatItDoes",
+          "required": true,
           "maxLength": 4000
         },
         "overriddencreatedon": {
@@ -640,11 +716,13 @@
         "createdonbehalfbyyominame",
         "modifiedbyyominame",
         "modifiedonbehalfbyyominame",
+        "nx_businessvalue",
         "nx_capability",
+        "nx_onelinesummary",
         "nx_solutionid",
         "nx_solutionname",
-        "nx_specializationarea",
         "nx_status",
+        "nx_whatitdoes",
         "ownerid",
         "owneridname",
         "owneridtype",

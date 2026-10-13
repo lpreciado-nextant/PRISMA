@@ -19,6 +19,9 @@ export interface CoreDraft {
   businessValue: string;
   clientContext: string;
   clientContextRedacted: string;
+  /** Internal only (`nx_challenges`, `nx_lessonslearned`); never read in present mode. */
+  challenges: string;
+  lessonsLearned: string;
   safetyAcknowledged: boolean;
   /** `nx_solution.nx_clientrole` numeric choice value. Optional, no default. */
   clientRoleValue?: number;
@@ -36,11 +39,11 @@ export interface DraftApi {
 export const EMPTY_DRAFT: CoreDraft = {
   name: "", summary: "", capabilityId: "", maturity: 125060004,
   whatItDoes: "", businessValue: "", clientContext: "",
-  clientContextRedacted: "", safetyAcknowledged: false,
+  clientContextRedacted: "", challenges: "", lessonsLearned: "", safetyAcknowledged: false,
 };
 
 const GUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
-const TEXT_FIELDS = ["name", "summary", "capabilityId", "whatItDoes", "businessValue", "clientContext", "clientContextRedacted"] as const;
+const TEXT_FIELDS = ["name", "summary", "capabilityId", "whatItDoes", "businessValue", "clientContext", "clientContextRedacted", "challenges", "lessonsLearned"] as const;
 
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid draft response.");
@@ -71,6 +74,7 @@ export function coreFields(draft: CoreDraft): CoreDraft {
     name: draft.name, summary: draft.summary, capabilityId: draft.capabilityId,
     maturity: draft.maturity, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
     clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
+    challenges: draft.challenges, lessonsLearned: draft.lessonsLearned,
     safetyAcknowledged: draft.safetyAcknowledged,
     ...(draft.clientRoleValue != null ? { clientRoleValue: draft.clientRoleValue } : {}),
   };

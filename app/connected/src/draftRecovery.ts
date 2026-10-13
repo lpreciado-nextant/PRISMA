@@ -18,8 +18,10 @@ export function parseRecovery(text: string, owner: string, id?: string): DraftRe
   if (value?.version !== 1 || value.owner !== owner.toLowerCase() || value.id !== (id ?? "new") || typeof value.rowVersion !== "string" || (id ? !/^\d+$/.test(value.rowVersion) : value.rowVersion !== "") || !Number.isInteger(value.step) || value.step < 0 || value.step > 5) throw new Error("Invalid recovery identity.");
   if (value.uncertain !== undefined && typeof value.uncertain !== "boolean") throw new Error("Invalid recovery operation state.");
   const draft = value.draft;
+  // Recoveries written before challenges and lessons learned existed have neither field.
+  if (draft && typeof draft === "object") { draft.challenges ??= ""; draft.lessonsLearned ??= ""; }
   if (!draft || Object.keys(EMPTY_DRAFT).some(key => typeof draft[key as keyof CoreDraft] !== typeof EMPTY_DRAFT[key as keyof CoreDraft]) || !MATURITY_OPTIONS.some(option => option.value === draft.maturity)) throw new Error("Invalid recovery draft.");
-  for (const [key, limit] of Object.entries({ name: 100, summary: 200, whatItDoes: 4000, businessValue: 4000, clientContext: 200, clientContextRedacted: 200 })) if ((draft[key as keyof CoreDraft] as string).length > limit) throw new Error("Invalid recovery text.");
+  for (const [key, limit] of Object.entries({ name: 100, summary: 200, whatItDoes: 4000, businessValue: 4000, clientContext: 200, clientContextRedacted: 200, challenges: 2000, lessonsLearned: 2000 })) if ((draft[key as keyof CoreDraft] as string).length > limit) throw new Error("Invalid recovery text.");
   if (draft.capabilityId && !guid.test(draft.capabilityId)) throw new Error("Invalid recovery reference.");
   const graph = value.graph;
   if (!graph || !Array.isArray(graph.contributors) || graph.contributors.length > 100) throw new Error("Invalid recovery contributors.");

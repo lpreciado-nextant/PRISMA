@@ -19,6 +19,7 @@ const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> 
   Status: { icon: "clock", visibility: "client" },
   Client: { icon: "briefcase" },
   "Built by & effort": { icon: "users", visibility: "internal" },
+  "Challenges & lessons learned": { icon: "edit", visibility: "internal" },
   "What does it do, and why does it matter?": { icon: "sparkle", visibility: "client" },
   "Tag it": { icon: "tag", visibility: "client" },
   Media: { icon: "image", visibility: "client" },
@@ -32,6 +33,7 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
   Status: "How mature the solution is today. It also decides how effort is entered below.",
   "Solution details": "The card's first impression. Name it like a product, not a project code, and say in one line what it does.",
   Client: "Who this was built for, and how to talk about them in front of other clients.",
+  "Challenges & lessons learned": "What made it hard and what you would tell the next team. Internal only: never shown in presentation mode.",
   "Built by & effort": "Add the contributors who worked on this solution and capture the effort required to deliver it. This information is used for internal tracking only.",
   "What does it do, and why does it matter?": "CSMs rely on this step most. Write it for someone who wasn't on the project.",
   "Tag it": "Tags help CSMs find this later. Capabilities and industries come from a fixed list; technologies are free text.",
@@ -395,6 +397,14 @@ export function StoryFields({ whatItDoes, businessValue, onChange, nested = fals
     <Field label="Business value" required hint="The problem it solves and why that matters. Add real numbers only if you have them."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={businessValue} onChange={event => onChange("businessValue", event.target.value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
     {children}
   </Shell>;
+}
+
+/** Optional, internal-only reflections (`nx_challenges`, `nx_lessonslearned`); never part of present mode. */
+export function LessonsFields({ challenges, lessonsLearned, onChange }: { challenges: string; lessonsLearned: string; onChange: (key: "challenges" | "lessonsLearned", value: string) => void }) {
+  return <NamedSection title="Challenges & lessons learned">
+    <Field label="Challenges" optional hint="Blockers, risks or difficulties you hit while building it."><textarea className={`${submissionInputClass} min-h-24 resize-y`} value={challenges} onChange={event => onChange("challenges", event.target.value)} placeholder="e.g. Test data arrived late, so matching rules were tuned on a small sample." maxLength={2000} /></Field>
+    <Field label="Lessons learned" optional hint="Recommendations or implementation notes for the next team."><textarea className={`${submissionInputClass} min-h-24 resize-y`} value={lessonsLearned} onChange={event => onChange("lessonsLearned", event.target.value)} placeholder="e.g. Request data access in week one and agree on a sample with finance." maxLength={2000} /></Field>
+  </NamedSection>;
 }
 
 export function SubmissionReview({ card, attachments, contributors, hours, images, safety, client, context, role, nextState, children }: {

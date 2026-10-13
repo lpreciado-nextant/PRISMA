@@ -1,6 +1,6 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-08
+**Status:** Living · **Last updated:** 2026-10-13
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
@@ -11,7 +11,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 |---|---|---|
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
-| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 19% — 3 Live / 16 |
+| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 20% — 3 Live, 1 Done in Dataverse / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 33% — 4 Live / 12 (2 Dropped excluded) |
@@ -20,7 +20,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
-- Schema for lessons learned, tools used and AI usage; one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
+- Whether to record that AI was used to build a solution (tools used are covered by Technologies); one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Demo viewing (PR-006): full screen (PR-004) and new-tab links (PR-005) are live; whether a modal is still wanted ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Whether to delete the retired `nx_startdate`/`nx_enddate` contributor columns (optional; first remove them from the unused "Information" form) ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08; legacy rows without hours are dummy data, no backfill
@@ -121,7 +121,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-10-01 — Feedback session with Natalia and Andrés: governance, capabilities and review
 
 **Attendees:** Natalia, Andrés
-**Progress:** 19% — 3 Live / 16
+**Progress:** 20% — 3 Live, 1 Done in Dataverse / 16
 
 ### Feedback
 
@@ -141,11 +141,11 @@ When a decision above gets resolved, delete its bullet here and update the match
 | **High** · Align capabilities with the official organization framework | Proposed | Capabilities are governed reference data ([reference-data governance](../data_model/reference-data-governance.md)); load the official list when it is defined |
 | **High** · Define the content governance model (ownership, submission, review, approval, maintenance) | Proposed | Builds on [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [content health](../operations/content-health.md) runbook |
 | **High** · Define content quality standards | Proposed | The review checklist's Review points list today's publication requirements; quality criteria beyond completeness still to define |
-| **High** · Capture lessons learned and insights | Proposed | New content (blockers, recommendations, implementation notes); needs a schema decision |
+| **High** · Capture lessons learned and insights | Done in Dataverse | Columns created 2026-10-13 (`nx_challenges` multiline, `nx_lessonslearned` single-line, both 2000); plug-ins, form ("Challenges & lessons learned" in Solution context) and internal detail panel in code, not deployed. Schema decided 2026-10-13: two optional multiline columns on `nx_solution`, Challenges (`nx_challenges`) and Lessons learned (`nx_lessonslearned`), both **internal-only** like `nx_clientcontext`: the plug-ins omit them when `Present` is true (ADR-0005), the present catalogue query does not select them and the presentation download never exports them. Outside present mode any internal user who can read the solution sees them (no field-level security). Next: create the columns in `PRISMA_Dev`, then plug-ins, connected form ("Solution context" step) and detail section |
 | **Medium** · Adoption strategy; user guide; training videos and onboarding | Proposed | Rollout and enablement material, outside the app |
 | **Medium** · Contextual guidance in forms for classifying solutions and capabilities | Proposed | Builds on the step introductions and field hints already in the submit flow |
 | **Medium** · Content curation: may Capability Owners correct metadata before publication? | Proposed | Today librarians cannot edit contributor content; they return it with comments |
-| **Medium** · Track tools used to build the solution (Copilot, Cowork, GitHub Copilot, …) and whether AI was used | Proposed | New fields; needs a schema decision |
+| **Medium** · Track tools used to build the solution (Copilot, Cowork, GitHub Copilot, …) and whether AI was used | Proposed | Tools used: decided 2026-10-13, no new field; they are captured as Technologies. Whether AI was used: still open |
 | **Medium** · Review whether one capability per solution is enough | Proposed | `nx_capability` is a single lookup today ([SchemaV2](../data_model/SchemaV2.md)) |
 | **Medium** · Retrieve roles from Azure AD instead of manual entry | 🟢 Live | Delivered 2026-10-08 for the contributor role: it now comes automatically from the consultant directory, `cr6b0_consultant.cr6b0_consultantlevel` (synced directory data), shown read-only, and a level naming customer success marks the solution's CSM; the manual `nx_role` entry was removed and the column deleted. The source is the `cr6b0_consultant` table, not a direct Microsoft Entra ID (Azure AD) call. The client role (`nx_clientrole`) is unchanged and still entered manually. `1c89c2d`, deployed 2026-10-08 ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level)) |
 | **Medium** · Effort metadata: whether to capture and show minimum effort estimates | Proposed | Continues the open effort decision from [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) |
@@ -157,7 +157,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 - Who approves: the PRISMA Librarian role, the Capability Owner, or both; and who may see the approver's name (Q15, Q17)
 - Whether Capability Owners may edit metadata before publication
-- Schema for lessons learned, tools used and AI usage
+- Whether to record that AI was used to build a solution. Tools used need no field (Technologies covers them); lessons learned is decided (two internal columns, readable by any internal user outside present mode)
 - One capability per solution, or several
 - Whether adoption and AI-tool analytics fit v1 scope
 
