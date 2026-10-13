@@ -1122,15 +1122,12 @@ static void RegisterSuggestionApi(IOrganizationService service, string[] options
     if (problems.Count > 0) { Console.WriteLine("Fix the table first. No changes made."); return; }
     var assembly = Find(service, "pluginassembly", "name", "Prisma.Plugins") ?? throw new InvalidOperationException("Existing assembly missing.");
     if (assembly.Id != Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba")) throw new InvalidOperationException("Unexpected assembly target.");
-    var type = new QueryExpression("plugintype") { ColumnSet = new ColumnSet(false) };
-    type.Criteria.AddCondition("pluginassemblyid", ConditionOperator.Equal, assembly.Id);
-    type.Criteria.AddCondition("typename", ConditionOperator.Equal, "Prisma.Plugins.SuggestionApi");
-    var deployed = service.RetrieveMultiple(type).Entities.Count > 0;
+    // Updating the assembly does not create plug-in types; registration does, and Dataverse refuses a type the assembly lacks.
+    var updated = service.Retrieve("pluginassembly", assembly.Id, new ColumnSet("modifiedon")).GetAttributeValue<DateTime>("modifiedon");
     var registered = new[] { "nx_SuggestChange", "nx_GetSolutionSuggestions" }.Where(name => Find(service, "customapi", "uniquename", name) != null).ToArray();
-    Console.WriteLine($"Table matches. SuggestionApi in the deployed assembly: {(deployed ? "yes" : "no — push the signed assembly first (blob-plugin --execute)")}. Already registered: {(registered.Length == 0 ? "none" : string.Join(", ", registered))}.");
+    Console.WriteLine($"Table matches. Prisma.Plugins last updated {updated:u}; it must be the signed build containing SuggestionApi. Already registered: {(registered.Length == 0 ? "none" : string.Join(", ", registered))}.");
     Console.WriteLine("Plan: register nx_SuggestChange (Guid SolutionId, String Text) and nx_GetSolutionSuggestions (Guid SolutionId), each returning String ResultJson, on Prisma.Plugins.SuggestionApi with execute privilege prvReadnx_Solution, in PRISMA_Dev. No roles, data or apps change.");
     if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
-    if (!deployed) throw new InvalidOperationException("Push the signed assembly containing SuggestionApi first.");
     var plugin = PluginType(service, assembly.Id, "Prisma.Plugins.SuggestionApi");
     RegisterApi(service, plugin, "nx_SuggestChange", "prvReadnx_Solution", new[] { ("SolutionId", 12, false), ("Text", 10, false) });
     RegisterApi(service, plugin, "nx_GetSolutionSuggestions", "prvReadnx_Solution", new[] { ("SolutionId", 12, false) });
