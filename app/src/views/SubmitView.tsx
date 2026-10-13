@@ -384,10 +384,10 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
         {step === 2 && safetyValid && (
           <StepShell title="Tag it">
-            <TagPicker label="Capability (choose one)" required governed options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(value) => set("capabilities", value.slice(-1))} />
+            <TagPicker label="Capability (choose one)" required governed hint="The kind of solution it is." options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(value) => set("capabilities", value.slice(-1))} />
             {!capabilityValid && <p className="text-[13px]" style={{ color: "var(--proto)" }}>Select exactly one capability before submitting.</p>}
             <TagPicker label="Technologies" optional options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
-            <TagPicker label="Industries" optional governed options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
+            <TagPicker label="Industries" optional governed hint="Industries where it applies." options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
           </StepShell>
         )}
 

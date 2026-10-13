@@ -434,25 +434,25 @@ export function ContributorRow({ index, person, level, value, onChange, onRemove
   onRemove?: () => void; result: { error: string; hours: number };
 }) {
   const id = useId();
-  return <fieldset className="mt-5 min-w-0 border-b border-(--glass-edge) pb-5" aria-describedby={id}>
-    <legend className="mb-3 text-[13px] font-semibold">Contributor {index + 1}</legend>
-    <div className="grid min-w-0 gap-4 sm:grid-cols-2">
-      <div className={`min-w-0 ${level === undefined ? "sm:col-span-2" : ""}`}>{person}</div>
-      {level !== undefined && <div className="min-w-0">
-        <p className="mb-1.5 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Level</p>
-        <p className="py-2.5 text-[15px] text-(--ink-2)">{level || "Not recorded in the consultant directory"}</p>
-      </div>}
-      <Field label="Minimum hours required" required><input type="number" className={submissionInputClass} min={0} step={0.01} value={value ?? ""} onChange={event => onChange(event.target.value === "" ? null : Number(event.target.value))} /></Field>
-      <div className="flex min-w-0 items-center justify-between gap-3 sm:col-span-2">
-        <p id={id} aria-live="polite" className={`text-[13px] ${result.error ? "text-(--proto)" : "text-(--ink-2)"}`}>{result.error || `${result.hours.toLocaleString()} hours`}</p>
-        {onRemove && <button type="button" onClick={onRemove} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center rounded-lg border border-(--glass-edge)" title="Remove contributor" aria-label={`Remove contributor ${index + 1}`}><Icon name="close" size={16} /></button>}
+  // One compact line per person: who (with their directory level underneath) beside their hours.
+  return <fieldset className="mt-4 min-w-0 border-b border-(--glass-edge) pb-4" aria-describedby={id}>
+    <legend className="sr-only">Contributor {index + 1}</legend>
+    <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2 sm:flex-nowrap">
+      <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
+        {person}
+        {level !== undefined && <p className="mt-1 truncate text-[12px] text-(--ink-3)" title={level || undefined}>{level || "Level not recorded in the consultant directory"}</p>}
       </div>
+      <div className="min-w-0 flex-1 sm:w-48 sm:flex-none"><Field label="Minimum hours required" required><input type="number" className={submissionInputClass} min={0} step={0.01} value={value ?? ""} onChange={event => onChange(event.target.value === "" ? null : Number(event.target.value))} /></Field></div>
+      {onRemove && <button type="button" onClick={onRemove} className="mt-[30px] grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg border border-(--glass-edge)" title="Remove contributor" aria-label={`Remove contributor ${index + 1}`}><Icon name="close" size={16} /></button>}
+      {/* Keeps the hours column aligned with rows that can be removed. */}
+      {!onRemove && <span aria-hidden="true" className="hidden w-11 shrink-0 sm:block" />}
     </div>
+    <p id={id} aria-live="polite" className={result.error ? "mt-2 text-[13px] text-(--proto)" : "sr-only"}>{result.error || `${result.hours.toLocaleString()} hours`}</p>
   </fieldset>;
 }
 
 type Person = { id: string; name: string; email?: string };
-export function PersonPicker<PersonType extends Person>({ value, options, onChange, label = "Person", hint = "Find a contributor by name or email and select their match." }: { value: PersonType; options: PersonType[]; onChange: (person: PersonType) => void; label?: string; hint?: string }) {
+export function PersonPicker<PersonType extends Person>({ value, options, onChange, label = "Person", hint = "" }: { value: PersonType; options: PersonType[]; onChange: (person: PersonType) => void; label?: string; hint?: string }) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState<string | null>(null);
@@ -463,7 +463,7 @@ export function PersonPicker<PersonType extends Person>({ value, options, onChan
   const close = () => { setOpen(false); setQuery(null); setActiveIndex(-1); };
   const select = (person: PersonType) => { onChange(person); close(); };
   return <div className="relative min-w-0">
-    <Field label={label} required hint={hint || undefined}><input role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={open ? `${id}-list` : undefined} aria-activedescendant={open && activePerson ? `${id}-option-${activePerson.id}` : undefined} aria-required="true" autoComplete="off" className={submissionInputClass} value={query ?? value.name} placeholder="e.g. Alex" onFocus={() => setOpen(true)} onClick={() => setOpen(true)} onBlur={close}
+    <Field label={label} required hint={hint || undefined}><input role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls={open ? `${id}-list` : undefined} aria-activedescendant={open && activePerson ? `${id}-option-${activePerson.id}` : undefined} aria-required="true" autoComplete="off" className={submissionInputClass} value={query ?? value.name} placeholder="Search by name or email" onFocus={() => setOpen(true)} onClick={() => setOpen(true)} onBlur={close}
       onChange={event => { setQuery(event.target.value); setActiveIndex(-1); setOpen(true); }}
       onKeyDown={event => {
         if (event.key === "ArrowDown" || event.key === "ArrowUp") {

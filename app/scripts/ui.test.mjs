@@ -288,15 +288,16 @@ test("the client question hides every client field until Yes", () => {
 test("safety and contributor rows preserve baseline copy and accessible field structure", () => {
   assert.match(render(form.SubmissionSafety, { accepted: false, onChange: noop }), /Help keep PRISMA content safe/);
   const html = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), value: null, onChange: noop, result: { error: "Enter hours", hours: 0 } });
-  assert.match(html, /<legend[^>]*>Contributor 1/);
-  assert.match(html, /sm:col-span-2/);
+  // Compact row: the legend is for screen readers; the hours sit beside the person, the level in small text under them.
+  assert.match(html, /<legend class="sr-only">Contributor 1/);
   assert.match(html, /Minimum hours required/);
+  assert.match(html, /role="alert"|aria-live="polite" class="mt-2[^"]*">Enter hours/);
   assert.doesNotMatch(html, /Allocation|Start date|business days|>Level</);
   const selected = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: "Customer Success Manager II", value: 4, onChange: noop, result: { error: "", hours: 4 } });
-  assert.match(selected, />Level</);
-  assert.match(selected, /Customer Success Manager II/);
-  assert.doesNotMatch(selected, /<select|Role/);
-  assert.match(render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: null, value: 4, onChange: noop, result: { error: "", hours: 4 } }), /Not recorded in the consultant directory/);
+  assert.match(selected, /<p class="mt-1 truncate text-\[12px\][^>]*>Customer Success Manager II<\/p>/);
+  assert.match(selected, /class="sr-only">4 hours/);
+  assert.doesNotMatch(selected, /<select|Role|>Level</);
+  assert.match(render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: null, value: 4, onChange: noop, result: { error: "", hours: 4 } }), /Level not recorded in the consultant directory/);
   assert.doesNotMatch(html, /Remove contributor/);
   assert.match(html, /aria-live="polite"/);
 });
@@ -574,4 +575,17 @@ test("challenges and lessons learned are optional, internal and limited to the D
 
 test("tagging comes right after defining the solution; internal context follows it", () => {
   assert.deepEqual([...form.SUBMISSION_STEPS], ["Before you start", "Define the solution", "Tag it", "Solution context", "Media", "Review & submit"]);
+});
+
+test("tag pickers show chosen tags first, list only what is left and search only long lists", async () => {
+  const { TagPicker } = await server.ssrLoadModule("/src/components/TagPicker.tsx");
+  const short = render(TagPicker, { label: "Industries", optional: true, governed: true, hint: "Industries where it applies.", options: ["Retail", "Energy"], selected: ["Retail"], onChange: noop });
+  assert.match(short, /Industries where it applies\./);
+  assert.match(short, /aria-label="Selected industries".*<span class="sr-only">Remove <\/span>Retail/s);
+  assert.match(short, /aria-label="Available industries".*<span class="sr-only">Add <\/span>Energy/s);
+  assert.doesNotMatch(short.split('aria-label="Available industries"')[1], /Retail/);
+  assert.doesNotMatch(short, /type="search"|Librarian-managed/);
+  const long = render(TagPicker, { label: "Technologies", optional: true, options: Array.from({ length: 13 }, (_, index) => `Tool ${index}`), selected: [], onChange: noop });
+  assert.match(long, /type="search"[^>]*aria-label="Search technologies"/);
+  assert.doesNotMatch(long, /aria-label="Selected technologies"/);
 });
