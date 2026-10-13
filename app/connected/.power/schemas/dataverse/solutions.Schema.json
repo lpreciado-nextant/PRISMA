@@ -171,7 +171,7 @@
           "type": "string",
           "title": "Challenges",
           "x-ms-dataverse-attribute": "nx_challenges",
-          "x-ms-dataverse-type": "MemoType",
+          "x-ms-dataverse-type": "StringType",
           "x-ms-schema-name": "nx_Challenges",
           "maxLength": 2000
         },
