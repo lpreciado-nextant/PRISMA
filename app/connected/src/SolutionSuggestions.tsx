@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { submissionInputClass } from "../../src/components/SubmissionForm";
@@ -23,17 +23,25 @@ export function SuggestForm({ api, solutionId, onClose, onSent }: { api: Suggest
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const sectionRef = useRef<HTMLElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  // The form opens below the solution details, away from the button: bring it into view and put the cursor in it.
+  useEffect(() => {
+    const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    sectionRef.current?.scrollIntoView({ block: "center", behavior: smooth ? "smooth" : "auto" });
+    textRef.current?.focus({ preventScroll: true });
+  }, []);
   const send = async () => {
     setBusy(true); setError("");
     try { await sendSuggestion(api, solutionId, text, new AbortController().signal); onSent(); }
     catch { setError("Your suggestion was not sent. Try again in a moment."); }
     finally { setBusy(false); }
   };
-  return <section className={panel} aria-labelledby={`${id}-title`}>
+  return <section ref={sectionRef} className={panel} aria-labelledby={`${id}-title`}>
     <h2 id={`${id}-title`} className="text-[16px] font-semibold">Suggest a change</h2>
     <p className="mt-1 text-[13px] text-(--ink-2)">Only the owner, the contributors and the librarian will see it, with your name.</p>
     <label className="sr-only" htmlFor={`${id}-text`}>Suggestion</label>
-    <textarea id={`${id}-text`} className={`${submissionInputClass} mt-3 min-h-28 resize-y`} maxLength={SUGGESTION_MAX} value={text} onChange={event => setText(event.target.value)} placeholder="e.g. Add an export to Excel so finance can share the unmatched items." disabled={busy} />
+    <textarea ref={textRef} id={`${id}-text`} className={`${submissionInputClass} mt-3 min-h-28 resize-y`} maxLength={SUGGESTION_MAX} value={text} onChange={event => setText(event.target.value)} placeholder="e.g. Add an export to Excel so finance can share the unmatched items." disabled={busy} />
     <p className="mt-1 text-right font-mono text-[11px] text-(--ink-3)">{text.length}/{SUGGESTION_MAX}</p>
     {error && <p role="alert" className="mt-2 text-[13px] text-(--proto)">{error}</p>}
     {busy && <LoadingState className="mt-2" label="Sending suggestion..." />}
