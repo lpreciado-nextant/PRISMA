@@ -30,10 +30,8 @@ const PUBLICATION_CHECKLIST = [
 ] as const;
 /** A returned submission needs feedback the submitter can act on, not a one-word note. */
 const MIN_CHANGE_COMMENT = 15;
-const PUBLISHED_ACTIONS: Choice<"changes" | "retire">[] = [
-  { value: "changes", title: "Request changes", detail: "Take it out of the library and send it back to the owner to fix.", icon: "alert", color: "var(--proto)" },
-  { value: "retire", title: "Retire from library", detail: "Take it out for good, e.g. obsolete or replaced. Nothing is deleted.", icon: "eyeOff", color: "var(--ink-2)" },
-];
+/** Compact secondary buttons for the published row and its Cancel. */
+const compactAction = "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-(--glass-edge) bg-(--ground)/50 px-3 py-1.5 text-[13.5px] font-semibold text-(--ink-2) hover:text-(--ink) disabled:cursor-not-allowed disabled:opacity-40";
 
 /** One option of a decision, as a selectable card backed by a native radio (arrow keys move between options). */
 function ChoiceCard<Value extends string>({ name, option, selected, onSelect }: { name: string; option: Choice<Value>; selected: boolean; onSelect: () => void }) {
@@ -74,7 +72,6 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
 }) {
   const heading = useId();
   const [manage, setManage] = useState<"changes" | "retire" | undefined>();
-  const manageOption = PUBLISHED_ACTIONS.find(option => option.value === manage);
   const [decision, setDecision] = useState<Decision | undefined>(defaultDecision);
   const disabled = busy || locked;
   // A returned record is a Draft awaiting its contributor: say so, and show the feedback as what they are working from.
@@ -169,40 +166,40 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         </div>}
       </section>}
 
-      {status === "Published" && <section aria-labelledby={`${heading}-live`} className="mt-6 rounded-xl border p-4 sm:p-5" style={{ borderColor: "color-mix(in srgb, var(--live) 40%, transparent)", background: "color-mix(in srgb, var(--live) 7%, transparent)" }}>
-        <div className="flex items-start gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ color: "var(--live)", background: "color-mix(in srgb, var(--live) 16%, transparent)" }}><Icon name="check" size={18} /></span>
-          <div className="min-w-0">
-            <h3 id={`${heading}-live`} className="text-[16px] font-semibold" style={{ color: "var(--live)" }}>Published</h3>
-            <p className="mt-0.5 text-[13.5px] text-(--ink-2)">Live in the library: CSMs can find it and present it.</p>
+      {/* Published: one compact row (status left, actions right). An action's form opens below only once chosen. */}
+      {status === "Published" && <section aria-labelledby={`${heading}-live`} className="mt-5 rounded-xl border px-4 py-3" style={{ borderColor: "color-mix(in srgb, var(--live) 35%, transparent)", background: "color-mix(in srgb, var(--live) 6%, transparent)" }}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <div className="flex min-w-0 flex-1 basis-56 items-center gap-2.5">
+            <span className="grid size-7 shrink-0 place-items-center rounded-full" style={{ color: "var(--live)", background: "color-mix(in srgb, var(--live) 16%, transparent)" }}><Icon name="check" size={14} /></span>
+            <p className="min-w-0"><span id={`${heading}-live`} className="text-[15px] font-semibold" style={{ color: "var(--live)" }}>Published</span>
+              <span className="text-[13.5px] text-(--ink-2)"> · Available in the Solution Library.</span></p>
           </div>
-        </div>
-        {feedback && <div className="mt-4 border-t border-(--glass-edge) pt-4">
-          <h4 className="eyebrow">Your note to the contributor</h4>
-          <p className="mt-2 border-l-2 border-(--live) pl-3 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{feedback}</p>
-        </div>}
-        {/* Taking a published record out of the library: either back to its owner to fix, or retired for good. Both need
-            the words the owner will read; the caller confirms before acting. */}
-        {(onRequestChanges || onRetire) && <fieldset disabled={disabled} className="mt-4 min-w-0 border-t border-(--glass-edge) pt-4">
-          <legend className="sr-only">Take it out of the library</legend>
-          <h4 aria-hidden="true" className="text-[14px] font-semibold">Need to change it?</h4>
-          <div role="radiogroup" aria-label="Take it out of the library" className="mt-2.5 grid gap-3 sm:grid-cols-2">
-            {PUBLISHED_ACTIONS.filter(option => option.value === "changes" ? onRequestChanges : onRetire).map(option => <ChoiceCard key={option.value} name={`${heading}-published`} option={option} selected={manage === option.value} onSelect={() => setManage(option.value)} />)}
-          </div>
-          {manageOption && <div className="animate-rise mt-4">
-            <label className="block text-[14px] font-semibold">{manage === "changes" ? "Comments to contributor" : "Reason for retiring"} <span className="font-normal text-(--ink-2)">(required)</span>
-              <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={3} required aria-required="true" className={textArea}
-                placeholder={manage === "changes" ? "Describe what needs to be updated before it can be published again." : "For example: replaced by a newer version, or no longer offered."} />
-            </label>
-            <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-              {!comments.trim() && <p id={`${heading}-manage-hint`} className="mr-auto text-[13px] text-(--ink-2)">{manage === "changes" ? "Add a comment so the owner knows what to fix." : "Add the reason the owner will see."}</p>}
-              <button type="button" aria-describedby={comments.trim() ? undefined : `${heading}-manage-hint`} disabled={!comments.trim() || disabled} onClick={manage === "changes" ? onRequestChanges : onRetire}
-                className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-                style={manage === "changes" ? { background: "var(--proto)", color: "var(--on-accent)" } : { border: "1px solid var(--glass-edge)" }}>
-                <Icon name={manageOption.icon} size={16} />{manage === "changes" ? "Send back for changes" : "Retire from library"}
-              </button>
-            </div>
+          {(onRequestChanges || onRetire) && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {onRequestChanges && <button type="button" disabled={disabled} aria-expanded={manage === "changes"} aria-controls={`${heading}-manage`} onClick={() => { onComments(""); setManage(manage === "changes" ? undefined : "changes"); }} className={compactAction} style={manage === "changes" ? { color: "var(--proto)", borderColor: "color-mix(in srgb, var(--proto) 45%, transparent)" } : undefined}><Icon name="alert" size={14} />Request changes</button>}
+            {onRetire && <button type="button" disabled={disabled} aria-expanded={manage === "retire"} aria-controls={`${heading}-manage`} onClick={() => { onComments(""); setManage(manage === "retire" ? undefined : "retire"); }} className={compactAction} style={manage === "retire" ? { color: "var(--ink)", borderColor: "var(--ink-3)" } : undefined}><Icon name="eyeOff" size={14} />Retire</button>}
           </div>}
+        </div>
+        {feedback && !manage && <p className="mt-2.5 border-l-2 border-(--live) pl-3 text-[13.5px] whitespace-pre-wrap break-words text-(--ink-2)"><span className="font-semibold text-(--ink)">Your note to the contributor: </span>{feedback}</p>}
+        {manage && <fieldset id={`${heading}-manage`} disabled={disabled} className="animate-rise mt-3 min-w-0 border-t border-(--glass-edge) pt-3">
+          <legend className="sr-only">{manage === "changes" ? "Request changes" : "Retire from the library"}</legend>
+          {/* One line on what each action means, so the two read differently. */}
+          <p className="text-[13.5px] text-(--ink-2)">{manage === "changes"
+            ? "Use this when something must be fixed. It leaves the library until the owner corrects it and resubmits it for review."
+            : "Use this when the solution is obsolete or replaced. It is removed from the Solution Library for good; the record is kept, not deleted, and the owner sees your reason."}</p>
+          {/* Both transitions send the words the owner will read (the plug-in requires them); the caller confirms first. */}
+          <label className="mt-3 block text-[14px] font-semibold">{manage === "changes" ? "What needs to be corrected" : "Reason for retiring"} <span className="font-normal text-(--ink-2)">(required)</span>
+            <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={3} required aria-required="true" className={textArea}
+              placeholder={manage === "changes" ? "Describe what needs to be updated before it can be published again." : "For example: replaced by a newer version, or no longer offered."} />
+          </label>
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+            {!comments.trim() && <p id={`${heading}-manage-hint`} className="mr-auto text-[13px] text-(--ink-2)">{manage === "changes" ? "Add a comment so the owner knows what to fix." : "Add the reason the owner will see."}</p>}
+            <button type="button" onClick={() => { onComments(""); setManage(undefined); }} className={compactAction}>Cancel</button>
+            <button type="button" aria-describedby={comments.trim() ? undefined : `${heading}-manage-hint`} disabled={!comments.trim() || disabled} onClick={manage === "changes" ? onRequestChanges : onRetire}
+              className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+              style={manage === "changes" ? { background: "var(--proto)", color: "var(--on-accent)" } : { background: "var(--ink)", color: "var(--ground)" }}>
+              <Icon name={manage === "changes" ? "chevronLeft" : "eyeOff"} size={15} />{manage === "changes" ? "Send back for changes" : "Retire from library"}
+            </button>
+          </div>
         </fieldset>}
       </section>}
 

@@ -395,11 +395,13 @@ test("review panel: overview, required publication checklist, and a decision tha
   assert.doesNotMatch(waiting, /Review decision|Publication checklist|Latest review comments|Resubmitted after/);
   // Published: a green block with the optional approval note and an explained, secondary retire action.
   const live = render(review.ReviewPanel, { ...props, status: "Published", solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved" }, feedback: "Great work", onRetire: noop, onRequestChanges: noop });
-  assert.match(live, /Solution overview.*<h3[^>]*>Published<\/h3>.*Your note to the contributor.*Great work.*Need to change it\?.*Request changes.*send it back to the owner.*Retire from library.*Nothing is deleted/s);
-  assert.equal((live.match(/type="radio"/g) ?? []).length, 2);
-  assert.doesNotMatch(live, /<textarea|Review decision|Publication checklist|Latest review comments/);
-  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Your note to the contributor|Need to change it/);
-  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published", onRetire: noop }), /send it back to the owner/);
+  // Published: one compact row (status left, two small actions right); no form, cards or heading until an action is chosen.
+  assert.match(live, /Solution overview.*>Published<\/span>.*Available in the Solution Library\..*aria-expanded="false"[^>]*>.*Request changes<\/button>.*aria-expanded="false"[^>]*>.*Retire<\/button>.*Your note to the contributor.*Great work/s);
+  assert.doesNotMatch(live, /<textarea|type="radio"|Need to change it|Review decision|Publication checklist|Latest review comments/);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Your note to the contributor|Request changes<\/button>|Retire<\/button>/);
+  const retireOnly = render(review.ReviewPanel, { ...props, status: "Published", onRetire: noop });
+  assert.match(retireOnly, /Retire<\/button>/);
+  assert.doesNotMatch(retireOnly, /Request changes<\/button>/);
   assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /<textarea|Approve &amp; publish|Send back for changes/);
   assert.match(html, /Submission preview · what the contributor submitted/);
@@ -518,12 +520,14 @@ test("my submissions filters by review state and keeps card controls outside the
   for (const [label, total] of [["All", 4], ["Draft", 1], ["Pending review", 1], ["Changes requested", 1], ["Published", 1]]) {
     assert.match(html, new RegExp(`aria-pressed="${label === "All"}"[^>]*>(<span[^>]*></span>)?${label}<span[^>]*>${total}</span>`));
   }
-  // Suggestions are a second, independent filter, shown only when the caller supplies them.
-  assert.doesNotMatch(html, /Filter by feedback/);
-  const suggested = render(MySubmissionsView, { entries, connected: true, suggestions: { live: { count: 3, authors: ["Ana", "Luis", "Marta"] } } });
-  assert.match(suggested, /aria-label="Filter by feedback".*Suggestions<span[^>]*>1<\/span>/s);
-  assert.doesNotMatch(suggested, /Librarian comments/);
-  assert.match(suggested, /3 suggestions from Ana, Luis \+1/);
+  // Without a Suggestions tab there is no tablist; status chips stay as they were and suggestions are no status.
+  assert.doesNotMatch(html, /role="tablist"|Filter by feedback/);
+  const suggested = render(MySubmissionsView, { entries, connected: true, suggestions: { live: { count: 3, authors: ["Ana", "Luis", "Marta"] } }, suggestionsTab: { count: 3 } });
+  assert.match(suggested, /role="tablist".*role="tab" aria-selected="true"[^>]*>My solutions<span[^>]*>4<\/span>.*role="tab" aria-selected="false"[^>]*>Suggestions<span[^>]*>3<\/span>.*role="tabpanel".*Filter by status/s);
+  assert.doesNotMatch(suggested, /Filter by feedback|Librarian comments|Review queue/);
+  // A compact footer indicator (icon and count, no names) that opens the published page.
+  assert.match(suggested, /title="View suggestions" aria-label="View 3 suggestions for Live one"[^>]*>.*?<svg.*?<\/svg>3<\/button>/s);
+  assert.doesNotMatch(suggested, /suggestions? from|Ana|Marta/);
   // A managed card is not itself a button: its title opens it and the controls sit beside that button.
   assert.doesNotMatch(html, /role="button"/);
   assert.equal((html.match(/class="card-open/g) ?? []).length, 4);
@@ -532,6 +536,8 @@ test("my submissions filters by review state and keeps card controls outside the
   assert.doesNotMatch(html, /Please anonymize|View submission/);
   // Connected Pending review and Published records are withdrawn on their page, not edited from the card.
   assert.match(html, /aria-label="Edit Draft one"/);
+  // Edit sits on the image's top-right corner, before the title, not in the footer beside •••.
+  assert.match(html, /card-poster.*?absolute top-3 right-3 z-\[2\]"><button[^>]*aria-label="Edit Draft one".*?card-open/s);
   assert.match(html, /aria-label="Edit Returned one"/);
   assert.doesNotMatch(html, /aria-label="Edit (Pending|Live) one"/);
   assert.equal((html.match(/aria-haspopup="menu"/g) ?? []).length, 4);
@@ -570,6 +576,11 @@ test("owner status panel tints by state, keeps actions on the right and shows th
   assert.match(returned, /var\(--proto\)/);
   assert.match(returned, /Librarian feedback[\s\S]*Add screenshots/);
   assert.doesNotMatch(render(SubmissionStatusPanel, { state: "Published" }), /Note from the librarian/);
+  // Published: the state as heading with its icon and one line; no "Your submission" label or workflow validations.
+  const published = render(SubmissionStatusPanel, { state: "Published", actions: createElement("button", null, "Unpublish & edit") });
+  assert.match(published, /<h2[^>]*>Published<\/h2><p[^>]*>This solution is available in the Solution Library\.<\/p>/);
+  assert.match(published, /sm:border-l[^>]*><button>Unpublish &amp; edit<\/button>/);
+  assert.doesNotMatch(published, /Your submission|Live in the library|Safety acknowledged|Cleared for presentation/);
 });
 
 test("challenges and lessons learned are optional, internal and limited to the Dataverse length", () => {
@@ -602,7 +613,8 @@ test("tag pickers show chosen tags first, list only what is left and search only
 test("suggestions: readers see a private list with author and date; others get a short form", async () => {
   const ui = await server.ssrLoadModule("/connected/src/SolutionSuggestions.tsx");
   const empty = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: [] } });
-  assert.match(empty, /Suggestions · 0 · internal only/);
+  assert.match(empty, /Suggestions<span[^>]*>0<\/span>.*Private · owner, contributors and librarian/s);
+  assert.doesNotMatch(empty, /internal only/);
   assert.match(empty, /No suggestions yet\./);
   const one = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: [{ id: "a", text: "Add an export to Excel.", author: "Ana Gómez", createdOn: "2026-10-13T15:04:05Z" }] } });
   assert.match(one, /Ana Gómez<\/span> · <time dateTime="2026-10-13T15:04:05Z">/);
@@ -612,6 +624,8 @@ test("suggestions: readers see a private list with author and date; others get a
   assert.match(form, /Only the owner, contributors and the PRISMA librarian see it, with your name\./);
   assert.match(form, /maxLength="1000"/);
   assert.match(form, /<button[^>]*disabled=""[^>]*>Send suggestion<\/button>/);
+  // The same items render inside a submitted solution's page, below its details.
+  assert.match(render(ui.SuggestionItems, { suggestions: [{ id: "a", text: "Add an export to Excel.", author: "Ana Gómez", createdOn: "2026-10-13T15:04:05Z" }] }), /Ana Gómez.*Add an export to Excel\./s);
   const card = render(ui.SuggestCard, { sent: false, onOpen: noop });
   assert.match(card, /class="suggest-card.*Suggest an improvement.*Have an idea to improve this solution\? Share your suggestion with the solution team\./s);
 });
@@ -658,4 +672,10 @@ test("library shows active filters above the cards with a total, result count an
   assert.match(html, /aria-label="Active filters".*2 filters.*results?<\/span>.*Clear all/s);
   assert.match(html, /aria-label="Refine solutions".*aria-label="Hide filters"/s);
   assert.doesNotMatch(render(LibraryView, { catalogue: SOLUTIONS, filters: EMPTY_FILTERS, onFilters: noop, present: false }), /Active filters/);
+});
+test("download presentation opens a theme menu instead of expanding the action row", async () => {
+  const { DownloadDeckButton } = await server.ssrLoadModule("/connected/src/DownloadDeckButton.tsx");
+  const html = render(DownloadDeckButton, { solution: { id: "s", name: "S" }, media: [] });
+  assert.match(html, /aria-haspopup="menu"[^>]*aria-expanded="false"[^>]*>.*Download presentation/s);
+  assert.doesNotMatch(html, /role="menu"|>Dark<|>Light<|Cancel/);
 });
