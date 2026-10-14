@@ -904,8 +904,8 @@
   /* ---- Area filter (under the library search) ----------------------- */
   /* A faint fill at rest so each option reads as a button; the chosen one swaps it for its area's tint. */
   .area-filter {
-    color: var(--ink-2);
-    font-weight: 500;
+    color: var(--ink);
+    font-weight: 600;
     background: color-mix(in srgb, var(--ink) 5%, transparent);
     transition: background 0.2s var(--ease-sheet), color 0.2s var(--ease-sheet);
   }
@@ -920,7 +920,7 @@
   /* Chosen: a light tint of the area's own colour; "All areas" (no --area) takes a neutral blue-grey. */
   .area-filter[aria-pressed="true"] {
     color: var(--ink);
-    font-weight: 600;
+    font-weight: 700;
     background: color-mix(in srgb, var(--area, color-mix(in srgb, var(--accent) 45%, var(--ink-3))) 15%, transparent);
   }
 

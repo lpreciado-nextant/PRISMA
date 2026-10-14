@@ -27,6 +27,8 @@ type Tab = "solutions" | "suggestions";
 export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, suggestions, suggestionsTab }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>>; suggestionsTab?: { count: number } }) {
   const [filter, setFilter] = useState<Filter>("All");
   const [tab, setTab] = useState<Tab>("solutions");
+  // Under Suggestions: only the solutions with suggestions still to address, or all that have any.
+  const [suggestionView, setSuggestionView] = useState<"new" | "all">("new");
   useFeedbackSeen();
   // Open feedback items: a draft returned with Changes requested (until resubmitted) and each unaddressed suggestion.
   // Counts are items, so they fall as suggestions are addressed and returned drafts are resubmitted.
@@ -87,6 +89,9 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const open = (solution: Solution) => onOpen ? onOpen(solution) : solution.publicationStatus === "Draft" ? navigate(`/submit/${solution.id}`) : navigate(`/s/${solution.id}`);
   const card = (solution: Solution, index: number) => renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />;
   const suggested = entries.filter(({ solution }) => (suggestions?.[solution.id]?.count ?? 0) > 0);
+  const openSuggestionsOn = (solution: Solution) => openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length;
+  const withNew = suggested.filter(({ solution }) => openSuggestionsOn(solution) > 0);
+  const listed = suggestionView === "new" ? withNew : suggested;
   const showing: Tab = suggestionsTab ? tab : "solutions";
   const tabs: { value: Tab; label: string; count: number; fresh: number }[] = [{ value: "solutions", label: "My solutions", count: entries.length, fresh: newOnSolutions }, ...(suggestionsTab ? [{ value: "suggestions" as const, label: "Suggestions", count: suggestionsTab.count, fresh: newOnSuggestions }] : [])];
   // Arrow keys move between the primary tabs, as in a standard tablist.
@@ -126,10 +131,23 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     {showing === "suggestions" ? !suggested.length ? <div className="py-16 text-center">
       <h2 className="text-[20px]">No suggestions yet</h2>
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>When colleagues suggest improvements to your published solutions, they appear here.</p>
-    </div> : <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-      {/* Only the cards: each opens its solution, where the suggestions are read below the details. */}
-      {suggested.map(({ solution }, index) => <article key={solution.id} className="min-w-0">{card(solution, index)}</article>)}
     </div> : <>
+      <div role="group" aria-label="Filter suggestions" className="mt-5 flex flex-wrap items-center gap-2">
+        {([["new", "New", withNew.length], ["all", "All", suggested.length]] as const).map(([value, label, total]) => <Chip key={value} active={suggestionView === value} pressed={suggestionView === value} onClick={() => setSuggestionView(value)}>
+          {value === "new" && total > 0 && suggestionView !== value && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />}
+          {label}
+          <span className="font-mono text-[11px] opacity-75">{total}</span>
+        </Chip>)}
+      </div>
+      {!listed.length ? <div className="py-16 text-center">
+        <h2 className="text-[20px]">Nothing new</h2>
+        <p className="mt-2" style={{ color: "var(--ink-2)" }}>Every suggestion on your solutions has been addressed.</p>
+        <button type="button" className="mt-3 cursor-pointer text-[14px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => setSuggestionView("all")}>Show all</button>
+      </div> : <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {/* Only the cards: each opens its solution, where the suggestions are read below the details. */}
+        {listed.map(({ solution }, index) => <article key={solution.id} className="min-w-0">{card(solution, index)}</article>)}
+      </div>}
+    </> : <>
     {!entries.length ? <div className="py-20 text-center">
       <h2 className="text-[20px]">No submissions yet</h2>
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>No saved drafts or submitted solutions.</p>
