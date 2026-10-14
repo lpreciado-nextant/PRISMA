@@ -101,6 +101,11 @@ export const draftApi: DraftApi = {
 export const suggestionApi: SuggestionApi | undefined = {
   list: id => Nx_GetSolutionSuggestionsService.nx_GetSolutionSuggestions(id),
   send: (id, text) => Nx_SuggestChangeService.nx_SuggestChange(id, text),
+  // Once nx_AddressSuggestion and nx_GetMyOpenFeedback are registered and their clients generated
+  // (pa app add dataverse-api --api-name ...), add:
+  //   address: (id, addressed) => Nx_AddressSuggestionService.nx_AddressSuggestion(id, addressed),
+  //   openFeedback: () => Nx_GetMyOpenFeedbackService.nx_GetMyOpenFeedback(),
+  // Until then suggestions are addressed in this browser and the masthead count uses the per-solution reads.
 };
 
 export const favoriteApi: FavoriteApi = {

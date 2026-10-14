@@ -33,5 +33,30 @@ namespace Prisma.Plugins.Tests
             Assert.True(SuggestionPolicy.CanRead(owner: false, contributor: false, librarian: true));
             Assert.False(SuggestionPolicy.CanRead(owner: false, contributor: false, librarian: false));
         }
+
+        [Fact]
+        public void Only_the_owner_and_contributors_mark_suggestions_addressed()
+        {
+            Assert.True(SuggestionPolicy.CanAddress(owner: true, contributor: false));
+            Assert.True(SuggestionPolicy.CanAddress(owner: false, contributor: true));
+            // The librarian reads suggestions but does not address them for the team.
+            Assert.False(SuggestionPolicy.CanAddress(owner: false, contributor: false));
+        }
+
+        [Fact]
+        public void Addressed_timestamps_are_utc_iso_or_null_while_open()
+        {
+            Assert.Null(SuggestionPolicy.Timestamp(null));
+            Assert.Equal("2026-10-14T22:30:00.0000000Z", SuggestionPolicy.Timestamp(new System.DateTime(2026, 10, 14, 22, 30, 0, System.DateTimeKind.Utc)));
+        }
+
+        [Fact]
+        public void Open_feedback_and_entries_serialize_with_the_client_field_names()
+        {
+            var json = DraftPolicy.Serialize(new OpenFeedback { Suggestions = new System.Collections.Generic.List<OpenSuggestion> { new OpenSuggestion { Id = "a", SolutionId = "s" } }, ChangesRequested = new System.Collections.Generic.List<string> { "r" } });
+            Assert.Contains("\"suggestions\":[{\"id\":\"a\",\"solutionId\":\"s\"}]", json);
+            Assert.Contains("\"changesRequested\":[\"r\"]", json);
+            Assert.Contains("\"addressedOn\":null", DraftPolicy.Serialize(new SuggestionEntry { Id = "a", Text = "t", Author = "x", CreatedOn = "c" }));
+        }
     }
 }

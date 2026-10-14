@@ -1115,6 +1115,10 @@ static void RegisterSuggestionApi(IOrganizationService service, string[] options
     Text("nx_suggestion", 1000);
     Lookup("nx_solution", "nx_solution");
     Lookup("nx_suggestedby", "cr6b0_consultant");
+    // Owners and contributors mark each suggestion addressed (nx_AddressSuggestion); empty while open.
+    var addressedOn = table.Attributes.SingleOrDefault(attribute => attribute.LogicalName == "nx_addressedon") as DateTimeAttributeMetadata;
+    if (addressedOn == null) problems.Add("nx_addressedon (Date and time) is missing");
+    else Console.WriteLine($"  nx_addressedon: date and time, format {addressedOn.Format}, behavior {addressedOn.DateTimeBehavior?.Value}, required {addressedOn.RequiredLevel?.Value}");
     var solution = table.ManyToOneRelationships.SingleOrDefault(item => item.ReferencingAttribute == "nx_solution");
     if (solution != null && solution.CascadeConfiguration.Delete != CascadeType.Cascade) problems.Add("deleting a solution should cascade to its suggestions (Delete: Cascade All)");
     if (solution != null && solution.CascadeConfiguration.Assign != CascadeType.NoCascade) problems.Add("Assign should be Cascade None, so suggestions stay with their author");
@@ -1124,14 +1128,16 @@ static void RegisterSuggestionApi(IOrganizationService service, string[] options
     if (assembly.Id != Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba")) throw new InvalidOperationException("Unexpected assembly target.");
     // Updating the assembly does not create plug-in types; registration does, and Dataverse refuses a type the assembly lacks.
     var updated = service.Retrieve("pluginassembly", assembly.Id, new ColumnSet("modifiedon")).GetAttributeValue<DateTime>("modifiedon");
-    var registered = new[] { "nx_SuggestChange", "nx_GetSolutionSuggestions" }.Where(name => Find(service, "customapi", "uniquename", name) != null).ToArray();
+    var registered = new[] { "nx_SuggestChange", "nx_GetSolutionSuggestions", "nx_AddressSuggestion", "nx_GetMyOpenFeedback" }.Where(name => Find(service, "customapi", "uniquename", name) != null).ToArray();
     Console.WriteLine($"Table matches. Prisma.Plugins last updated {updated:u}; it must be the signed build containing SuggestionApi. Already registered: {(registered.Length == 0 ? "none" : string.Join(", ", registered))}.");
-    Console.WriteLine("Plan: register nx_SuggestChange (Guid SolutionId, String Text) and nx_GetSolutionSuggestions (Guid SolutionId), each returning String ResultJson, on Prisma.Plugins.SuggestionApi with execute privilege prvReadnx_Solution, in PRISMA_Dev. No roles, data or apps change.");
+    Console.WriteLine("Plan: register (skipping any already present) nx_SuggestChange (Guid SolutionId, String Text), nx_GetSolutionSuggestions (Guid SolutionId), nx_AddressSuggestion (Guid SuggestionId, Boolean Addressed) and nx_GetMyOpenFeedback (no parameters), each returning String ResultJson, on Prisma.Plugins.SuggestionApi with execute privilege prvReadnx_Solution, in PRISMA_Dev. No roles, data or apps change.");
     if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
     var plugin = PluginType(service, assembly.Id, "Prisma.Plugins.SuggestionApi");
     RegisterApi(service, plugin, "nx_SuggestChange", "prvReadnx_Solution", new[] { ("SolutionId", 12, false), ("Text", 10, false) });
     RegisterApi(service, plugin, "nx_GetSolutionSuggestions", "prvReadnx_Solution", new[] { ("SolutionId", 12, false) });
-    Console.WriteLine("Registered. Generate the clients from app/connected: pa app add dataverse-api --api-name nx_SuggestChange, then nx_GetSolutionSuggestions.");
+    RegisterApi(service, plugin, "nx_AddressSuggestion", "prvReadnx_Solution", new[] { ("SuggestionId", 12, false), ("Addressed", 0, false) });
+    RegisterApi(service, plugin, "nx_GetMyOpenFeedback", "prvReadnx_Solution", Array.Empty<(string, int, bool)>());
+    Console.WriteLine("Registered. Generate the clients from app/connected: pa app add dataverse-api --api-name nx_AddressSuggestion, then nx_GetMyOpenFeedback (nx_SuggestChange and nx_GetSolutionSuggestions already exist).");
 }
 
 static void BlobPlugin(IOrganizationService service, string[] options)
