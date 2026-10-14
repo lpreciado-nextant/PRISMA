@@ -15,7 +15,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 50% — 5 Live, 4 Pending review / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 58% — 7 Live / 12 (2 Dropped excluded) |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 67% — 8 Live / 12 (2 Dropped excluded) |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
@@ -24,7 +24,6 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 - Whether to record that AI was used to build a solution (tools used are covered by Technologies); one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Whether to delete the retired `nx_startdate`/`nx_enddate` contributor columns (optional; first remove them from the unused "Information" form) ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08; legacy rows without hours are dummy data, no backfill
-- Workstream/project mapping (PR-013) — not scoped, future release only; the time-tracking row (PR-012) was resolved as the library time filter ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Merging duplicate technologies needs a librarian-only plug-in operation; today only the read-only `technology-duplicates` report exists ([2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review))
 - Favorites ranking: whether to also count views/demo requests, and visibility in present mode ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux))
 - Specialization areas: max per solution, whether a "primary" area is needed ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
@@ -262,7 +261,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 58% — 7 Live, 5 Proposed / 12 (2 Dropped excluded)
+**Progress:** 67% — 8 Live, 4 Proposed / 12 (2 Dropped excluded)
 
 ### Feedback
 
@@ -295,14 +294,14 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-010 Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the minimum-hours effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
 | PR-011 Complexity classification (Small / Medium / Large) | Proposed | Medium priority. Alternative or complement to duration bands above |
 | PR-012 Time-tracking system integration | 🟢 Live | Resolved 2026-10-06 as a time filter in the library: an "Added: …" picker beside "Sort by" with Any time / Last 30 days / Last 3 months / Last 6 months / Last 12 months, each showing how many solutions it leaves. Filters on creation date (`createdon`), months counted as calendar months back from today; kept in the URL (`added=3m`). `6e0b314`, `8a7b544`, published 2026-10-06 ([design system](../design/design-system.md#library-page)). Integration with an external time-tracking system is not part of this |
-| PR-013 Solution-to-workstream/project mapping | Proposed | Low priority · Backlog. Prerequisite if an external time-tracking integration is ever pursued |
+| PR-013 Solution-to-workstream/project mapping | 🟢 Live | Resolved 2026-10-14 with the existing projects table: a solution links to any number of `cr6b0_project` rows through the native N:N (PR-030, live), chosen in the form's Projects picker and shown as **Associated projects** on the solution page (internal; hidden in present mode). No separate workstream table |
 | PR-014 Media display standardization (video/image/HTML/demo) | Proposed | Medium priority. Not closed by asset purpose (PR-028), which organizes assets (same three sections in the form, solution page and filter) but does not change how they look. Already shared: video, HTML, documents and links open in one viewer (`ViewerFrame`) with Full screen (PR-004). Remaining gap: the PoC shows the first demo video inline on the solution page, while the connected app lists every asset as a row to click; images keep their own gallery and lightbox |
 
 ### Open decisions
 
 - ~~Modal/popup (PR-006)~~ resolved 2026-10-14: Open in new tab in a focused viewer replaces it.
 - How effort is represented going forward (PR-010/011) — duration bands, Small/Medium/Large complexity, or both — and whether this replaces or sits alongside the hours-based model in ADR-0007.
-- Whether and when workstream/project mapping (PR-013) gets scoped for a future release.
+- ~~Workstream/project mapping (PR-013)~~ resolved 2026-10-14 through the projects table (N:N, PR-030).
 
 ## 2026-09-28 / 29 — Working sessions: integration, favorites ranking and library UX
 
