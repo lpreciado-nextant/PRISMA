@@ -18,6 +18,22 @@ export function SuggestionsPanel({ list }: { list: SuggestionList }) {
   </section>;
 }
 
+/** The side-column entry point, in the style of the solution page's other action cards. */
+export function SuggestCard({ sent, focus = false, onOpen }: { sent: boolean; focus?: boolean; onOpen: () => void }) {
+  const button = useRef<HTMLButtonElement>(null);
+  useEffect(() => { if (focus) button.current?.focus(); }, [focus]);
+  return <div className="flex flex-col gap-3">
+    <button ref={button} type="button" onClick={onOpen} className="glass glass-sheen lift flex cursor-pointer items-center gap-3 rounded-[20px] p-5 text-left">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "color-mix(in srgb, var(--accent) 20%, transparent)", color: "var(--accent)" }}><Icon name="edit" size={18} /></span>
+      <span className="min-w-0">
+        <span className="block text-[14.5px] font-semibold" style={{ fontFamily: "var(--font-display)" }}>Suggest a change</span>
+        <span className="block text-[13px]" style={{ color: "var(--ink-3)" }}>Only the owner, contributors and librarian see it</span>
+      </span>
+    </button>
+    {sent && <p role="status" className="px-1 text-[13.5px] text-(--ink-2)">Thanks. Your suggestion was sent to the owner, the contributors and the librarian.</p>}
+  </div>;
+}
+
 export function SuggestForm({ api, solutionId, onClose, onSent }: { api: SuggestionApi; solutionId: string; onClose: () => void; onSent: () => void }) {
   const id = useId();
   const [text, setText] = useState("");

@@ -55,7 +55,6 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
     favoritable={!!favorite} favorite={favorite}
     actions={!present && <>
       {appLocation && <CopyLinkButton appLocation={appLocation} route={`/s/${solution.id}`} />}
-      {suggestions.action}
       {canExportDeck(solution) && <DownloadDeckButton solution={hydrated} media={detail.media} presenter={{ name: user.fullName, email: user.live ? user.userPrincipalName : undefined }}
         csm={effort.contributors.find(person => isCustomerSuccessLevel(person.level))}
         link={route => appLocation && shareUrl(appLocation, route)} />}
@@ -63,6 +62,7 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     gallery={<PublishedGallery media={detail.media} />}
     panels={suggestions.panel}
+    aside={suggestions.action}
     reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
     onAssetOpen={asset => void mediaAction.open(detail.media.find(item => item.id === asset.id))} />;
 }

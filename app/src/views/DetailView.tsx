@@ -68,11 +68,13 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels }: {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels, aside }: {
   solution: Solution; present: boolean; favoritable?: boolean; onEdit?: () => void; onBack?: () => void;
   backLabel?: string; actions?: React.ReactNode; reviewActions?: React.ReactNode; assetBasePath?: string;
   /** Extra internal panels in the main column (connected: suggestions). Never rendered in present mode. */
   panels?: React.ReactNode;
+  /** Extra internal block at the end of the side column (connected: Suggest a change). Never rendered in present mode. */
+  aside?: React.ReactNode;
   catalogueOnly?: boolean;
   connected?: boolean;
   effort?: { contributors: { name: string; hours: number | null; email?: string; level?: string }[]; totalHours: number | null };
@@ -344,6 +346,8 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
               </span>
             </button>
           )}
+
+          {!present && aside}
         </div>
       </div>
     </div>
