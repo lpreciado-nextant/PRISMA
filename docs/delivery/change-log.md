@@ -9,7 +9,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 5 Live / 5 |
+| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 7 Live / 7 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 28% — 4 Live, 2 Done in Dataverse / 16 |
@@ -69,7 +69,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 
-**Progress:** 100% — 5 Live / 5
+**Progress:** 100% — 7 Live / 7
 
 ### Feedback
 
@@ -87,6 +87,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | My submissions: Suggestions filter and "N suggestions from …" on cards | 🟢 Live | `1765c9b` ([contribution and review](../workflows/contribution-and-review.md)); published 2026-10-14; hosted UI not yet checked |
 | Library headings, hero alignment, borderless toolbar, shared control sizes | 🟢 Live | `9d9ddac` ([design system](../design/design-system.md#library-page)); published 2026-10-14; hosted UI not yet checked |
 | Refine rail: collapsible groups, show more, in-group search, hide/show, mobile drawer, active-filter chips with Clear all | 🟢 Live | `9d9ddac`; Clear all now also clears Demo; not load-tested with thousands of solutions |
+| Suggest a change as a side-column card below Delivered for | 🟢 Live | `194dd8a` ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)); published 2026-10-14; hosted UI not yet checked |
+| Librarian review: Solution overview with Capability Owner, five-item Publication checklist required to approve, 15+ character comment to request changes | 🟢 Live | `8a8afb6` ([runbook](../operations/librarian-runbook.md)); Capability Owner read-only from `nx_capability.nx_capabilityowner`; no schema or plug-in change; published 2026-10-14; hosted UI not yet checked |
 ## 2026-10-08 — Working session: contributor effort as minimum hours required
 
 **Progress:** 100% — 5 Live / 5
