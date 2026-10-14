@@ -40,6 +40,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Proposed | Discussed, not yet built | 0% |
 | Done in Dataverse | Table, column or relationship exists in `PRISMA_Dev` (Nextant Pulse) | 25% |
 | In code | Implemented on a branch, not yet deployed or published | 50% |
+| 🟡 Pending review | Built or set up, awaiting stakeholder review or confirmation | 75% |
 | 🟢 Live | Deployed/published and working in the app | 100% |
 | Dropped | Decided against, or replaced by another change | excluded from the total |
 
