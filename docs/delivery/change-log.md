@@ -12,7 +12,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 15 Live / 15 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
-| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 59% — 5 Live, 6 Pending review, 1 Blocked / 16 |
+| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 50% — 5 Live, 4 Pending review, 3 Pending to do / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
 | [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 69% — 9 Live / 13 (2 Dropped excluded) |
@@ -151,7 +151,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-10-01 — Feedback session with Natalia and Andrés: governance, capabilities and review
 
 **Attendees:** Natalia, Andrés
-**Progress:** 59% — 5 Live, 6 Pending review, 1 Blocked / 16
+**Progress:** 50% — 5 Live, 4 Pending review, 3 Pending to do / 16
 
 ### Feedback
 
@@ -172,9 +172,9 @@ When a decision above gets resolved, delete its bullet here and update the match
 | **High** · Define the content governance model (ownership, submission, review, approval, maintenance) | Proposed | Builds on [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [content health](../operations/content-health.md) runbook |
 | **High** · Define content quality standards | 🟡 Pending review | 2026-10-14: the librarian's **Publication checklist** sets five quality criteria to confirm before approving (no confidential data or PII in media; client details anonymized unless authorized; accurate, professional, non-confidential descriptions; demos and documents fit the audience; correct classification), live in `8a8afb6` ([runbook](../operations/librarian-runbook.md)); awaiting stakeholder review of the criteria |
 | **High** · Capture lessons learned and insights | 🟢 Live | Columns created 2026-10-13 (`nx_challenges` and `nx_lessonslearned`, both text area, 2000 characters). Signed plug-in deployed by Luis 2026-10-13 22:18 UTC (verified to contain both columns); connected app published from `5c6e00b` the same day with the "Challenges & lessons learned" section in Solution context and the internal panel on the solution page; hosted UI not yet checked. Schema decided 2026-10-13: two optional multiline columns on `nx_solution`, Challenges (`nx_challenges`) and Lessons learned (`nx_lessonslearned`), both **internal-only** like `nx_clientcontext`: the plug-ins omit them when `Present` is true (ADR-0005), the present catalogue query does not select them and the presentation download never exports them. Outside present mode any internal user who can read the solution sees them (no field-level security). Next: create the columns in `PRISMA_Dev`, then plug-ins, connected form ("Solution context" step) and detail section |
-| **Medium** · Adoption strategy; user guide; training videos and onboarding | 🟡 Pending review | Rollout and enablement material, outside the app; moved to Pending review 2026-10-14 at the user's request |
-| **Medium** · Contextual guidance in forms for classifying solutions and capabilities | 🟡 Pending review | Builds on the step introductions and field hints already in the submit flow; moved to Pending review 2026-10-14 at the user's request |
-| **Medium** · Content curation: may Capability Owners correct metadata before publication? | 🔴 Blocked | Waiting on a decision outside the team (2026-10-14): whether Capability Owners may edit a submission's metadata. Technically feasible once decided. Today librarians cannot edit contributor content; they return it with comments |
+| **Medium** · Adoption strategy; user guide; training videos and onboarding | 🔴 Pending to do | Rollout and enablement material, outside the app; to do (2026-10-14) |
+| **Medium** · Contextual guidance in forms for classifying solutions and capabilities | 🔴 Pending to do | Builds on the step introductions and field hints already in the submit flow; to do (2026-10-14) |
+| **Medium** · Content curation: may Capability Owners correct metadata before publication? | 🔴 Pending to do | To do (2026-10-14): whether Capability Owners may edit a submission's metadata depends on a decision outside the team; technically feasible once decided. Today librarians cannot edit contributor content; they return it with comments |
 | **Medium** · Track tools used to build the solution (Copilot, Cowork, GitHub Copilot, …) and whether AI was used | 🟢 Live | Tools used: decided 2026-10-13, no new field; they are captured as Technologies, already live in the app. Marked Live 2026-10-14 at the user's request; whether AI was used has no field of its own |
 | **Medium** · Review whether one capability per solution is enough | Proposed | `nx_capability` is a single lookup today ([SchemaV2](../data_model/SchemaV2.md)) |
 | **Medium** · Retrieve roles from Azure AD instead of manual entry | 🟢 Live | Delivered 2026-10-08 for the contributor role: it now comes automatically from the consultant directory, `cr6b0_consultant.cr6b0_consultantlevel` (synced directory data), shown read-only, and a level naming customer success marks the solution's CSM; the manual `nx_role` entry was removed and the column deleted. The source is the `cr6b0_consultant` table, not a direct Microsoft Entra ID (Azure AD) call. The client role (`nx_clientrole`) is unchanged and still entered manually. `1c89c2d`, deployed 2026-10-08 ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level)) |
@@ -261,7 +261,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 69% — 9 Live, 4 Proposed / 13 (2 Dropped excluded)
+**Progress:** 69% — 9 Live, 3 Proposed, 1 Pending to do / 13 (2 Dropped excluded)
 
 ### Feedback
 
@@ -296,7 +296,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-012 Time-tracking system integration | 🟢 Live | Resolved 2026-10-06 as a time filter in the library: an "Added: …" picker beside "Sort by" with Any time / Last 30 days / Last 3 months / Last 6 months / Last 12 months, each showing how many solutions it leaves. Filters on creation date (`createdon`), months counted as calendar months back from today; kept in the URL (`added=3m`). `6e0b314`, `8a7b544`, published 2026-10-06 ([design system](../design/design-system.md#library-page)). Integration with an external time-tracking system is not part of this |
 | PR-013 Solution-to-workstream/project mapping | 🟢 Live | Resolved 2026-10-14 with the existing projects table: a solution links to any number of `cr6b0_project` rows through the native N:N (PR-030, live), chosen in the form's Projects picker and shown as **Associated projects** on the solution page (internal; hidden in present mode). No separate workstream table |
 | PR-014 Media display standardization (video/image/HTML/demo) | 🟢 Live | 2026-10-14: video, uploaded HTML, embedded links and images play in one centred 16:9 stage, the same size and place for every type, with the same Full screen and Open in new tab (`1f6a01b`). Decided 2026-10-14 (user): demos open on request, never auto-shown on the solution page, for quality; the connected app keeps listing them as rows. Screenshots keep their own gallery and lightbox; PDF and PowerPoint download |
-| PR-031 More than one target client role per solution | Proposed | Added 2026-10-14 from Ximena's feedback. Today `nx_solution.nx_clientrole` is a single choice; allowing several means changing it to a multi-select choice (or an N:N), plus the form picker, the library's "Target client role" filter, the solution page and the plug-ins that read and write it. Not started: the logic is unchanged |
+| PR-031 More than one target client role per solution | 🔴 Pending to do | Added 2026-10-14 from Ximena's feedback. Today `nx_solution.nx_clientrole` is a single choice; allowing several means changing it to a multi-select choice (or an N:N), plus the form picker, the library's "Target client role" filter, the solution page and the plug-ins that read and write it. Not started: the logic is unchanged |
 
 ### Open decisions
 
