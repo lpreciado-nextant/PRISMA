@@ -11,8 +11,11 @@ import { solutionAge } from "../lib/sort";
 import { submissionState } from "../lib/submissionState";
 import { FavoriteButton } from "./FavoriteButton";
 
-/** Submission workspace controls. `actions` replace "Open" in the footer; `onFeedback` adds "View feedback" to a returned card. */
-export type CardManagement = { actions: ReactNode; onFeedback?: () => void };
+/**
+ * Submission workspace controls. `actions` replace "Open" in the footer; `corner` sits on the image's top-right corner
+ * (e.g. Edit on a draft); `onFeedback` adds "View feedback" to a returned card.
+ */
+export type CardManagement = { actions: ReactNode; corner?: ReactNode; onFeedback?: () => void };
 
 export function SolutionCard({
   solution,
@@ -84,6 +87,8 @@ export function SolutionCard({
         <div className="absolute top-3 left-3">
           <StatusPill status={solution.status} />
         </div>
+        {/* Above the title's stretched open button, like the footer controls. */}
+        {managed && manage?.corner && <div className="absolute top-3 right-3 z-[2]">{manage.corner}</div>}
       </div>
 
       <div className="flex flex-1 flex-col gap-2 px-5 pt-4 pb-4">

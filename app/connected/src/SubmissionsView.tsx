@@ -5,7 +5,7 @@ import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { MySubmissionsView, type SuggestionSummary } from "../../src/views/MySubmissionsView";
 import { DetailView } from "../../src/views/DetailView";
 import { ReviewPanel, ReviewQueue } from "../../src/components/ReviewQueue";
-import { outlinedStatusButton, statusButton, SubmissionStatusPanel } from "../../src/components/SubmissionStatusPanel";
+import { outlinedStatusButton, statusButton, subtleStatusButton, SubmissionStatusPanel } from "../../src/components/SubmissionStatusPanel";
 import { submissionState } from "../../src/lib/submissionState";
 import { reviewChecklist } from "../../src/lib/reviewChecklist";
 import { newTechnologies, type NewTechnology } from "../../src/lib/technologyName";
@@ -13,7 +13,8 @@ import type { Solution } from "../../src/types";
 import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
 import { workflowApi, readRows, suggestionApi } from "./dataSource";
-import { loadSuggestions } from "./suggestions";
+import { loadSuggestions, type Suggestion, type SuggestionList } from "./suggestions";
+import { SuggestionsPanel } from "./SolutionSuggestions";
 import { deleteSubmission, loadSubmissions, mediaAsset, parseSubmission, PUBLICATIONS, submissionSolution, type SubmissionDetail } from "./workflow";
 import { loadDraftReferences } from "./drafts";
 import { MediaPreview } from "./DraftMediaEditor";
@@ -29,8 +30,9 @@ const shell = "mx-auto max-w-[1100px] px-6 py-10";
 const CONFIRMATIONS = {
   withdraw: { title: "Withdraw submission?", label: "Withdraw & edit", body: "This submission will return to Draft for editing. Any published access will be removed until it is approved again." },
   "request-changes": { title: "Send back for changes?", label: "Send back for changes", body: "It leaves the library and CSMs lose access to it. The owner sees your comments as Changes requested, and it returns to the review queue when they resubmit." },
-  retire: { title: "Retire from the library?", label: "Retire from library", body: "It disappears from search and browse and CSMs lose access to it. Nothing is deleted: the owner sees your reason and can update it and resubmit it for approval." },
+  retire: { title: "Retire from the library?", label: "Retire from library", body: "It is removed from the Solution Library for good: it disappears from search and browse and CSMs lose access to it. The record is kept, not deleted, and the owner sees your reason." },
 } as const;
+const UNPUBLISH = { title: "Unpublish to edit?", label: "Unpublish & edit", body: "It leaves the Solution Library and returns to Draft so you can edit it. It is published again once a librarian approves it." };
 
 export function SubmissionsView({ review }: { review: boolean }) {
   const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number }[]; librarian: boolean } | null>(null);
@@ -51,7 +53,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [review, attempt]);
   // Suggestions exist only on published solutions: one read each, in parallel. A failed read just leaves that card out.
-  const [suggestions, setSuggestions] = useState<Record<string, SuggestionSummary>>();
+  const [suggestionRows, setSuggestionRows] = useState<Record<string, Suggestion[]>>();
   const published = review ? "" : (state?.entries ?? []).filter(entry => entry.solution.publicationStatus === "Published").map(entry => entry.solution.id).join(",");
   useEffect(() => {
     const api = suggestionApi;
@@ -60,11 +62,14 @@ export function SubmissionsView({ review }: { review: boolean }) {
     void Promise.all(published.split(",").map(async id => {
       try {
         const { suggestions: rows } = await loadSuggestions(api, id, controller.signal);
-        return [[id, { count: rows.length, authors: [...new Set(rows.map(row => row.author))] }]] as [string, SuggestionSummary][];
-      } catch { return [] as [string, SuggestionSummary][]; }
-    })).then(lists => { if (!controller.signal.aborted) setSuggestions(Object.fromEntries(lists.flat())); });
+        return [[id, rows]] as [string, Suggestion[]][];
+      } catch { return [] as [string, Suggestion[]][]; }
+    })).then(lists => { if (!controller.signal.aborted) setSuggestionRows(Object.fromEntries(lists.flat())); });
     return () => controller.abort();
   }, [published]);
+  // No published solutions: nothing to read, so the Suggestions tab is simply empty.
+  const rows: Record<string, Suggestion[]> | undefined = published ? suggestionRows : {};
+  const suggestions = rows && Object.fromEntries(Object.entries(rows).map(([id, list]): [string, SuggestionSummary] => [id, { count: list.length, authors: [...new Set(list.map(row => row.author))] }]));
   if (error || !state) return <section className={shell}>{error ? <div role="alert"><p className="mb-4">{review ? "Review queue unavailable. An explicit PRISMA Librarian role and Dataverse read access are required." : "Submissions unavailable. Check your Dataverse access and connection."}</p><button className={button} onClick={() => { setError(false); setState(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></div> : <LoadingState variant="page" label={review ? "Loading review queue..." : "Loading submissions..."} />}</section>;
   const open = (solution: Solution) => navigate(solution.publicationStatus === "Draft" ? `/submit?draft=${solution.id}` : `/submission/${solution.id}`);
   const remove = async (id: string) => {
@@ -86,7 +91,13 @@ export function SubmissionsView({ review }: { review: boolean }) {
     } catch { throw new Error("Deletion was not confirmed. Cancel and refresh submissions before retrying."); }
     finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", abort); }
   };
-  if (!review) return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onDelete={remove} renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />} actions={<div className="flex flex-wrap gap-3"><button className={button} onClick={() => { setState(null); setAttempt(current => current + 1); }}><Icon name="refresh" />Refresh submissions</button>{state.librarian && <button className={button} onClick={() => navigate("/review")}><Icon name="shield" />Review queue</button>}</div>} />;
+  if (!review) {
+    // The Suggestions tab lists the cards with suggestions; each solution shows them inside. Review queue lives in the masthead.
+    return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onDelete={remove}
+      suggestionsTab={rows && { count: Object.values(rows).reduce((total, list) => total + list.length, 0) }}
+      renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />}
+      actions={<button type="button" title="Refresh submissions" aria-label="Refresh submissions" className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold hover:bg-(--glass-edge)" style={{ color: "var(--ink-2)" }} onClick={() => { setState(null); setSuggestionRows(undefined); setAttempt(current => current + 1); }}><Icon name="refresh" size={15} />Refresh</button>} />;
+  }
   return <ReviewQueue entries={state.entries} connected />;
 }
 
@@ -107,6 +118,16 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const [attempt, setAttempt] = useState(0);
   const [preview, setPreview] = useState<MediaItem | null>(null);
   const mediaAction = useMediaAction(setPreview, { solutionId: id, mode: "submission" });
+  // Suggestions colleagues sent on this solution, listed below its details. The server returns them only to the owner,
+  // contributors and the PRISMA Librarian; anyone else, or a failed read, gets no panel.
+  const [suggestionList, setSuggestionList] = useState<SuggestionList | null>(null);
+  useEffect(() => {
+    const api = suggestionApi;
+    if (!api) return;
+    const controller = new AbortController();
+    void loadSuggestions(api, id, controller.signal).then(list => { if (!controller.signal.aborted) setSuggestionList(list); }).catch(() => undefined);
+    return () => controller.abort();
+  }, [id, attempt]);
   const lifetime = useRef<AbortController | null>(null);
   const running = useRef(false);
   useEffect(() => {
@@ -172,7 +193,11 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const thumbnail = state.media.find(item => item.kind === "thumbnail" && item.complete);
   const solution: Solution = { ...submissionSolution(state.record, names), technologies: graph.technologyIds.map(id => names[id] ?? "Unavailable technology"), industries: graph.industryIds.map(id => names[id] ?? "Unavailable industry"), projects: graph.projectIds.map(id => ({ id, projectName: names[id] ?? `Untitled project (${id.slice(0, 8)})` })), assets: state.media.filter(item => item.kind === "attachment" && item.complete).map(mediaAsset) };
   const effort = { contributors: graph.contributors.map((person, index) => ({ name: names[person.personId] ?? "Unavailable consultant", hours: state.graph.hours[index], email: emails[person.personId], level: levels[person.personId] })), totalHours: state.graph.hours.some(hours => hours === null) ? null : Math.round(state.graph.hours.reduce<number>((total, hours) => total + (hours ?? 0), 0) * 100) / 100 };
-  return <DetailView solution={solution} present={false} connected effort={effort} backLabel={review ? "Review queue" : "My submissions"} onBack={() => navigate(review ? "/review" : "/my-submissions")}
+  // Shown when there is something to read, or on a published record (where "no suggestions yet" is meaningful).
+  // Same withdraw action either way; a published record is described as being unpublished.
+  const confirmCopy = confirmation && (confirmation === "withdraw" && status === 125060000 ? UNPUBLISH : CONFIRMATIONS[confirmation]);
+  const suggestionsPanel = suggestionList?.canRead && (suggestionList.suggestions.length > 0 || status === 125060000) ? <SuggestionsPanel list={suggestionList} /> : undefined;
+  return <DetailView solution={solution} present={false} connected effort={effort} panels={suggestionsPanel} backLabel={review ? "Review queue" : "My submissions"} onBack={() => navigate(review ? "/review" : "/my-submissions")}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={
       <>{review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
@@ -191,20 +216,18 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
           {status === 125060003 ? <><button type="button" className={outlinedStatusButton} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="edit" size={16} />Edit draft</button>
             <button type="button" className={statusButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" size={16} />Submit for review</button></>
-          : <button type="button" className={outlinedStatusButton} onClick={() => setConfirmation("withdraw")}><Icon name="edit" size={16} />Withdraw &amp; edit</button>}
+          : <button type="button" className={subtleStatusButton} onClick={() => setConfirmation("withdraw")}><Icon name="edit" size={15} />{status === 125060000 ? "Unpublish & edit" : "Withdraw & edit"}</button>}
         </fieldset>}>
-        <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-(--ink-2)">
-          <span className="inline-flex items-center gap-1.5" style={core.safetyAcknowledged ? undefined : { color: "var(--proto)" }}><Icon name={core.safetyAcknowledged ? "shield" : "alert"} size={14} />{core.safetyAcknowledged ? "Safety acknowledged" : "Safety acknowledgment required"}</span>
-          {state.record.cleared && <><span aria-hidden="true">·</span><span>Cleared for presentation</span></>}
-        </p>
+        {/* Workflow validations are not status: only a missing safety acknowledgment, which blocks submitting, is shown. */}
+        {!core.safetyAcknowledged && <p className="mt-3 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} />Safety acknowledgment required</p>}
         {mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
         {error && <div role="alert" className="my-4"><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></div>}
         {missing && status === 125060003 && <p role="status" className="mt-3 flex items-start gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} className="mt-0.5 shrink-0" />Complete the summary, what it does, business value, capability, contributor effort, redacted context when needed, detail images and safety acknowledgment before submitting.</p>}
         {busy && <LoadingState className="mt-4" label="Updating submission..." />}
       </SubmissionStatusPanel>}
-        {confirmation && <ConfirmDialog title={CONFIRMATIONS[confirmation].title} confirmLabel={CONFIRMATIONS[confirmation].label} onCancel={() => setConfirmation(null)} onConfirm={() => { setConfirmation(null); void transition(confirmation); }}>
+        {confirmation && confirmCopy && <ConfirmDialog title={confirmCopy.title} confirmLabel={confirmCopy.label} onCancel={() => setConfirmation(null)} onConfirm={() => { setConfirmation(null); void transition(confirmation); }}>
           <p className="mb-3 font-semibold text-(--ink)">{core.name}</p>
-          <p>{CONFIRMATIONS[confirmation].body}</p>
+          <p>{confirmCopy.body}</p>
         </ConfirmDialog>}
       </>
     } />;

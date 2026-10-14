@@ -2,19 +2,31 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { submissionInputClass } from "../../src/components/SubmissionForm";
-import { sendSuggestion, SUGGESTION_MAX, type SuggestionApi, type SuggestionList } from "./suggestions";
+import { sendSuggestion, SUGGESTION_MAX, type Suggestion, type SuggestionApi, type SuggestionList } from "./suggestions";
 
 export const suggestionButton = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px] disabled:cursor-default disabled:opacity-40";
 const panel = "glass glass-lite rounded-[20px] p-5";
 
+/** Author, date and text of each suggestion; shared by the solution page panel and My submissions. */
+export function SuggestionItems({ suggestions }: { suggestions: Suggestion[] }) {
+  return <ul className="flex flex-col gap-4">{suggestions.map(item => <li key={item.id} className="border-b border-(--glass-edge) pb-4 last:border-b-0 last:pb-0">
+    <p className="text-[12.5px] text-(--ink-3)"><span className="font-semibold text-(--ink-2)">{item.author}</span> · <time dateTime={item.createdOn}>{new Date(item.createdOn).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</time></p>
+    <p className="mt-1 whitespace-pre-wrap break-words text-[14.5px] text-(--ink)">{item.text}</p>
+  </li>)}</ul>;
+}
+
 export function SuggestionsPanel({ list }: { list: SuggestionList }) {
   return <section className={panel} aria-labelledby="suggestions-heading">
-    <div className="mb-3 flex items-center gap-2"><Icon name="edit" size={14} /><h2 id="suggestions-heading" className="eyebrow">Suggestions · {list.suggestions.length} · internal only</h2></div>
+    {/* Heading with its count; who can read it sits apart as a quiet note instead of an "internal only" tag. */}
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
+      <h2 id="suggestions-heading" className="flex items-center gap-2 text-[15px] font-semibold" style={{ fontFamily: "var(--font-display)" }}>
+        <Icon name="message" size={16} />Suggestions
+        <span className="rounded-full px-2 py-px font-mono text-[11.5px] font-normal" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}>{list.suggestions.length}</span>
+      </h2>
+      <p className="flex items-center gap-1.5 text-[12px] text-(--ink-3)"><Icon name="shield" size={12} />Private · owner, contributors and librarian</p>
+    </div>
     {list.suggestions.length === 0 ? <p className="text-[14px] text-(--ink-3)">No suggestions yet. Colleagues who view this solution can send one.</p>
-      : <ul className="flex flex-col gap-4">{list.suggestions.map(item => <li key={item.id} className="border-b border-(--glass-edge) pb-4 last:border-b-0 last:pb-0">
-        <p className="text-[12.5px] text-(--ink-3)"><span className="font-semibold text-(--ink-2)">{item.author}</span> · <time dateTime={item.createdOn}>{new Date(item.createdOn).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</time></p>
-        <p className="mt-1 whitespace-pre-wrap break-words text-[14.5px] text-(--ink)">{item.text}</p>
-      </li>)}</ul>}
+      : <SuggestionItems suggestions={list.suggestions} />}
   </section>;
 }
 
