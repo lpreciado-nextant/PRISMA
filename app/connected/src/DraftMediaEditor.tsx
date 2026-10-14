@@ -210,7 +210,12 @@ function PreparedFileDownload({ file }: { file: File }) {
   // eslint-disable-next-line jsx-a11y/anchor-is-valid -- href is the object URL the effect assigns and revokes.
   return <a ref={link} download={file.name} className={button}><Icon name="download" />Keep upload file for resume</a>;
 }
-export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "submission", autoDownload = false }: { item: MediaItem; onClose: () => void; viewerTitle?: string; solutionId?: string; mode?: PlaybackMode; autoDownload?: boolean }) {
+export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "submission", autoDownload = false, newTabUrl, focused = false }: { item: MediaItem; onClose: () => void; viewerTitle?: string; solutionId?: string; mode?: PlaybackMode; autoDownload?: boolean;
+  /** "Open in new tab": this demo in the focused viewer, in another browser tab. */
+  newTabUrl?: string;
+  /** The demo alone, as opened in its own tab. */
+  focused?: boolean }) {
+  const frame = { newTabUrl, focused };
   const [content, setContent] = useState<{ url: string; html?: string } | null>(null);
   const [error, setError] = useState(false);
   const downloaded = useRef(false);
@@ -248,7 +253,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
   }, [item, solutionId, mode]);
   if (solutionId && item.mime === "video/mp4") {
     const player = <StreamingVideo key={`${item.id}:${mode}`} item={item} solutionId={solutionId} mode={mode} />;
-    return viewerTitle ? <ViewerFrame name={viewerTitle} kind="Video walkthrough" onClose={onClose}>{player}</ViewerFrame>
+    return viewerTitle ? <ViewerFrame {...frame} name={viewerTitle} kind="Video walkthrough" onClose={onClose}>{player}</ViewerFrame>
       : <section className="mt-6 border-t border-(--glass-edge) pt-5"><div className="flex items-center justify-between gap-3"><h3 className="min-w-0 break-words text-[18px]">{item.name}</h3><button type="button" className={button} onClick={onClose} aria-label="Close preview"><Icon name="close" /></button></div>{player}</section>;
   }
   if (item.linkedAsset) {
@@ -256,7 +261,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
     const embedded = link.assetType === "Hosted web app (URL)" && link.allowsEmbedding;
     const content = embedded ? <iframe title={link.name} src={link.externalUrl} sandbox="allow-scripts allow-forms allow-popups" referrerPolicy="no-referrer" className="h-full min-h-[360px] w-full border-0 bg-white" />
       : <div className="grid h-full min-h-[360px] place-items-center p-6 text-center"><div><p className="eyebrow">{assetTypeLabel(link.assetType)}</p><h2 className="mt-3 text-[22px] font-semibold">{link.name}</h2><p className="mx-auto mt-3 max-w-[48ch] whitespace-pre-wrap break-words text-[15px] text-(--ink-2)">{link.embedHint || "Open the application in a new tab."}</p>{link.externalUrl && <a className={`${button} mt-6`} href={link.externalUrl} target="_blank" rel="noopener noreferrer"><Icon name="external" />Open in new tab</a>}{!link.externalUrl && <p className="mt-4 text-[13px] text-(--ink-3)">No demo request has been sent.</p>}</div></div>;
-    if (viewerTitle) return <ViewerFrame name={viewerTitle} kind={link.assetType} onClose={onClose} externalUrl={link.externalUrl || undefined} hint={embedded ? link.embedHint : undefined}>{content}</ViewerFrame>;
+    if (viewerTitle) return <ViewerFrame {...frame} name={viewerTitle} kind={link.assetType} onClose={onClose} externalUrl={link.externalUrl || undefined} hint={embedded ? link.embedHint : undefined}>{content}</ViewerFrame>;
     return <div className="mt-6 border-t border-(--glass-edge) pt-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><h3 className="min-w-0 flex-1 break-words text-[18px] font-semibold">{link.name}</h3>{embedded && <a className={button} href={link.externalUrl} target="_blank" rel="noopener noreferrer"><Icon name="external" />Open in new tab</a>}<button className={button} onClick={onClose} aria-label="Close preview"><Icon name="close" /></button></div>{embedded && link.embedHint && <p className="mb-3 break-words text-[13px] text-(--ink-2)">{link.embedHint}</p>}{content}</div>;
   }
   const stage = error ? <p role="alert" className="p-6">Media could not be downloaded.</p> : !content ? <LoadingState variant="media" className={viewerTitle ? "h-full w-full" : "h-64"} label="Loading preview..." />
@@ -264,7 +269,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
     : content.html !== undefined ? <iframe title={item.name} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={content.html} className={`${viewerTitle ? "h-full" : "h-[65vh]"} w-full border-0 bg-white`} />
     : item.mime.startsWith("video/") ? <VideoPlayer key={content.url} src={content.url} name={item.name} className={viewerTitle ? "h-full w-full" : "max-h-[65vh] w-full"} />
     : <div className="grid h-full place-items-center p-6 text-center"><a className={button} href={content.url} download={item.name}><Icon name="download" /><span className="break-all">{item.name}</span></a></div>;
-  if (viewerTitle) return <ViewerFrame name={viewerTitle} kind={item.kind === "attachment" ? mediaAsset(item, 0).assetType : "Screenshot"} onClose={onClose} actions={content && <a className={button} href={content.url} download={item.name} aria-label={`Download ${item.name}`} title="Download"><Icon name="download" /></a>}>{stage}</ViewerFrame>;
+  if (viewerTitle) return <ViewerFrame {...frame} name={viewerTitle} kind={item.kind === "attachment" ? mediaAsset(item, 0).assetType : "Screenshot"} onClose={onClose} actions={content && <a className={button} href={content.url} download={item.name} aria-label={`Download ${item.name}`} title="Download"><Icon name="download" /></a>}>{stage}</ViewerFrame>;
   return <div className="mt-6 border-t border-(--glass-edge) pt-5">
     <div className="mb-4 flex flex-wrap items-center gap-3"><h3 className="min-w-0 flex-1 break-all text-[18px] font-semibold">{item.name}</h3>{content && <a className={button} href={content.url} download={item.name}><Icon name="download" />Download</a>}<button className={button} onClick={onClose} aria-label="Close preview" title="Close preview"><Icon name="close" /></button></div>
     {stage}

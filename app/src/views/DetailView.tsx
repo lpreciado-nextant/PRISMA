@@ -66,7 +66,9 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels, aside, capabilityOwner }: {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels, aside, capabilityOwner, assetNewTabUrl }: {
+  /** "Open in new tab" for demos shown in the viewer (connected: the focused viewer in another browser tab). */
+  assetNewTabUrl?: (asset: DemoAsset) => string | undefined;
   /** The capability's owner (`nx_capability.nx_capabilityowner`): `null` shows "Not assigned", omitted hides the row. Never in present mode. */
   capabilityOwner?: { name: string; email?: string } | null;
   solution: Solution; present: boolean; favoritable?: boolean; onEdit?: () => void; onBack?: () => void;
@@ -187,14 +189,14 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
               <Icon name="external" size={13} />
             </button>
           </div>
-          <div className="h-[min(70dvh,720px)] min-h-[360px]">
+          <div className="demo-stage-169">
             <DemoStage solution={solution} asset={inlineDemo} />
           </div>
         </section>
       ) : mainDemo && (
         <div className="mt-6">
           <Panel title="Main demo">
-            <ul><AssetRow solution={solution} asset={mainDemo} basePath={assetBasePath} onOpen={onAssetOpen} /></ul>
+            <ul><AssetRow solution={solution} asset={mainDemo} basePath={assetBasePath} onOpen={onAssetOpen} newTabUrl={assetNewTabUrl?.(mainDemo)} /></ul>
           </Panel>
         </div>
       )}
@@ -216,7 +218,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
           {!catalogueOnly && assetSections.map((section) => <Panel key={section.purpose} title={`${mainDemo && assetPurpose(mainDemo) === section.purpose ? `More ${section.title.toLowerCase()}` : section.title} · ${section.items.length}`}>
             <ul className="flex flex-col gap-3">
               {section.items.map((asset) => (
-                <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} onOpen={onAssetOpen} />
+                <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} onOpen={onAssetOpen} newTabUrl={assetNewTabUrl?.(asset)} />
               ))}
             </ul>
           </Panel>)}
@@ -441,7 +443,7 @@ const ASSET_SECTIONS: { purpose: AssetPurpose; title: string }[] = [
   { purpose: "Supporting material", title: "Supporting material" },
 ];
 
-function AssetRow({ solution, asset, basePath, onOpen }: { solution: Solution; asset: DemoAsset; basePath?: string; onOpen?: (asset: DemoAsset) => void }) {
+function AssetRow({ solution, asset, basePath, onOpen, newTabUrl }: { solution: Solution; asset: DemoAsset; basePath?: string; onOpen?: (asset: DemoAsset) => void; newTabUrl?: string }) {
   const behaviour = behaviourFor(asset);
 
   const act = () => {
@@ -484,6 +486,9 @@ function AssetRow({ solution, asset, basePath, onOpen }: { solution: Solution; a
           {behaviour.note ? ` · ${behaviour.note}` : ""}
         </span>
       </span>
+      {/* A demo shown in the viewer can also open on its own in another tab; the main action stays the in-app viewer. */}
+      {newTabUrl && behaviour.mode === "viewer" && <a href={newTabUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${asset.name} in a new tab`} title="Open in new tab"
+        className="grid size-9 shrink-0 place-items-center rounded-xl border" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="external" size={15} /></a>}
       <button
         type="button"
         onClick={act}

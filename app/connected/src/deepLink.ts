@@ -28,8 +28,11 @@ export function routeHash(route: string | undefined): string | undefined {
   }
   const match = /^\/(s|submission|review)\/([^/]+)(?:\/demo\/([^/]+))?$/.exec(path);
   if (!match || !GUID.test(match[2]) || (match[3] !== undefined && (match[1] !== "s" || !GUID.test(match[3])))) return;
-  // A presentation's link to a file asks the viewer to start the download on arrival.
-  return `#${path.toLowerCase()}${match[3] && query.get("download") === "1" ? "?download=1" : ""}`;
+  if (!match[3]) return `#${path.toLowerCase()}`;
+  // A presentation's link to a file asks the viewer to start the download on arrival. "Open in new tab" asks for the
+  // focused viewer (the demo alone), carrying present mode so the new tab never shows internal fields.
+  const focus = query.get("focus") === "1";
+  return buildHash(path.toLowerCase(), { download: query.get("download") === "1" ? "1" : undefined, focus: focus ? "1" : undefined, present: focus && query.get("present") === "1" ? "1" : undefined });
 }
 
 /** A play URL that reopens `route`, or undefined when the host gave no usable app address. */

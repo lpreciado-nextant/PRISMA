@@ -456,7 +456,28 @@
   /* ---- Demo viewer full screen -------------------------------------- */
   /* The browser's full screen (:fullscreen) or, when the host forbids it, the
      stage expanded over the PRISMA chrome. A small exit control stays on top. */
-  .viewer-stage:fullscreen {
+  /* One 16:9 stage for every demo: as large as the space under the viewer header allows, centred. */
+  .viewer-fit {
+    display: grid;
+    place-items: center;
+    container-type: size;
+  }
+  .viewer-stage--169 {
+    width: min(100cqw, calc(100cqh * 16 / 9));
+    aspect-ratio: 16 / 9;
+  }
+  /* The "Main demo" on the solution page: the same 16:9 stage, capped so it never takes the whole screen. */
+  .demo-stage-169 {
+    width: min(100%, calc(70dvh * 16 / 9));
+    aspect-ratio: 16 / 9;
+    margin-inline: auto;
+  }
+  /* Full screen (browser or expanded) drops the frame and fills the screen. */
+  .viewer-stage--169:fullscreen,
+  .viewer-stage--169.viewer-stage--expanded {
+    width: auto;
+    aspect-ratio: auto;
+  }  .viewer-stage:fullscreen {
     border-radius: 0;
     background: var(--ground);
   }

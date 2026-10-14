@@ -1,6 +1,6 @@
 # Demo assets
 
-**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain; asset purpose sections and Demo filter (ADR-0011) live 2026-10-06; the hosted web app link type shows as "URL" (2026-10-08). · **Last updated:** 2026-10-08
+**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain; asset purpose sections and Demo filter (ADR-0011) live 2026-10-06; the hosted web app link type shows as "URL" (2026-10-08); one 16:9 stage and Open in new tab in a focused viewer (2026-10-14). · **Last updated:** 2026-10-14
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
@@ -239,6 +239,8 @@ Linked-asset live checks on 2026-09-22 covered all four types, hosted edit, reop
 ## Viewer routes
 
 Full-screen viewer at `#/s/:id/demo/:assetId` — PoC implementation in [`app/src/views/ViewerView.tsx`](../../app/src/views/ViewerView.tsx). In present mode the viewer is full-bleed with minimal chrome.
+
+**One stage and Open in new tab (2026-10-14):** every demo (video, uploaded HTML, embedded link, image) plays in the same 16:9 stage, centred and as large as the space under the viewer header allows; the solution page's "Main demo" uses the same 16:9 frame, capped at 70% of the screen height; content that is not 16:9 fits inside with plain margins, and Full screen drops the frame. Demos shown in the viewer also offer **Open in new tab** (in the viewer header and as a ↗ beside each demo on the solution page; the main action stays the in-app viewer). The new tab opens the connected app on that demo in **focused** mode (`?focus=1`: no masthead, tabs or banner; the welcome step is skipped) and, when opened from present mode, already in present mode (`&present=1`), so it never shows internal fields; the back control returns to the solution. Uploaded HTML still renders only in the sandboxed viewer, never as a raw page. Links that refuse embedding, Power Apps and Power BI keep opening directly in a new tab.
 
 **Full screen (2026-10-01, live):** every viewer (PoC and connected, through [`ViewerFrame`](../../app/src/components/ViewerFrame.tsx)) has a **Full screen** button that puts only the demo stage into the browser's full screen; Esc or the small corner control exits, and Esc then does not also close the viewer. The Power Apps host runs the app in its own iframe and may not grant full screen; then the stage instead expands over the PRISMA chrome to fill the app's window. Either way the demo stays in its sandboxed iframe, with no sandbox change. Videos keep their native full screen; hosted URLs keep Pop out (new tab). In Local Play on 2026-10-01 the Power Apps host granted browser full screen: the demo filled the whole monitor (user-verified).
 

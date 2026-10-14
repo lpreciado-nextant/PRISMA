@@ -65,6 +65,12 @@ export default function ConnectedApp() {
       // A link only picks the first screen; once the person has moved, their own navigation wins.
       if (!hash || (window.location.hash || "#/") !== "#/") return;
       const { path, query } = parseHash(hash);
+      // "Open in new tab": a focused demo goes straight to the viewer, in present mode when it was opened from it.
+      if (query.get("focus") === "1") {
+        if (query.get("present") === "1") { setPresent(true); try { sessionStorage.setItem(PRESENT_KEY, "1"); } catch { void 0; } }
+        query.delete("present");
+        setEntry("entered");
+      }
       replaceQuery(path, Object.fromEntries(query));
     }).catch(() => undefined);
     return () => { active = false; };
@@ -278,11 +284,13 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     if (present && (section === "submit" || section === "submission" || section === "review" || route.path === "/my-submissions" || route.path === "/favorites")) navigate("/");
     else if (present && state.kind === "ready" && section === "s" && !solution) navigate("/");
   }, [present, route.path, section, solution, state.kind]);
-  const showBanner = present && bannerVisible;
+  // A demo opened in its own tab shows the viewer alone: no masthead, tabs or banner.
+  const focused = route.query.get("focus") === "1" && segments.length === 4 && segments[2] === "demo";
+  const showBanner = present && bannerVisible && !focused;
 
   return <div className="min-h-full" style={{ "--sticky-top": showBanner ? "9.75rem" : "6rem" } as CSSProperties}>
     <Background />
-    <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} reviewCount={librarian ? reviewPending : undefined} favoriteCount={present ? undefined : favorites?.size} />
+    {!focused && <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} reviewCount={librarian ? reviewPending : undefined} favoriteCount={present ? undefined : favorites?.size} />}
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
     <main key={route.path} ref={main} tabIndex={-1} className="focus-visible:outline-none">
       <Suspense fallback={<LoadingState variant="page" label="Loading..." />}>
@@ -293,7 +301,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
         : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} technologyUse={technologyUse} />
         : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
-        : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} appLocation={appLocation}
+        : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} focused={focused} appLocation={appLocation}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id), saves: topSaves.get(solution.id.toLowerCase()) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
         : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly

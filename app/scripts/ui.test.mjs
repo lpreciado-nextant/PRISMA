@@ -741,3 +741,16 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   const { FeedbackPanel } = await server.ssrLoadModule("/src/components/FeedbackPanel.tsx");
   assert.doesNotMatch(render(FeedbackPanel, { name: "Returned one", feedback: "Blur the client logo.", onClose: noop, onEdit: noop }), /Mark as addressed/);
 });
+test("demo viewer: one 16:9 stage for every type, Open in new tab when offered, and a focused page for that tab", async () => {
+  const { ViewerFrame } = await server.ssrLoadModule("/src/components/ViewerFrame.tsx");
+  const html = render(ViewerFrame, { name: "Invoice matcher", kind: "Video walkthrough", onClose: noop, newTabUrl: "https://apps.powerapps.com/play/x?route=%2Fs%2Fa%2Fdemo%2Fb%3Ffocus%3D1", children: "DEMO" });
+  assert.match(html, /viewer-fit[^"]*">.*viewer-stage viewer-stage--169.*DEMO/s);
+  assert.match(html, /href="https:\/\/apps\.powerapps\.com\/play\/x[^"]*" target="_blank" rel="noopener noreferrer"[^>]*>.*Open in new tab/s);
+  assert.doesNotMatch(render(ViewerFrame, { name: "N", onClose: noop, children: "D" }), /Open in new tab/);
+  assert.match(render(ViewerFrame, { name: "N", onClose: noop, focused: true, children: "D" }), /h-dvh/);
+  // The solution page lists the same option beside each viewer demo; the main action stays the in-app viewer.
+  const { DetailView } = await server.ssrLoadModule("/src/views/DetailView.tsx");
+  const solution = { id: "s", name: "S", summary: "Sum", whatItDoes: "Does", businessValue: "Value", specializationArea: "ai", specializationAreas: ["ai"], status: "Working prototype", publicationStatus: "Published", capabilities: [], technologies: [], industries: [], contributors: [], assets: [{ id: "v", name: "Walkthrough", assetType: "Video walkthrough only", sortOrder: 1 }] };
+  const detail = render(DetailView, { solution, present: false, connected: true, onAssetOpen: noop, assetNewTabUrl: () => "https://example.test/tab" });
+  assert.match(detail, /aria-label="Open Walkthrough in a new tab"[^>]*>.*Play walkthrough/s);
+});
