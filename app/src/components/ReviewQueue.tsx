@@ -17,9 +17,19 @@ const matches = ({ solution }: Entry, status: string) => submissionState(solutio
 type Choice<Value extends string> = { value: Value; title: string; detail: string; icon: IconName; color: string };
 type Decision = "publish" | "changes";
 const DECISIONS: Choice<Decision>[] = [
-  { value: "publish", title: "Ready to publish", detail: "It can go live as it is.", icon: "check", color: "var(--live)" },
-  { value: "changes", title: "Request changes", detail: "Send it back with what to fix.", icon: "alert", color: "var(--proto)" },
+  { value: "publish", title: "Approve", detail: "The solution is ready for publication.", icon: "check", color: "var(--live)" },
+  { value: "changes", title: "Request changes", detail: "Return it to the submitter with required feedback.", icon: "alert", color: "var(--proto)" },
 ];
+/** What the librarian confirms before approving; all are required. Informational to the server, which still checks content. */
+const PUBLICATION_CHECKLIST = [
+  "Images, screenshots, videos and attachments expose no confidential information, personal data (PII) or sensitive client details.",
+  "Client names, logos and identifying details are anonymized, unless publication is explicitly authorized.",
+  "Descriptions are accurate, clear, professionally written and free of confidential business information.",
+  "Demos, links and supporting documents are appropriate for the intended audience.",
+  "Capability, specialization area and other metadata classify the solution correctly.",
+] as const;
+/** A returned submission needs feedback the submitter can act on, not a one-word note. */
+const MIN_CHANGE_COMMENT = 15;
 const PUBLISHED_ACTIONS: Choice<"changes" | "retire">[] = [
   { value: "changes", title: "Request changes", detail: "Take it out of the library and send it back to the owner to fix.", icon: "alert", color: "var(--proto)" },
   { value: "retire", title: "Retire from library", detail: "Take it out for good, e.g. obsolete or replaced. Nothing is deleted.", icon: "eyeOff", color: "var(--ink-2)" },
@@ -27,25 +37,33 @@ const PUBLISHED_ACTIONS: Choice<"changes" | "retire">[] = [
 
 /** One option of a decision, as a selectable card backed by a native radio (arrow keys move between options). */
 function ChoiceCard<Value extends string>({ name, option, selected, onSelect }: { name: string; option: Choice<Value>; selected: boolean; onSelect: () => void }) {
-  return <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--accent)"
+  return <label className="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--accent)"
     style={{ borderColor: selected ? option.color : "var(--glass-edge)", background: selected ? `color-mix(in srgb, ${option.color} 12%, transparent)` : "color-mix(in srgb, var(--ink) 3%, transparent)" }}>
     <input type="radio" name={name} value={option.value} checked={selected} onChange={onSelect} className="sr-only" />
-    <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ color: option.color, background: `color-mix(in srgb, ${option.color} 16%, transparent)` }}><Icon name={option.icon} size={18} /></span>
+    <span className="grid size-8 shrink-0 place-items-center rounded-lg" style={{ color: option.color, background: `color-mix(in srgb, ${option.color} 16%, transparent)` }}><Icon name={option.icon} size={16} /></span>
     <span className="min-w-0">
       <span className="block text-[15px] font-semibold" style={selected ? { color: option.color } : undefined}>{option.title}</span>
       <span className="mt-0.5 block text-[13.5px] text-(--ink-2)">{option.detail}</span>
     </span>
   </label>;
 }
+/** The review panel's inner sections: one subtle border each, so overview, checklist and decision read apart. */
+const reviewSection = "mt-5 rounded-xl border border-(--glass-edge) px-4 py-4 sm:px-5";
+function OverviewRow({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="min-w-0"><dt className="text-[12px] text-(--ink-3)">{label}</dt><dd className="mt-0.5 break-words">{children}</dd></div>;
+}
 const textArea = "mt-2 block w-full resize-y rounded-lg border border-(--glass-edge) bg-(--ground)/60 px-3 py-2 text-[14px] font-normal";
 
 /**
- * Librarian controls above the submission preview: status, then context, then one decision at a time. Only the chosen
- * decision's controls show. The comment is shared state, as before: required to send back, an optional note on approval
- * (approval replaces the stored feedback, or clears it when blank).
+ * Librarian controls above the submission preview: status, Solution overview, Publication checklist, then one decision at
+ * a time. Approval needs required content and every checklist item confirmed (sent as the client-safety clearance);
+ * sending back needs a comment of at least MIN_CHANGE_COMMENT characters. The comment is shared state: an optional note
+ * on approval (approval replaces the stored feedback, or clears it when blank). Transitions are unchanged.
  */
-export function ReviewPanel({ status, owner, client, context, feedback, solution, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, children }: {
+export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, children }: {
   status: string; owner?: string; client?: string; context?: string; feedback?: string;
+  /** The capability's owner from `nx_capability.nx_capabilityowner`: a name, `null` when none is assigned, omitted when unknown. */
+  capabilityOwner?: string | null;
   /** Classification and resubmission state; omitted, the checklist shows client safety only. */
   solution?: Solution; checks?: ReviewCheck[];
   comments: string; onComments: (value: string) => void;
@@ -63,8 +81,18 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
   const returned = !!solution && submissionState(solution) === "Changes requested";
   const chosen = DECISIONS.find(option => option.value === decision);
   const missingChecks = checks?.filter(check => !check.done) ?? [];
-  const hint = decision === "changes" ? !comments.trim() && "Add a comment to send this submission back."
-    : decision === "publish" ? !canApprove ? "Complete the missing items above before approving." : !cleared && "Tick the confirmation to publish." : undefined;
+  // Every checklist item must be confirmed; together they are the approval's client-safety clearance.
+  const [confirmed, setConfirmed] = useState<boolean[]>(() => PUBLICATION_CHECKLIST.map(() => cleared));
+  const confirm = (index: number, value: boolean) => {
+    const next = confirmed.map((item, position) => position === index ? value : item);
+    setConfirmed(next);
+    onCleared(next.every(Boolean));
+  };
+  const remaining = confirmed.filter(item => !item).length;
+  const commentReady = comments.trim().length >= MIN_CHANGE_COMMENT;
+  const hint = decision === "changes" ? !commentReady && `Explain what needs to be corrected (at least ${MIN_CHANGE_COMMENT} characters).`
+    : decision === "publish" ? !canApprove ? "Add the missing content before approving." : !cleared && `Confirm the publication checklist to approve (${remaining} of ${PUBLICATION_CHECKLIST.length} left).` : undefined;
+  const pending = status === "Pending review";
   return <>
     <section aria-labelledby={heading} className="relative mt-6 overflow-hidden rounded-[22px] border p-5 sm:p-6"
       style={{ borderColor: "color-mix(in srgb, var(--accent) 34%, transparent)", background: "linear-gradient(180deg, color-mix(in srgb, var(--accent) 13%, transparent), color-mix(in srgb, var(--accent) 4%, transparent))" }}>
@@ -75,37 +103,55 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         <div className="min-w-0">
           <p className="eyebrow inline-flex items-center gap-1.5" style={{ color: "var(--accent)" }}><Icon name="shield" size={13} />Librarian review{local && " · local preview"}</p>
           <h2 id={heading} className="mt-2 text-[22px]">{returned ? "Changes requested" : status}</h2>
-          {owner && <p className="mt-1 break-all text-[13px] text-(--ink-2)">Submitted by <span className="font-semibold text-(--ink)">{owner}</span></p>}
         </div>
       </div>
 
-      {/* 2 · Before you decide: what it is, the client wording, and only what needs attention. */}
-      <div className="mt-5 rounded-xl border border-(--glass-edge) px-4 pt-4 pb-5 sm:px-5" style={{ background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
-        <h3 className="eyebrow">Before you decide</h3>
-        <dl className="mt-3 grid gap-x-8 gap-y-4 text-[13.5px] sm:grid-cols-2">
-          {solution && <div className="min-w-0">
-            <dt className="text-[12px] text-(--ink-3)">What it is</dt>
-            <dd className="mt-1 flex flex-wrap items-center gap-1.5">{solutionAreas(solution).map(area => <AreaTag key={area} area={area} size="xs" />)}
-              {solution.capabilities[0] ? <span className="break-words">{solution.capabilities[0]}</span> : <span className="text-(--proto)">No capability</span>}
-              <span className="text-(--ink-3)">· {solution.status}</span></dd>
-          </div>}
-          <div className="min-w-0">
-            <dt className="text-[12px] text-(--ink-3)">Client</dt>
-            {client ? <dd className="mt-1 break-words">{client} <span className="text-(--ink-3)">→ shown as</span> <span style={context ? undefined : { color: "var(--proto)" }}>{context ? `“${context}”` : "not provided"}</span></dd>
-              : <dd className="mt-1 text-(--ink-2)">No client named{context && <> · shown as “{context}”</>}</dd>}
-          </div>
+      {/* 2 · Solution overview: who and what, from the record's own fields; nothing invented when a value is missing. */}
+      <section aria-labelledby={`${heading}-overview`} className={reviewSection}>
+        <h3 id={`${heading}-overview`} className="eyebrow">Solution overview</h3>
+        <dl className="mt-3 grid gap-x-8 gap-y-3 text-[13.5px] sm:grid-cols-2">
+          {solution && <OverviewRow label="Capability">{solution.capabilities[0] ?? <span className="text-(--proto)">Not set</span>}</OverviewRow>}
+          {capabilityOwner !== undefined && <OverviewRow label="Capability owner">{capabilityOwner ?? <span className="text-(--ink-3)">Not assigned</span>}</OverviewRow>}
+          {solution && <OverviewRow label={solutionAreas(solution).length > 1 ? "Specialization areas" : "Specialization area"}>
+            <span className="flex flex-wrap gap-1.5">{solutionAreas(solution).map(area => <AreaTag key={area} area={area} size="xs" />)}</span>
+          </OverviewRow>}
+          {owner && <OverviewRow label="Submitted by"><span className="break-all">{owner}</span></OverviewRow>}
+          {/* Client wording only when the record names a client or a client-facing context; the librarian may read both. */}
+          {(client || context) && <OverviewRow label="Client">
+            {client && <>{client} <span className="text-(--ink-3)">→ shown as</span> </>}
+            <span style={context ? undefined : { color: "var(--proto)" }}>{context ? `“${context}”` : "not provided"}</span>
+          </OverviewRow>}
         </dl>
-        {/* Only what the record fails is listed; when nothing is missing, one line says so. The librarian still checks quality. */}
-        {checks && (missingChecks.length ? <section aria-labelledby={`${heading}-points`} className="mt-4 text-[13.5px]" style={{ color: "var(--proto)" }}>
-          <h4 id={`${heading}-points`} className="flex items-center gap-1.5 font-semibold"><Icon name="alert" size={14} />Missing</h4>
-          <ul className="mt-1 list-disc space-y-0.5 pl-5">{missingChecks.map(check => <li key={check.label}>{check.label}</li>)}</ul>
-        </section> : <p className="mt-4 text-[13.5px] text-(--ink-2)">All required content is present.</p>)}
-        {children}
-        {feedback && !returned && status !== "Published" && <div className="mt-5 border-l-2 border-(--proto) pl-3">
-          <h4 className="text-[13.5px] font-semibold">{status === "Pending review" && solution?.reviewOutcome === "Changes requested" ? "Resubmitted after changes requested" : "Latest review comments"}</h4>
+        {feedback && !returned && status !== "Published" && <div className="mt-4 border-l-2 border-(--proto) pl-3">
+          <h4 className="text-[13.5px] font-semibold">{pending && solution?.reviewOutcome === "Changes requested" ? "Resubmitted after changes requested" : "Latest review comments"}</h4>
           <p className="mt-0.5 whitespace-pre-wrap break-words text-[13.5px] text-(--ink-2)">{feedback}</p>
         </div>}
-      </div>
+      </section>
+
+      {/* 3 · Publication checklist (pending review only): required content first, then what the librarian confirms. */}
+      {pending && <section aria-labelledby={`${heading}-checklist`} className={reviewSection}>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 id={`${heading}-checklist`} className="eyebrow">Publication checklist</h3>
+          <span className="font-mono text-[11px] text-(--ink-3)">{PUBLICATION_CHECKLIST.length - remaining} / {PUBLICATION_CHECKLIST.length} confirmed</span>
+        </div>
+        {missingChecks.length > 0 && <div role="status" className="mt-3 rounded-lg border px-3 py-2 text-[13px]" style={{ color: "var(--proto)", borderColor: "color-mix(in srgb, var(--proto) 35%, transparent)" }}>
+          <p className="flex items-center gap-1.5 font-semibold"><Icon name="alert" size={13} />Missing content</p>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">{missingChecks.map(check => <li key={check.label}>{check.label}</li>)}</ul>
+        </div>}
+        <fieldset disabled={disabled} className="mt-3 min-w-0">
+          <legend className="sr-only">Confirm each item before approving</legend>
+          <ul className="space-y-2">
+            {PUBLICATION_CHECKLIST.map((item, index) => <li key={item}>
+              <label className="flex cursor-pointer items-start gap-2.5 text-[13.5px] leading-snug">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-(--accent)" checked={confirmed[index]} onChange={event => confirm(index, event.target.checked)} />
+                <span style={{ color: confirmed[index] ? "var(--ink)" : "var(--ink-2)" }}>{item}</span>
+              </label>
+            </li>)}
+          </ul>
+        </fieldset>
+        {children}
+      </section>}
+      {!pending && children}
       {noticeBusy && typeof notice === "string" ? <LoadingState className="mt-3" label={notice} /> : notice && <div role="status" className="mt-3 text-[14px] text-(--ink-2)">{notice}</div>}
 
       {/* 3 · Review decision, then only the chosen decision's required action. */}
@@ -160,26 +206,26 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         </fieldset>}
       </section>}
 
-      {status === "Pending review" && <fieldset disabled={disabled} className="mt-6 min-w-0 border-t border-(--glass-edge) pt-5">
+      {/* 4 · Review decision: one choice, then only its required input. */}
+      {pending && <fieldset disabled={disabled} className={`${reviewSection} min-w-0`}>
         <legend className="sr-only">Review decision</legend>
-        <h3 aria-hidden="true" className="text-[16px] font-semibold">Review decision</h3>
+        <h3 aria-hidden="true" className="eyebrow">Review decision</h3>
         <div role="radiogroup" aria-label="Review decision" className="mt-3 grid gap-3 sm:grid-cols-2">
           {DECISIONS.map(option => <ChoiceCard key={option.value} name={`${heading}-decision`} option={option} selected={decision === option.value} onSelect={() => setDecision(option.value)} />)}
         </div>
 
-        {chosen && <div className="animate-rise mt-5 rounded-xl border p-4 sm:p-5" style={{ borderColor: `color-mix(in srgb, ${chosen.color} 40%, transparent)`, background: `color-mix(in srgb, ${chosen.color} 6%, transparent)` }}>
-          {decision === "changes" ? <label className="block text-[14px] font-semibold">Comments to contributor <span className="font-normal text-(--ink-2)">(required)</span>
-            <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={4} required aria-required="true"
-              placeholder="Describe what needs to be updated before this solution can be published." className={textArea} />
+        {chosen && <div className="animate-rise mt-4 rounded-xl border p-4" style={{ borderColor: `color-mix(in srgb, ${chosen.color} 40%, transparent)`, background: `color-mix(in srgb, ${chosen.color} 6%, transparent)` }}>
+          {decision === "changes" ? <label className="block text-[14px] font-semibold">What needs to be corrected <span className="font-normal text-(--ink-2)">(required)</span>
+            <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={4} required aria-required="true" minLength={MIN_CHANGE_COMMENT}
+              placeholder="Name each item to fix, e.g. “Blur the client logo in screenshot 2 and replace the client name in the summary.”" className={textArea} />
           </label> : <>
-            <label className="flex items-start gap-3 text-[14px]"><input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={cleared} onChange={event => onCleared(event.target.checked)} /><span>I reviewed the content, and anything clients see is authorized and anonymized.</span></label>
-            <label className="mt-4 block text-[14px] font-semibold">Note to contributor <span className="font-normal text-(--ink-2)">(optional)</span>
+            <label className="block text-[14px] font-semibold">Note to the submitter <span className="font-normal text-(--ink-2)">(optional)</span>
               <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={2} className={textArea} />            </label>
           </>}
           <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
             {hint && <p id={`${heading}-hint`} className="mr-auto text-[13px] text-(--ink-2)">{hint}</p>}
             {decision === "changes"
-              ? <button type="button" aria-describedby={hint ? `${heading}-hint` : undefined} disabled={!comments.trim() || disabled} onClick={onReturn} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--proto)" }}><Icon name="chevronLeft" />Send back for changes</button>
+              ? <button type="button" aria-describedby={hint ? `${heading}-hint` : undefined} disabled={!commentReady || disabled} onClick={onReturn} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--proto)" }}><Icon name="chevronLeft" />Send back for changes</button>
               : <button type="button" aria-describedby={hint ? `${heading}-hint` : undefined} disabled={!cleared || !canApprove || disabled} onClick={onApprove} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--live)" }}><Icon name="check" />Approve &amp; publish</button>}
           </div>
         </div>}

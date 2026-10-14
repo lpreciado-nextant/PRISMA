@@ -97,6 +97,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [levels, setLevels] = useState<Record<string, string>>({});
   const [namesLoaded, setNamesLoaded] = useState(false);
+  const [capabilityOwners, setCapabilityOwners] = useState<Record<string, string | null>>();
   const [error, setError] = useState("");
   const [comments, setComments] = useState("");
   const [cleared, setCleared] = useState(false);
@@ -130,6 +131,14 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         return typeof values[primary] === "string" && typeof values[label] === "string" ? [[values[primary] as string, values[label] as string]] : [];
       }); } catch { return []; }
     })).then(lists => { if (!controller.signal.aborted) { setNames(Object.fromEntries(lists.flat())); setTechnologyLabels(lists[2].map(([, label]) => label)); setNamesLoaded(true); } });
+    // Capability owners (`nx_capabilityowner`, a consultant lookup) in their own read: a failure only hides the row.
+    void readAll(readRows, "capabilities", { select: ["nx_capabilityid", "_nx_capabilityowner_value"], filter: "statecode eq 0" }, controller.signal).then(rows => {
+      if (controller.signal.aborted) return;
+      setCapabilityOwners(Object.fromEntries(rows.flatMap(row => {
+        const values = row as Record<string, unknown>;
+        return typeof values.nx_capabilityid === "string" ? [[values.nx_capabilityid, typeof values._nx_capabilityowner_value === "string" ? values._nx_capabilityowner_value : null]] : [];
+      })));
+    }).catch(() => undefined);
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [id, review, attempt]);
   const transition = async (action: string) => {
@@ -167,7 +176,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={
       <>{review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
-        solution={solution} checks={reviewChecklist({
+        solution={solution} capabilityOwner={capabilityOwnerName(capabilityOwners, core.capabilityId, names)} checks={reviewChecklist({
           summary: !!core.summary.trim(), story: !!core.whatItDoes.trim() && !!core.businessValue.trim(), capability: !!core.capabilityId,
           contributors: state.graph.hours.length > 0 && state.graph.hours.every(hours => hours !== null),
           images: state.media.filter(item => item.kind === "image" && item.complete).length, uploadsComplete: state.media.every(item => item.complete),
@@ -200,6 +209,16 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       </>
     } />;
 }
+/**
+ * The owner of the submission's capability, by name: `null` when the capability names none, `undefined` (row hidden)
+ * while unknown — the owners did not load, there is no capability, or the owner is not an active consultant.
+ */
+function capabilityOwnerName(owners: Record<string, string | null> | undefined, capabilityId: string | undefined, names: Record<string, string>): string | null | undefined {
+  if (!owners || !capabilityId || !(capabilityId in owners)) return undefined;
+  const owner = owners[capabilityId];
+  return owner === null ? null : names[owner];
+}
+
 /** New technologies that resemble an existing one: likely duplicates. Nothing renders when there are none. */
 function NewTechnologies({ items }: { items: NewTechnology[] }) {
   const suspects = items.filter(item => item.similar.length > 0);

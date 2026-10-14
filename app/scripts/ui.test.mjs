@@ -368,59 +368,62 @@ test("upload progress uses themed bounded progress and distinguishes finalizatio
   assert.match(render(form.UploadProgress, { name: "demo.html", received: 720, size: 1000, active: false }), /Upload incomplete/);
 });
 
-test("review actions require comments on return and independent clearance on approval", () => {
+test("review panel: overview, required publication checklist, and a decision that needs real feedback", () => {
   const props = { status: "Pending review", owner: "Ana", comments: "", onComments: noop, cleared: false, onCleared: noop, busy: false, onReturn: noop, onApprove: noop };
-  // Status, then context, then the decision; nothing to act on until a decision is chosen.
+  // Status, Solution overview, Publication checklist, then the decision; nothing to act on until a decision is chosen.
   const html = render(review.ReviewPanel, props);
-  assert.match(html, /Librarian review.*Pending review.*Submitted by.*Ana.*Before you decide.*Client.*No client named.*Review decision.*Ready to publish.*Request changes/s);
-  // The checklist compares the internal client with its client-facing wording and flags what is missing.
+  assert.match(html, /Librarian review.*Pending review.*Solution overview.*Submitted by.*Ana.*Publication checklist.*0 \/ 5 confirmed.*Review decision.*Approve.*Request changes/s);
+  // No client named and no context: no Client row; no owner known: no Capability owner row.
+  assert.doesNotMatch(html, />Client<|Capability owner/);
+  assert.equal((html.match(/type="checkbox"/g) ?? []).length, 5);
+  assert.match(html, /personal data \(PII\).*anonymized.*professionally written.*intended audience.*classify the solution correctly/s);
   const solution = { id: "r", name: "R", summary: "S", specializationArea: "data", specializationAreas: ["data"], status: "Client demo", publicationStatus: "Pending review", reviewOutcome: "Changes requested", capabilities: ["Data platforms"], contributors: [], technologies: [], assets: [] };
-  const checked = render(review.ReviewPanel, { ...props, solution, client: "Bank X", context: "", feedback: "Anonymize it", checks: [{ label: "Summary and capability", done: true }, { label: "Detail images (1 to 6)", done: false }] });
-  assert.match(checked, /What it is.*Data Solutions.*Data platforms.*Client demo/s);
-  assert.match(checked, /Bank X.*shown as.*not provided/s);
-  // Only what the record fails is listed; met requirements are not repeated.
+  const checked = render(review.ReviewPanel, { ...props, solution, capabilityOwner: "Marta Ruiz", client: "Bank X", context: "", feedback: "Anonymize it", checks: [{ label: "Summary and capability", done: true }, { label: "Detail images (1 to 6)", done: false }] });
+  assert.match(checked, /Capability<\/dt><dd[^>]*>Data platforms.*Capability owner<\/dt><dd[^>]*>Marta Ruiz.*Specialization area<\/dt>.*Data Solutions.*Submitted by.*Client<\/dt>.*Bank X.*shown as.*not provided/s);
+  assert.match(render(review.ReviewPanel, { ...props, solution, capabilityOwner: null }), /Capability owner.*Not assigned/s);
+  // Missing required content is listed inside the checklist; met requirements are not repeated.
   const points = checked.match(/<ul class="[^"]*list-disc[^"]*">.*?<\/ul>/s)?.[0] ?? "";
-  assert.match(checked, /Missing<\/h4>/);
+  assert.match(checked, /Missing content/);
   assert.match(points, /<li>Detail images \(1 to 6\)<\/li>/);
-  assert.doesNotMatch(points, /Summary and capability|type="checkbox"/);
-  assert.match(render(review.ReviewPanel, { ...props, solution, checks: [{ label: "Summary and capability", done: true }] }), /All required content is present\./);
+  assert.doesNotMatch(points, /Summary and capability/);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...props, solution, checks: [{ label: "Summary and capability", done: true }] }), /Missing content/);
   assert.match(checked, /Resubmitted after changes requested.*Anonymize it/s);
   assert.match(render(review.ReviewPanel, { ...props, solution: { ...solution, reviewOutcome: "None" }, feedback: "Old note" }), /Latest review comments/);
-  // A returned record awaits its contributor: the status says so and the feedback sits below the checklist, with no decision.
+  // A returned record awaits its contributor: the status says so and the feedback sits below the overview, with no checklist or decision.
   const waiting = render(review.ReviewPanel, { ...props, status: "Draft", solution: { ...solution, publicationStatus: "Draft" }, feedback: "Anonymize it" });
-  assert.match(waiting, /<h2[^>]*>Changes requested<\/h2>.*Before you decide.*Waiting for corrections.*Sent back to the contributor.*Your feedback.*Anonymize it/s);
-  assert.doesNotMatch(waiting, /Review decision|Latest review comments|Resubmitted after/);
+  assert.match(waiting, /<h2[^>]*>Changes requested<\/h2>.*Solution overview.*Waiting for corrections.*Sent back to the contributor.*Your feedback.*Anonymize it/s);
+  assert.doesNotMatch(waiting, /Review decision|Publication checklist|Latest review comments|Resubmitted after/);
   // Published: a green block with the optional approval note and an explained, secondary retire action.
-  // Taking it out of the library: request changes or retire, chosen first, each then asking for the owner-facing words.
   const live = render(review.ReviewPanel, { ...props, status: "Published", solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved" }, feedback: "Great work", onRetire: noop, onRequestChanges: noop });
-  assert.match(live, /Before you decide.*<h3[^>]*>Published<\/h3>.*Your note to the contributor.*Great work.*Need to change it\?.*Request changes.*send it back to the owner.*Retire from library.*Nothing is deleted/s);
+  assert.match(live, /Solution overview.*<h3[^>]*>Published<\/h3>.*Your note to the contributor.*Great work.*Need to change it\?.*Request changes.*send it back to the owner.*Retire from library.*Nothing is deleted/s);
   assert.equal((live.match(/type="radio"/g) ?? []).length, 2);
-  assert.doesNotMatch(live, /<textarea|Review decision|Latest review comments/);
+  assert.doesNotMatch(live, /<textarea|Review decision|Publication checklist|Latest review comments/);
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Your note to the contributor|Need to change it/);
-  // Each action appears only when the caller offers it.
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published", onRetire: noop }), /send it back to the owner/);
   assert.equal((html.match(/type="radio"/g) ?? []).length, 2);
-  assert.doesNotMatch(html, /<textarea|type="checkbox"|Approve &amp; publish|Send back for changes/);
+  assert.doesNotMatch(html, /<textarea|Approve &amp; publish|Send back for changes/);
   assert.match(html, /Submission preview · what the contributor submitted/);
-  // Request changes: a required comment, sending back only once it has text.
+  // Request changes: a required, meaningful comment (15+ characters) before sending back.
   const changes = { ...props, defaultDecision: "changes" };
   const back = render(review.ReviewPanel, changes);
-  const field = back.match(/Comments to contributor.*?<textarea[^>]*>/s)?.[0] ?? "";
-  for (const attribute of [/required=""/, /maxLength="4000"/, /placeholder="Describe what needs to be updated before this solution can be published."/]) assert.match(field, attribute);
-  assert.doesNotMatch(back, /type="checkbox"|Approve &amp; publish/);
+  const field = back.match(/What needs to be corrected.*?<textarea[^>]*>/s)?.[0] ?? "";
+  for (const attribute of [/required=""/, /maxLength="4000"/, /minLength="15"/]) assert.match(field, attribute);
+  assert.doesNotMatch(back, /Approve &amp; publish/);
   assert.match(back, /disabled=""[^>]*>.*Send back for changes/s);
-  assert.match(back, /Add a comment to send this submission back\./);
-  assert.doesNotMatch(render(review.ReviewPanel, { ...changes, comments: "Fix the screenshots" }), /disabled=""/);
-  // Ready to publish: independent confirmation, an optional note, and an explained disabled state.
+  assert.match(back, /Explain what needs to be corrected \(at least 15 characters\)\./);
+  assert.match(render(review.ReviewPanel, { ...changes, comments: "Fix it" }), /disabled=""[^>]*>.*Send back for changes/s);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...changes, comments: "Fix the screenshots" }), /disabled=""[^>]*>.*Send back for changes/s);
+  // Approve: the whole checklist must be confirmed, plus an optional note and an explained disabled state.
   const publish = { ...props, defaultDecision: "publish" };
   const ready = render(review.ReviewPanel, publish);
-  assert.match(ready, /type="checkbox".*I reviewed the content.*Note to contributor.*optional/s);
-  assert.doesNotMatch(ready, /Send back for changes|required=""/);
-  assert.match(ready, /Tick the confirmation to publish\./);
+  assert.match(ready, /Note to the submitter.*optional/s);
+  assert.doesNotMatch(ready, /Send back for changes/);
+  assert.match(ready, /Confirm the publication checklist to approve \(5 of 5 left\)\./);
+  assert.match(ready, /disabled=""[^>]*>.*Approve &amp; publish/s);
   assert.doesNotMatch(render(review.ReviewPanel, { ...publish, cleared: true }), /disabled=""/);
   const incomplete = render(review.ReviewPanel, { ...publish, cleared: true, canApprove: false });
   assert.match(incomplete, /disabled=""[^>]*>.*Approve &amp; publish/s);
-  assert.match(incomplete, /Complete the missing items above before approving\./);
+  assert.match(incomplete, /Add the missing content before approving\./);
   assert.match(render(review.ReviewPanel, { ...publish, cleared: true, locked: true }), /<fieldset disabled=""/);
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Review decision|Approve &amp; publish/);
   assert.match(render(review.ReviewPanel, { ...props, busy: true }), /loading-state--inline/);
