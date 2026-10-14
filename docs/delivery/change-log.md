@@ -9,7 +9,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 8 Live / 8 |
+| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 11 Live / 11 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 45% — 5 Live, 3 Pending review / 16 |
@@ -70,7 +70,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 
-**Progress:** 100% — 8 Live / 8
+**Progress:** 100% — 11 Live / 11
 
 ### Feedback
 
@@ -91,6 +91,9 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Suggest a change as a side-column card below Delivered for | 🟢 Live | `194dd8a` ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)); published 2026-10-14; hosted UI not yet checked |
 | Librarian review: Solution overview with Capability Owner, five-item Publication checklist required to approve, 15+ character comment to request changes | 🟢 Live | `8a8afb6` ([runbook](../operations/librarian-runbook.md)); Capability Owner read-only from `nx_capability.nx_capabilityowner`; no schema or plug-in change; published 2026-10-14; hosted UI not yet checked |
 | Solution page side column: Overview with Capability Owner, Business context, Technologies used; internal Contributors & development effort (Minimum hours invested) and Associated projects; Suggest an improvement | 🟢 Live | `91ad934` ([design system](../design/design-system.md#library-page), [present mode](../workflows/present-mode.md)); present mode drops every internal section; contributor "role" is the directory level (`nx_role` was deleted 2026-10-08); published 2026-10-14; hosted UI not yet checked |
+| Download presentation: theme menu with usage hints, Suggested first, client-safe note, visible confirmation and retry | 🟢 Live | `b9bd0c1` ([discovery and presentation](../workflows/discovery-and-presentation.md)); deck generation unchanged; published 2026-10-14; hosted UI not yet checked |
+| My submissions: My solutions / Suggestions tabs, suggestions read inside the solution, message-count pill on cards, Edit on the card corner, compact owner status (Unpublish & edit) | 🟢 Live | `7bf7a7e` ([contribution and review](../workflows/contribution-and-review.md)); withdraw action and statuses unchanged; published 2026-10-14; hosted UI not yet checked |
+| Librarian review: compact Published row; Request changes and Retire open their own form on demand | 🟢 Live | `468a8f8` ([runbook](../operations/librarian-runbook.md)); transitions unchanged; published 2026-10-14; hosted UI not yet checked |
 ## 2026-10-08 — Working session: contributor effort as minimum hours required
 
 **Progress:** 100% — 5 Live / 5
@@ -188,7 +191,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-01 — Working session: Top 3 save counts and card sizing
 
-**Progress:** 100% — 8 Live / 8
+**Progress:** 100% — 11 Live / 11
 
 ### Feedback
 
