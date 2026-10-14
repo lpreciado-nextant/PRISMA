@@ -36,6 +36,8 @@ import { Nx_GetMyFavoritesService } from "./generated/services/Nx_GetMyFavorites
 import type { FavoriteApi } from "./favorites";
 import { Nx_SuggestChangeService } from "./generated/services/Nx_SuggestChangeService";
 import { Nx_GetSolutionSuggestionsService } from "./generated/services/Nx_GetSolutionSuggestionsService";
+import { Nx_AddressSuggestionService } from "./generated/services/Nx_AddressSuggestionService";
+import { Nx_GetMyOpenFeedbackService } from "./generated/services/Nx_GetMyOpenFeedbackService";
 import type { SuggestionApi } from "./suggestions";
 import { Nx_BeginResumableUploadService } from "./generated/services/Nx_BeginResumableUploadService";
 import { Nx_GetUploadCheckpointService } from "./generated/services/Nx_GetUploadCheckpointService";
@@ -101,11 +103,9 @@ export const draftApi: DraftApi = {
 export const suggestionApi: SuggestionApi | undefined = {
   list: id => Nx_GetSolutionSuggestionsService.nx_GetSolutionSuggestions(id),
   send: (id, text) => Nx_SuggestChangeService.nx_SuggestChange(id, text),
-  // Once nx_AddressSuggestion and nx_GetMyOpenFeedback are registered and their clients generated
-  // (pa app add dataverse-api --api-name ...), add:
-  //   address: (id, addressed) => Nx_AddressSuggestionService.nx_AddressSuggestion(id, addressed),
-  //   openFeedback: () => Nx_GetMyOpenFeedbackService.nx_GetMyOpenFeedback(),
-  // Until then suggestions are addressed in this browser and the masthead count uses the per-solution reads.
+  // Suggestions are addressed in Dataverse (nx_addressedon); the masthead count is one read of open feedback.
+  address: (id, addressed) => Nx_AddressSuggestionService.nx_AddressSuggestion(id, addressed),
+  openFeedback: () => Nx_GetMyOpenFeedbackService.nx_GetMyOpenFeedback(),
 };
 
 export const favoriteApi: FavoriteApi = {

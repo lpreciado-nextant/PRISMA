@@ -177,7 +177,10 @@ function NavLink({ item, className }: { item: NavItem; className: string }) {
       <Icon name={item.icon} size={18} filled={item.icon === "heart" && !!item.count} className={item.icon === "heart" && item.count ? "nav-heart-saved" : undefined} />
       {item.label}
       {item.open !== undefined && <span className="section-nav-count section-nav-count--open" aria-label={`${item.open} feedback to address`}>{item.open}</span>}
+      {/* What a lit number means, on hover or keyboard focus (screen readers already get it from the badge). */}
+      {item.open !== undefined && <span aria-hidden="true" className="hover-hint-text">{item.open === 1 ? "1 feedback item to address" : `${item.open} feedback items to address`}</span>}
       {item.pending !== undefined && <span className="section-nav-count section-nav-count--pending" aria-label={`${item.pending} awaiting review`}>{item.pending}</span>}
+      {item.pending !== undefined && <span aria-hidden="true" className="hover-hint-text">{item.pending === 1 ? "1 submission awaiting review" : `${item.pending} submissions awaiting review`}</span>}
     </a>
   );
 }

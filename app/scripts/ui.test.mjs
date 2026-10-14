@@ -711,7 +711,7 @@ test("library area filter is editorial text: plain options with colour dots, a t
 test("review queue tab shows the pending count in amber, only when there is one", () => {
   const user = { fullName: "Ana Gómez", userPrincipalName: "ana@nextant.com", live: true };
   const props = { user, theme: "dark", onToggleTheme: noop, present: false, onTogglePresent: noop, favoriteCount: 3, reviewAvailable: true };
-  assert.match(render(masthead.Masthead, { ...props, reviewCount: 5 }), /Review queue<span class="section-nav-count section-nav-count--pending" aria-label="5 awaiting review">5<\/span>/);
+  assert.match(render(masthead.Masthead, { ...props, reviewCount: 5 }), /Review queue<span class="section-nav-count section-nav-count--pending" aria-label="5 awaiting review">5<\/span><span aria-hidden="true" class="hover-hint-text">5 submissions awaiting review<\/span>/);
   assert.doesNotMatch(render(masthead.Masthead, { ...props, reviewCount: 0 }), /awaiting review/);
   assert.doesNotMatch(render(masthead.Masthead, props), /awaiting review/);
 });

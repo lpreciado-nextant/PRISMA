@@ -979,7 +979,9 @@
     pointer-events: none;
     transition: opacity 0.18s var(--ease-sheet), transform 0.18s var(--ease-sheet);
   }
-  .hover-hint:hover .hover-hint-text {
+  .hover-hint:hover .hover-hint-text,
+  .section-nav-link:hover > .hover-hint-text,
+  .section-nav-link:focus-visible > .hover-hint-text {
     opacity: 1;
     transform: none;
   }

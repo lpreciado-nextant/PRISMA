@@ -19,6 +19,38 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "nx_addresssuggestion": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_AddressSuggestion": {
+        "path": "/api/data/v9.2/nx_AddressSuggestion",
+        "method": "POST",
+        "parameters": [
+          {
+            "name": "SuggestionId",
+            "in": "body",
+            "required": true,
+            "type": "string",
+            "format": "guid"
+          },
+          {
+            "name": "Addressed",
+            "in": "body",
+            "required": true,
+            "type": "boolean"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
   "nx_beginmediaupload": {
     "tableId": "",
     "version": "",
@@ -301,6 +333,24 @@ export const dataSourcesInfo = {
     "apis": {
       "nx_GetMyFavorites": {
         "path": "/api/data/v9.2/nx_GetMyFavorites",
+        "method": "POST",
+        "parameters": [],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "nx_getmyopenfeedback": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Dataverse",
+    "apis": {
+      "nx_GetMyOpenFeedback": {
+        "path": "/api/data/v9.2/nx_GetMyOpenFeedback",
         "method": "POST",
         "parameters": [],
         "responseInfo": {
