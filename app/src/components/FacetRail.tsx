@@ -181,7 +181,8 @@ export function FacetGroup({
           className="flex w-full cursor-pointer items-center gap-2 rounded-lg py-1 text-left text-[13px] font-semibold"
           style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}
         >
-          <span className="min-w-0 flex-1">{label}</span>
+          {/* How many options the group offers right now (it follows the search and other filters). */}
+          <span className="min-w-0 flex-1">{label} <span className="ml-1 font-mono text-[11px] font-normal" style={{ color: "var(--ink-3)" }} aria-label={`${entries.length} options`}>{entries.length}</span></span>
           {chosen > 0 && <span className="font-mono text-[11px]" style={{ color: "var(--accent)" }}>{chosen} selected</span>}
           <span className={`inline-grid transition-transform duration-200 ${open ? "rotate-180" : ""}`} style={{ color: "var(--ink-3)" }}><Icon name="chevronDown" size={14} /></span>
         </button>

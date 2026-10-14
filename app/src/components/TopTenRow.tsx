@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Solution } from "../types";
+import { AREAS } from "../data/catalogueMetadata";
 import { solutionAreas } from "../lib/areas";
 import { navigate } from "../lib/router";
 import { FavoriteButton } from "./FavoriteButton";
@@ -35,7 +36,7 @@ export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: 
   /** Heart state for a solution; omit to hide the heart (for example when favorites didn't load). */
   favorite?: (solution: Solution) => Favorite | undefined;
 }) {
-  // Hidden folds the shelf down to its heading; a per-viewer convenience.
+  // Hidden folds the shelf down to its heading and a short ranked list of names; a per-viewer convenience.
   const [hidden, setHidden] = useState(() => readFlag(HIDDEN_KEY));
   const track = useRef<HTMLOListElement>(null);
   const [edges, setEdges] = useState({ start: true, end: true });
@@ -70,20 +71,35 @@ export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: 
     <section aria-labelledby="top-ten-title" className="section-panel section-panel--featured top-shelf animate-rise">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <h2 id="top-ten-title" className="section-title">{`Top ${shown.length} Most Saved`}</h2>
-          <p className="section-subtitle">Most popular solutions in the library</p>
+          {/* The explanation appears on hover instead of taking a line; screen readers get it as the description. */}
+          <span className="hover-hint relative inline-block">
+            <h2 id="top-ten-title" className="section-title" aria-describedby="top-ten-hint">{`Top ${shown.length} Most Saved`}</h2>
+            <span id="top-ten-hint" role="tooltip" className="hover-hint-text">Most popular solutions in the library</span>
+          </span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {!hidden && <>
             <ShelfButton label="Previous solutions" icon="chevronLeft" disabled={edges.start} onClick={() => page(-1)} />
             <ShelfButton label="More solutions" icon="chevronRight" disabled={edges.end} onClick={() => page(1)} />
           </>}
-          <button type="button" onClick={toggleHidden} aria-expanded={!hidden} aria-controls="top-ten-shelf" className="top-view-all inline-flex items-center gap-1" style={{ color: "var(--ink-2)" }}>
+          <button type="button" onClick={toggleHidden} aria-expanded={!hidden} aria-controls="top-ten-shelf" className="toolbar-select inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px]">
             {hidden ? "Show" : "Hide"}
             <span className={`inline-grid transition-transform duration-300 ${hidden ? "" : "rotate-180"}`}><Icon name="chevronDown" size={14} /></span>
           </button>
         </div>
       </div>
+
+      {/* Hidden folds to a short list: rank and name only, each still opening its solution. */}
+      {hidden && <ol className="mt-3 flex flex-wrap gap-2" aria-label="Most saved solutions, best first">
+        {shown.map((solution, index) => <li key={solution.id} className="min-w-0">
+          {/* Tinted in the solution's own area colour (AI blue, Data green, IBO purple), light and translucent. */}
+          <button type="button" onClick={() => openSolution(solution)} className="top-mini inline-flex max-w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-left text-[13.5px] font-medium"
+            style={{ "--area": AREAS[solutionAreas(solution)[0] ?? solution.specializationArea].cssVar } as CSSProperties}>
+            <span className="font-mono text-[12px] font-semibold" style={{ color: "var(--area)" }}>{index + 1}</span>
+            <span className="min-w-0 truncate">{solution.name}</span>
+          </button>
+        </li>)}
+      </ol>}
 
       <ol id="top-ten-shelf" ref={track} hidden={hidden} className="top-ten-track mt-1" aria-label="Most saved solutions, best first">
         {shown.map((solution, index) => {
@@ -128,7 +144,7 @@ function ShelfButton({ label, icon, disabled, onClick }: { label: string; icon: 
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="glass grid h-9 w-9 cursor-pointer place-items-center rounded-full transition-opacity disabled:cursor-default disabled:opacity-35"
+      className="toolbar-select grid h-9 w-9 cursor-pointer place-items-center rounded-full disabled:cursor-default disabled:opacity-35"
     >
       <Icon name={icon} size={15} />
     </button>

@@ -9,7 +9,6 @@ import { SolutionCard } from "../components/SolutionCard";
 import { SolutionRow } from "../components/SolutionRow";
 import { SelectPicker } from "../components/SelectPicker";
 import { SORT_LABELS, SORT_ORDERS, sortSolutions, type SortOrder } from "../lib/sort";
-import { solutionAreas } from "../lib/areas";
 
 type LibraryLayout = "grid" | "list";
 const SORT_KEY = "prisma.library.sort";
@@ -73,15 +72,6 @@ export function LibraryView({
   const chips = activeChips(filters);
   // Everything "Clear all" resets: the Refine selections plus the added window.
   const activeCount = chips.length + (filters.added === "any" ? 0 : 1);
-  // Live proof under the hero line, from the catalogue this person can see.
-  const stats = useMemo(() => {
-    const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
-    return [
-      plural(catalogue.length, "solution", "solutions"),
-      plural(new Set(catalogue.flatMap((solution) => solutionAreas(solution))).size, "specialization area", "specialization areas"),
-      plural(new Set(catalogue.flatMap((solution) => solution.technologies)).size, "technology", "technologies"),
-    ];
-  }, [catalogue]);
   // Searching or filtering goes straight to results: the shelf must not push the grid down.
   const showFeatured = !!featured && !present && !filters.q.trim() && filters.area === "all" && filters.added === "any" && chips.length === 0;
 
@@ -89,8 +79,6 @@ export function LibraryView({
     <div className="mx-auto w-full max-w-[1340px] px-4 pb-24 sm:px-6">
       {!present && (
         <section className="animate-rise grid gap-x-14 gap-y-2 pt-8 pb-1 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
-          {/* Eyebrow on its own row, so the description aligns with the wordmark itself. */}
-          <span className="eyebrow lg:col-span-2">Nextant · Solution Library</span>
           <div className="min-w-0">
             <div className="flex items-center gap-[0.12em] text-[clamp(3rem,7.5vw,5.75rem)]">
               <img
@@ -104,24 +92,18 @@ export function LibraryView({
               </h1>
             </div>
           </div>
-          {/* The right column runs the wordmark's full height behind the divider. Inside it, one block (description and
+          {/* The right column runs the wordmark's full height. Inside it, one block (description and
               stats, sharing a left edge) is centred both ways in the free space; its text stays left-aligned. */}
-          <div className="mt-4 min-w-0 lg:mt-0 lg:flex lg:items-center lg:justify-center lg:self-stretch lg:border-l lg:border-(--glass-edge) lg:px-10 lg:py-2">
+          <div className="mt-4 min-w-0 lg:mt-0 lg:flex lg:items-center lg:justify-center lg:self-stretch lg:px-10 lg:py-2">
             <div className="min-w-0 text-[clamp(17px,1.6vw,20px)] lg:w-full lg:max-w-[46ch]">
-              <p className="max-w-[46ch] text-[clamp(17px,1.6vw,20px)] leading-relaxed" style={{ color: "var(--ink-2)" }}>
-                Nextant's solutions across AI, Data and Operations, with demos ready for your next
-                client conversation.
+              {/* Three levels: a headline in dark blue-grey, a neutral supporting line, then the live stats. */}
+              <p className="text-[clamp(21px,1.9vw,24px)] leading-snug font-semibold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.01em", color: "color-mix(in srgb, var(--ink) 72%, var(--accent))" }}>
+                Explore what Nextant has built.
               </p>
-              {catalogue.length > 0 && (
-                <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.14em] uppercase" style={{ color: "var(--ink-3)" }}>
-                  {stats.map((stat, index) => (
-                    <span key={stat} className="inline-flex items-center gap-3">
-                      {index > 0 && <span aria-hidden="true">·</span>}
-                      {stat}
-                    </span>
-                  ))}
-                </p>
-              )}
+              <p className="mt-2 max-w-[52ch] text-[15px] leading-relaxed" style={{ color: "var(--ink-2)" }}>
+                Discover solutions across AI, Data, and Operations — ready to support your next client conversation.
+              </p>
+
             </div>
           </div>
         </section>
@@ -134,7 +116,9 @@ export function LibraryView({
           resultCount={results.length}
         />
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        {/* Editorial area filter: text options with their colour dots; only the chosen one gets a light tint. It must not
+            look like the section tabs above (no icons, no underline). */}
+        <div role="group" aria-label="Filter by specialization area" className="mt-4 flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
           <AreaTab
             label="All areas"
             count={counts.get("all") ?? 0}
@@ -155,7 +139,11 @@ export function LibraryView({
 
         {/* Only a chosen area carries a note; "All" needs no explanation. */}
         {filters.area !== "all" && (
-          <p className="mt-4 max-w-[72ch] text-[14.5px]" style={{ color: "var(--ink-2)" }}>
+          // Tied to the chosen area: a thin bar and faint wash in its colour, its name, then what it covers.
+          <p className="animate-rise mt-3 w-fit max-w-full rounded-r-[10px] border-l-[3px] py-2 pr-4 pl-3.5 text-[13.5px] leading-relaxed"
+            style={{ borderColor: AREAS[filters.area].cssVar, background: `color-mix(in srgb, ${AREAS[filters.area].cssVar} 7%, transparent)`, color: "var(--ink-2)" }}>
+            <span className="font-semibold" style={{ color: "var(--ink)" }}>{AREAS[filters.area].name}</span>
+            <span aria-hidden="true"> · </span>
             {AREAS[filters.area].note}
           </p>
         )}
@@ -174,7 +162,10 @@ export function LibraryView({
             // heading's row. Otherwise (rail collapsed, or below lg): heading row, then Filters left and the rest right.
             <div className={`mb-5 ${railShown ? "lg:flex lg:items-center lg:justify-between lg:gap-4" : ""}`}>
               {/* Same heading style as the Top 3 title. */}
-              <h2 className="section-title">Solution Library</h2>
+              <h2 className="section-title flex items-center gap-2.5">Nextant · Solution Library
+                {/* How many solutions the library holds; the hero no longer repeats it. */}
+                {catalogue.length > 0 && <span className="rounded-full px-2 py-0.5 font-mono text-[12px] font-medium" style={{ color: "var(--ink-2)", background: "color-mix(in srgb, var(--ink) 7%, transparent)" }} aria-label={`${catalogue.length} ${catalogue.length === 1 ? "solution" : "solutions"}`}>{catalogue.length}</span>}
+              </h2>
               {/* The right group wraps within itself on narrow screens, so Filters keeps its place. */}
               <div className={`mt-4 flex items-center justify-between gap-3 ${railShown ? "lg:mt-0" : ""}`}>
                 <div className={`flex shrink-0 items-center ${railShown ? "lg:hidden" : ""}`}>
@@ -323,13 +314,14 @@ function SearchField({
   resultCount: number;
 }) {
   return (
-    <div className="glass glass-gloss flex h-14 items-center gap-3 rounded-[16px] px-4">
+    // A neutral surface with a hairline border; focus raises the border to the accent (`.search-field`).
+    <div className="search-field flex h-[50px] items-center gap-3 rounded-[12px] px-4">
       <Icon name="search" size={18} className="shrink-0" />
       <input
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Search by problem, capability, technology or client…"
+        placeholder="Search solutions, business challenges, capabilities, and more..."
         aria-label="Search the solution library"
         className="h-full min-w-0 flex-1 bg-transparent text-[16px] outline-none"
         style={{ color: "var(--ink)" }}
@@ -362,25 +354,17 @@ function AreaTab({
   label: string;
   count: number;
   active: boolean;
+  /** The area's own colour (`--sa-*`): its dot, and the tint when chosen. "All areas" has none and tints blue-grey. */
   color?: string;
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className="glass inline-flex h-9 cursor-pointer items-center gap-2 rounded-full px-4 text-[13.5px] font-semibold transition-all duration-300"
-      style={{
-        fontFamily: "var(--font-display)",
-        color: active ? "var(--on-accent)" : "var(--ink-2)",
-        background: active ? "var(--accent)" : undefined,
-        borderColor: active ? "var(--accent)" : undefined,
-      }}
-    >
-      {color && !active && <span className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />}
+    <button type="button" onClick={onClick} aria-pressed={active} className="area-filter inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-[7px] px-2.5 text-[13.5px] whitespace-nowrap"
+      style={color ? { "--area": color } as React.CSSProperties : undefined}>
+      {color && <span aria-hidden="true" className="size-[7px] shrink-0 rounded-full" style={{ background: color }} />}
       {label}
-      <span className="font-mono text-[11px] opacity-70">{count}</span>
+      {/* An empty area stays listed, its count quieter still. */}
+      <span className="font-mono text-[11px]" style={{ color: "var(--ink-3)", opacity: count === 0 ? 0.6 : 1 }}>{count}</span>
     </button>
   );
 }

@@ -11,20 +11,11 @@ export function FavoritesView({ catalogue }: { catalogue: Solution[] }) {
 
   return (
     <div className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
-      <button
-        type="button"
-        onClick={() => navigate("/")}
-        className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold"
-        style={{ fontFamily: "var(--font-display)", color: "var(--ink-2)" }}
-      >
-        <Icon name="chevronLeft" size={15} />
-        Back to the library
-      </button>
-      <div className="mt-4 border-b pb-5" style={{ borderColor: "var(--glass-edge)" }}>
-        <p className="eyebrow">Your shortlist</p>
-        <h1 className="mt-2 text-[26px]">My favorites</h1>
+      {/* Same header position as the other sections: the tabs above already lead back to the library. */}
+      <div className="border-b pb-5" style={{ borderColor: "var(--glass-edge)" }}>
+        <h1 className="text-[26px]">My favorites</h1>
         <p className="mt-2 text-[14px]" style={{ color: "var(--ink-2)" }}>
-          Only you see this list. Saved in this browser only; no Dataverse records.
+          Saved in this browser only; no Dataverse records.
         </p>
       </div>
       {saved.length === 0 ? (
