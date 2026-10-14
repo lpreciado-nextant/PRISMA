@@ -15,14 +15,13 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 50% — 5 Live, 4 Pending review / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 42% — 5 Live / 12 (2 Dropped excluded) |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 58% — 7 Live / 12 (2 Dropped excluded) |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Whether to record that AI was used to build a solution (tools used are covered by Technologies); one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
-- Demo viewing (PR-006): full screen (PR-004), new-tab links (PR-005) and, since 2026-10-14, one 16:9 stage plus "Open in new tab" in a focused viewer are live (`1f6a01b`, published and confirmed by the user 2026-10-14); a modal is likely no longer needed ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Whether to delete the retired `nx_startdate`/`nx_enddate` contributor columns (optional; first remove them from the unused "Information" form) ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08; legacy rows without hours are dummy data, no backfill
 - Workstream/project mapping (PR-013) — not scoped, future release only; the time-tracking row (PR-012) was resolved as the library time filter ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
@@ -263,7 +262,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 42% — 5 Live, 7 Proposed / 12 (2 Dropped excluded)
+**Progress:** 58% — 7 Live, 5 Proposed / 12 (2 Dropped excluded)
 
 ### Feedback
 
@@ -289,8 +288,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-003 Prototype URL field | Dropped | Closed 2026-10-08 as covered by PR-001: no dedicated field; a prototype is added as a **URL** link under "Interactive demo", whose hint now invites prototypes |
 | PR-004 Full-screen demo/prototype view | 🟢 Live | 2026-10-01: Full screen button in every viewer (browser full screen, or the stage expanded over the PRISMA chrome when the Power Apps host forbids it). In Local Play the host granted full screen and the demo filled the monitor. See [Demo assets](../workflows/demo-assets.md#viewer-routes) |
 | PR-005 Open demo/prototype in a new tab | 🟢 Live | Every published solution page has **Copy link** (Luis, `e6f4c92` and `7237ea3`, 2026-09-30): a play link carrying `?route=/s/{id}` that opens that solution directly, in a new tab or for a colleague, with the usual sign-in and access checks ([ADR-0003](../architecture/decisions/adr-0003-hash-routing.md)). Hosted demo URLs also keep **Pop out** (new tab) in the viewer |
-| PR-006 Demo modal/popup view | Proposed | Medium priority. Likely redundant with full-screen/new-tab — see open decisions |
-| PR-007 Reduce chrome around the demo viewer | Proposed | High priority |
+| PR-006 Demo modal/popup view | 🟢 Live | Resolved 2026-10-14 without a modal: every viewer demo offers **Open in new tab**, which opens that demo alone in a focused viewer (in present mode when opened from it), alongside Full screen (PR-004). `1f6a01b`, published and confirmed by the user ([demo assets](../workflows/demo-assets.md)) |
+| PR-007 Reduce chrome around the demo viewer | 🟢 Live | 2026-10-14: one centred 16:9 stage for every demo type, the same in the viewer and the solution page's main demo; the focused viewer (Open in new tab) shows the demo with only its title bar, no masthead, tabs or banner. `1f6a01b`, published and confirmed by the user |
 | PR-008 User feedback capture (comments/suggestions) | 🟢 Live | Live 2026-10-13: `nx_SuggestChange` and `nx_GetSolutionSuggestions` registered by Juliana (Web API, same definition as `Prisma.Deploy suggestion-api`), clients generated and the connected app published with **Suggest a change** and the **Suggestions** panel; hosted UI not yet checked. Table `nx_solutionsuggestion` created 2026-10-13; `SuggestionApi` plug-in, `suggestion-api` registration command and the connected button/panel in code ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)). Medium priority. Decided 2026-10-13: private **suggestions** on published solutions, not public comments (no social features in v1). Anyone who can read a published solution, outside present mode, uses **Suggest a change** on the solution page (owner included: second signed plug-in deployed by Luis and connected app republished 2026-10-14). Only the owner, the solution's contributors and the PRISMA Librarian read them, in a **Suggestions** panel on the same page, with the author's name and date; no status. Separate from the librarian review. Signed plug-in with `SuggestionApi` deployed 2026-10-13 22:18 UTC |
 | PR-009 Solution rating / usefulness score | Proposed | Low priority |
 | PR-010 Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the minimum-hours effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
@@ -301,7 +300,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ### Open decisions
 
-- Modal/popup (PR-006): full screen (PR-004) and new-tab links (PR-005) are live; whether a modal is still wanted.
+- ~~Modal/popup (PR-006)~~ resolved 2026-10-14: Open in new tab in a focused viewer replaces it.
 - How effort is represented going forward (PR-010/011) — duration bands, Small/Medium/Large complexity, or both — and whether this replaces or sits alongside the hours-based model in ADR-0007.
 - Whether and when workstream/project mapping (PR-013) gets scoped for a future release.
 
