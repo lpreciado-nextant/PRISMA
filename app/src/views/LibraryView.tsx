@@ -1,9 +1,9 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import type { Solution } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
-import { activeChips, activeFacetCount, ADDED_LABELS, ADDED_WINDOWS, addedCounts, areaCounts, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
+import { activeChips, activeFacetCount, ADDED_LABELS, ADDED_WINDOWS, addedCounts, areaCounts, clearFacets, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
 import { Chip } from "../components/Badges";
-import { FacetPanel, FacetRail } from "../components/FacetRail";
+import { FacetDrawer, FacetRail } from "../components/FacetRail";
 import { Icon } from "../components/Icon";
 import { SolutionCard } from "../components/SolutionCard";
 import { SolutionRow } from "../components/SolutionRow";
@@ -14,6 +14,9 @@ import { solutionAreas } from "../lib/areas";
 type LibraryLayout = "grid" | "list";
 const SORT_KEY = "prisma.library.sort";
 const LAYOUT_KEY = "prisma.library.layout";
+const RAIL_KEY = "prisma.library.rail";
+/** Borderless toolbar dropdown: a muted label, then the chosen value. */
+const TOOLBAR_SELECT = "toolbar-select flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-left text-[13px] outline-none";
 
 /** Sort and layout are per-viewer conveniences, kept for the session so they survive opening a solution. */
 function remembered<Value extends string>(key: string, allowed: readonly Value[], fallback: Value): Value {
@@ -50,13 +53,26 @@ export function LibraryView({
   const [sort, setSort] = useState<SortOrder>(() => remembered(SORT_KEY, SORT_ORDERS, "newest"));
   const [layout, setLayout] = useState<LibraryLayout>(() => remembered(LAYOUT_KEY, ["grid", "list"] as const, "grid"));
   const [refineOpen, setRefineOpen] = useState(false);
+  // Desktop only: the Refine rail can be hidden so the cards take the full width.
+  const [railShown, setRailShown] = useState(() => remembered(RAIL_KEY, ["shown", "hidden"] as const, "shown") === "shown");
+  const rail = !present && railShown;
   const refineToggle = useRef<HTMLButtonElement>(null);
+  // The control that toggled the rail disappears with it, so focus moves to the one that takes its place.
+  const railCollapse = useRef<HTMLButtonElement>(null);
+  const railExpand = useRef<HTMLButtonElement>(null);
+  const setRail = (shown: boolean) => {
+    setRailShown(shown);
+    remember(RAIL_KEY, shown ? "shown" : "hidden");
+    requestAnimationFrame(() => (shown ? railCollapse : railExpand).current?.focus());
+  };
   const refineCount = activeFacetCount(filters);
   // Sorting and layout apply to the Solution Library grid only; the Top 3 keeps its own ranking.
   const results = useMemo(() => sortSolutions(filterSolutions(catalogue, filters), sort), [catalogue, filters, sort]);
   const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
   const added = useMemo(() => addedCounts(catalogue, filters), [catalogue, filters]);
   const chips = activeChips(filters);
+  // Everything "Clear all" resets: the Refine selections plus the added window.
+  const activeCount = chips.length + (filters.added === "any" ? 0 : 1);
   // Live proof under the hero line, from the catalogue this person can see.
   const stats = useMemo(() => {
     const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
@@ -72,11 +88,11 @@ export function LibraryView({
   return (
     <div className="mx-auto w-full max-w-[1340px] px-4 pb-24 sm:px-6">
       {!present && (
-        <section className="animate-rise grid gap-x-12 gap-y-2 pt-12 pb-2 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-start">
+        <section className="animate-rise grid gap-x-14 gap-y-2 pt-8 pb-1 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-center">
           {/* Eyebrow on its own row, so the description aligns with the wordmark itself. */}
           <span className="eyebrow lg:col-span-2">Nextant · Solution Library</span>
           <div className="min-w-0">
-            <div className="flex items-center gap-[0.12em] text-[clamp(3.6rem,9vw,7.25rem)]">
+            <div className="flex items-center gap-[0.12em] text-[clamp(3rem,7.5vw,5.75rem)]">
               <img
                 src="./prisma-mark-v2.svg"
                 alt=""
@@ -88,26 +104,30 @@ export function LibraryView({
               </h1>
             </div>
           </div>
-          <div className="mt-4 min-w-0 lg:mt-[0.35rem] lg:border-l lg:border-(--glass-edge) lg:pl-10">
-            <p className="max-w-[46ch] text-[clamp(17px,1.6vw,20px)] leading-relaxed" style={{ color: "var(--ink-2)" }}>
-              Nextant's solutions across AI, Data and Operations, with demos ready for your next
-              client conversation.
-            </p>
-            {catalogue.length > 0 && (
-              <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.14em] uppercase" style={{ color: "var(--ink-3)" }}>
-                {stats.map((stat, index) => (
-                  <span key={stat} className="inline-flex items-center gap-3">
-                    {index > 0 && <span aria-hidden="true">·</span>}
-                    {stat}
-                  </span>
-                ))}
+          {/* The right column runs the wordmark's full height behind the divider. Inside it, one block (description and
+              stats, sharing a left edge) is centred both ways in the free space; its text stays left-aligned. */}
+          <div className="mt-4 min-w-0 lg:mt-0 lg:flex lg:items-center lg:justify-center lg:self-stretch lg:border-l lg:border-(--glass-edge) lg:px-10 lg:py-2">
+            <div className="min-w-0 text-[clamp(17px,1.6vw,20px)] lg:w-full lg:max-w-[46ch]">
+              <p className="max-w-[46ch] text-[clamp(17px,1.6vw,20px)] leading-relaxed" style={{ color: "var(--ink-2)" }}>
+                Nextant's solutions across AI, Data and Operations, with demos ready for your next
+                client conversation.
               </p>
-            )}
+              {catalogue.length > 0 && (
+                <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] tracking-[0.14em] uppercase" style={{ color: "var(--ink-3)" }}>
+                  {stats.map((stat, index) => (
+                    <span key={stat} className="inline-flex items-center gap-3">
+                      {index > 0 && <span aria-hidden="true">·</span>}
+                      {stat}
+                    </span>
+                  ))}
+                </p>
+              )}
+            </div>
           </div>
         </section>
       )}
 
-      <section className="pt-8">
+      <section className="pt-5">
         <SearchField
           value={filters.q}
           onChange={(q) => onFilters({ ...filters, q })}
@@ -140,92 +160,122 @@ export function LibraryView({
           </p>
         )}
 
-        {chips.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <span className="eyebrow">Filters</span>
-            {chips.map(({ key, value }) => (
-              <Chip
-                key={`${key}-${value}`}
-                active
-                onClick={() =>
-                  onFilters({ ...filters, [key]: filters[key].filter((v) => v !== value) })
-                }
-              >
-                {value}
-                <Icon name="close" size={12} />
-              </Chip>
-            ))}
-          </div>
-        )}
       </section>
 
       {showFeatured && <div className="mt-10">{featured}</div>}
 
-      <div className={`mt-8 grid gap-6 ${present ? "" : "lg:grid-cols-[250px_minmax(0,1fr)]"}`}>
-        {/* Present mode drops the filter rail — minimal chrome per design §3.4. */}
-        {!present && <FacetRail all={catalogue} filters={filters} onChange={onFilters} />}
+      <div className={`mt-8 grid gap-6 ${rail ? "lg:grid-cols-[250px_minmax(0,1fr)]" : ""}`}>
+        {/* Present mode drops the filter rail — minimal chrome per design §3.4. Collapsing keeps every selection. */}
+        {rail && <FacetRail all={catalogue} filters={filters} onChange={onFilters} onCollapse={() => setRail(false)} collapseRef={railCollapse} />}
 
         <div className="min-w-0">
           {!present && (
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-              {/* Same type and colour (the wordmark's "P") as the Top 3 title. */}
-              <h2 className="text-[clamp(1.3rem,2vw,1.65rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em", color: "var(--brand-p)" }}>Solution Library</h2>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  ref={refineToggle}
-                  type="button"
-                  onClick={() => setRefineOpen(!refineOpen)}
-                  aria-expanded={refineOpen}
-                  aria-controls={refineOpen ? "refine-panel" : undefined}
-                  aria-label={refineCount ? `Refine, ${refineCount} active` : "Refine"}
-                  className="toolbar-control flex h-9 cursor-pointer items-center gap-2 rounded-[10px] px-3 text-[13px] font-semibold lg:hidden"
-                >
-                  <Icon name="sliders" size={14} />
-                  Refine
-                  {refineCount > 0 && (
-                    <span className="grid h-5 min-w-5 place-items-center rounded-full px-1 font-mono text-[10.5px]" style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
-                      {refineCount}
-                    </span>
-                  )}
-                </button>
-                <SelectPicker
-                  compact
-                  label="Sort solutions"
-                  value={sort}
-                  options={SORT_ORDERS}
-                  getLabel={(order) => SORT_LABELS[order]}
-                  getButtonLabel={(order) => `Sort by: ${order === "newest" ? "Newest" : "Oldest"}`}
-                  onChange={(order) => { setSort(order); remember(SORT_KEY, order); }}
-                />
-                <SelectPicker
-                  compact
-                  label="Added within"
-                  value={filters.added}
-                  options={ADDED_WINDOWS}
-                  getLabel={(window) => ADDED_LABELS[window]}
-                  getButtonLabel={(window) => `Added: ${ADDED_LABELS[window]}`}
-                  getHint={(window) => String(added.get(window) ?? 0)}
-                  onChange={(window) => onFilters({ ...filters, added: window })}
-                />
-                <div className="view-toggle" role="group" aria-label="Layout">
-                  {(["grid", "list"] as const).map((option) => (
+            // Desktop with the rail open: the rail is the filter control, so the toolbar drops Filters and joins the
+            // heading's row. Otherwise (rail collapsed, or below lg): heading row, then Filters left and the rest right.
+            <div className={`mb-5 ${railShown ? "lg:flex lg:items-center lg:justify-between lg:gap-4" : ""}`}>
+              {/* Same heading style as the Top 3 title. */}
+              <h2 className="section-title">Solution Library</h2>
+              {/* The right group wraps within itself on narrow screens, so Filters keeps its place. */}
+              <div className={`mt-4 flex items-center justify-between gap-3 ${railShown ? "lg:mt-0" : ""}`}>
+                <div className={`flex shrink-0 items-center ${railShown ? "lg:hidden" : ""}`}>
+                  <button
+                    ref={refineToggle}
+                    type="button"
+                    onClick={() => setRefineOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-label={refineCount ? `Filters, ${refineCount} active` : "Filters"}
+                    className="toolbar-filter flex h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] lg:hidden"
+                  >
+                    <Icon name="sliders" size={14} />
+                    Filters
+                    {refineCount > 0 && <RefineCount count={refineCount} />}
+                  </button>
+                  {/* Desktop, rail collapsed: reopens it. A soft fill sets it apart from Sort by and Added. */}
+                  {!railShown && (
                     <button
-                      key={option}
+                      ref={railExpand}
                       type="button"
-                      aria-pressed={layout === option}
-                      aria-label={option === "grid" ? "Grid view" : "List view"}
-                      title={option === "grid" ? "Grid view" : "List view"}
-                      onClick={() => { setLayout(option); remember(LAYOUT_KEY, option); }}
+                      onClick={() => setRail(true)}
+                      aria-label={refineCount ? `Show filters, ${refineCount} active` : "Show filters"}
+                      title="Show filters"
+                      className="toolbar-filter hidden h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] lg:flex"
                     >
-                      <Icon name={option} size={15} />
+                      <Icon name="sliders" size={14} />
+                      Filters
+                      {refineCount > 0 && <RefineCount count={refineCount} />}
                     </button>
-                  ))}
+                  )}
+                </div>
+                <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-1 gap-y-2">
+                  <SelectPicker
+                    compact
+                    label="Sort solutions"
+                    value={sort}
+                    options={SORT_ORDERS}
+                    getLabel={(order) => SORT_LABELS[order]}
+                    buttonClassName={TOOLBAR_SELECT}
+                    buttonPrefix="Sort by"
+                    getButtonLabel={(order) => (order === "newest" ? "Newest" : "Oldest")}
+                    onChange={(order) => { setSort(order); remember(SORT_KEY, order); }}
+                  />
+                  <SelectPicker
+                    compact
+                    label="Added within"
+                    value={filters.added}
+                    options={ADDED_WINDOWS}
+                    getLabel={(window) => ADDED_LABELS[window]}
+                    buttonClassName={TOOLBAR_SELECT}
+                    buttonPrefix="Added"
+                    getHint={(window) => String(added.get(window) ?? 0)}
+                    onChange={(window) => onFilters({ ...filters, added: window })}
+                  />
+                  <div className="view-toggle ml-2" role="group" aria-label="Layout">
+                    {(["grid", "list"] as const).map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        aria-pressed={layout === option}
+                        aria-label={option === "grid" ? "Grid view" : "List view"}
+                        title={option === "grid" ? "Grid view" : "List view"}
+                        onClick={() => { setLayout(option); remember(LAYOUT_KEY, option); }}
+                      >
+                        <Icon name={option} size={15} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
           )}
           {!present && refineOpen && (
-            <FacetPanel id="refine-panel" all={catalogue} filters={filters} onChange={onFilters} onClose={() => { setRefineOpen(false); refineToggle.current?.focus(); }} />
+            <FacetDrawer all={catalogue} filters={filters} onChange={onFilters} resultCount={results.length} onClose={() => setRefineOpen(false)} />
+          )}
+          {/* Active filters sit right above the cards: each removable, with the total and a single reset. */}
+          {activeCount > 0 && (
+            <div className="mb-5 flex flex-wrap items-center gap-2" role="region" aria-label="Active filters">
+              <span className="text-[13px] font-semibold" style={{ color: "var(--ink)" }}>
+                {activeCount} {activeCount === 1 ? "filter" : "filters"}
+              </span>
+              <span aria-hidden="true" style={{ color: "var(--ink-3)" }}>·</span>
+              <span className="text-[13px]" style={{ color: "var(--ink-2)" }} role="status">
+                {results.length} {results.length === 1 ? "result" : "results"}
+              </span>
+              {chips.map(({ key, value }) => (
+                <Chip key={`${key}-${value}`} active onClick={() => onFilters({ ...filters, [key]: filters[key].filter((v) => v !== value) })} title={`Remove ${value}`}>
+                  {value}
+                  <Icon name="close" size={12} />
+                </Chip>
+              ))}
+              {filters.added !== "any" && (
+                <Chip active onClick={() => onFilters({ ...filters, added: "any" })} title="Remove the added-within filter">
+                  Added: {ADDED_LABELS[filters.added]}
+                  <Icon name="close" size={12} />
+                </Chip>
+              )}
+              <button type="button" onClick={() => onFilters({ ...clearFacets(filters), added: "any" })} className="ml-1 cursor-pointer text-[13px] font-semibold" style={{ color: "var(--accent)" }}>
+                Clear all
+              </button>
+            </div>
           )}
           {results.length > 0 ? (
             layout === "list" && !present ? (
@@ -235,7 +285,7 @@ export function LibraryView({
                 ))}
               </div>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <div className={`grid gap-5 sm:grid-cols-2 ${present || rail ? "xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4"}`}>
                 {results.map((s, i) => (
                   renderCard ? <div key={s.id} className="grid min-w-0">{renderCard(s, i)}</div> : <SolutionCard key={s.id} solution={s} present={present} index={i} catalogueOnly={catalogueOnly} favoritable={!renderCard && !catalogueOnly} />
                 ))}
@@ -252,6 +302,14 @@ export function LibraryView({
         </div>
       </div>
     </div>
+  );
+}
+
+function RefineCount({ count }: { count: number }) {
+  return (
+    <span className="grid h-4 min-w-4 place-items-center rounded-full px-1 font-mono text-[10px] leading-none" style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
+      {count}
+    </span>
   );
 }
 
@@ -312,7 +370,7 @@ function AreaTab({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="glass inline-flex cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-[13.5px] font-semibold transition-all duration-300"
+      className="glass inline-flex h-9 cursor-pointer items-center gap-2 rounded-full px-4 text-[13.5px] font-semibold transition-all duration-300"
       style={{
         fontFamily: "var(--font-display)",
         color: active ? "var(--on-accent)" : "var(--ink-2)",

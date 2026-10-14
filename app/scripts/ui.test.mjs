@@ -372,28 +372,28 @@ test("review actions require comments on return and independent clearance on app
   const props = { status: "Pending review", owner: "Ana", comments: "", onComments: noop, cleared: false, onCleared: noop, busy: false, onReturn: noop, onApprove: noop };
   // Status, then context, then the decision; nothing to act on until a decision is chosen.
   const html = render(review.ReviewPanel, props);
-  assert.match(html, /Librarian review.*Pending review.*Submitted by.*Ana.*Review checklist.*Client safety.*No client named.*Review decision.*Ready to publish.*Request changes/s);
+  assert.match(html, /Librarian review.*Pending review.*Submitted by.*Ana.*Before you decide.*Client.*No client named.*Review decision.*Ready to publish.*Request changes/s);
   // The checklist compares the internal client with its client-facing wording and flags what is missing.
   const solution = { id: "r", name: "R", summary: "S", specializationArea: "data", specializationAreas: ["data"], status: "Client demo", publicationStatus: "Pending review", reviewOutcome: "Changes requested", capabilities: ["Data platforms"], contributors: [], technologies: [], assets: [] };
   const checked = render(review.ReviewPanel, { ...props, solution, client: "Bank X", context: "", feedback: "Anonymize it", checks: [{ label: "Summary and capability", done: true }, { label: "Detail images (1 to 6)", done: false }] });
-  assert.match(checked, /Classification.*Specialization areas.*Data Solutions.*Capability.*Data platforms.*Status.*Client demo/s);
-  assert.match(checked, /Internal client.*Bank X.*Shown to clients as.*Not provided/s);
-  // Review points are plain bullets: nothing reads as already verified; only a point the record fails is flagged.
-  assert.match(checked, /Review points.*Verify these items before making your decision\./s);
+  assert.match(checked, /What it is.*Data Solutions.*Data platforms.*Client demo/s);
+  assert.match(checked, /Bank X.*shown as.*not provided/s);
+  // Only what the record fails is listed; met requirements are not repeated.
   const points = checked.match(/<ul class="[^"]*list-disc[^"]*">.*?<\/ul>/s)?.[0] ?? "";
-  assert.doesNotMatch(points, /type="checkbox"|<svg[^>]*>(?:(?!<\/svg>).)*m4 12 5 5L20 6/s);
-  assert.match(points, /<li[^>]*>Summary and capability<\/li>/);
-  assert.match(points, /<li[^>]*>Detail images \(1 to 6\)<span[^>]*>.*Missing<\/span><\/li>/s);
+  assert.match(checked, /Missing<\/h4>/);
+  assert.match(points, /<li>Detail images \(1 to 6\)<\/li>/);
+  assert.doesNotMatch(points, /Summary and capability|type="checkbox"/);
+  assert.match(render(review.ReviewPanel, { ...props, solution, checks: [{ label: "Summary and capability", done: true }] }), /All required content is present\./);
   assert.match(checked, /Resubmitted after changes requested.*Anonymize it/s);
   assert.match(render(review.ReviewPanel, { ...props, solution: { ...solution, reviewOutcome: "None" }, feedback: "Old note" }), /Latest review comments/);
   // A returned record awaits its contributor: the status says so and the feedback sits below the checklist, with no decision.
   const waiting = render(review.ReviewPanel, { ...props, status: "Draft", solution: { ...solution, publicationStatus: "Draft" }, feedback: "Anonymize it" });
-  assert.match(waiting, /<h2[^>]*>Changes requested<\/h2>.*Review checklist.*Waiting for corrections.*Sent back to the contributor.*Your feedback.*Anonymize it/s);
+  assert.match(waiting, /<h2[^>]*>Changes requested<\/h2>.*Before you decide.*Waiting for corrections.*Sent back to the contributor.*Your feedback.*Anonymize it/s);
   assert.doesNotMatch(waiting, /Review decision|Latest review comments|Resubmitted after/);
   // Published: a green block with the optional approval note and an explained, secondary retire action.
   // Taking it out of the library: request changes or retire, chosen first, each then asking for the owner-facing words.
   const live = render(review.ReviewPanel, { ...props, status: "Published", solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved" }, feedback: "Great work", onRetire: noop, onRequestChanges: noop });
-  assert.match(live, /Review checklist.*<h3[^>]*>Published<\/h3>.*Your note to the contributor.*Great work.*Need to change it\?.*Request changes.*send it back to the owner.*Retire from library.*Nothing is deleted/s);
+  assert.match(live, /Before you decide.*<h3[^>]*>Published<\/h3>.*Your note to the contributor.*Great work.*Need to change it\?.*Request changes.*send it back to the owner.*Retire from library.*Nothing is deleted/s);
   assert.equal((live.match(/type="radio"/g) ?? []).length, 2);
   assert.doesNotMatch(live, /<textarea|Review decision|Latest review comments/);
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Your note to the contributor|Need to change it/);
@@ -414,13 +414,13 @@ test("review actions require comments on return and independent clearance on app
   // Ready to publish: independent confirmation, an optional note, and an explained disabled state.
   const publish = { ...props, defaultDecision: "publish" };
   const ready = render(review.ReviewPanel, publish);
-  assert.match(ready, /type="checkbox".*I confirm that I reviewed.*Note to contributor.*optional/s);
+  assert.match(ready, /type="checkbox".*I reviewed the content.*Note to contributor.*optional/s);
   assert.doesNotMatch(ready, /Send back for changes|required=""/);
-  assert.match(ready, /Confirm the review above to publish\./);
+  assert.match(ready, /Tick the confirmation to publish\./);
   assert.doesNotMatch(render(review.ReviewPanel, { ...publish, cleared: true }), /disabled=""/);
   const incomplete = render(review.ReviewPanel, { ...publish, cleared: true, canApprove: false });
   assert.match(incomplete, /disabled=""[^>]*>.*Approve &amp; publish/s);
-  assert.match(incomplete, /must be complete before approval/);
+  assert.match(incomplete, /Complete the missing items above before approving\./);
   assert.match(render(review.ReviewPanel, { ...publish, cleared: true, locked: true }), /<fieldset disabled=""/);
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Review decision|Approve &amp; publish/);
   assert.match(render(review.ReviewPanel, { ...props, busy: true }), /loading-state--inline/);
@@ -515,6 +515,12 @@ test("my submissions filters by review state and keeps card controls outside the
   for (const [label, total] of [["All", 4], ["Draft", 1], ["Pending review", 1], ["Changes requested", 1], ["Published", 1]]) {
     assert.match(html, new RegExp(`aria-pressed="${label === "All"}"[^>]*>(<span[^>]*></span>)?${label}<span[^>]*>${total}</span>`));
   }
+  // Suggestions are a second, independent filter, shown only when the caller supplies them.
+  assert.doesNotMatch(html, /Filter by feedback/);
+  const suggested = render(MySubmissionsView, { entries, connected: true, suggestions: { live: { count: 3, authors: ["Ana", "Luis", "Marta"] } } });
+  assert.match(suggested, /aria-label="Filter by feedback".*Suggestions<span[^>]*>1<\/span>/s);
+  assert.doesNotMatch(suggested, /Librarian comments/);
+  assert.match(suggested, /3 suggestions from Ana, Luis \+1/);
   // A managed card is not itself a button: its title opens it and the controls sit beside that button.
   assert.doesNotMatch(html, /role="button"/);
   assert.equal((html.match(/class="card-open/g) ?? []).length, 4);
@@ -603,4 +609,30 @@ test("suggestions: readers see a private list with author and date; others get a
   assert.match(form, /Only the owner, the contributors and the librarian will see it, with your name\./);
   assert.match(form, /maxLength="1000"/);
   assert.match(form, /<button[^>]*disabled=""[^>]*>Send<\/button>/);
+});
+
+test("refine groups show five options, keep selected ones at zero, and search long lists", async () => {
+  const { FacetGroup } = await server.ssrLoadModule("/src/components/FacetRail.tsx");
+  const counts = new Map(Array.from({ length: 9 }, (_, index) => [`Option ${index + 1}`, 9 - index]));
+  const html = render(FacetGroup, { label: "Technology", counts, selected: ["Retired option"], searchable: true, onToggle: noop });
+  assert.match(html, /aria-expanded="true"[^>]*>.*Technology.*1 selected/s);
+  assert.match(html, /aria-label="Search technology options"/);
+  // Five options plus the selected one, which has no results under the current search.
+  assert.equal((html.match(/aria-pressed=/g) ?? []).length, 6);
+  assert.match(html, /aria-pressed="true"[^>]*>.*Retired option.*>0<\/span>/s);
+  assert.match(html, /Show 4 more/);
+  assert.doesNotMatch(html, /truncate/);
+  // Short or non-searchable lists get no search box.
+  assert.doesNotMatch(render(FacetGroup, { label: "Demo", counts: new Map([["Demo video", 2]]), selected: [], searchable: false, onToggle: noop }), /type="search"/);
+});
+
+test("library shows active filters above the cards with a total, result count and Clear all", async () => {
+  const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");
+  const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");
+  const { EMPTY_FILTERS } = await server.ssrLoadModule("/src/lib/search.ts");
+  const capability = SOLUTIONS[0].capabilities[0];
+  const html = render(LibraryView, { catalogue: SOLUTIONS, filters: { ...EMPTY_FILTERS, capabilities: [capability], added: "1y" }, onFilters: noop, present: false });
+  assert.match(html, /aria-label="Active filters".*2 filters.*results?<\/span>.*Clear all/s);
+  assert.match(html, /aria-label="Refine solutions".*aria-label="Hide filters"/s);
+  assert.doesNotMatch(render(LibraryView, { catalogue: SOLUTIONS, filters: EMPTY_FILTERS, onFilters: noop, present: false }), /Active filters/);
 });

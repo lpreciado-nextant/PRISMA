@@ -354,6 +354,22 @@
     color: var(--ink-3);
   }
 
+  /* Library section headings (Top 3, Solution Library): one bold display title, an optional muted line below. */
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .section-subtitle {
+    margin-top: 0.25rem;
+    font-size: 13.5px;
+    font-weight: 400;
+    color: var(--ink-2);
+  }
+
   /* The product wordmark. The gradient is static: panning it repaints the
      whole headline every frame and stalls the backdrop-filter panels above. */
   .prisma-wordmark {
@@ -496,7 +512,7 @@
   /* Horizontal, snap-scrolling carousel. The edge mask fades cards into the
      panel instead of clipping them; padding keeps focus rings unmasked. */
   .top-shelf {
-    padding-block: clamp(16px, 2vw, 22px) clamp(8px, 1.2vw, 12px);
+    padding-block: clamp(14px, 1.6vw, 18px) clamp(6px, 1vw, 10px);
   }
   .top-ten-track {
     display: flex;
@@ -507,7 +523,7 @@
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
     scroll-padding-inline: 6px;
-    padding: 14px 6px 18px;
+    padding: 10px 6px 12px;
     margin-inline: -6px;
     scrollbar-width: none;
     container-type: inline-size;
@@ -529,10 +545,10 @@
      rank numeral and the edge fade, about half of the card itself shows,
      signalling that the shelf scrolls. */
   .top-card-item {
-    --rank-inset: 3.2rem;
+    --rank-inset: 2.6rem;
     --visible: 1;
     --peek: 0.6;
-    --card-w: calc((100cqw - var(--visible) * 1.25rem) / (var(--visible) + var(--peek)) - 3.2rem);
+    --card-w: calc((100cqw - var(--visible) * 1.25rem) / (var(--visible) + var(--peek)) - 2.6rem);
     position: relative;
     display: flex;
     flex-shrink: 0;
@@ -541,7 +557,7 @@
     padding-left: var(--rank-inset);
   }
   .top-card-item[data-wide] {
-    --rank-inset: 5rem;
+    --rank-inset: 4rem;
   }
   @container (min-width: 600px) {
     .top-card-item { --visible: 2; }
@@ -562,7 +578,7 @@
     top: 50%;
     z-index: 0;
     font-family: var(--font-display);
-    font-size: 8.25rem;
+    font-size: 6.5rem;
     font-weight: 900;
     line-height: 1;
     letter-spacing: -0.07em;
@@ -740,8 +756,7 @@
   /* ---- Library toolbar (sort, grid/list) ---------------------------- */
   /* Secondary controls: smaller than the search bar, no strong shadow, no new
      colours. Light: white with a lavender-grey edge. Dark: the navy surface. */
-  .toolbar-control,
-  .view-toggle {
+  .toolbar-control {
     border: 1px solid color-mix(in srgb, var(--sa-ibo) 22%, var(--glass-edge));
     background: color-mix(in srgb, white 88%, transparent);
     color: var(--ink-2);
@@ -760,13 +775,78 @@
     height: 2.25rem;
     padding: 3px;
     gap: 2px;
-    border-radius: 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+
+  /* Library toolbar dropdowns: no border or fill at rest, a muted label and a stronger value; a faint wash on hover. */
+  .toolbar-select {
+    color: var(--ink);
+    font-weight: 600;
+    background: transparent;
+    transition: background 0.2s var(--ease-sheet);
+  }
+  .toolbar-select:hover,
+  .toolbar-select[aria-expanded="true"] {
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  .toolbar-select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .toolbar-select > svg {
+    color: var(--ink-3);
+  }
+  .toolbar-select-label {
+    font-weight: 400;
+    color: var(--ink-3);
+  }
+
+  /* The toolbar's Filters button: a soft fill, one step above the borderless Sort by and Added; pressed while the
+     Refine rail is open. No accent fill, so it never competes with selected tabs and chips. */
+  .toolbar-filter {
+    color: var(--ink);
+    font-weight: 600;
+    border: 1px solid transparent;
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+    transition: background 0.2s var(--ease-sheet), border-color 0.2s var(--ease-sheet);
+  }
+  .toolbar-filter:hover {
+    background: color-mix(in srgb, var(--ink) 11%, transparent);
+  }
+  .toolbar-filter:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .toolbar-filter[aria-pressed="true"] {
+    border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+    background: color-mix(in srgb, var(--accent) 13%, transparent);
+  }
+  .toolbar-filter[aria-pressed="true"]:hover {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  /* ---- Refine rail ---------------------------------------------------- */
+  .facet-icon-button {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: background 0.2s var(--ease-sheet), color 0.2s var(--ease-sheet);
+  }
+  .facet-icon-button:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
   }
   .view-toggle > button {
     display: grid;
-    width: 1.9rem;
+    width: 2rem;
     place-items: center;
-    border-radius: 7px;
+    border-radius: 999px;
     color: color-mix(in srgb, var(--ink-3) 90%, transparent);
     cursor: pointer;
     transition: background 0.25s var(--ease-sheet), color 0.25s var(--ease-sheet);
@@ -774,14 +854,13 @@
   .view-toggle > button:hover {
     background: color-mix(in srgb, var(--sa-ibo) 9%, transparent);
   }
+  /* Selected toggles share one state across the library controls: solid accent, like area tabs and chips. */
   .view-toggle > button[aria-pressed="true"] {
-    background: color-mix(in srgb, var(--sa-ibo) 15%, color-mix(in srgb, var(--accent) 6%, white));
-    color: var(--sa-ibo);
+    background: var(--accent);
+    color: var(--on-accent);
   }
   :root:not([data-theme="light"]) .toolbar-control,
-  :root:not([data-theme="light"]) .view-toggle,
-  [data-theme="dark"] .toolbar-control,
-  [data-theme="dark"] .view-toggle {
+  [data-theme="dark"] .toolbar-control {
     border-color: color-mix(in srgb, var(--accent) 16%, var(--ground-2));
     background: color-mix(in srgb, var(--ground-2) 92%, transparent);
     box-shadow: none;
@@ -793,11 +872,6 @@
   :root:not([data-theme="light"]) .view-toggle > button:hover,
   [data-theme="dark"] .view-toggle > button:hover {
     background: color-mix(in srgb, var(--sa-ibo) 10%, transparent);
-  }
-  :root:not([data-theme="light"]) .view-toggle > button[aria-pressed="true"],
-  [data-theme="dark"] .view-toggle > button[aria-pressed="true"] {
-    background: color-mix(in srgb, var(--sa-ibo) 20%, var(--ground-2));
-    color: color-mix(in srgb, var(--sa-ibo) 80%, white);
   }
 
   /* ---- Screenshot lightbox ------------------------------------------ */
@@ -984,6 +1058,19 @@
 
   .animate-drawer-in {
     animation: drawer-in 0.4s var(--ease-sheet) backwards;
+  }
+  @keyframes drawer-in-left {
+    from {
+      opacity: 0;
+      transform: translate3d(-32px, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .animate-drawer-in-left {
+    animation: drawer-in-left 0.4s var(--ease-sheet) backwards;
   }
 }
 

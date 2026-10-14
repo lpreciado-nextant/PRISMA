@@ -95,7 +95,7 @@ export function Chip({
     );
   }
   return (
-    <button type="button" onClick={onClick} aria-pressed={pressed} className={`${className} cursor-pointer hover:brightness-110`} style={style} title={title}>
+    <button type="button" onClick={onClick} aria-pressed={pressed} className={`${className} min-h-8 cursor-pointer hover:brightness-110`} style={style} title={title}>
       {children}
     </button>
   );

@@ -157,6 +157,11 @@ export function activeFacetCount(f: Filters): number {
   return f.demos.length + f.capabilities.length + f.technologies.length + f.industries.length + f.roles.length;
 }
 
+/** Clears the Refine selections only; search, area and the added window stay. */
+export function clearFacets(f: Filters): Filters {
+  return { ...f, demos: [], capabilities: [], technologies: [], industries: [], roles: [] };
+}
+
 export function activeChips(f: Filters): { key: FacetKey; value: string }[] {
   return [
     ...f.demos.map((value) => ({ key: "demos" as const, value })),

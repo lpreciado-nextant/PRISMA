@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Icon, type IconName } from "./Icon";
 
-export function SelectPicker<Value extends string>({ label, value, options, onChange, getLabel = (option) => option, placeholder, compact = false, getButtonLabel, getHint, buttonClassName, buttonIcon }: {
+export function SelectPicker<Value extends string>({ label, value, options, onChange, getLabel = (option) => option, placeholder, compact = false, getButtonLabel, getHint, buttonClassName, buttonIcon, buttonPrefix }: {
   label: string;
   /** Shown greyed out, like an input placeholder, while no value is chosen. */
   placeholder?: string;
@@ -19,6 +19,8 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
   buttonClassName?: string;
   /** Icon before the button text, e.g. a plus for an "Add …" menu. */
   buttonIcon?: IconName;
+  /** A muted label before the value on the closed button, e.g. "Sort by" before "Newest". */
+  buttonPrefix?: string;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -75,6 +77,7 @@ export function SelectPicker<Value extends string>({ label, value, options, onCh
         }}
       >
         {buttonIcon && <Icon name={buttonIcon} size={16} className="shrink-0" />}
+        {buttonPrefix && <span className="toolbar-select-label shrink-0">{buttonPrefix}</span>}
         {!value && placeholder ? <span className="min-w-0 break-words text-(--ink-3)">{placeholder}</span> : <span className="min-w-0 break-words">{(getButtonLabel ?? getLabel)(value)}</span>}
         <Icon name="chevronDown" size={compact ? 14 : undefined} className="shrink-0" />
       </button>

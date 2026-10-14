@@ -70,10 +70,8 @@ export function TopTenRow({ solutions, saves, renderPoster, onOpen, favorite }: 
     <section aria-labelledby="top-ten-title" className="section-panel section-panel--featured top-shelf animate-rise">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <p className="eyebrow">Most saved in the Solution Library</p>
-          <h2 id="top-ten-title" className="mt-1 text-[clamp(1.3rem,2vw,1.65rem)] leading-none font-extrabold" style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.04em", color: "var(--brand-p)" }}>
-            Top {shown.length}
-          </h2>
+          <h2 id="top-ten-title" className="section-title">{`Top ${shown.length} Most Saved`}</h2>
+          <p className="section-subtitle">Most popular solutions in the library</p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {!hidden && <>
