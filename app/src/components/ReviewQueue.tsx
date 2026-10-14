@@ -17,8 +17,8 @@ const matches = ({ solution }: Entry, status: string) => submissionState(solutio
 type Choice<Value extends string> = { value: Value; title: string; detail: string; icon: IconName; color: string };
 type Decision = "publish" | "changes";
 const DECISIONS: Choice<Decision>[] = [
-  { value: "publish", title: "Ready to publish", detail: "The submission meets the requirements.", icon: "check", color: "var(--live)" },
-  { value: "changes", title: "Request changes", detail: "The contributor needs to make updates.", icon: "alert", color: "var(--proto)" },
+  { value: "publish", title: "Ready to publish", detail: "It can go live as it is.", icon: "check", color: "var(--live)" },
+  { value: "changes", title: "Request changes", detail: "Send it back with what to fix.", icon: "alert", color: "var(--proto)" },
 ];
 const PUBLISHED_ACTIONS: Choice<"changes" | "retire">[] = [
   { value: "changes", title: "Request changes", detail: "Take it out of the library and send it back to the owner to fix.", icon: "alert", color: "var(--proto)" },
@@ -62,8 +62,9 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
   // A returned record is a Draft awaiting its contributor: say so, and show the feedback as what they are working from.
   const returned = !!solution && submissionState(solution) === "Changes requested";
   const chosen = DECISIONS.find(option => option.value === decision);
+  const missingChecks = checks?.filter(check => !check.done) ?? [];
   const hint = decision === "changes" ? !comments.trim() && "Add a comment to send this submission back."
-    : decision === "publish" ? !canApprove ? "Required content, contributor effort, images and the safety acknowledgment must be complete before approval." : !cleared && "Confirm the review above to publish." : undefined;
+    : decision === "publish" ? !canApprove ? "Complete the missing items above before approving." : !cleared && "Tick the confirmation to publish." : undefined;
   return <>
     <section aria-labelledby={heading} className="relative mt-6 overflow-hidden rounded-[22px] border p-5 sm:p-6"
       style={{ borderColor: "color-mix(in srgb, var(--accent) 34%, transparent)", background: "linear-gradient(180deg, color-mix(in srgb, var(--accent) 13%, transparent), color-mix(in srgb, var(--accent) 4%, transparent))" }}>
@@ -78,37 +79,28 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         </div>
       </div>
 
-      {/* 2 · Review checklist: what the decision rests on, secondary to the status and decision. */}
+      {/* 2 · Before you decide: what it is, the client wording, and only what needs attention. */}
       <div className="mt-5 rounded-xl border border-(--glass-edge) px-4 pt-4 pb-5 sm:px-5" style={{ background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
-        <h3 className="eyebrow">Review checklist</h3>
-        <div className="mt-3 grid gap-x-8 gap-y-5 text-[13.5px] lg:grid-cols-3">
-          {solution && <section aria-label="Classification" className="min-w-0">
-            <h4 className="font-semibold">Classification</h4>
-            <dl className="mt-1.5 space-y-2">
-              <div><dt className="text-[12px] text-(--ink-3)">Specialization areas</dt><dd className="mt-0.5 flex flex-wrap gap-1.5">{solutionAreas(solution).map(area => <AreaTag key={area} area={area} size="xs" />)}</dd></div>
-              <div><dt className="text-[12px] text-(--ink-3)">Capability</dt><dd className="break-words">{solution.capabilities[0] ?? <span className="text-(--proto)">No capability</span>}</dd></div>
-              <div><dt className="text-[12px] text-(--ink-3)">Status</dt><dd>{solution.status}</dd></div>
-            </dl>
-          </section>}
-          <section aria-label="Client safety" className="min-w-0">
-            <h4 className="font-semibold">Client safety</h4>
-            {client ? <dl className="mt-1.5 space-y-2">
-              <div><dt className="text-[12px] text-(--ink-3)">Internal client</dt><dd className="break-words">{client}</dd></div>
-              <div><dt className="text-[12px] text-(--ink-3)">Shown to clients as</dt><dd className="break-words" style={context ? undefined : { color: "var(--proto)" }}>{context || "Not provided"}</dd></div>
-            </dl> : <p className="mt-1.5 text-(--ink-2)">No client named; nothing to anonymize.{context && <> Shown to clients as “{context}”.</>}</p>}
-          </section>
-          {/* Points to verify, as plain bullets: no ticks, so nothing reads as already reviewed. Only a point the record
-              does not meet is flagged. */}
-          {checks && <section aria-labelledby={`${heading}-points`} className="min-w-0">
-            <h4 id={`${heading}-points`} className="font-semibold">Review points</h4>
-            <p className="text-[12px] text-(--ink-3)">Verify these items before making your decision.</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 marker:text-(--ink-3)">
-              {checks.map(check => <li key={check.label} style={{ color: check.done ? "var(--ink-2)" : "var(--proto)" }}>
-                {check.label}{!check.done && <span className="ml-1.5 inline-flex items-center gap-1 text-[12px] font-semibold"><Icon name="alert" size={12} />Missing</span>}
-              </li>)}
-            </ul>
-          </section>}
-        </div>
+        <h3 className="eyebrow">Before you decide</h3>
+        <dl className="mt-3 grid gap-x-8 gap-y-4 text-[13.5px] sm:grid-cols-2">
+          {solution && <div className="min-w-0">
+            <dt className="text-[12px] text-(--ink-3)">What it is</dt>
+            <dd className="mt-1 flex flex-wrap items-center gap-1.5">{solutionAreas(solution).map(area => <AreaTag key={area} area={area} size="xs" />)}
+              {solution.capabilities[0] ? <span className="break-words">{solution.capabilities[0]}</span> : <span className="text-(--proto)">No capability</span>}
+              <span className="text-(--ink-3)">· {solution.status}</span></dd>
+          </div>}
+          <div className="min-w-0">
+            <dt className="text-[12px] text-(--ink-3)">Client</dt>
+            {client ? <dd className="mt-1 break-words">{client} <span className="text-(--ink-3)">→ shown as</span> <span style={context ? undefined : { color: "var(--proto)" }}>{context ? `“${context}”` : "not provided"}</span></dd>
+              : <dd className="mt-1 text-(--ink-2)">No client named{context && <> · shown as “{context}”</>}</dd>}
+          </div>
+        </dl>
+        {/* Only what the record fails is listed; when nothing is missing, one line says so. The librarian still checks quality. */}
+        {checks && (missingChecks.length ? <section aria-labelledby={`${heading}-points`} className="mt-4 text-[13.5px]" style={{ color: "var(--proto)" }}>
+          <h4 id={`${heading}-points`} className="flex items-center gap-1.5 font-semibold"><Icon name="alert" size={14} />Missing</h4>
+          <ul className="mt-1 list-disc space-y-0.5 pl-5">{missingChecks.map(check => <li key={check.label}>{check.label}</li>)}</ul>
+        </section> : <p className="mt-4 text-[13.5px] text-(--ink-2)">All required content is present.</p>)}
+        {children}
         {feedback && !returned && status !== "Published" && <div className="mt-5 border-l-2 border-(--proto) pl-3">
           <h4 className="text-[13.5px] font-semibold">{status === "Pending review" && solution?.reviewOutcome === "Changes requested" ? "Resubmitted after changes requested" : "Latest review comments"}</h4>
           <p className="mt-0.5 whitespace-pre-wrap break-words text-[13.5px] text-(--ink-2)">{feedback}</p>
@@ -180,11 +172,9 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
             <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={4} required aria-required="true"
               placeholder="Describe what needs to be updated before this solution can be published." className={textArea} />
           </label> : <>
-            <label className="flex items-start gap-3 text-[14px]"><input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={cleared} onChange={event => onCleared(event.target.checked)} /><span>I confirm that I reviewed the descriptions, contributor effort, screenshots and attachments, and that client-visible content is authorized and anonymized.</span></label>
+            <label className="flex items-start gap-3 text-[14px]"><input type="checkbox" className="mt-1 h-4 w-4 shrink-0" checked={cleared} onChange={event => onCleared(event.target.checked)} /><span>I reviewed the content, and anything clients see is authorized and anonymized.</span></label>
             <label className="mt-4 block text-[14px] font-semibold">Note to contributor <span className="font-normal text-(--ink-2)">(optional)</span>
-              <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={2} className={textArea} />
-              <span className="mt-1 block text-[12.5px] font-normal text-(--ink-3)">Replaces the latest feedback on the record; leave blank to clear it.</span>
-            </label>
+              <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={2} className={textArea} />            </label>
           </>}
           <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
             {hint && <p id={`${heading}-hint`} className="mr-auto text-[13px] text-(--ink-2)">{hint}</p>}
@@ -194,7 +184,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           </div>
         </div>}
       </fieldset>}
-      {busy && <LoadingState className="mt-3" label="Saving review..." />}{error && <div role="alert" className="mt-3">{error}</div>}{children}
+      {busy && <LoadingState className="mt-3" label="Saving review..." />}{error && <div role="alert" className="mt-3">{error}</div>}
     </section>
     {/* Marks where the librarian's controls end and the submitted solution begins. */}
     <div className="mt-8 flex items-center gap-3">

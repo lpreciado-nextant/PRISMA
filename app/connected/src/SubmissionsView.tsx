@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
-import { MySubmissionsView } from "../../src/views/MySubmissionsView";
+import { MySubmissionsView, type SuggestionSummary } from "../../src/views/MySubmissionsView";
 import { DetailView } from "../../src/views/DetailView";
 import { ReviewPanel, ReviewQueue } from "../../src/components/ReviewQueue";
 import { outlinedStatusButton, statusButton, SubmissionStatusPanel } from "../../src/components/SubmissionStatusPanel";
@@ -12,7 +12,8 @@ import { newTechnologies, type NewTechnology } from "../../src/lib/technologyNam
 import type { Solution } from "../../src/types";
 import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
-import { workflowApi, readRows } from "./dataSource";
+import { workflowApi, readRows, suggestionApi } from "./dataSource";
+import { loadSuggestions } from "./suggestions";
 import { deleteSubmission, loadSubmissions, mediaAsset, parseSubmission, PUBLICATIONS, submissionSolution, type SubmissionDetail } from "./workflow";
 import { loadDraftReferences } from "./drafts";
 import { MediaPreview } from "./DraftMediaEditor";
@@ -49,6 +50,21 @@ export function SubmissionsView({ review }: { review: boolean }) {
     }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [review, attempt]);
+  // Suggestions exist only on published solutions: one read each, in parallel. A failed read just leaves that card out.
+  const [suggestions, setSuggestions] = useState<Record<string, SuggestionSummary>>();
+  const published = review ? "" : (state?.entries ?? []).filter(entry => entry.solution.publicationStatus === "Published").map(entry => entry.solution.id).join(",");
+  useEffect(() => {
+    const api = suggestionApi;
+    if (!published || !api) return;
+    const controller = new AbortController();
+    void Promise.all(published.split(",").map(async id => {
+      try {
+        const { suggestions: rows } = await loadSuggestions(api, id, controller.signal);
+        return [[id, { count: rows.length, authors: [...new Set(rows.map(row => row.author))] }]] as [string, SuggestionSummary][];
+      } catch { return [] as [string, SuggestionSummary][]; }
+    })).then(lists => { if (!controller.signal.aborted) setSuggestions(Object.fromEntries(lists.flat())); });
+    return () => controller.abort();
+  }, [published]);
   if (error || !state) return <section className={shell}>{error ? <div role="alert"><p className="mb-4">{review ? "Review queue unavailable. An explicit PRISMA Librarian role and Dataverse read access are required." : "Submissions unavailable. Check your Dataverse access and connection."}</p><button className={button} onClick={() => { setError(false); setState(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></div> : <LoadingState variant="page" label={review ? "Loading review queue..." : "Loading submissions..."} />}</section>;
   const open = (solution: Solution) => navigate(solution.publicationStatus === "Draft" ? `/submit?draft=${solution.id}` : `/submission/${solution.id}`);
   const remove = async (id: string) => {
@@ -70,7 +86,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
     } catch { throw new Error("Deletion was not confirmed. Cancel and refresh submissions before retrying."); }
     finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", abort); }
   };
-  if (!review) return <MySubmissionsView connected entries={state.entries} onOpen={open} onEdit={open} onDelete={remove} renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />} actions={<div className="flex flex-wrap gap-3"><button className={button} onClick={() => { setState(null); setAttempt(current => current + 1); }}><Icon name="refresh" />Refresh submissions</button>{state.librarian && <button className={button} onClick={() => navigate("/review")}><Icon name="shield" />Review queue</button>}</div>} />;
+  if (!review) return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onDelete={remove} renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />} actions={<div className="flex flex-wrap gap-3"><button className={button} onClick={() => { setState(null); setAttempt(current => current + 1); }}><Icon name="refresh" />Refresh submissions</button>{state.librarian && <button className={button} onClick={() => navigate("/review")}><Icon name="shield" />Review queue</button>}</div>} />;
   return <ReviewQueue entries={state.entries} connected />;
 }
 
@@ -184,16 +200,14 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       </>
     } />;
 }
-/** Technologies on this submission that no other published solution uses: new names a reviewer checks for duplicates. */
+/** New technologies that resemble an existing one: likely duplicates. Nothing renders when there are none. */
 function NewTechnologies({ items }: { items: NewTechnology[] }) {
-  if (!items.length) return null;
-  return <section aria-label="New technologies" className="mt-4 rounded-xl border border-(--glass-edge) p-4 text-[14px]">
-    <h3 className="font-semibold">New {items.length === 1 ? "technology" : "technologies"}</h3>
-    <p className="mt-1 text-[13px] text-(--ink-2)">No other published solution uses {items.length === 1 ? "this" : "these"} yet. If one repeats an existing technology, request changes and name the existing one.</p>
+  const suspects = items.filter(item => item.similar.length > 0);
+  if (!suspects.length) return null;
+  return <section aria-label="Possible duplicate technologies" className="mt-4 rounded-xl border p-4 text-[14px]" style={{ borderColor: "color-mix(in srgb, var(--proto) 40%, transparent)" }}>
+    <h3 className="flex items-center gap-1.5 font-semibold" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} />Possible duplicate {suspects.length === 1 ? "technology" : "technologies"}</h3>
     <ul className="mt-2 space-y-1.5">
-      {items.map(item => <li key={item.name}><span className="font-semibold">{item.name}</span>{item.similar.length > 0
-        ? <span style={{ color: "var(--proto)" }}> · similar to {item.similar.join(", ")}</span>
-        : <span className="text-(--ink-2)"> · no similar technology found</span>}</li>)}
+      {suspects.map(item => <li key={item.name}><span className="font-semibold">{item.name}</span><span className="text-(--ink-2)"> · looks like {item.similar.join(", ")}</span></li>)}
     </ul>
   </section>;
 }

@@ -12,9 +12,17 @@ import { submissionState } from "../lib/submissionState";
 const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published"] as const;
 type Filter = typeof FILTERS[number];
 const matches = (solution: Solution, filter: Filter) => filter === "All" || submissionState(solution) === filter;
+/** Who has suggested changes on a published solution: the count and the distinct authors, newest first. */
+export type SuggestionSummary = { count: number; authors: string[] };
+const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "" : "s"}`;
 
-export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode }) {
+/**
+ * `suggestions` (connected only) adds a Suggestions filter and, on each card with any, who sent them. It narrows within
+ * the chosen status and never changes the status counts. Librarian comments need no filter: Changes requested has them.
+ */
+export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, suggestions }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>> }) {
   const [filter, setFilter] = useState<Filter>("All");
+  const [suggested, setSuggested] = useState(false);
   const [feedbackTarget, setFeedbackTarget] = useState<Solution | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Solution | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -49,7 +57,9 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     };
   };
   const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
-  const visible = entries.filter(({ solution }) => matches(solution, filter));
+  const hasSuggestions = (solution: Solution) => (suggestions?.[solution.id]?.count ?? 0) > 0;
+  const inStatus = entries.filter(({ solution }) => matches(solution, filter));
+  const visible = inStatus.filter(({ solution }) => !suggested || hasSuggestions(solution));
   return <div className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
     <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-5" style={{ borderColor: "var(--glass-edge)" }}>
       <div>
@@ -74,13 +84,28 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
           </Chip>;
         })}
       </div>
+      {/* A second, independent filter: pressing the chip again clears it. */}
+      {suggestions && <div role="group" aria-label="Filter by feedback" className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-[12.5px] text-(--ink-3)">Feedback</span>
+        <Chip active={suggested} pressed={suggested} onClick={() => setSuggested(current => !current)}>
+          Suggestions
+          <span className="font-mono text-[11px] opacity-75">{inStatus.filter(({ solution }) => hasSuggestions(solution)).length}</span>
+        </Chip>
+      </div>}
       {!visible.length ? <div className="py-16 text-center">
-        <h2 className="text-[20px]">No submissions in this status</h2>
-        <button type="button" className="mt-3 cursor-pointer text-[14px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => setFilter("All")}>Show all submissions</button>
+        <h2 className="text-[20px]">{suggested ? "No submissions match these filters" : "No submissions in this status"}</h2>
+        <button type="button" className="mt-3 cursor-pointer text-[14px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => { setFilter("All"); setSuggested(false); }}>Show all submissions</button>
       </div> : <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0">
-          {renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />}
-        </article>)}
+        {visible.map(({ solution }, index) => {
+          const sent = suggestions?.[solution.id];
+          return <article key={solution.id} className="min-w-0">
+            {renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />}
+            {/* Suggestions are read on the published page, where the panel lives. */}
+            {!!sent?.count && <button type="button" onClick={() => navigate(`/s/${solution.id}`)} className="mt-2 inline-flex min-h-8 max-w-full cursor-pointer items-center gap-1.5 text-left text-[13px] font-semibold" style={{ color: "var(--accent)" }}>
+              <Icon name="edit" size={14} className="shrink-0" /><span className="min-w-0 truncate">{`${plural(sent.count, "suggestion")} from ${sent.authors.slice(0, 2).join(", ")}${sent.authors.length > 2 ? ` +${sent.authors.length - 2}` : ""}`}</span><Icon name="arrowRight" size={14} className="shrink-0" />
+            </button>}
+          </article>;
+        })}
       </div>}
     </>}
     {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} retired={feedbackTarget.publicationStatus === "Retired"} onClose={() => setFeedbackTarget(null)} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
