@@ -14,9 +14,13 @@ const STATES: Record<SubmissionState, { icon: IconName; detail: string; feedback
  * The owner's view of where a submission stands: the state as the heading with its icon, one line of meaning, the
  * actions on the right behind a divider, and the librarian's words underneath. A faint state tint, no extra labels.
  */
-export function SubmissionStatusPanel({ state, feedback, actions, local = false, children }: {
+export function SubmissionStatusPanel({ state, feedback, feedbackAction, badge, actions, local = false, children }: {
   state: SubmissionState;
   feedback?: string;
+  /** Beside the librarian's words, e.g. the owner's "Mark as addressed" check. */
+  feedbackAction?: ReactNode;
+  /** Beside the state heading, e.g. a "New feedback" bubble. */
+  badge?: ReactNode;
   /** Buttons for this state (Edit, Submit, Withdraw), shown on the right. */
   actions?: ReactNode;
   local?: boolean;
@@ -32,14 +36,14 @@ export function SubmissionStatusPanel({ state, feedback, actions, local = false,
       <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
         <span className="grid size-8 shrink-0 place-items-center rounded-full" style={{ color, background: `color-mix(in srgb, ${color} 16%, transparent)` }}><Icon name={meta.icon} size={16} /></span>
         <div className="min-w-0">
-          <h2 id={heading} className="text-[17px] leading-tight font-semibold" style={{ color }}>{state}</h2>
+          <h2 id={heading} className="flex flex-wrap items-center gap-2 text-[17px] leading-tight font-semibold" style={{ color }}>{state}{badge}</h2>
           <p className="mt-0.5 text-[13.5px] text-(--ink-2)">{meta.detail}{local && <span className="text-(--ink-3)"> · Local preview</span>}</p>
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2.5 sm:ml-auto sm:border-l sm:border-(--glass-edge) sm:pl-5">{actions}</div>}
     </div>
     {feedback && <div className="mt-3.5 border-t border-(--glass-edge) pt-3.5">
-      <h3 className="eyebrow">{meta.feedback}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="eyebrow">{meta.feedback}</h3>{feedbackAction}</div>
       <p className="mt-2 border-l-2 pl-3 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words" style={{ borderColor: color }}>{feedback}</p>
     </div>}
     {children}

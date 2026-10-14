@@ -2,20 +2,48 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { submissionInputClass } from "../../src/components/SubmissionForm";
+import { isAddressed, setAddressed, suggestionFeedbackKey, useFeedbackSeen } from "../../src/lib/feedbackSeen";
 import { sendSuggestion, SUGGESTION_MAX, type Suggestion, type SuggestionApi, type SuggestionList } from "./suggestions";
 
 export const suggestionButton = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px] disabled:cursor-default disabled:opacity-40";
 const panel = "glass glass-lite rounded-[20px] p-5";
 
-/** Author, date and text of each suggestion; shared by the solution page panel and My submissions. */
+/**
+ * Author, date and text of each suggestion, each with its own "Mark as addressed" check. Addressed items stay listed
+ * (quieter) under the panel's Addressed filter.
+ */
 export function SuggestionItems({ suggestions }: { suggestions: Suggestion[] }) {
-  return <ul className="flex flex-col gap-4">{suggestions.map(item => <li key={item.id} className="border-b border-(--glass-edge) pb-4 last:border-b-0 last:pb-0">
-    <p className="text-[12.5px] text-(--ink-3)"><span className="font-semibold text-(--ink-2)">{item.author}</span> · <time dateTime={item.createdOn}>{new Date(item.createdOn).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</time></p>
-    <p className="mt-1 whitespace-pre-wrap break-words text-[14.5px] text-(--ink)">{item.text}</p>
-  </li>)}</ul>;
+  useFeedbackSeen();
+  return <ul className="flex flex-col gap-4">{suggestions.map(item => {
+    const key = suggestionFeedbackKey(item.id);
+    const done = isAddressed(key);
+    return <li key={item.id} className="flex items-start gap-3 border-b border-(--glass-edge) pb-4 last:border-b-0 last:pb-0">
+      <div className="min-w-0 flex-1" style={done ? { opacity: 0.7 } : undefined}>
+        <p className="text-[12.5px] text-(--ink-3)"><span className="font-semibold text-(--ink-2)">{item.author}</span> · <time dateTime={item.createdOn}>{new Date(item.createdOn).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</time></p>
+        <p className="mt-1 whitespace-pre-wrap break-words text-[14.5px] text-(--ink)">{item.text}</p>
+      </div>
+      <AddressedToggle done={done} onToggle={() => setAddressed(key, !done)} />
+    </li>;
+  })}</ul>;
 }
 
+/** "Mark as addressed" for one feedback item: a quiet check that fills in accent once confirmed (and can be undone). */
+export function AddressedToggle({ done, onToggle }: { done: boolean; onToggle: () => void }) {
+  return <button type="button" onClick={onToggle} aria-pressed={done} title={done ? "Addressed — click to reopen" : "Mark as addressed"}
+    className="addressed-toggle inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-semibold">
+    <span aria-hidden="true" className="grid size-4 place-items-center rounded-full border">{done && <Icon name="check" size={10} />}</span>
+    {done ? "Addressed" : "Mark as addressed"}
+  </button>;
+}
+
+type View = "new" | "addressed" | "all";
+
 export function SuggestionsPanel({ list }: { list: SuggestionList }) {
+  useFeedbackSeen();
+  const open = list.suggestions.filter(item => !isAddressed(suggestionFeedbackKey(item.id)));
+  const [view, setView] = useState<View>(() => open.length ? "new" : "all");
+  const shown = view === "new" ? open : view === "addressed" ? list.suggestions.filter(item => isAddressed(suggestionFeedbackKey(item.id))) : list.suggestions;
+  const views: { value: View; label: string; count: number }[] = [{ value: "new", label: "New", count: open.length }, { value: "addressed", label: "Addressed", count: list.suggestions.length - open.length }, { value: "all", label: "All", count: list.suggestions.length }];
   return <section className={panel} aria-labelledby="suggestions-heading">
     {/* Heading with its count; who can read it sits apart as a quiet note instead of an "internal only" tag. */}
     <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
@@ -25,11 +53,17 @@ export function SuggestionsPanel({ list }: { list: SuggestionList }) {
       </h2>
       <p className="flex items-center gap-1.5 text-[12px] text-(--ink-3)"><Icon name="shield" size={12} />Private · owner, contributors and librarian</p>
     </div>
-    {list.suggestions.length === 0 ? <p className="text-[14px] text-(--ink-3)">No suggestions yet. Colleagues who view this solution can send one.</p>
-      : <SuggestionItems suggestions={list.suggestions} />}
+    {list.suggestions.length === 0 ? <p className="text-[14px] text-(--ink-3)">No suggestions yet. Colleagues who view this solution can send one.</p> : <>
+      {/* What is still to address, what has been, or everything. */}
+      <div role="group" aria-label="Show suggestions" className="mb-4 flex flex-wrap gap-1.5">
+        {views.map(option => <button key={option.value} type="button" aria-pressed={view === option.value} onClick={() => setView(option.value)} className="area-filter inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-[7px] px-2.5 text-[13px]">
+          {option.label}<span className="font-mono text-[11px]" style={{ color: "var(--ink-3)" }}>{option.count}</span>
+        </button>)}
+      </div>
+      {shown.length ? <SuggestionItems suggestions={shown} /> : <p className="text-[14px] text-(--ink-3)">{view === "new" ? "Nothing new: every suggestion has been addressed." : "No suggestions addressed yet."}</p>}
+    </>}
   </section>;
 }
-
 /** The side-column entry point: an action, not metadata, so a dashed accent outline instead of a glass card. */
 export function SuggestCard({ sent, focus = false, onOpen }: { sent: boolean; focus?: boolean; onOpen: () => void }) {
   const button = useRef<HTMLButtonElement>(null);

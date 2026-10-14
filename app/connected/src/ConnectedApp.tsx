@@ -12,9 +12,11 @@ import { navigate, parseHash, replaceQuery, useRoute } from "../../src/lib/route
 import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue, type CatalogueSolution } from "./catalogue";
-import { getAppLocation, getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails } from "./dataSource";
+import { getAppLocation, getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails, suggestionApi } from "./dataSource";
 import { routeHash, type AppLocation } from "./deepLink";
-import { workflowData } from "./workflow";
+import { loadSubmissions, submissionSolution, workflowData } from "./workflow";
+import { loadSuggestions } from "./suggestions";
+import { feedbackKeys, setFeedbackItems } from "../../src/lib/feedbackSeen";
 import { loadFavorites, loadTopFavorites, setFavorite, type TopFavorite } from "./favorites";
 import { PublishedView } from "./PublishedView";
 import { ConnectedSolutionCard, PublishedThumbnail } from "./ConnectedSolutionCard";
@@ -155,6 +157,33 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     }).catch(() => { if (!controller.signal.aborted) setLibrarian(false); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [present, user.live]);
+  // Once per session, on entry: is any of the owner's feedback still open? (One read of their submissions and
+  // one of suggestions per published solution.) The masthead's dot then follows confirmations, and My submissions
+  // refreshes it from its own data, without further reads.
+  useEffect(() => {
+    if (present || !user.live) return;
+    const controller = new AbortController();
+    void loadSubmissions(workflowApi, false, controller.signal).then(async result => {
+      const api = suggestionApi;
+      const found = await Promise.all(result.records.map(async record => {
+        const ids = record.publication === 125060000 && api ? await loadSuggestions(api, record.core.id, controller.signal).then(list => list.suggestions.map(item => item.id)).catch(() => []) : [];
+        return feedbackKeys(submissionSolution(record, {}), ids);
+      }));
+      if (!controller.signal.aborted) setFeedbackItems(found.flat());
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, [present, user.live]);
+  // Librarians see how many submissions await review on the Review queue tab. Re-read on each navigation, so it
+  // follows their own approvals and returns; a failed read just hides the count.
+  const [reviewPending, setReviewPending] = useState<number>();
+  useEffect(() => {
+    if (present || !librarian) return;
+    const controller = new AbortController();
+    void loadSubmissions(workflowApi, true, controller.signal).then(result => {
+      if (!controller.signal.aborted) setReviewPending(result.records.filter(record => record.publication === 125060002).length);
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, [present, librarian, route.path]);
   useEffect(() => {
     // Present mode never shows favorites (the masthead link and card hearts hide themselves).
     if (present || !user.live) return;
@@ -250,7 +279,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
 
   return <div className="min-h-full" style={{ "--sticky-top": showBanner ? "9.75rem" : "6rem" } as CSSProperties}>
     <Background />
-    <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} favoriteCount={present ? undefined : favorites?.size} />
+    <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} reviewCount={librarian ? reviewPending : undefined} favoriteCount={present ? undefined : favorites?.size} />
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
     <main key={route.path} ref={main} tabIndex={-1} className="focus-visible:outline-none">
       <Suspense fallback={<LoadingState variant="page" label="Loading..." />}>

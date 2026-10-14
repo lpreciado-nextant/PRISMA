@@ -617,6 +617,9 @@ test("suggestions: readers see a private list with author and date; others get a
   assert.doesNotMatch(empty, /internal only/);
   assert.match(empty, /No suggestions yet\./);
   const one = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: [{ id: "a", text: "Add an export to Excel.", author: "Ana Gómez", createdOn: "2026-10-13T15:04:05Z" }] } });
+  // A New / Addressed / All filter (New first while anything is open) and a check on each suggestion.
+  assert.match(one, /aria-label="Show suggestions".*aria-pressed="true"[^>]*>New<span[^>]*>1<\/span>.*Addressed<span[^>]*>0<\/span>.*All<span[^>]*>1<\/span>/s);
+  assert.match(one, /Add an export to Excel\..*aria-pressed="false" title="Mark as addressed"/s);
   assert.match(one, /Ana Gómez<\/span> · <time dateTime="2026-10-13T15:04:05Z">/);
   assert.match(one, /Add an export to Excel\./);
   const form = render(ui.SuggestForm, { api: {}, solutionId: "s", onClose: noop, onSent: noop });
@@ -652,7 +655,8 @@ test("refine groups show five options, keep selected ones at zero, and search lo
   const { FacetGroup } = await server.ssrLoadModule("/src/components/FacetRail.tsx");
   const counts = new Map(Array.from({ length: 9 }, (_, index) => [`Option ${index + 1}`, 9 - index]));
   const html = render(FacetGroup, { label: "Technology", counts, selected: ["Retired option"], searchable: true, onToggle: noop });
-  assert.match(html, /aria-expanded="true"[^>]*>.*Technology.*1 selected/s);
+  // The heading counts the options on offer: nine listed plus the selected one at zero.
+  assert.match(html, /aria-expanded="true"[^>]*>.*Technology <span[^>]*aria-label="10 options">10<\/span>.*1 selected/s);
   assert.match(html, /aria-label="Search technology options"/);
   // Five options plus the selected one, which has no results under the current search.
   assert.equal((html.match(/aria-pressed=/g) ?? []).length, 6);
@@ -678,4 +682,61 @@ test("download presentation opens a theme menu instead of expanding the action r
   const html = render(DownloadDeckButton, { solution: { id: "s", name: "S" }, media: [] });
   assert.match(html, /aria-haspopup="menu"[^>]*aria-expanded="false"[^>]*>.*Download presentation/s);
   assert.doesNotMatch(html, /role="menu"|>Dark<|>Light<|Cancel/);
+});
+test("masthead: primary row with Submit, Present and utilities; section navigation below, Review queue only for librarians", () => {
+  const user = { fullName: "Ana Gómez", userPrincipalName: "ana@nextant.com", live: true };
+  const props = { user, theme: "dark", onToggleTheme: noop, present: false, onTogglePresent: noop, favoriteCount: 3, reviewAvailable: false };
+  const html = render(masthead.Masthead, props);
+  assert.match(html, /Submit a solution.*Present mode.*<nav aria-label="Sections".*Library.*Saved solutions.*>3<\/span>.*My submissions/s);
+  assert.doesNotMatch(html, /Review queue/);
+  assert.match(render(masthead.Masthead, { ...props, reviewAvailable: true }), /<nav aria-label="Sections".*Review queue/s);
+  // Present mode and read-only (before entry) show no section navigation.
+  assert.doesNotMatch(render(masthead.Masthead, { ...props, present: true }), /aria-label="Sections"/);
+  assert.doesNotMatch(render(masthead.Masthead, { ...props, readOnly: true }), /aria-label="Sections"/);
+});
+test("library area filter is editorial text: plain options with colour dots, a tint only on the chosen one", async () => {
+  const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");
+  const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");
+  const { EMPTY_FILTERS } = await server.ssrLoadModule("/src/lib/search.ts");
+  const html = render(LibraryView, { catalogue: SOLUTIONS, filters: EMPTY_FILTERS, onFilters: noop, present: false });
+  const row = html.match(/<div role="group" aria-label="Filter by specialization area".*?<\/div>/s)?.[0] ?? "";
+  assert.match(row, /aria-pressed="true" class="area-filter[^"]*">All areas<span[^>]*>\d+<\/span>.*aria-pressed="false" class="area-filter/s);
+  assert.doesNotMatch(html, /Explore by area|specialization areas<\/span>/i);
+  // Each area has its own colour dot (never "All areas"), no glass or icons.
+  assert.equal((row.match(/size-\[7px\] shrink-0 rounded-full/g) ?? []).length, 3);
+  assert.doesNotMatch(row, /glass|<svg/);
+});
+test("review queue tab shows the pending count in amber, only when there is one", () => {
+  const user = { fullName: "Ana Gómez", userPrincipalName: "ana@nextant.com", live: true };
+  const props = { user, theme: "dark", onToggleTheme: noop, present: false, onTogglePresent: noop, favoriteCount: 3, reviewAvailable: true };
+  assert.match(render(masthead.Masthead, { ...props, reviewCount: 5 }), /Review queue<span class="section-nav-count section-nav-count--pending" aria-label="5 awaiting review">5<\/span>/);
+  assert.doesNotMatch(render(masthead.Masthead, { ...props, reviewCount: 0 }), /awaiting review/);
+  assert.doesNotMatch(render(masthead.Masthead, props), /awaiting review/);
+});
+test("open feedback: items counted one by one on cards and tabs, a dot on My submissions, each addressed on its own", async () => {
+  const { MySubmissionsView } = await server.ssrLoadModule("/src/views/MySubmissionsView.tsx");
+  const base = { summary: "Summary", specializationArea: "ai", status: "Working prototype", contributors: [], capabilities: [], technologies: [], industries: [], assets: [] };
+  const entries = [
+    { solution: { ...base, id: "returned", name: "Returned one", publicationStatus: "Draft", reviewOutcome: "Changes requested", reviewComments: "Blur the client logo." } },
+    { solution: { ...base, id: "live", name: "Live one", publicationStatus: "Published", reviewOutcome: "Approved" } },
+  ];
+  const suggestions = { live: { count: 2, authors: ["Ana"], ids: ["a", "b"] } };
+  const html = render(MySubmissionsView, { entries, connected: true, suggestions, suggestionsTab: { count: 2 } });
+  // No sentence-long notice: tabs count open items ("1 new" librarian comment, "2 new" suggestions), cards say "N new".
+  assert.doesNotMatch(html, /solutions? ha(s|ve) new feedback/);
+  assert.match(html, /My solutions<span[^>]*>2<\/span><span class="tab-new">1 new<\/span>.*Suggestions<span[^>]*>2<\/span><span class="tab-new">2 new<\/span>/s);
+  assert.equal((html.match(/card-unread/g) ?? []).length, 2);
+  assert.match(html, /new-feedback.*1 new.*new-feedback.*2 new/s);
+  // The masthead shows a dot (no count) on My submissions while any item is open.
+  const seen = await server.ssrLoadModule("/src/lib/feedbackSeen.ts");
+  const user = { fullName: "Ana Gómez", userPrincipalName: "ana@nextant.com", live: true };
+  const mastheadProps = { user, theme: "dark", onToggleTheme: noop, present: false, onTogglePresent: noop, favoriteCount: 0, reviewAvailable: false };
+  seen.setFeedbackItems(seen.feedbackKeys(entries[0].solution));
+  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="nav-alert-dot" role="img" aria-label="New feedback to review"><\/span>/);
+  seen.setFeedbackItems([]);
+  assert.doesNotMatch(render(masthead.Masthead, mastheadProps), /nav-alert-dot/);
+  // The librarian's comment gets its own "Mark as addressed" check in the feedback panel.
+  const { FeedbackPanel } = await server.ssrLoadModule("/src/components/FeedbackPanel.tsx");
+  assert.match(render(FeedbackPanel, { name: "Returned one", feedback: "Blur the client logo.", onClose: noop, addressed: false, onToggleAddressed: noop }), /aria-pressed="false"[^>]*>.*Mark as addressed/s);
+  assert.doesNotMatch(render(FeedbackPanel, { name: "Returned one", feedback: "Blur the client logo.", onClose: noop }), /Mark as addressed/);
 });

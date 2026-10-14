@@ -354,7 +354,7 @@
     color: var(--ink-3);
   }
 
-  /* Library section headings (Top 3, Solution Library): one bold display title, an optional muted line below. */
+  /* Library section headings (Top 3, Solution Library). */
   .section-title {
     font-family: var(--font-display);
     font-size: 20px;
@@ -362,12 +362,6 @@
     line-height: 1.2;
     letter-spacing: -0.01em;
     color: var(--ink);
-  }
-  .section-subtitle {
-    margin-top: 0.25rem;
-    font-size: 13.5px;
-    font-weight: 400;
-    color: var(--ink-2);
   }
 
   /* The product wordmark. The gradient is static: panning it repaints the
@@ -545,10 +539,11 @@
      rank numeral and the edge fade, about half of the card itself shows,
      signalling that the shelf scrolls. */
   .top-card-item {
-    --rank-inset: 2.6rem;
+    /* The card covers about 40% of its numeral, which sits behind it (wide digits such as 4 stay readable). */
+    --rank-inset: 2.25rem;
     --visible: 1;
     --peek: 0.6;
-    --card-w: calc((100cqw - var(--visible) * 1.25rem) / (var(--visible) + var(--peek)) - 2.6rem);
+    --card-w: calc((100cqw - var(--visible) * 1.25rem) / (var(--visible) + var(--peek)) - 2.25rem);
     position: relative;
     display: flex;
     flex-shrink: 0;
@@ -557,7 +552,7 @@
     padding-left: var(--rank-inset);
   }
   .top-card-item[data-wide] {
-    --rank-inset: 4rem;
+    --rank-inset: 4.4rem;
   }
   @container (min-width: 600px) {
     .top-card-item { --visible: 2; }
@@ -676,19 +671,6 @@
     }
   }
 
-  .top-view-all {
-    padding: 0.35rem 0.6rem;
-    border-radius: 8px;
-    font-family: var(--font-display);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--sa-ibo);
-    cursor: pointer;
-    transition: background 0.25s var(--ease-sheet);
-  }
-  .top-view-all:hover {
-    background: color-mix(in srgb, var(--sa-ibo) 10%, transparent);
-  }
 
   /* Gallery thumbnails: a desaturated image under a colour-blend wash of the
      card's area, so the grid reads as a few calm hues; hover/focus restores it. */
@@ -841,6 +823,223 @@
     outline-offset: 2px;
   }
 
+  /* ---- Section tabs (under the masthead, on the page) ---------------- */
+  /* Text tabs on a hairline: muted until hovered; the current one in ink with an accent underline over the line. */
+  .section-nav-link {
+    color: var(--ink-2);
+    font-weight: 500;
+    padding-inline: 0.25rem;
+    margin-inline: 0.85rem;
+    transition: color 0.2s var(--ease-sheet);
+  }
+  .section-nav-link:first-child {
+    margin-left: 0;
+  }
+  .section-nav-link:hover {
+    color: var(--ink);
+  }
+  .section-nav-link:hover::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: color-mix(in srgb, var(--ink) 16%, transparent);
+  }
+  .section-nav-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  .section-nav-link[aria-current="page"] {
+    color: var(--ink);
+    font-weight: 650;
+  }
+  .section-nav-link[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: var(--accent);
+  }
+  .section-nav-link > svg {
+    color: var(--ink-3);
+    transition: color 0.2s var(--ease-sheet);
+  }
+  .section-nav-link:hover > svg,
+  .section-nav-link[aria-current="page"] > svg {
+    color: var(--accent);
+  }
+  .section-nav-link > svg.nav-heart-saved {
+    color: var(--favorite);
+  }
+  /* Saved solutions' count: a legible badge in the heart's own colour. */
+  .section-nav-count {
+    min-width: 1.4rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.1;
+    text-align: center;
+    color: var(--favorite);
+    background: color-mix(in srgb, var(--favorite) 15%, transparent);
+  }
+  /* My submissions: open feedback items. A small accent dot, deliberately without a count. */
+  .nav-alert-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  /* Review queue: submissions awaiting review, in the amber of pending work. */
+  .section-nav-count--pending {
+    color: color-mix(in srgb, var(--proto) 85%, var(--ink));
+    background: color-mix(in srgb, var(--proto) 20%, transparent);
+  }
+  /* ---- Area filter (under the library search) ----------------------- */
+  /* A faint fill at rest so each option reads as a button; the chosen one swaps it for its area's tint. */
+  .area-filter {
+    color: var(--ink-2);
+    font-weight: 500;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    transition: background 0.2s var(--ease-sheet), color 0.2s var(--ease-sheet);
+  }
+  .area-filter:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+  }
+  .area-filter:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* Chosen: a light tint of the area's own colour; "All areas" (no --area) takes a neutral blue-grey. */
+  .area-filter[aria-pressed="true"] {
+    color: var(--ink);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--area, color-mix(in srgb, var(--accent) 45%, var(--ink-3))) 15%, transparent);
+  }
+
+  /* ---- Library search field ------------------------------------------ */
+  /* One visible field in the app's own glass: the translucent card surface (`--glass-bg-2`) and a 1px glass border
+     all round, so it follows each theme like the cards do; no gradient. Focus lifts the border to the accent. */
+  .search-field {
+    /* An ink tint, not the glass edge: light-theme glass edges are white and would vanish on the light page. */
+    border: 1px solid color-mix(in srgb, var(--ink) 13%, transparent);
+    background: var(--glass-bg-2);
+    color: var(--ink-3);
+    transition: border-color 0.2s var(--ease-sheet), background 0.2s var(--ease-sheet);
+  }
+  .search-field:hover {
+    border-color: color-mix(in srgb, var(--ink) 22%, transparent);
+  }
+  .search-field:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 80%, transparent);
+  }
+  .search-field input::placeholder {
+    color: var(--ink-3);
+    opacity: 1;
+  }  /* Folded Top shelf: rank and name chips in a light, translucent tint of each solution's area colour (--area). */
+  .top-mini {
+    color: var(--ink);
+    border: 1px solid color-mix(in srgb, var(--area, var(--favorite)) 30%, transparent);
+    background: color-mix(in srgb, var(--area, var(--favorite)) 14%, transparent);
+    transition: background 0.2s var(--ease-sheet), border-color 0.2s var(--ease-sheet);
+  }
+  .top-mini:hover {
+    border-color: color-mix(in srgb, var(--area, var(--favorite)) 50%, transparent);
+    background: color-mix(in srgb, var(--area, var(--favorite)) 22%, transparent);
+  }
+  .top-mini:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* A small tooltip under a heading, shown on hover (e.g. what the Top shelf ranks). */
+  .hover-hint-text {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 5;
+    width: max-content;
+    max-width: 18rem;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--glass-edge);
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: var(--ink-2);
+    background: var(--ground);
+    box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    transform: translateY(-2px);
+    pointer-events: none;
+    transition: opacity 0.18s var(--ease-sheet), transform 0.18s var(--ease-sheet);
+  }
+  .hover-hint:hover .hover-hint-text {
+    opacity: 1;
+    transform: none;
+  }
+  /* ---- Unread feedback on My submissions cards ------------------------ */
+  /* Until opened: an accent outline and a soft accent shadow, plus a small "New feedback" pill in the status band. */
+  .card-unread > .solution-card {
+    outline: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);
+    outline-offset: 0;
+    box-shadow: 0 10px 28px -14px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  /* "N new" beside a My submissions tab: open feedback items, in the accent like the masthead dot. */
+  .tab-new {
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+  /* One feedback item's "Mark as addressed": quiet until confirmed, then an accent check. */
+  .addressed-toggle {
+    color: var(--ink-2);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    transition: background 0.2s var(--ease-sheet), color 0.2s var(--ease-sheet);
+  }
+  .addressed-toggle:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 9%, transparent);
+  }
+  .addressed-toggle > span {
+    border-color: var(--ink-3);
+  }
+  .addressed-toggle[aria-pressed="true"] {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .addressed-toggle[aria-pressed="true"] > span {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .addressed-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .new-feedback {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
   /* ---- Refine rail ---------------------------------------------------- */
   .facet-icon-button {
     display: grid;

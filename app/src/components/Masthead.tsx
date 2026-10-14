@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
+import { OverflowMenu } from "./OverflowMenu";
+import { openFeedbackCount, useFeedbackSeen } from "../lib/feedbackSeen";
 import { initials, type AppUser } from "../lib/powerContext";
 import type { Theme } from "../lib/theme";
-import { navigate } from "../lib/router";
+import { navigate, useRoute } from "../lib/router";
 
 export function Masthead({
   user,
@@ -14,6 +16,7 @@ export function Masthead({
   draftOnly = false,
   reviewAvailable = !draftOnly,
   favoriteCount,
+  reviewCount,
 }: {
   user: AppUser;
   theme: Theme;
@@ -23,11 +26,17 @@ export function Masthead({
   readOnly?: boolean;
   draftOnly?: boolean;
   reviewAvailable?: boolean;
-  /** When set, shows the My favorites button (hidden in present mode). */
+  /** When set, shows Saved solutions with this count in the section navigation (hidden in present mode). */
   favoriteCount?: number;
+  /** Submissions awaiting review, shown on the Review queue tab (librarians only; hidden at zero or when unknown). */
+  reviewCount?: number;
 }) {
+  const route = useRoute();
+  const showNav = !present && !readOnly;
   return (
+    <>
     <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6">
+      {/* A slim glass bar: branding, the primary action and utilities. The section tabs sit below it, on the page. */}
       <div className="glass glass-gloss @container mx-auto flex min-h-16 w-full max-w-[1340px] flex-wrap items-center gap-2 rounded-[20px] px-3 py-2 sm:h-16 sm:flex-nowrap sm:gap-3 sm:px-5 sm:py-0">
         <button
           type="button"
@@ -61,29 +70,17 @@ export function Masthead({
         </button>
 
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-          {!present && !readOnly && reviewAvailable && <button type="button" onClick={() => navigate("/review")} title="Review queue" aria-label="Review queue" className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="shield" size={15} /><span className="hidden whitespace-nowrap @[1240px]:inline">Review queue</span></button>}
-          {!present && !readOnly && favoriteCount !== undefined && <button type="button" onClick={() => navigate("/favorites")} title="My favorites" aria-label={`My favorites, ${favoriteCount} saved`} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: favoriteCount ? "var(--favorite)" : "var(--ink-2)" }}>
-            <Icon name="heart" size={15} filled={favoriteCount > 0} /><span className="font-mono text-[12px]">{favoriteCount}</span><span className="hidden whitespace-nowrap @[1240px]:inline" style={{ color: "var(--ink-2)" }}>My favorites</span>
-          </button>}
-          {!present && !readOnly && <button type="button" onClick={() => navigate("/my-submissions")} title={draftOnly ? "My drafts" : "My submissions"} aria-label={draftOnly ? "My drafts" : "My submissions"} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}>
-            <Icon name="file" size={15} /><span className="hidden whitespace-nowrap @[1080px]:inline">{draftOnly ? "My drafts" : "My submissions"}</span>
-          </button>}
           {!present && !readOnly && (
             <button
               type="button"
               title={draftOnly ? "New draft" : "Submit a solution"}
               aria-label={draftOnly ? "New draft" : "Submit a solution"}
               onClick={() => navigate("/submit")}
-              className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border px-3 text-[13.5px] font-semibold transition-colors duration-200"
-              style={{
-                fontFamily: "var(--font-display)",
-                borderColor: "var(--glass-edge)",
-                background: "color-mix(in srgb, var(--ink) 6%, transparent)",
-                color: "var(--ink-2)",
-              }}
+              className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl px-3.5 text-[13.5px] font-semibold transition-[filter] duration-200 hover:brightness-110"
+              style={{ fontFamily: "var(--font-display)", background: "var(--accent)", color: "var(--on-accent)" }}
             >
               <Icon name="plus" size={15} />
-              <span className="hidden whitespace-nowrap @[1080px]:inline">{draftOnly ? "New draft" : "Submit a solution"}</span>
+              <span className="hidden whitespace-nowrap @[720px]:inline">{draftOnly ? "New draft" : "Submit a solution"}</span>
             </button>
           )}
 
@@ -131,9 +128,59 @@ export function Masthead({
         </div>
       </div>
     </header>
+    {showNav && <SectionNav path={route.path} favoriteCount={favoriteCount} reviewCount={reviewCount} draftOnly={draftOnly} reviewAvailable={reviewAvailable} />}
+    </>
   );
 }
 
+type NavItem = { path: string; label: string; icon: IconName; active: boolean; count?: number; pending?: number; alert?: boolean };
+
+/**
+ * Section tabs under the header bar, on the page itself (they scroll with it): Library, Saved solutions (with its
+ * count), My submissions, and Review queue only for librarians (the caller's existing role check; the server still
+ * enforces it). An accent underline marks the current section. Below `sm`, Library and Saved solutions stay visible
+ * and the rest move into a "More" menu.
+ */
+function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailable }: { path: string; favoriteCount?: number; reviewCount?: number; draftOnly: boolean; reviewAvailable: boolean }) {
+  // A dot on My submissions while any feedback item is still open (no count: it invites a visit).
+  useFeedbackSeen();
+  const feedbackWaiting = openFeedbackCount() > 0;
+  const items: NavItem[] = [
+    { path: "/", label: "Library", icon: "grid", active: path === "/" || path.startsWith("/s/") },
+    ...(favoriteCount !== undefined ? [{ path: "/favorites", label: "Saved solutions", icon: "heart" as const, active: path === "/favorites", count: favoriteCount }] : []),
+    { path: "/my-submissions", label: draftOnly ? "My drafts" : "My submissions", icon: "folderOpen", active: path === "/my-submissions" || path.startsWith("/submission/") || path.startsWith("/submit"), alert: feedbackWaiting || undefined },
+    ...(reviewAvailable ? [{ path: "/review", label: "Review queue", icon: "clipboardCheck" as const, active: path === "/review" || path.startsWith("/review/"), pending: reviewCount || undefined }] : []),
+  ];
+  const primary = items.slice(0, favoriteCount !== undefined ? 2 : 1);
+  const rest = items.slice(primary.length);
+  return (
+    <nav aria-label="Sections" className="mx-auto mt-3 w-full max-w-[1340px] px-4 sm:px-6">
+      <div className="flex h-11 items-stretch gap-1 border-b border-(--glass-edge) sm:gap-2">
+        {items.map((item, index) => <NavLink key={item.path} item={item} className={index >= primary.length ? "hidden sm:inline-flex" : "inline-flex"} />)}
+        {rest.length > 0 && <div className="ml-auto flex items-center sm:hidden">
+          <OverflowMenu label="More sections" items={rest.map(item => ({ label: item.label, icon: item.icon, onSelect: () => navigate(item.path) }))} />
+        </div>}
+      </div>
+    </nav>
+  );
+}
+
+function NavLink({ item, className }: { item: NavItem; className: string }) {
+  return (
+    <a
+      href={`#${item.path}`}
+      onClick={(event) => { event.preventDefault(); navigate(item.path); }}
+      aria-current={item.active ? "page" : undefined}
+      className={`section-nav-link ${className} relative items-center gap-2 text-[15px] whitespace-nowrap`}
+    >
+      <Icon name={item.icon} size={18} filled={item.icon === "heart" && !!item.count} className={item.icon === "heart" && item.count ? "nav-heart-saved" : undefined} />
+      {item.label}
+      {item.count !== undefined && <span className="section-nav-count" aria-label={`${item.count} saved`}>{item.count}</span>}
+      {item.alert && <span className="nav-alert-dot" role="img" aria-label="New feedback to review" />}
+      {item.pending !== undefined && <span className="section-nav-count section-nav-count--pending" aria-label={`${item.pending} awaiting review`}>{item.pending}</span>}
+    </a>
+  );
+}
 function UserAvatar({ user }: { user: AppUser }) {
   const [failed, setFailed] = useState(false);
   return <span className="relative grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-lg font-mono text-[10px] font-medium"

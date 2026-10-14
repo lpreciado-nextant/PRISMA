@@ -3,7 +3,9 @@ import { Icon } from "./Icon";
 
 /** Right-side panel with the librarian's full feedback, opened over My submissions without leaving it. A retired record
  * shows the librarian's reason for taking it out of the library instead. */
-export function FeedbackPanel({ name, feedback, retired = false, onEdit, onClose }: { name: string; feedback: string; retired?: boolean; onEdit?: () => void; onClose: () => void }) {
+export function FeedbackPanel({ name, feedback, retired = false, onEdit, addressed, onToggleAddressed, onClose }: { name: string; feedback: string; retired?: boolean; onEdit?: () => void;
+  /** Whether the owner marked this comment as addressed; omitted, no check is offered. */
+  addressed?: boolean; onToggleAddressed?: () => void; onClose: () => void }) {
   const tone = retired ? "var(--ink-2)" : "var(--proto)";
   const dialog = useRef<HTMLDialogElement>(null);
   const close = useRef<HTMLButtonElement>(null);
@@ -35,8 +37,11 @@ export function FeedbackPanel({ name, feedback, retired = false, onEdit, onClose
         {retired && <p className="mt-2 text-[13.5px] text-(--ink-2)">CSMs no longer see it. To bring it back, open it, withdraw it to Draft, update it and resubmit it.</p>}
         <p id={`${id}-feedback`} className="mt-3 border-l-2 pl-3 text-[15px] leading-relaxed whitespace-pre-wrap break-words text-(--ink-2)" style={{ borderColor: tone }}>{feedback}</p>
       </section>
-      {onEdit && <div className="mt-auto pt-8"><div className="flex justify-end border-t border-(--glass-edge) pt-5">
-        <button type="button" onClick={onEdit} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg bg-(--accent) px-4 py-2.5 text-[14px] font-semibold text-(--on-accent)"><Icon name="edit" size={16} />Edit solution</button>
+      {(onEdit || onToggleAddressed) && <div className="mt-auto pt-8"><div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-(--glass-edge) pt-5">
+        {onToggleAddressed && addressed !== undefined && <button type="button" onClick={onToggleAddressed} aria-pressed={addressed} title={addressed ? "Addressed — click to reopen" : "Mark as addressed"} className="addressed-toggle mr-auto inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[12.5px] font-semibold">
+          <span aria-hidden="true" className="grid size-4 place-items-center rounded-full border">{addressed && <Icon name="check" size={10} />}</span>{addressed ? "Addressed" : "Mark as addressed"}
+        </button>}
+        {onEdit && <button type="button" onClick={onEdit} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg bg-(--accent) px-4 py-2.5 text-[14px] font-semibold text-(--on-accent)"><Icon name="edit" size={16} />Edit solution</button>}
       </div></div>}
     </div>
   </dialog>;

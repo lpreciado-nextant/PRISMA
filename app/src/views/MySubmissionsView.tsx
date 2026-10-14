@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Solution } from "../types";
 import { SolutionCard, type CardManagement } from "../components/SolutionCard";
 import { Chip } from "../components/Badges";
@@ -8,12 +8,13 @@ import { OverflowMenu } from "../components/OverflowMenu";
 import { FeedbackPanel } from "../components/FeedbackPanel";
 import { navigate } from "../lib/router";
 import { submissionState } from "../lib/submissionState";
+import { feedbackKeys, isAddressed, openFeedback, reviewFeedbackKey, setAddressed, setFeedbackItems, suggestionFeedbackKey, useFeedbackSeen } from "../lib/feedbackSeen";
 
 const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published"] as const;
 type Filter = typeof FILTERS[number];
 const matches = (solution: Solution, filter: Filter) => filter === "All" || submissionState(solution) === filter;
-/** Who has suggested changes on a published solution: the count and the distinct authors, newest first. */
-export type SuggestionSummary = { count: number; authors: string[] };
+/** Suggestions on a published solution: the count, the distinct authors (newest first) and their ids. */
+export type SuggestionSummary = { count: number; authors: string[]; ids: string[] };
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "" : "s"}`;
 
 type Tab = "solutions" | "suggestions";
@@ -26,6 +27,15 @@ type Tab = "solutions" | "suggestions";
 export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, suggestions, suggestionsTab }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>>; suggestionsTab?: { count: number } }) {
   const [filter, setFilter] = useState<Filter>("All");
   const [tab, setTab] = useState<Tab>("solutions");
+  useFeedbackSeen();
+  // Feedback items (librarian comment, each suggestion) still open, each confirmed on its own, here or in the
+  // solution (this browser only). Counts are items, so they fall as the owner addresses them.
+  const keys = (solution: Solution) => feedbackKeys(solution, suggestions?.[solution.id]?.ids ?? []);
+  const openOn = (solution: Solution) => openFeedback(keys(solution));
+  // Share this page's fresh data with the masthead's dot (no extra reads). Connected waits for the suggestions.
+  const ready = !connected || suggestions !== undefined;
+  const allKeys = ready ? entries.flatMap(({ solution }) => keys(solution)).join("|") : "";
+  useEffect(() => { if (allKeys) setFeedbackItems(allKeys.split("|")); }, [allKeys]);
   const tabsId = useId();
   const [feedbackTarget, setFeedbackTarget] = useState<Solution | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Solution | null>(null);
@@ -55,6 +65,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     return {
       // Returned and retired records both carry the librarian's words the owner needs to act on.
       onFeedback: ["Changes requested", "Retired"].includes(submissionState(solution)) && solution.reviewComments ? () => setFeedbackTarget(solution) : undefined,
+      unread: openOn(solution).length,
       // Edit sits on the image's top-right corner, readable over any thumbnail; the footer keeps the count and •••.
       corner: editable(solution) ? <button type="button" aria-label={`Edit ${name}`} onClick={() => edit(solution)} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold shadow-sm backdrop-blur-sm transition-colors hover:brightness-110" style={{ color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)", background: "color-mix(in srgb, var(--ground) 88%, transparent)" }}><Icon name="edit" size={14} />Edit</button> : undefined,
       actions: <>
@@ -69,12 +80,15 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   };
   const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
   const visible = entries.filter(({ solution }) => matches(solution, filter));
+  // "N new" on each tab: unconfirmed librarian comments under My solutions, unconfirmed suggestions under Suggestions.
+  const newOnSolutions = entries.filter(({ solution }) => { const key = reviewFeedbackKey(solution); return !!key && !isAddressed(key); }).length;
+  const newOnSuggestions = entries.reduce((total, { solution }) => total + openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length, 0);
   // One card everywhere: status, Edit, •••, and opening the solution (where its suggestions are read).
   const open = (solution: Solution) => onOpen ? onOpen(solution) : solution.publicationStatus === "Draft" ? navigate(`/submit/${solution.id}`) : navigate(`/s/${solution.id}`);
   const card = (solution: Solution, index: number) => renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />;
   const suggested = entries.filter(({ solution }) => (suggestions?.[solution.id]?.count ?? 0) > 0);
   const showing: Tab = suggestionsTab ? tab : "solutions";
-  const tabs: { value: Tab; label: string; count: number }[] = [{ value: "solutions", label: "My solutions", count: entries.length }, ...(suggestionsTab ? [{ value: "suggestions" as const, label: "Suggestions", count: suggestionsTab.count }] : [])];
+  const tabs: { value: Tab; label: string; count: number; fresh: number }[] = [{ value: "solutions", label: "My solutions", count: entries.length, fresh: newOnSolutions }, ...(suggestionsTab ? [{ value: "suggestions" as const, label: "Suggestions", count: suggestionsTab.count, fresh: newOnSuggestions }] : [])];
   // Arrow keys move between the primary tabs, as in a standard tablist.
   const onTabKey = (event: React.KeyboardEvent, index: number) => {
     if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
@@ -104,6 +118,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
           className="-mb-px cursor-pointer border-b-[3px] px-3 py-3 text-[14px] font-semibold transition-colors" style={{ borderColor: active ? "var(--accent)" : "transparent", color: active ? "var(--accent)" : "var(--ink-2)" }}>
           {option.label}
           <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={{ background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{option.count}</span>
+          {option.fresh > 0 && <span className="tab-new">{option.fresh} new</span>}
         </button>;
       })}
     </div>}
@@ -138,7 +153,9 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     </>}
     </>}
     </div>
-    {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} retired={feedbackTarget.publicationStatus === "Retired"} onClose={() => setFeedbackTarget(null)} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
+    {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} retired={feedbackTarget.publicationStatus === "Retired"} onClose={() => setFeedbackTarget(null)}
+      addressed={(() => { const key = reviewFeedbackKey(feedbackTarget); return key ? isAddressed(key) : undefined; })()}
+      onToggleAddressed={() => { const key = reviewFeedbackKey(feedbackTarget); if (key) setAddressed(key, !isAddressed(key)); }} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
     {deleteTarget && <ConfirmDialog title="Delete submission?" confirmLabel={deleting ? "Deleting..." : "Delete submission"} busy={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete}>
       <p className="break-words text-[14px]">Permanently delete "{deleteTarget.name}" and its attached media from {connected ? "Dataverse" : "this browser"}? This cannot be undone.{deleteTarget.publicationStatus === "Published" ? " It will also be removed from the library and published access revoked." : ""}</p>
       {deleteError && <p role="alert" className="mt-3 text-[14px]">{deleteError}</p>}

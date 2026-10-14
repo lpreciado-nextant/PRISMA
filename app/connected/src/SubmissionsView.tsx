@@ -14,7 +14,8 @@ import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
 import { workflowApi, readRows, suggestionApi } from "./dataSource";
 import { loadSuggestions, type Suggestion, type SuggestionList } from "./suggestions";
-import { SuggestionsPanel } from "./SolutionSuggestions";
+import { feedbackKeys, isAddressed, openFeedback, reviewFeedbackKey, setAddressed, useFeedbackSeen } from "../../src/lib/feedbackSeen";
+import { AddressedToggle, SuggestionsPanel } from "./SolutionSuggestions";
 import { deleteSubmission, loadSubmissions, mediaAsset, parseSubmission, PUBLICATIONS, submissionSolution, type SubmissionDetail } from "./workflow";
 import { loadDraftReferences } from "./drafts";
 import { MediaPreview } from "./DraftMediaEditor";
@@ -69,7 +70,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
   }, [published]);
   // No published solutions: nothing to read, so the Suggestions tab is simply empty.
   const rows: Record<string, Suggestion[]> | undefined = published ? suggestionRows : {};
-  const suggestions = rows && Object.fromEntries(Object.entries(rows).map(([id, list]): [string, SuggestionSummary] => [id, { count: list.length, authors: [...new Set(list.map(row => row.author))] }]));
+  const suggestions = rows && Object.fromEntries(Object.entries(rows).map(([id, list]): [string, SuggestionSummary] => [id, { count: list.length, authors: [...new Set(list.map(row => row.author))], ids: list.map(row => row.id) }]));
   if (error || !state) return <section className={shell}>{error ? <div role="alert"><p className="mb-4">{review ? "Review queue unavailable. An explicit PRISMA Librarian role and Dataverse read access are required." : "Submissions unavailable. Check your Dataverse access and connection."}</p><button className={button} onClick={() => { setError(false); setState(null); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button></div> : <LoadingState variant="page" label={review ? "Loading review queue..." : "Loading submissions..."} />}</section>;
   const open = (solution: Solution) => navigate(solution.publicationStatus === "Draft" ? `/submit?draft=${solution.id}` : `/submission/${solution.id}`);
   const remove = async (id: string) => {
@@ -125,9 +126,13 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
     const api = suggestionApi;
     if (!api) return;
     const controller = new AbortController();
-    void loadSuggestions(api, id, controller.signal).then(list => { if (!controller.signal.aborted) setSuggestionList(list); }).catch(() => undefined);
+    // A failed read counts as none, so opening the solution still marks its feedback as read.
+    void loadSuggestions(api, id, controller.signal).then(list => { if (!controller.signal.aborted) setSuggestionList(list); })
+      .catch(() => { if (!controller.signal.aborted) setSuggestionList({ canRead: false, suggestions: [] }); });
     return () => controller.abort();
   }, [id, attempt]);
+  // New feedback stays flagged until the owner confirms reading it here (or from My submissions).
+  useFeedbackSeen();
   const lifetime = useRef<AbortController | null>(null);
   const running = useRef(false);
   useEffect(() => {
@@ -194,6 +199,10 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const solution: Solution = { ...submissionSolution(state.record, names), technologies: graph.technologyIds.map(id => names[id] ?? "Unavailable technology"), industries: graph.industryIds.map(id => names[id] ?? "Unavailable industry"), projects: graph.projectIds.map(id => ({ id, projectName: names[id] ?? `Untitled project (${id.slice(0, 8)})` })), assets: state.media.filter(item => item.kind === "attachment" && item.complete).map(mediaAsset) };
   const effort = { contributors: graph.contributors.map((person, index) => ({ name: names[person.personId] ?? "Unavailable consultant", hours: state.graph.hours[index], email: emails[person.personId], level: levels[person.personId] })), totalHours: state.graph.hours.some(hours => hours === null) ? null : Math.round(state.graph.hours.reduce<number>((total, hours) => total + (hours ?? 0), 0) * 100) / 100 };
   // Shown when there is something to read, or on a published record (where "no suggestions yet" is meaningful).
+  // Open feedback items (librarian comment, suggestions), each confirmed on its own; the heading shows a bubble while any is open.
+  const reviewKey = review ? undefined : reviewFeedbackKey(solution);
+  const openItems = review ? [] : openFeedback(feedbackKeys(solution, suggestionList?.suggestions.map(item => item.id) ?? []));
+  const newFeedback = openItems.length > 0;
   // Same withdraw action either way; a published record is described as being unpublished.
   const confirmCopy = confirmation && (confirmation === "withdraw" && status === 125060000 ? UNPUBLISH : CONFIRMATIONS[confirmation]);
   const suggestionsPanel = suggestionList?.canRead && (suggestionList.suggestions.length > 0 || status === 125060000) ? <SuggestionsPanel list={suggestionList} /> : undefined;
@@ -213,11 +222,14 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
         {technologyUse && <NewTechnologies items={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologyLabels)} />}
-      </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
+      </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined}
+        badge={newFeedback && <span className="new-feedback">{openItems.length === 1 ? "New feedback" : `${openItems.length} new feedback`}</span>}
+        feedbackAction={reviewKey && <AddressedToggle done={isAddressed(reviewKey)} onToggle={() => setAddressed(reviewKey, !isAddressed(reviewKey))} />} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
           {status === 125060003 ? <><button type="button" className={outlinedStatusButton} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="edit" size={16} />Edit draft</button>
             <button type="button" className={statusButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" size={16} />Submit for review</button></>
           : <button type="button" className={subtleStatusButton} onClick={() => setConfirmation("withdraw")}><Icon name="edit" size={15} />{status === 125060000 ? "Unpublish & edit" : "Withdraw & edit"}</button>}
         </fieldset>}>
+
         {/* Workflow validations are not status: only a missing safety acknowledgment, which blocks submitting, is shown. */}
         {!core.safetyAcknowledged && <p className="mt-3 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} />Safety acknowledgment required</p>}
         {mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
