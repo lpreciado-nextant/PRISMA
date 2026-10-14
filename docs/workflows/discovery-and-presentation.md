@@ -1,6 +1,6 @@
 # Discovery & presentation — the CSM hero flow
 
-**Status:** Aligned with client-safe review and minimum-hours effort; presentation download added; CSM derived from the consultant level (2026-10-08) · **Last updated:** 2026-10-08
+**Status:** Aligned with client-safe review and minimum-hours effort; presentation download added; CSM derived from the consultant level (2026-10-08); download theme menu with hints, confirmation and retry (2026-10-14) · **Last updated:** 2026-10-14
 **Source:** [End-to-end design §3.2](../design/end-to-end-design.md#32-discovery--presentation-the-csm-path)
 **Measure:** problem statement → presentable demo in **under two minutes**, unaided (G1). Anything that adds a click to this path needs to earn it.
 
@@ -52,7 +52,7 @@ From here: open the demo in the viewer, download the one-pager, download a prese
 
 ### Download presentation
 
-Connected PRISMA only. **Download presentation** sits beside Copy link on a published solution and builds a six-slide PRISMA × Nextant `.pptx` from the solution's own fields; the CSM picks the Dark or Light template. Field-to-slide mapping and limits: [`tools/pptx-template/PRISMA_Field_Map.md`](../../tools/pptx-template/PRISMA_Field_Map.md).
+Connected PRISMA only. **Download presentation** sits beside Copy link on a published solution and builds a six-slide PRISMA × Nextant `.pptx` from the solution's own fields; the CSM picks the Dark or Light template from a small menu (Dark "best on screens and video calls", Light "best for projectors and print"; the last choice, else the app's theme, comes first as Suggested and is remembered in the browser; a note says the deck is client-safe). The button shows progress, then "Downloaded" with the file name, or the error with **Try again** (2026-10-14). Field-to-slide mapping and limits: [`tools/pptx-template/PRISMA_Field_Map.md`](../../tools/pptx-template/PRISMA_Field_Map.md).
 
 - Offered only for published solutions with Client review = Cleared, and never in present mode.
 - Never exports effort hours, builder names, estimated cost, projects or library notes. The CSM (the contributor whose consultant-directory level, `cr6b0_consultantlevel`, names customer success) is the only person named, with the presenter (the signed-in user).
