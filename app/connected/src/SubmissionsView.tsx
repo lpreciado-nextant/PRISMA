@@ -14,8 +14,8 @@ import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
 import { workflowApi, readRows, suggestionApi } from "./dataSource";
 import { loadSuggestions, type Suggestion, type SuggestionList } from "./suggestions";
-import { feedbackKeys, isAddressed, openFeedback, reviewFeedbackKey, setAddressed, useFeedbackSeen } from "../../src/lib/feedbackSeen";
-import { AddressedToggle, SuggestionsPanel } from "./SolutionSuggestions";
+import { feedbackKeys, openFeedback, useFeedbackSeen } from "../../src/lib/feedbackSeen";
+import { SuggestionsPanel } from "./SolutionSuggestions";
 import { deleteSubmission, loadSubmissions, mediaAsset, parseSubmission, PUBLICATIONS, submissionSolution, type SubmissionDetail } from "./workflow";
 import { loadDraftReferences } from "./drafts";
 import { MediaPreview } from "./DraftMediaEditor";
@@ -200,7 +200,6 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const effort = { contributors: graph.contributors.map((person, index) => ({ name: names[person.personId] ?? "Unavailable consultant", hours: state.graph.hours[index], email: emails[person.personId], level: levels[person.personId] })), totalHours: state.graph.hours.some(hours => hours === null) ? null : Math.round(state.graph.hours.reduce<number>((total, hours) => total + (hours ?? 0), 0) * 100) / 100 };
   // Shown when there is something to read, or on a published record (where "no suggestions yet" is meaningful).
   // Open feedback items (librarian comment, suggestions), each confirmed on its own; the heading shows a bubble while any is open.
-  const reviewKey = review ? undefined : reviewFeedbackKey(solution);
   const openItems = review ? [] : openFeedback(feedbackKeys(solution, suggestionList?.suggestions.map(item => item.id) ?? []));
   const newFeedback = openItems.length > 0;
   // Same withdraw action either way; a published record is described as being unpublished.
@@ -223,8 +222,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
         {technologyUse && <NewTechnologies items={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologyLabels)} />}
       </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined}
-        badge={newFeedback && <span className="new-feedback">{openItems.length === 1 ? "New feedback" : `${openItems.length} new feedback`}</span>}
-        feedbackAction={reviewKey && <AddressedToggle done={isAddressed(reviewKey)} onToggle={() => setAddressed(reviewKey, !isAddressed(reviewKey))} />} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
+        badge={newFeedback && <span className="new-feedback">{openItems.length === 1 ? "New feedback" : `${openItems.length} new feedback`}</span>} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
           {status === 125060003 ? <><button type="button" className={outlinedStatusButton} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="edit" size={16} />Edit draft</button>
             <button type="button" className={statusButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" size={16} />Submit for review</button></>
           : <button type="button" className={subtleStatusButton} onClick={() => setConfirmation("withdraw")}><Icon name="edit" size={15} />{status === 125060000 ? "Unpublish & edit" : "Withdraw & edit"}</button>}

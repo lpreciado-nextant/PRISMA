@@ -118,7 +118,7 @@ export function LibraryView({
 
         {/* Editorial area filter: text options with their colour dots; only the chosen one gets a light tint. It must not
             look like the section tabs above (no icons, no underline). */}
-        <div role="group" aria-label="Filter by specialization area" className="mt-4 flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
+        <div role="group" aria-label="Filter by specialization area" className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-2">
           <AreaTab
             label="All areas"
             count={counts.get("all") ?? 0}

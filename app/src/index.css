@@ -878,7 +878,7 @@
   .section-nav-link > svg.nav-heart-saved {
     color: var(--favorite);
   }
-  /* Saved solutions' count: a legible badge in the heart's own colour. */
+  /* Counts on section tabs (open feedback, awaiting review): small legible badges; only work to do is counted. */
   .section-nav-count {
     min-width: 1.4rem;
     padding: 0.15rem 0.45rem;
@@ -891,13 +891,10 @@
     color: var(--favorite);
     background: color-mix(in srgb, var(--favorite) 15%, transparent);
   }
-  /* My submissions: open feedback items. A small accent dot, deliberately without a count. */
-  .nav-alert-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 999px;
-    background: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  /* My submissions: open feedback items (librarian comments and suggestions), in the accent. */
+  .section-nav-count--open {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
   }
   /* Review queue: submissions awaiting review, in the amber of pending work. */
   .section-nav-count--pending {

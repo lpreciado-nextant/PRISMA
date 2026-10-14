@@ -8,7 +8,7 @@ import { OverflowMenu } from "../components/OverflowMenu";
 import { FeedbackPanel } from "../components/FeedbackPanel";
 import { navigate } from "../lib/router";
 import { submissionState } from "../lib/submissionState";
-import { feedbackKeys, isAddressed, openFeedback, reviewFeedbackKey, setAddressed, setFeedbackItems, suggestionFeedbackKey, useFeedbackSeen } from "../lib/feedbackSeen";
+import { feedbackKeys, isAddressed, openFeedback, reviewFeedbackKey, setFeedbackItems, suggestionFeedbackKey, useFeedbackSeen } from "../lib/feedbackSeen";
 
 const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published"] as const;
 type Filter = typeof FILTERS[number];
@@ -28,8 +28,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const [filter, setFilter] = useState<Filter>("All");
   const [tab, setTab] = useState<Tab>("solutions");
   useFeedbackSeen();
-  // Feedback items (librarian comment, each suggestion) still open, each confirmed on its own, here or in the
-  // solution (this browser only). Counts are items, so they fall as the owner addresses them.
+  // Open feedback items: a draft returned with Changes requested (until resubmitted) and each unaddressed suggestion.
+  // Counts are items, so they fall as suggestions are addressed and returned drafts are resubmitted.
   const keys = (solution: Solution) => feedbackKeys(solution, suggestions?.[solution.id]?.ids ?? []);
   const openOn = (solution: Solution) => openFeedback(keys(solution));
   // Share this page's fresh data with the masthead's dot (no extra reads). Connected waits for the suggestions.
@@ -153,9 +153,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     </>}
     </>}
     </div>
-    {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} retired={feedbackTarget.publicationStatus === "Retired"} onClose={() => setFeedbackTarget(null)}
-      addressed={(() => { const key = reviewFeedbackKey(feedbackTarget); return key ? isAddressed(key) : undefined; })()}
-      onToggleAddressed={() => { const key = reviewFeedbackKey(feedbackTarget); if (key) setAddressed(key, !isAddressed(key)); }} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
+    {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} retired={feedbackTarget.publicationStatus === "Retired"} onClose={() => setFeedbackTarget(null)} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
     {deleteTarget && <ConfirmDialog title="Delete submission?" confirmLabel={deleting ? "Deleting..." : "Delete submission"} busy={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete}>
       <p className="break-words text-[14px]">Permanently delete "{deleteTarget.name}" and its attached media from {connected ? "Dataverse" : "this browser"}? This cannot be undone.{deleteTarget.publicationStatus === "Published" ? " It will also be removed from the library and published access revoked." : ""}</p>
       {deleteError && <p role="alert" className="mt-3 text-[14px]">{deleteError}</p>}

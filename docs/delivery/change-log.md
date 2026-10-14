@@ -9,7 +9,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 14 Live / 14 |
+| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 97% — 14 Live, 1 In code / 15 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 45% — 5 Live, 3 Pending review / 16 |
@@ -70,7 +70,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 
-**Progress:** 100% — 14 Live / 14
+**Progress:** 97% — 14 Live, 1 In code / 15
 
 ### Feedback
 
@@ -97,6 +97,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Library: lighter hero, glass search field, editorial area filters with colour dots and area notes, Refine option counts, Top controls and folded area-tinted list, My favorites header | 🟢 Live | `4384c1b` ([design system](../design/design-system.md#library-page)); published 2026-10-14; hosted UI not yet checked |
 | Header: slim bar with Submit as primary and section tabs below (Saved solutions count, amber Review queue count for librarians) | 🟢 Live | `2f935dc` ([design system](../design/design-system.md)); published 2026-10-14; hosted UI not yet checked |
 | Open feedback per item: Mark as addressed on the librarian comment and each suggestion, New / Addressed / All filter, "N new" on cards and tabs, header dot | 🟢 Live | `2f935dc` ([contribution and review](../workflows/contribution-and-review.md)); kept per browser (no Dataverse column); dot read once per session; published 2026-10-14; hosted UI not yet checked |
+| Feedback addressed in Dataverse: `nx_solutionsuggestion.nx_addressedon` (created 2026-10-14), `nx_AddressSuggestion` and `nx_GetMyOpenFeedback` on `SuggestionApi`; returned drafts resolve by resubmitting | In code | Plug-in, `suggestion-api` registration (preview by default) and client ready; next: build and sign the plug-in, `blob-plugin --execute`, `suggestion-api --execute`, generate the two clients and add them in `dataSource.ts`. Until then the app keeps checks in the browser ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)) |
 ## 2026-10-08 — Working session: contributor effort as minimum hours required
 
 **Progress:** 100% — 5 Live / 5
@@ -194,7 +195,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-01 — Working session: Top 3 save counts and card sizing
 
-**Progress:** 100% — 14 Live / 14
+**Progress:** 97% — 14 Live, 1 In code / 15
 
 ### Feedback
 

@@ -14,9 +14,9 @@ import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue, type CatalogueSolution } from "./catalogue";
 import { getAppLocation, getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails, suggestionApi } from "./dataSource";
 import { routeHash, type AppLocation } from "./deepLink";
-import { loadSubmissions, submissionSolution, workflowData } from "./workflow";
-import { loadSuggestions } from "./suggestions";
-import { feedbackKeys, setFeedbackItems } from "../../src/lib/feedbackSeen";
+import { loadSubmissions, submissionFeedbackFields, workflowData } from "./workflow";
+import { addressSuggestion, loadOpenFeedback, loadSuggestions } from "./suggestions";
+import { feedbackKeys, recordServerAddressed, setAddressWriter, setFeedbackItems, suggestionFeedbackKey } from "../../src/lib/feedbackSeen";
 import { loadFavorites, loadTopFavorites, setFavorite, type TopFavorite } from "./favorites";
 import { PublishedView } from "./PublishedView";
 import { ConnectedSolutionCard, PublishedThumbnail } from "./ConnectedSolutionCard";
@@ -157,23 +157,26 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     }).catch(() => { if (!controller.signal.aborted) setLibrarian(false); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [present, user.live]);
-  // Once per session, on entry: is any of the owner's feedback still open? (One read of their submissions and
-  // one of suggestions per published solution.) The masthead's dot then follows confirmations, and My submissions
-  // refreshes it from its own data, without further reads.
+  // Once per session, on entry: the owner's open feedback for the masthead count. With nx_GetMyOpenFeedback this is a
+  // single read; until it is registered, one read of their submissions plus one of suggestions per published solution.
+  // Afterwards the count follows each "Mark as addressed" and My submissions' own data, with no further reads.
   useEffect(() => {
     if (present || !user.live) return;
+    const api = suggestionApi;
+    // Suggestions are then addressed in Dataverse (nx_addressedon), not in this browser.
+    setAddressWriter(api?.address ? (id, addressed) => addressSuggestion(api, id, addressed) : undefined);
     const controller = new AbortController();
-    void loadSubmissions(workflowApi, false, controller.signal).then(async result => {
-      const api = suggestionApi;
-      const found = await Promise.all(result.records.map(async record => {
-        const ids = record.publication === 125060000 && api ? await loadSuggestions(api, record.core.id, controller.signal).then(list => list.suggestions.map(item => item.id)).catch(() => []) : [];
-        return feedbackKeys(submissionSolution(record, {}), ids);
-      }));
-      if (!controller.signal.aborted) setFeedbackItems(found.flat());
-    }).catch(() => undefined);
+    const single = api?.openFeedback ? loadOpenFeedback(api, controller.signal).then(open => {
+      const suggestionKeys = open.suggestions.map(item => suggestionFeedbackKey(item.id));
+      recordServerAddressed(suggestionKeys.map(key => ({ key, addressed: false })));
+      return [...open.changesRequested.map(id => `review:${id}`), ...suggestionKeys];
+    }) : undefined;
+    void (single ?? loadSubmissions(workflowApi, false, controller.signal).then(async result => (await Promise.all(result.records.map(async record => {
+      const ids = record.publication === 125060000 && api ? await loadSuggestions(api, record.core.id, controller.signal).then(list => list.suggestions.map(item => item.id)).catch(() => []) : [];
+      return feedbackKeys(submissionFeedbackFields(record), ids);
+    }))).flat())).then(keys => { if (!controller.signal.aborted) setFeedbackItems(keys); }).catch(() => undefined);
     return () => controller.abort();
-  }, [present, user.live]);
-  // Librarians see how many submissions await review on the Review queue tab. Re-read on each navigation, so it
+  }, [present, user.live]);  // Librarians see how many submissions await review on the Review queue tab. Re-read on each navigation, so it
   // follows their own approvals and returns; a failed read just hides the count.
   const [reviewPending, setReviewPending] = useState<number>();
   useEffect(() => {

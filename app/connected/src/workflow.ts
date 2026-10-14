@@ -14,6 +14,14 @@ export function mediaAsset(item: MediaItem, index: number): Solution["assets"][n
   if (item.linkedAsset) return { id: item.id, ...item.linkedAsset, sortOrder: item.sortOrder ?? index, ...(item.purpose ? { purpose: item.purpose } : {}) };
   return { id: item.id, name: item.name, assetType: item.mime === "text/html" ? "Self-contained HTML file" : item.mime.startsWith("video/") ? "Video walkthrough only" : "Client-ready one-pager / slide", allowsEmbedding: item.mime === "text/html" || item.mime.startsWith("video/"), sortOrder: index, ...(item.purpose ? { purpose: item.purpose } : {}) };
 }
+/** Only what feedback tracking needs (state, review outcome and comment): no reference names, so it never fails on them. */
+export function submissionFeedbackFields(record: Submission): Pick<Solution, "id" | "publicationStatus" | "reviewOutcome" | "reviewComments"> {
+  return {
+    id: record.core.id, publicationStatus: PUBLICATIONS[record.publication] as Solution["publicationStatus"],
+    reviewOutcome: record.outcome === 125060001 ? "Changes requested" : record.outcome === 125060002 ? "Approved" : "None", reviewComments: record.comments,
+  };
+}
+
 export function submissionSolution(record: Submission, names: Record<string, string>): Solution {
   const core = record.core;
   // The plugin returns areas primary first (ascending Sort Order). Drafts may have none yet.

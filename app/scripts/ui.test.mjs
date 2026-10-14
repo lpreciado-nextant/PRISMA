@@ -687,7 +687,9 @@ test("masthead: primary row with Submit, Present and utilities; section navigati
   const user = { fullName: "Ana Gómez", userPrincipalName: "ana@nextant.com", live: true };
   const props = { user, theme: "dark", onToggleTheme: noop, present: false, onTogglePresent: noop, favoriteCount: 3, reviewAvailable: false };
   const html = render(masthead.Masthead, props);
-  assert.match(html, /Submit a solution.*Present mode.*<nav aria-label="Sections".*Library.*Saved solutions.*>3<\/span>.*My submissions/s);
+  assert.match(html, /Submit a solution.*Present mode.*<nav aria-label="Sections".*Library.*Saved solutions.*My submissions/s);
+  // Saved solutions are not work to do, so their tab carries no number (the heart fills instead).
+  assert.doesNotMatch(html, /aria-label="3 saved"|Saved solutions<span/);
   assert.doesNotMatch(html, /Review queue/);
   assert.match(render(masthead.Masthead, { ...props, reviewAvailable: true }), /<nav aria-label="Sections".*Review queue/s);
   // Present mode and read-only (before entry) show no section navigation.
@@ -713,7 +715,7 @@ test("review queue tab shows the pending count in amber, only when there is one"
   assert.doesNotMatch(render(masthead.Masthead, { ...props, reviewCount: 0 }), /awaiting review/);
   assert.doesNotMatch(render(masthead.Masthead, props), /awaiting review/);
 });
-test("open feedback: items counted one by one on cards and tabs, a dot on My submissions, each addressed on its own", async () => {
+test("open feedback: items counted one by one on cards, tabs and the My submissions tab; suggestions checked off, returned drafts resolved by resubmitting", async () => {
   const { MySubmissionsView } = await server.ssrLoadModule("/src/views/MySubmissionsView.tsx");
   const base = { summary: "Summary", specializationArea: "ai", status: "Working prototype", contributors: [], capabilities: [], technologies: [], industries: [], assets: [] };
   const entries = [
@@ -727,16 +729,15 @@ test("open feedback: items counted one by one on cards and tabs, a dot on My sub
   assert.match(html, /My solutions<span[^>]*>2<\/span><span class="tab-new">1 new<\/span>.*Suggestions<span[^>]*>2<\/span><span class="tab-new">2 new<\/span>/s);
   assert.equal((html.match(/card-unread/g) ?? []).length, 2);
   assert.match(html, /new-feedback.*1 new.*new-feedback.*2 new/s);
-  // The masthead shows a dot (no count) on My submissions while any item is open.
+  // The masthead counts open items on My submissions, like Saved solutions and Review queue.
   const seen = await server.ssrLoadModule("/src/lib/feedbackSeen.ts");
   const user = { fullName: "Ana Gómez", userPrincipalName: "ana@nextant.com", live: true };
   const mastheadProps = { user, theme: "dark", onToggleTheme: noop, present: false, onTogglePresent: noop, favoriteCount: 0, reviewAvailable: false };
   seen.setFeedbackItems(seen.feedbackKeys(entries[0].solution));
-  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="nav-alert-dot" role="img" aria-label="New feedback to review"><\/span>/);
+  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="section-nav-count section-nav-count--open" aria-label="1 feedback to address">1<\/span>/);
   seen.setFeedbackItems([]);
-  assert.doesNotMatch(render(masthead.Masthead, mastheadProps), /nav-alert-dot/);
-  // The librarian's comment gets its own "Mark as addressed" check in the feedback panel.
+  assert.doesNotMatch(render(masthead.Masthead, mastheadProps), /section-nav-count--open/);
+  // The librarian's comment has no check: it stays open until the owner resubmits.
   const { FeedbackPanel } = await server.ssrLoadModule("/src/components/FeedbackPanel.tsx");
-  assert.match(render(FeedbackPanel, { name: "Returned one", feedback: "Blur the client logo.", onClose: noop, addressed: false, onToggleAddressed: noop }), /aria-pressed="false"[^>]*>.*Mark as addressed/s);
-  assert.doesNotMatch(render(FeedbackPanel, { name: "Returned one", feedback: "Blur the client logo.", onClose: noop }), /Mark as addressed/);
+  assert.doesNotMatch(render(FeedbackPanel, { name: "Returned one", feedback: "Blur the client logo.", onClose: noop, onEdit: noop }), /Mark as addressed/);
 });

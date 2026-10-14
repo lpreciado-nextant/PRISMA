@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { feedbackKeys, isAddressed, openFeedback, openFeedbackCount, reviewFeedbackKey, setAddressed, setFeedbackItems } from "./feedbackSeen.ts";
+import { feedbackKeys, isAddressed, openFeedback, openFeedbackCount, recordServerAddressed, reviewFeedbackKey, setAddressWriter, setAddressed, setFeedbackItems, suggestionFeedbackKey } from "./feedbackSeen.ts";
 
 const store = new Map<string, string>();
 Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
@@ -8,29 +8,50 @@ Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
   setItem: (key: string, value: string) => { store.set(key, value); },
 } });
 
-const returned = { id: "s1", publicationStatus: "Draft" as const, reviewOutcome: "Changes requested" as const, reviewComments: "Blur the client logo." };
+const returned = { id: "S1", publicationStatus: "Draft" as const, reviewOutcome: "Changes requested" as const, reviewComments: "Blur the client logo." };
 
-test("feedback items: the librarian's comment on a returned or retired record, and each suggestion", () => {
-  assert.equal(reviewFeedbackKey({ ...returned, reviewOutcome: "None", reviewComments: "" }), undefined);
-  // An approval note on a published record is not feedback to address.
-  assert.equal(reviewFeedbackKey({ id: "p", publicationStatus: "Published", reviewOutcome: "Approved", reviewComments: "Great work" }), undefined);
-  assert.equal(feedbackKeys(returned, ["A", "b"]).length, 3);
-  assert.equal(feedbackKeys({ id: "r", publicationStatus: "Retired", reviewOutcome: "Approved", reviewComments: "Replaced by v2" }).length, 1);
+test("feedback items: a draft returned with Changes requested, and each suggestion", () => {
+  assert.equal(reviewFeedbackKey({ ...returned, reviewOutcome: "None" }), undefined);
+  // Retired reasons and approval notes are information, not work to do.
+  assert.equal(reviewFeedbackKey({ id: "r", publicationStatus: "Retired", reviewOutcome: "Approved" }), undefined);
+  assert.equal(reviewFeedbackKey({ id: "p", publicationStatus: "Published", reviewOutcome: "Approved" }), undefined);
+  assert.deepEqual(feedbackKeys(returned, ["A", "b"]), ["review:s1", "suggestion:a", "suggestion:b"]);
 });
 
-test("each item is confirmed on its own; counts fall as items are addressed; new librarian words are a new item", () => {
+test("without a writer, suggestions are addressed in this browser; the librarian comment cannot be checked off", () => {
   store.clear();
+  setAddressWriter(undefined);
   const keys = feedbackKeys(returned, ["a", "b"]);
   setFeedbackItems(keys);
   assert.equal(openFeedbackCount(), 3);
   setAddressed(keys[1]);
   assert.equal(isAddressed(keys[1]), true);
   assert.equal(openFeedbackCount(), 2);
-  assert.deepEqual(openFeedback(keys), [keys[0], keys[2]]);
-  setAddressed(keys[1], false);
-  assert.equal(openFeedbackCount(), 3);
   setAddressed(keys[0]);
-  assert.notEqual(reviewFeedbackKey({ ...returned, reviewComments: "Also anonymize the summary." }), keys[0]);
-  // Keys never hold the feedback text.
-  assert.doesNotMatch(store.get("prisma.feedback.addressed") ?? "", /Blur|logo/);
+  assert.equal(isAddressed(keys[0]), false);
+  setAddressed(keys[1], false);
+  assert.deepEqual(openFeedback(keys), keys);
+});
+
+test("with a writer, Dataverse holds the state: shown at once, rolled back if the save fails, and it overrides the browser", async () => {
+  store.clear();
+  const calls: [string, boolean][] = [];
+  let fail = false;
+  setAddressWriter(async (id, addressed) => { calls.push([id, addressed]); if (fail) throw new Error("denied"); });
+  const key = suggestionFeedbackKey("C");
+  setAddressed(key);
+  assert.equal(isAddressed(key), true);
+  assert.deepEqual(calls, [["c", true]]);
+  // Nothing was written to this browser.
+  assert.equal(store.get("prisma.feedback.addressed"), undefined);
+  fail = true;
+  setAddressed(key, false);
+  assert.equal(isAddressed(key), false);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(isAddressed(key), true);
+  // What the server reports wins over anything kept locally.
+  store.set("prisma.feedback.addressed", JSON.stringify([suggestionFeedbackKey("d")]));
+  recordServerAddressed([{ key: suggestionFeedbackKey("d"), addressed: false }]);
+  assert.equal(isAddressed(suggestionFeedbackKey("d")), false);
+  setAddressWriter(undefined);
 });

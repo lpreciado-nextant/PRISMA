@@ -26,7 +26,7 @@ export function Masthead({
   readOnly?: boolean;
   draftOnly?: boolean;
   reviewAvailable?: boolean;
-  /** When set, shows Saved solutions with this count in the section navigation (hidden in present mode). */
+  /** When set, shows the Saved solutions tab (hidden in present mode); the heart fills while any are saved, no number. */
   favoriteCount?: number;
   /** Submissions awaiting review, shown on the Review queue tab (librarians only; hidden at zero or when unknown). */
   reviewCount?: number;
@@ -133,22 +133,23 @@ export function Masthead({
   );
 }
 
-type NavItem = { path: string; label: string; icon: IconName; active: boolean; count?: number; pending?: number; alert?: boolean };
+type NavItem = { path: string; label: string; icon: IconName; active: boolean; count?: number; pending?: number; open?: number };
 
 /**
- * Section tabs under the header bar, on the page itself (they scroll with it): Library, Saved solutions (with its
- * count), My submissions, and Review queue only for librarians (the caller's existing role check; the server still
+ * Section tabs under the header bar, on the page itself (they scroll with it): Library, Saved solutions, My
+ * submissions, and Review queue only for librarians. Only work to do is counted (open feedback, submissions awaiting
+ * review); saved solutions are not, so their tab shows no number (the caller's existing role check; the server still
  * enforces it). An accent underline marks the current section. Below `sm`, Library and Saved solutions stay visible
  * and the rest move into a "More" menu.
  */
 function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailable }: { path: string; favoriteCount?: number; reviewCount?: number; draftOnly: boolean; reviewAvailable: boolean }) {
-  // A dot on My submissions while any feedback item is still open (no count: it invites a visit).
+  // My submissions counts its open feedback items, in the same badge format as Saved solutions and Review queue.
   useFeedbackSeen();
-  const feedbackWaiting = openFeedbackCount() > 0;
+  const openFeedbackItems = openFeedbackCount();
   const items: NavItem[] = [
     { path: "/", label: "Library", icon: "grid", active: path === "/" || path.startsWith("/s/") },
     ...(favoriteCount !== undefined ? [{ path: "/favorites", label: "Saved solutions", icon: "heart" as const, active: path === "/favorites", count: favoriteCount }] : []),
-    { path: "/my-submissions", label: draftOnly ? "My drafts" : "My submissions", icon: "folderOpen", active: path === "/my-submissions" || path.startsWith("/submission/") || path.startsWith("/submit"), alert: feedbackWaiting || undefined },
+    { path: "/my-submissions", label: draftOnly ? "My drafts" : "My submissions", icon: "folderOpen", active: path === "/my-submissions" || path.startsWith("/submission/") || path.startsWith("/submit"), open: openFeedbackItems || undefined },
     ...(reviewAvailable ? [{ path: "/review", label: "Review queue", icon: "clipboardCheck" as const, active: path === "/review" || path.startsWith("/review/"), pending: reviewCount || undefined }] : []),
   ];
   const primary = items.slice(0, favoriteCount !== undefined ? 2 : 1);
@@ -175,8 +176,7 @@ function NavLink({ item, className }: { item: NavItem; className: string }) {
     >
       <Icon name={item.icon} size={18} filled={item.icon === "heart" && !!item.count} className={item.icon === "heart" && item.count ? "nav-heart-saved" : undefined} />
       {item.label}
-      {item.count !== undefined && <span className="section-nav-count" aria-label={`${item.count} saved`}>{item.count}</span>}
-      {item.alert && <span className="nav-alert-dot" role="img" aria-label="New feedback to review" />}
+      {item.open !== undefined && <span className="section-nav-count section-nav-count--open" aria-label={`${item.open} feedback to address`}>{item.open}</span>}
       {item.pending !== undefined && <span className="section-nav-count section-nav-count--pending" aria-label={`${item.pending} awaiting review`}>{item.pending}</span>}
     </a>
   );
