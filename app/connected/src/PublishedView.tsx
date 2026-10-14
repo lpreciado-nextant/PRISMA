@@ -5,7 +5,8 @@ import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { DetailView, GalleryFigure } from "../../src/views/DetailView";
 import { navigate } from "../../src/lib/router";
-import { publishedDetails, suggestionApi } from "./dataSource";
+import { publishedDetails, readRows, suggestionApi } from "./dataSource";
+import { loadCapabilityOwner, type CapabilityOwner } from "./capabilityOwner";
 import { useSolutionSuggestions } from "./useSolutionSuggestions";
 import { mediaAsset, type PublishedDetail } from "./workflow";
 import type { MediaItem } from "./media";
@@ -30,6 +31,16 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
   const [attempt, setAttempt] = useState(0);
   const user = useAppUser();
   const suggestions = useSolutionSuggestions(suggestionApi, solution.id, !present);
+  // Internal only: never read in present mode. `undefined` hides the row (unknown); `null` shows "Not assigned".
+  const capability = solution.capabilities?.[0];
+  const [owner, setOwner] = useState<{ capability: string; value: CapabilityOwner | null | undefined }>();
+  useEffect(() => {
+    if (present || !capability) return;
+    const controller = new AbortController();
+    void loadCapabilityOwner(readRows, capability, controller.signal).then(value => { if (!controller.signal.aborted) setOwner({ capability, value }); }).catch(() => undefined);
+    return () => controller.abort();
+  }, [capability, present]);
+  const capabilityOwner = !present && owner && owner.capability === capability ? owner.value : undefined;
   const mediaAction = useMediaAction(item => navigate(`/s/${solution.id}/demo/${item.id}`), { solutionId: solution.id, mode: present ? "present" : "published" });
   useEffect(() => {
     const controller = new AbortController();
@@ -63,6 +74,7 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
     gallery={<PublishedGallery media={detail.media} />}
     panels={suggestions.panel}
     aside={suggestions.action}
+    capabilityOwner={capabilityOwner}
     reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
     onAssetOpen={asset => void mediaAction.open(detail.media.find(item => item.id === asset.id))} />;
 }

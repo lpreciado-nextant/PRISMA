@@ -826,6 +826,21 @@
     background: color-mix(in srgb, var(--accent) 18%, transparent);
   }
 
+  /* Suggest an improvement: an action set apart from the metadata cards around it. */
+  .suggest-card {
+    border: 1.5px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
+    transition: background 0.2s var(--ease-sheet), border-color 0.2s var(--ease-sheet);
+  }
+  .suggest-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+  }
+  .suggest-card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   /* ---- Refine rail ---------------------------------------------------- */
   .facet-icon-button {
     display: grid;

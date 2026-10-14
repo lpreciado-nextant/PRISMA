@@ -1,6 +1,5 @@
 import { useState } from "react";
 import type { AssetType, DemoAsset, Solution } from "../types";
-import { AREAS } from "../data/catalogueMetadata";
 import { AreaTag, Chip, StatusPill } from "../components/Badges";
 import { outlinedStatusButton, SubmissionStatusPanel } from "../components/SubmissionStatusPanel";
 import { submissionState } from "../lib/submissionState";
@@ -9,7 +8,6 @@ import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
 import { assetTypeLabel } from "../lib/linkedAssets";
-import { isCustomerSuccessLevel } from "../lib/consultantLevel";
 import { DemoStage } from "../components/DemoStage";
 import { solutionAreas } from "../lib/areas";
 import { FavoriteButton } from "../components/FavoriteButton";
@@ -68,7 +66,9 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels, aside }: {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels, aside, capabilityOwner }: {
+  /** The capability's owner (`nx_capability.nx_capabilityowner`): `null` shows "Not assigned", omitted hides the row. Never in present mode. */
+  capabilityOwner?: { name: string; email?: string } | null;
   solution: Solution; present: boolean; favoritable?: boolean; onEdit?: () => void; onBack?: () => void;
   backLabel?: string; actions?: React.ReactNode; reviewActions?: React.ReactNode; assetBasePath?: string;
   /** Extra internal panels in the main column (connected: suggestions). Never rendered in present mode. */
@@ -95,12 +95,10 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
   const assetSections = ASSET_SECTIONS.map((section) => ({ ...section, items: assets.filter((asset) => asset !== mainDemo && assetPurpose(asset) === section.purpose) })).filter((section) => section.items.length > 0);
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
   const contributions = solution.contributors.map((contributor) => ({ ...contributor, hours: contributor.directHours ?? 0 }));
-  // Contributors whose directory level names customer success are listed as the solution's CSM, not as builders.
-  const csms = contributions.filter((contributor) => isCustomerSuccessLevel(contributor.builtBy.level));
-  const builders = contributions.filter((contributor) => !isCustomerSuccessLevel(contributor.builtBy.level));
-  const effortCsms = effort?.contributors.filter((person) => isCustomerSuccessLevel(person.level)) ?? [];
-  const effortBuilders = effort?.contributors.filter((person) => !isCustomerSuccessLevel(person.level)) ?? [];
-  const totalHours = Math.round(contributions.reduce((total, contributor) => total + contributor.hours, 0) * 100) / 100;
+  // Everyone who contributed, CSMs included, with the minimum hours each invested (ADR-0007) and their directory level
+  // (`cr6b0_consultantlevel`; there is no per-solution contributor role). The solution's minimum is their sum, as stored.
+  const people = effort ? effort.contributors : contributions.map((contributor) => ({ name: contributor.builtBy.name, email: contributor.builtBy.email, level: contributor.builtBy.level, hours: contributor.hours as number | null }));
+  const minimumHours = effort ? effort.totalHours : Math.round(contributions.reduce((total, contributor) => total + contributor.hours, 0) * 100) / 100;
 
   return (
     <div className="animate-rise mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6 [overflow-wrap:anywhere]">
@@ -256,73 +254,70 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
           {!present && panels}
         </div>
 
+        {/* Side column. Client-facing facts first (overview, business context, technologies), then internal-only
+            sections, which present mode drops entirely rather than leaving empty headings. */}
         <div className="flex flex-col gap-6">
-          <Panel title="Built on">
-            <div className="flex flex-wrap gap-1.5">
-              {solution.technologies.map((t) => (
-                <Chip key={t}>{t}</Chip>
-              ))}
-            </div>
-          </Panel>
+          <section className="glass glass-lite glass-sheen rounded-[20px] px-6 py-5" aria-label="Solution details">
+            <SideSection title="Solution overview" first>
+              <dl className="flex flex-col gap-3 text-[14px]">
+                <Field label={areas.length > 1 ? "Specialization areas" : "Specialization area"}>
+                  <span className="flex flex-wrap gap-1.5">{areas.map((area) => <AreaTag key={area} area={area} size="xs" />)}</span>
+                </Field>
+                {solution.capabilities[0] && <Field label="Capability"><span className="font-semibold">{solution.capabilities[0]}</span></Field>}
+                {/* The capability's owner, never the submitter or a contributor; internal, so never in present mode. */}
+                {!present && capabilityOwner !== undefined && <Field label="Capability owner">
+                  {capabilityOwner ? <Person name={capabilityOwner.name} email={capabilityOwner.email} /> : <span style={{ color: "var(--ink-3)" }}>Not assigned</span>}
+                </Field>}
+                {!present && solution.dateAdded && <Field label="Added">{solution.dateAdded}</Field>}
+              </dl>
+            </SideSection>
 
-          <Panel title="At a glance">
-            <dl className="flex flex-col gap-3 text-[14px]">
-              <Row label={areas.length > 1 ? "Areas" : "Area"}>{areas.map((area) => AREAS[area].name).join(" · ")}</Row>
-              {!present && !effort && csms.length > 0 && <Row label={csms.length > 1 ? "CSMs" : "CSM"}>
-                <ul className="space-y-1 break-words">
-                  {csms.map(({ id, builtBy }) => <li key={id}><a href={`mailto:${builtBy.email}`} style={{ color: "var(--accent)" }}>{builtBy.name}</a></li>)}
-                </ul>
-              </Row>}
-              {!present && effort && effortCsms.length > 0 && <Row label={effortCsms.length > 1 ? "CSMs" : "CSM"}>
-                <ul className="space-y-1 break-words">
-                  {effortCsms.map((person, index) => <li key={index}>{person.email ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</li>)}
-                </ul>
-              </Row>}
-              {!present && !catalogueOnly && <Row label="Total effort">{effort ? effort.totalHours === null ? "Incomplete" : `${effort.totalHours.toLocaleString()} hours` : `${totalHours.toLocaleString()} hours`}</Row>}
-              {!present && !catalogueOnly && solution.status === "Client demo" && <Row label="Effort scope">Demo effort only; production delivery may take longer.</Row>}
-              {!present && solution.estimatedCost !== undefined && <Row label="Est. cost">{solution.estimatedCost.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</Row>}
-              {clientLine && <Row label="Context">{clientLine}</Row>}
-              {!present && <Row label="Client review">{solution.clientSafeReviewed ? "Cleared" : "Required"}</Row>}
-              {!present && solution.dateAdded && <Row label="Added">{solution.dateAdded}</Row>}
-              {solution.clientRole && <Row label="Client role">{solution.clientRole}</Row>}
-              <Row label="Industries">{solution.industries.join(" · ")}</Row>
-            </dl>
-          </Panel>
+            {(solution.clientRole || solution.industries.length > 0 || clientLine) && <SideSection title="Business context">
+              <dl className="flex flex-col gap-3 text-[14px]">
+                {solution.clientRole && <Field label="Target role">{solution.clientRole}</Field>}
+                {solution.industries.length > 0 && <Field label={solution.industries.length > 1 ? "Industries" : "Industry"}>
+                  <span className="flex flex-wrap gap-1.5">{solution.industries.map((industry) => <Chip key={industry}>{industry}</Chip>)}</span>
+                </Field>}
+                {/* nx_clientcontext is the internal client name; present mode shows only the approved client-facing wording. */}
+                {!present && solution.clientContext && <Field label="Client (internal)">{solution.clientContext}</Field>}
+                {(present || solution.clientContext) && solution.clientContextRedacted && <Field label={present ? "Client context" : "Shown to clients as"}>{solution.clientContextRedacted}</Field>}
+              </dl>
+            </SideSection>}
 
-          {!present && !catalogueOnly && (
-            <Panel title="Built by & effort">
-              <ul className="space-y-4 text-[14px]">
-                {effort ? effortBuilders.map((person, index) => <li key={index} className="break-words"><p className="font-semibold">{person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}{person.level && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {person.level}</span>}</p><p className="text-[12px]">Minimum hours required</p><p className="font-mono text-(--accent)">{person.hours === null ? "Incomplete effort" : `${person.hours.toLocaleString()} hours`}</p></li>) : builders.map((contributor) => (
-                  <li key={contributor.id} className="break-words">
-                    <p className="font-semibold"><a href={`mailto:${contributor.builtBy.email}`} style={{ color: "var(--accent)" }}>{contributor.builtBy.name}</a>{contributor.builtBy.level && <span className="font-normal" style={{ color: "var(--ink-3)" }}> · {contributor.builtBy.level}</span>}</p>
-                    <p className="text-[12px]">Minimum hours required</p>
-                    <p className="font-mono" style={{ color: "var(--accent)" }}>{contributor.hours.toLocaleString()} hours</p>
-                  </li>
-                ))}
-              </ul>
-            </Panel>
-          )}
+            {solution.technologies.length > 0 && <SideSection title="Technologies used">
+              <div className="flex flex-wrap gap-1.5">{solution.technologies.map((technology) => <Chip key={technology}>{technology}</Chip>)}</div>
+            </SideSection>}
+          </section>
 
-          {!present && solution.projects && solution.projects.length > 0 && (
-            <Panel title={`Delivered for · ${solution.projects.length}`}>
-              <ul className="flex flex-col gap-2.5 text-[14px]">
-                {solution.projects.map((p) => (
-                  <li key={p.id}>
-                    <span className="block font-semibold" style={{ fontFamily: "var(--font-display)" }}>
-                      {p.projectName}
+          {!present && (!catalogueOnly || (solution.projects?.length ?? 0) > 0 || solution.estimatedCost !== undefined) && (
+            <section className="glass glass-lite glass-sheen rounded-[20px] px-6 py-5" aria-label="Internal details">
+              {!catalogueOnly && <SideSection title="Contributors & development effort" first>
+                <ExpandableList limit={4} label="contributors" items={people.map((person, index) => (
+                  <li key={index} className="flex items-start justify-between gap-3 text-[14px]">
+                    <span className="min-w-0">
+                      <span className="block font-semibold" style={{ color: "var(--ink)" }}>{person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</span>
+                      {person.level && <span className="block text-[12.5px]" style={{ color: "var(--ink-3)" }}>{person.level}</span>}
                     </span>
-                    {p.projectOwner && (
-                      <span className="block text-[12.5px]" style={{ color: "var(--ink-3)" }}>
-                        Project owner · {p.projectOwner}
-                      </span>
-                    )}
+                    <span className="shrink-0 font-mono text-[12.5px]" style={{ color: "var(--accent)" }} title="Minimum hours this person invested">{person.hours === null ? "Incomplete" : `${person.hours.toLocaleString()} h`}</span>
                   </li>
-                ))}
-              </ul>
-              <p className="mt-3 font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-3)" }}>
-                Client engagements · hidden in present mode
-              </p>
-            </Panel>
+                ))} />
+                <div className="mt-4 border-t border-(--glass-edge) pt-3">
+                  <p className="font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-2)" }}>Minimum hours invested</p>
+                  <p className="mt-1 font-mono text-[16px]" style={{ color: "var(--accent)" }}>{minimumHours === null ? "Incomplete" : `${minimumHours.toLocaleString()} hours`}</p>
+                  <p className="mt-0.5 text-[12.5px]" style={{ color: "var(--ink-3)" }}>Minimum recorded development effort for this solution{solution.status === "Client demo" ? "; demo effort only, production delivery may take longer." : "."}</p>
+                </div>
+                {solution.estimatedCost !== undefined && <dl className="mt-3 text-[14px]"><Field label="Estimated cost">{solution.estimatedCost.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</Field></dl>}
+              </SideSection>}
+
+              {solution.projects && solution.projects.length > 0 && <SideSection title={`Associated projects · ${solution.projects.length}`} first={catalogueOnly}>
+                <ExpandableList limit={4} label="projects" items={solution.projects.map((project) => (
+                  <li key={project.id} className="text-[14px]">
+                    <span className="block font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{project.projectName}</span>
+                    {project.projectOwner && <span className="block text-[12.5px]" style={{ color: "var(--ink-3)" }}>Project owner · {project.projectOwner}</span>}
+                  </li>
+                ))} />
+              </SideSection>}
+            </section>
           )}
 
           {!present && !catalogueOnly && !connected && (
@@ -381,27 +376,64 @@ export function GalleryFigure({ caption, children }: { caption?: string; childre
   return <figure className="m-0 min-w-0 overflow-hidden rounded-[14px] border border-(--glass-edge)">{children}{caption && <figcaption className="break-words px-3 py-2 text-[12.5px] text-(--ink-3)">{caption}</figcaption>}</figure>;
 }
 
-function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+/** One titled group inside a side-column card; groups after the first are set off by a hairline divider. */
+function SideSection({ title, first = false, children }: { title: string; first?: boolean; children: React.ReactNode }) {
   return (
-    <section className="glass glass-lite glass-sheen rounded-[20px] p-6">
-      <h2 className="eyebrow mb-3">{title}</h2>
+    <section className={first ? "pt-1" : "mt-5 border-t border-(--glass-edge) pt-5"}>
+      {/* The page's panel heading style, at full ink contrast so each group stands out in the dense side column. */}
+      <h2 className="eyebrow mb-3" style={{ color: "var(--ink)" }}>{title}</h2>
       <div style={{ color: "var(--ink-2)" }}>{children}</div>
     </section>
   );
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex gap-3">
-      <dt className="w-24 shrink-0 font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-3)" }}>
-        {label}
-      </dt>
-      <dd className="min-w-0 flex-1" style={{ color: "var(--ink)" }}>
-        {children}
-      </dd>
+    <div className="min-w-0">
+      <dt className="font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-2)" }}>{label}</dt>
+      <dd className="mt-1 break-words" style={{ color: "var(--ink)" }}>{children}</dd>
     </div>
   );
 }
+
+/** A compact person: initials, then the name (a mail link when the email is valid). */
+function Person({ name, email }: { name: string; email?: string }) {
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+  return (
+    <span className="flex items-center gap-2.5">
+      <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold" style={{ background: "color-mix(in srgb, var(--accent) 16%, transparent)", color: "var(--accent)" }}>{initials}</span>
+      <span className="min-w-0 font-semibold" style={{ color: "var(--ink)" }}>
+        {email && /^[^\s@]+@[^\s@]+$/.test(email) ? <a href={`mailto:${encodeURIComponent(email)}`} style={{ color: "var(--accent)" }}>{name}</a> : name}
+      </span>
+    </span>
+  );
+}
+
+/** A list that shows its first `limit` items and folds the rest behind "Show N more". */
+function ExpandableList({ items, limit, label }: { items: React.ReactNode[]; limit: number; label: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const hidden = items.length - limit;
+  return (
+    <>
+      <ul className="flex flex-col gap-3">{expanded ? items : items.slice(0, limit)}</ul>
+      {hidden > 0 && (
+        <button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} className="mt-2 cursor-pointer text-[12.5px] font-semibold" style={{ color: "var(--accent)" }}>
+          {expanded ? "Show fewer" : `Show ${hidden} more ${label}`}
+        </button>
+      )}
+    </>
+  );
+}
+
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="glass glass-lite glass-sheen rounded-[20px] p-6">
+      <h2 className="eyebrow mb-3" style={{ color: "var(--ink)" }}>{title}</h2>
+      <div style={{ color: "var(--ink-2)" }}>{children}</div>
+    </section>
+  );
+}
+
 
 const ASSET_SECTIONS: { purpose: AssetPurpose; title: string }[] = [
   { purpose: "Demo video", title: "Demo videos" },

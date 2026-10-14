@@ -608,10 +608,30 @@ test("suggestions: readers see a private list with author and date; others get a
   assert.match(one, /Ana Gómez<\/span> · <time dateTime="2026-10-13T15:04:05Z">/);
   assert.match(one, /Add an export to Excel\./);
   const form = render(ui.SuggestForm, { api: {}, solutionId: "s", onClose: noop, onSent: noop });
-  assert.match(form, /Suggest a change/);
-  assert.match(form, /Only the owner, the contributors and the librarian will see it, with your name\./);
+  assert.match(form, /Suggest an improvement/);
+  assert.match(form, /Only the owner, contributors and the PRISMA librarian see it, with your name\./);
   assert.match(form, /maxLength="1000"/);
-  assert.match(form, /<button[^>]*disabled=""[^>]*>Send<\/button>/);
+  assert.match(form, /<button[^>]*disabled=""[^>]*>Send suggestion<\/button>/);
+  const card = render(ui.SuggestCard, { sent: false, onOpen: noop });
+  assert.match(card, /class="suggest-card.*Suggest an improvement.*Have an idea to improve this solution\? Share your suggestion with the solution team\./s);
+});
+
+test("solution sidebar: overview, business context and technologies for everyone; internal sections never in present mode", async () => {
+  const { DetailView } = await server.ssrLoadModule("/src/views/DetailView.tsx");
+  const solution = { id: "s", name: "S", summary: "Sum", whatItDoes: "Does", businessValue: "Value", specializationArea: "ai", specializationAreas: ["ai"], status: "Working prototype", publicationStatus: "Published", capabilities: ["Data Engineering"], technologies: ["Power Apps code app", "Microsoft Fabric"], industries: ["Education", "IT"], clientRole: "Chief of Staff", clientContext: "MICROSOFT", clientContextRedacted: "A global software company", clientSafeReviewed: true, contributors: [], assets: [], projects: [{ id: "p", projectName: "Project Atlas" }], dateAdded: "2026-10-01" };
+  const effort = { contributors: [{ name: "Ana Gómez", hours: 15, level: "Senior Consultant" }, { name: "Luis Pérez", hours: 8, level: "Customer Success Manager" }], totalHours: 23 };
+  const normal = render(DetailView, { solution, present: false, connected: true, effort, capabilityOwner: { name: "Marta Ruiz" }, aside: "SUGGEST" });
+  assert.match(normal, /Solution overview.*Specialization area.*Capability.*Data Engineering.*Capability owner.*MR.*Marta Ruiz/s);
+  assert.match(normal, /Business context.*Target role.*Chief of Staff.*Industries.*Education.*IT.*Client \(internal\).*MICROSOFT.*Shown to clients as.*A global software company/s);
+  assert.match(normal, /Technologies used.*Power Apps code app.*Microsoft Fabric/s);
+  assert.match(normal, /Contributors &amp; development effort.*Ana Gómez.*Senior Consultant.*15 h.*Luis Pérez.*8 h.*Minimum hours invested.*23 hours.*Minimum recorded development effort for this solution\./s);
+  assert.match(normal, /Associated projects · 1.*Project Atlas/s);
+  assert.match(normal, /SUGGEST/);
+  assert.doesNotMatch(normal, /Built on|At a glance|Built by|Delivered for|Total effort|>Context</);
+  assert.match(render(DetailView, { solution, present: false, connected: true, effort, capabilityOwner: null }), /Capability owner.*Not assigned/s);
+  const present = render(DetailView, { solution, present: true, connected: true, effort, capabilityOwner: { name: "Marta Ruiz" }, aside: "SUGGEST" });
+  assert.match(present, /Solution overview.*Data Engineering.*Business context.*Chief of Staff.*Client context.*A global software company.*Technologies used/s);
+  assert.doesNotMatch(present, /Capability owner|Marta Ruiz|MICROSOFT|Contributors|Ana Gómez|Minimum hours|23 hours|Associated projects|Project Atlas|SUGGEST|Added/);
 });
 
 test("refine groups show five options, keep selected ones at zero, and search long lists", async () => {
