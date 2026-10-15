@@ -29,11 +29,21 @@ namespace Prisma.Plugins
             var owner = parent.GetAttributeValue<EntityReference>("ownerid");
             var owns = owner?.LogicalName == "systemuser" && owner.Id == caller;
             var status = parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value;
+            var unreported = parent.GetAttributeValue<bool>(DraftPolicy.LibrarianEditPending);
+            var editing = action == "media" || action == "technology" || action == "asset";
             var change = new Entity("nx_solution", parent.Id) { RowVersion = expected, ["nx_clientsafereviewed"] = false };
+            // Any decision or ownership change settles an unreported librarian edit: its comment is what the owner reads.
+            if (unreported && !editing) change[DraftPolicy.LibrarianEditPending] = false;
             if (action == "submit" && owns && status == DraftPolicy.DraftStatus)
                 change["nx_publicationstatus"] = new OptionSetValue(Pending);
-            else if ((action == "media" || action == "technology" || action == "asset") && owns && status == DraftPolicy.DraftStatus)
+            else if (editing && owns && status == DraftPolicy.DraftStatus)
                 change["nx_safetyacknowledged"] = false;
+            else if (editing && librarian && !owns && (status == Pending || status == Published))
+            {
+                // A librarian edit (ADR-0013) keeps status, acknowledgment and clearance; the caller records real changes.
+                change.Attributes.Remove("nx_clientsafereviewed");
+                change["nx_status"] = parent.GetAttributeValue<OptionSetValue>("nx_status");
+            }
             else if (action == "delete" && owns && (status == DraftPolicy.DraftStatus || status == Pending || status == Published || status == Retired))
             {
                 change["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus);
@@ -56,6 +66,7 @@ namespace Prisma.Plugins
             {
                 if (!cleared) throw MediaPolicy.Invalid("Independent client-safe confirmation is required for approval.");
                 if ((comments ?? "").Length > 4000) throw MediaPolicy.Invalid("Review comments exceed 4000 characters.");
+                if (unreported && string.IsNullOrWhiteSpace(comments)) throw MediaPolicy.Invalid("You edited this solution. Tell the contributor what you changed and why.");
                 change["nx_publicationstatus"] = new OptionSetValue(Published);
                 change["nx_clientsafereviewed"] = cleared;
                 change["nx_reviewoutcome"] = new OptionSetValue(125060002);
@@ -70,6 +81,15 @@ namespace Prisma.Plugins
                 change["nx_reviewoutcome"] = new OptionSetValue(125060001);
                 change["nx_reviewcomments"] = comments.Trim();
                 change["nx_safetyacknowledged"] = false;
+            }
+            else if (action == "confirm-edit" && librarian && status == Published && unreported)
+            {
+                // Ends a librarian edit of a published record: the same client-safe confirmation as approval, and the
+                // explanation the owner will read. The caller revalidates the record and restores reader access.
+                if (!cleared) throw MediaPolicy.Invalid("Independent client-safe confirmation is required to keep this solution published.");
+                if (string.IsNullOrWhiteSpace(comments) || comments.Trim().Length > 4000) throw MediaPolicy.Invalid("Tell the contributor what you changed and why, in at most 4000 characters.");
+                change["nx_clientsafereviewed"] = true;
+                change["nx_reviewcomments"] = comments.Trim();
             }
             else if (action == "retire" && librarian && status == Published)
             {
@@ -132,6 +152,9 @@ namespace Prisma.Plugins
         [DataMember(Name = "imageCount")] public int ImageCount { get; set; }
         [DataMember(Name = "attachmentCount")] public int AttachmentCount { get; set; }
         [DataMember(Name = "libraryNotes")] public string LibraryNotes { get; set; }
+        [DataMember(Name = "librarianEditedOn", EmitDefaultValue = false)] public string LibrarianEditedOn { get; set; }
+        [DataMember(Name = "librarianEditedBy", EmitDefaultValue = false)] public string LibrarianEditedBy { get; set; }
+        [DataMember(Name = "librarianEditPending")] public bool LibrarianEditPending { get; set; }
     }
 
     [DataContract]
@@ -184,7 +207,7 @@ namespace Prisma.Plugins
                 else query.Criteria.AddCondition("ownerid", ConditionOperator.Equal, context.InitiatingUserId);
                 query.Orders.Add(new OrderExpression("nx_solutionid", OrderType.Ascending));
                 var rows = caller.RetrieveMultiple(query);
-                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionPage { Records = rows.Entities.Select(row => Summary(server, row)).ToList(), MoreRecords = rows.MoreRecords, PagingCookie = rows.PagingCookie, Librarian = librarian });
+                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionPage { Records = rows.Entities.Select(row => Summary(server, row, librarian)).ToList(), MoreRecords = rows.MoreRecords, PagingCookie = rows.PagingCookie, Librarian = librarian });
                 return;
             }
             if (context.MessageName != "nx_GetSubmission" && context.MessageName != ReviewPolicy.Transition) throw MediaPolicy.Invalid("Unknown submission operation.");
@@ -200,9 +223,11 @@ namespace Prisma.Plugins
                     context.InputParameters.Contains("Comments") ? context.InputParameters["Comments"] as string : "", context.InputParameters.Contains("Cleared") && (bool)context.InputParameters["Cleared"]);
                 tracing?.Trace("Transition '{0}' from publication status {1} (librarian: {2}).", action, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, librarian);
                 server.Execute(new UpdateRequest { Target = change, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
+                var librarianEdit = !change.Contains("nx_clientsafereviewed");
                 if (action == "asset")
                 {
                     MediaApi.SaveLinkedAsset(server, parent, context.InitiatingUserId, LinkedAssetPolicy.Parse(context.InputParameters["Comments"] as string));
+                    if (librarianEdit) MarkEdited(server, parent, context.InitiatingUserId);
                     context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult { Id = identifier.ToString(), RowVersion = caller.Retrieve("nx_solution", identifier, new ColumnSet(false)).RowVersion, BlockSize = MediaPolicy.BlockSize, Media = MediaApi.Snapshots(server, identifier) });
                     return;
                 }
@@ -223,6 +248,7 @@ namespace Prisma.Plugins
                 if (action == "media")
                 {
                     var edits = MediaPolicy.ParseMetadata(context.InputParameters["Comments"] as string);
+                    var altered = false;
                     foreach (var edit in edits)
                     {
                         var item = media.SingleOrDefault(row => row.GetAttributeValue<string>("nx_targetid") == edit.Id);
@@ -237,13 +263,15 @@ namespace Prisma.Plugins
                             var type = server.Retrieve("nx_demoasset", update.Id, new ColumnSet("nx_assettype")).GetAttributeValue<OptionSetValue>("nx_assettype").Value;
                             update["nx_assetpurpose"] = new OptionSetValue(AssetPurposePolicy.Validated(edit.Purpose, type));
                         }
+                        if (librarianEdit) altered |= DraftPolicy.Changed(server.Retrieve(update.LogicalName, update.Id, new ColumnSet(update.Attributes.Keys.ToArray())), update);
                         server.Update(update);
                     }
+                    if (altered) MarkEdited(server, parent, context.InitiatingUserId);
                     var latest = caller.Retrieve("nx_solution", identifier, new ColumnSet(false));
                     context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult { Id = identifier.ToString(), RowVersion = latest.RowVersion, BlockSize = MediaPolicy.BlockSize, Media = MediaApi.Snapshots(server, identifier) });
                     return;
                 }
-                if (action == "submit" || action == "approve")
+                if (action == "submit" || action == "approve" || action == "confirm-edit")
                 {
                     var graph = DraftGraph.Read(server, parent);
                     ReviewPolicy.Complete(parent, graph, media);
@@ -254,7 +282,7 @@ namespace Prisma.Plugins
                     foreach (var item in media)
                         MediaApi.VerifyStoredMedia(server, item, storage);
                 }
-                PublicationAccess(server, identifier, media, action == "approve", tracing);
+                PublicationAccess(server, identifier, media, action == "approve" || action == "confirm-edit", tracing);
                 if (action == "delete")
                 {
                     foreach (var item in media)
@@ -280,9 +308,14 @@ namespace Prisma.Plugins
                 parent = caller.Retrieve("nx_solution", identifier, Columns());
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionDetail {
-                Record = Summary(server, parent), Graph = DraftGraph.Read(caller, parent),
+                Record = Summary(server, parent, librarian), Graph = DraftGraph.Read(caller, parent),
                 Media = MediaApi.Snapshots(server, identifier), Librarian = librarian
             });
+        }
+
+        private static void MarkEdited(IOrganizationService server, Entity parent, Guid caller)
+        {
+            server.Update(DraftPolicy.LibrarianEdit(parent.Id, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, caller, DateTime.UtcNow));
         }
 
         public static bool IsLibrarian(IOrganizationService server, Guid caller)
@@ -321,9 +354,11 @@ namespace Prisma.Plugins
                 else server.Execute(new RevokeAccessRequest { Target = target, Revokee = team });
         }
 
-        private static ColumnSet Columns() { return new ColumnSet(DraftPolicy.CoreColumns.Concat(new[] { "ownerid", "nx_dateadded", "createdon", "nx_librarynote", "nx_publicationstatus", "nx_reviewoutcome", "nx_reviewcomments", "nx_clientsafereviewed" }).ToArray()); }
-        private static SubmissionSummary Summary(IOrganizationService server, Entity record)
+        private static ColumnSet Columns() { return new ColumnSet(DraftPolicy.CoreColumns.Concat(new[] { "ownerid", "nx_dateadded", "createdon", "nx_librarynote", "nx_publicationstatus", "nx_reviewoutcome", "nx_reviewcomments", "nx_clientsafereviewed",
+            DraftPolicy.LibrarianEditedBy, DraftPolicy.LibrarianEditedOn, DraftPolicy.LibrarianEditPending }).ToArray()); }
+        private static SubmissionSummary Summary(IOrganizationService server, Entity record, bool librarian)
         {
+            var edited = record.GetAttributeValue<DateTime?>(DraftPolicy.LibrarianEditedOn);
             var media = MediaApi.Sessions(server, record.Id);
             var added = record.GetAttributeValue<DateTime?>("nx_dateadded") ?? record.GetAttributeValue<DateTime?>("createdon");
             return new SubmissionSummary { Core = DraftApi.Snapshot(record), AreaIds = DraftGraph.AreaIds(server, record.Id), Publication = record.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value,
@@ -332,7 +367,10 @@ namespace Prisma.Plugins
                 Owner = record.GetAttributeValue<EntityReference>("ownerid")?.Name ?? "", DateAdded = added?.ToString("yyyy-MM-dd") ?? "",
                 ImageCount = media.Count(item => item.GetAttributeValue<string>("nx_kind") == "image" && item.GetAttributeValue<bool>("nx_complete")),
                 AttachmentCount = media.Count(item => item.GetAttributeValue<string>("nx_kind") == "attachment" && item.GetAttributeValue<bool>("nx_complete")),
-                LibraryNotes = record.GetAttributeValue<string>("nx_librarynote") ?? "" };
+                LibraryNotes = record.GetAttributeValue<string>("nx_librarynote") ?? "",
+                // Owners see that the librarian edited and when; only librarians see who (Q17).
+                LibrarianEditedOn = edited?.ToString("yyyy-MM-dd"), LibrarianEditPending = record.GetAttributeValue<bool>(DraftPolicy.LibrarianEditPending),
+                LibrarianEditedBy = librarian && edited != null ? record.GetAttributeValue<EntityReference>(DraftPolicy.LibrarianEditedBy)?.Name ?? "" : null };
         }
     }
 }

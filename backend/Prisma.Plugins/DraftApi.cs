@@ -36,11 +36,22 @@ namespace Prisma.Plugins
             }
             else
             {
-                var current = caller.Retrieve("nx_solution", identifier, new ColumnSet("ownerid", "nx_publicationstatus"));
-                DraftPolicy.AssertEditable(current, context.InitiatingUserId, expectedVersion);
+                var server = factory.CreateOrganizationService(null);
+                var current = caller.Retrieve("nx_solution", identifier, new ColumnSet(DraftPolicy.CoreColumns.Concat(new[] { "ownerid", "nx_publicationstatus" }).ToArray()));
+                var mode = DraftPolicy.Editable(current, context.InitiatingUserId, expectedVersion, () => ReviewApi.IsLibrarian(server, context.InitiatingUserId));
+                // The owner's safety acknowledgment covers what they submitted; a librarian never sets or clears it.
+                if (mode == EditMode.Librarian) input.Attributes.Remove("nx_safetyacknowledged");
+                var changed = DraftPolicy.Changed(current, input);
                 input.Id = identifier;
                 input.RowVersion = expectedVersion;
                 caller.Execute(new UpdateRequest { Target = input, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
+                if (mode == EditMode.Librarian)
+                {
+                    // Pending review and Published records keep their status; only a real change is recorded.
+                    if (changed) server.Update(DraftPolicy.LibrarianEdit(identifier, current.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, context.InitiatingUserId, DateTime.UtcNow));
+                    context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(Snapshot(caller.Retrieve("nx_solution", identifier, Columns())));
+                    return;
+                }
             }
             var protectedUpdate = new Entity("nx_solution", identifier) {
                 ["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus),
