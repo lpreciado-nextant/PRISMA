@@ -26,7 +26,12 @@ function areaName(name: string) {
   return name === "ai" || name === "data" || name === "ibo" ? AREAS[name].name : name;
 }
 
-export function DraftsView({ draftId, owner }: { draftId?: string; owner: string }) {
+/**
+ * The guided editor. With `librarian`, a PRISMA Librarian edits someone else's Pending review or Published solution in
+ * place (ADR-0013): no safety step or acknowledgment, contributors and hours stay with the owner, and saving returns
+ * to the review page, where the librarian tells the owner what changed and why.
+ */
+export function DraftsView({ draftId, owner, librarian = false }: { draftId?: string; owner: string; librarian?: boolean }) {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
   const createdId = useRef<string | undefined>(undefined);
@@ -38,24 +43,25 @@ export function DraftsView({ draftId, owner }: { draftId?: string; owner: string
     void Promise.all([draftId ? workflowApi.read(draftId).then(parseSubmission) : undefined, loadDraftReferences(readRows, controller.signal), loadGraphReferences(readRows, controller.signal)])
       .then(([detail, references, graphReferences]) => {
         controller.signal.throwIfAborted();
-        if (detail && (detail.record.core.id !== draftId || detail.record.publication !== 125060003)) throw new Error("Draft unavailable.");
+        if (librarian ? !detail || !detail.librarian || ![125060000, 125060002].includes(detail.record.publication) : detail && detail.record.publication !== 125060003) throw new Error("Draft unavailable.");
+        if (detail && detail.record.core.id !== draftId) throw new Error("Draft unavailable.");
         createdId.current = undefined;
         setState({ kind: "ready", revision: ++revision.current, detail, references, graphReferences });
       })
       .catch(() => { if (!controller.signal.aborted) setState({ kind: "error" }); })
       .finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
-  }, [attempt, draftId]);
+  }, [attempt, draftId, librarian]);
   const retry = () => { createdId.current = undefined; setState({ kind: "loading" }); setAttempt(current => current + 1); };
 
   return <section className="mx-auto w-full max-w-[980px] px-4 pt-8 pb-24 sm:px-6">
     {state.kind === "loading" ? <LoadingState variant="page" label="Loading submission..." />
-      : state.kind === "error" ? <div role="alert"><h1 className="text-[28px] font-semibold">Draft unavailable</h1><p className="my-4 text-(--ink-2)">Check your Dataverse access and connection. Only your Draft submissions can be edited.</p><button className={buttonClass} onClick={retry}><Icon name="arrowRight" />Retry</button></div>
-      : <DraftEditor key={state.revision} owner={owner} initial={state.detail} references={state.references} graphReferences={state.graphReferences} onReload={retry} onCreated={id => { createdId.current = id; replaceQuery("/submit", { draft: id }); }} />}
+      : state.kind === "error" ? <div role="alert"><h1 className="text-[28px] font-semibold">{librarian ? "Solution unavailable" : "Draft unavailable"}</h1><p className="my-4 text-(--ink-2)">{librarian ? "Check your Dataverse access and connection. Librarians edit Pending review and Published solutions only." : "Check your Dataverse access and connection. Only your Draft submissions can be edited."}</p><button className={buttonClass} onClick={retry}><Icon name="arrowRight" />Retry</button></div>
+      : <DraftEditor key={state.revision} owner={owner} librarian={librarian} initial={state.detail} references={state.references} graphReferences={state.graphReferences} onReload={retry} onCreated={id => { createdId.current = id; replaceQuery("/submit", { draft: id }); }} />}
   </section>;
 }
 
-function DraftEditor({ initial, references, graphReferences: initialGraphReferences, onReload, onCreated, owner }: { initial?: SubmissionDetail; references: DraftReferences; graphReferences: GraphReferences; onReload: () => void; onCreated: (id: string) => void; owner: string }) {
+function DraftEditor({ initial, references, graphReferences: initialGraphReferences, onReload, onCreated, owner, librarian }: { initial?: SubmissionDetail; references: DraftReferences; graphReferences: GraphReferences; onReload: () => void; onCreated: (id: string) => void; owner: string; librarian: boolean }) {
   const [graphReferences, setGraphReferences] = useState(initialGraphReferences);
   const [draft, setDraft] = useState<CoreDraft>(() => coreFields(initial?.record.core ?? EMPTY_DRAFT));
   const [saved, setSaved] = useState<SavedDraft | undefined>(initial?.record.core);
@@ -64,8 +70,11 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const [media, setMedia] = useState<MediaItem[]>(initial?.media ?? []);
   const [captions, setCaptions] = useState<Record<string, string>>({});
   const captionsDirty = hasCaptionChanges(media, captions);
-  const [step, setStep] = useState(0);
-  const [accepted, setAccepted] = useState(initial?.record.core.safetyAcknowledged ?? false);
+  // The safety step is the contributor's own statement, so a librarian starts at the content.
+  const [step, setStep] = useState(librarian ? 1 : 0);
+  const [accepted, setAccepted] = useState(librarian || (initial?.record.core.safetyAcknowledged ?? false));
+  const reviewPath = `/review/${initial?.record.core.id ?? ""}`;
+  const publishedEdit = librarian && initial?.record.publication === 125060000;
   const [submitted, setSubmitted] = useState(false);
   const [confirmation, setConfirmation] = useState<"leave" | "reopen" | null>(null);
   const [hours, setHours] = useState<(number | null)[]>(initial?.graph.hours ?? []);
@@ -206,13 +215,14 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
         setHours(detail.graph.hours);
         setMedia(detail.media);
       }
-      if (action === "submit") {
+      if (action === "submit" && librarian) { recoverySuppressed.current = true; allowedNavigation.current = true; navigate(reviewPath); }
+      else if (action === "submit") {
         const result = parseSubmission(await workflowApi.transition(next.core.id, next.core.rowVersion, "submit", "", false));
         operation.signal.throwIfAborted();
         if (result.record.core.id !== next.core.id || result.record.publication !== 125060002 || result.record.core.rowVersion === next.core.rowVersion) throw new Error("Unconfirmed submission.");
         setSaved(result.record.core);
         setSubmitted(true);
-      } else if (action === "close") { recoverySuppressed.current = true; allowedNavigation.current = true; navigate("/my-submissions"); }
+      } else if (action === "close") { recoverySuppressed.current = true; allowedNavigation.current = true; navigate(librarian ? reviewPath : "/my-submissions"); }
       else { setStep(current => Math.min(current + 1, 5)); window.scrollTo({ top: 0, behavior: "instant" }); }
       setStatus("saved");
     } catch {
@@ -251,14 +261,15 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const storyComplete = !!draft.whatItDoes.trim() && !!draft.businessValue.trim();
   const complete = canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
   const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && !!draft.capabilityId : step === 3 ? canSave && effortComplete && clientValid : step === 4 ? complete : canSave;
-  const goBack = (next: number) => { if (!locked) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
+  const goBack = (next: number) => { if (!locked && !(librarian && next === 0)) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;
 
   return <>
-    <button type="button" disabled={busy} className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-(--ink-2)" onClick={() => { if (dirty) setConfirmation("leave"); else navigate("/"); }}><Icon name="chevronLeft" size={15} />Back to the library</button>
-    <div className="animate-rise mt-4"><p className="eyebrow">Contributor · guided submission</p><h1 className="mt-2 text-[28px] font-bold">{initial ? "Edit submission" : "Put your work on the shelf"}</h1><p role="status" className="mt-2 text-[14px] text-(--ink-2)">{busy ? "Saving..." : dirty || captionsDirty ? "Unsaved changes" : saved ? "Saved to Dataverse" : "Draft"}</p></div>
-    {initial?.record.comments && <section aria-label="Librarian feedback" className="mt-5 border-l-2 border-(--proto) pl-4"><h2 className="text-[15px] font-semibold">Librarian feedback</h2><p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{initial.record.comments}</p></section>}
+    <button type="button" disabled={busy} className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-(--ink-2)" onClick={() => { if (dirty) setConfirmation("leave"); else navigate(librarian ? reviewPath : "/"); }}><Icon name="chevronLeft" size={15} />{librarian ? "Back to review" : "Back to the library"}</button>
+    <div className="animate-rise mt-4"><p className="eyebrow">{librarian ? "Librarian · editing a contributor's solution" : "Contributor · guided submission"}</p><h1 className="mt-2 text-[28px] font-bold">{librarian ? "Edit solution" : initial ? "Edit submission" : "Put your work on the shelf"}</h1><p role="status" className="mt-2 text-[14px] text-(--ink-2)">{busy ? "Saving..." : dirty || captionsDirty ? "Unsaved changes" : saved ? "Saved to Dataverse" : "Draft"}</p></div>
+    {librarian && <p className="mt-3 max-w-[70ch] text-[14px] text-(--ink-2)">It stays {publishedEdit ? "published" : "in Pending review"} while you edit; contributors and their hours stay with the owner. When you save, you return to the review to tell the owner what you changed and why{publishedEdit ? ". Until you confirm the changes there, it is left out of present mode" : ""}.</p>}
+    {!librarian && initial?.record.comments && <section aria-label="Librarian feedback" className="mt-5 border-l-2 border-(--proto) pl-4"><h2 className="text-[15px] font-semibold">Librarian feedback</h2><p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{initial.record.comments}</p></section>}
     {status === "uncertain" && <div role="alert" className="mt-5 border-l-2 border-(--accent) pl-4"><p className="mb-3 text-[14px]">Save was not confirmed. Your edits remain here. Reopen from Dataverse before saving again.</p><button type="button" className={buttonClass} onClick={() => setConfirmation("reopen")}><Icon name="file" />{saved ? "Reopen saved draft" : "Check my submissions"}</button></div>}
     {recoveryError && <p role="alert" className="mt-4 text-[14px]">Tab recovery is unavailable. Save to Dataverse before leaving.</p>}
     {recovery && <ConfirmDialog title={recovery.rowVersion === (saved?.rowVersion ?? "") ? "Restore unsaved draft?" : "Saved draft has changed"} cancelLabel="Discard retained edits" confirmLabel={recovery.rowVersion === (saved?.rowVersion ?? "") ? "Restore edits" : "Use saved version"} onCancel={() => { clearRecovery(); setRecovery(null); }} onConfirm={() => {
@@ -287,7 +298,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
             <StatusField status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
           </NamedSection>
           <NamedSection title="Built by & effort">
-            <DraftGraphEditor graph={graph} references={graphReferences} section="contributors" onChange={changeGraph} />
+            {librarian ? <p className="text-[14px] text-(--ink-2)">{preview.contributors.map(person => person.builtBy.name).join(", ") || "No contributors yet"}. Contributors and their hours are edited by the owner.</p>
+              : <DraftGraphEditor graph={graph} references={graphReferences} section="contributors" onChange={changeGraph} />}
           </NamedSection>
           <ClientFields framed value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
             role={draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : ""} roles={CLIENT_ROLES} onRole={value => change("clientRoleValue", value ? CLIENT_ROLE_VALUES[value] : undefined)}
@@ -299,10 +311,11 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}
       {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}
         contributors={preview.contributors.map(person => person.builtBy.name).join(", ")} hours={!hours.length || hours.some(value => value === null) ? null : Math.round(hours.reduce<number>((total, value) => total + (value ?? 0), 0) * 100) / 100}
-        images={`${thumbnail ? "Thumbnail" : "Generated poster"} · ${media.filter(item => item.kind === "image" && item.complete).length} screenshots`} safety={draft.safetyAcknowledged ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.clientContextRedacted} nextState="Pending review">
-        <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>{!complete && <p role="alert">Complete Define the solution, Solution context (status, effort and the client question), a capability and at least one detail image before submitting.</p>}
+        images={`${thumbnail ? "Thumbnail" : "Generated poster"} · ${media.filter(item => item.kind === "image" && item.complete).length} screenshots`} safety={draft.safetyAcknowledged ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.clientContextRedacted} nextState={publishedEdit ? "Published" : "Pending review"}>
+        {!librarian && <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>}{!complete && <p role="alert">{librarian ? "Complete Define the solution, the client question, a capability and at least one detail image before saving." : "Complete Define the solution, Solution context (status, effort and the client question), a capability and at least one detail image before submitting."}</p>}
       </SubmissionReview>}
-      <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave} canContinue={canContinue} canSubmit={complete && !captionsDirty && draft.safetyAcknowledged && !!hours.length && hours.every(value => value !== null)}
+      <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave} canContinue={canContinue} canSubmit={librarian ? complete && !captionsDirty : complete && !captionsDirty && draft.safetyAcknowledged && !!hours.length && hours.every(value => value !== null)}
+        saveLabel={librarian ? "Save & back to review" : undefined} submitLabel={librarian ? "Save & back to review" : undefined}
         onBack={() => goBack(step - 1)} onSave={() => void persist("close")} onContinue={() => void persist("continue")} onSubmit={() => void persist("submit")} />
     </div>
   </>;

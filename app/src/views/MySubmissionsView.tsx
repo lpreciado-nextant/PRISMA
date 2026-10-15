@@ -71,6 +71,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       // Edit sits on the image's top-right corner, readable over any thumbnail; the footer keeps the count and •••.
       corner: editable(solution) ? <button type="button" aria-label={`Edit ${name}`} onClick={() => edit(solution)} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold shadow-sm backdrop-blur-sm transition-colors hover:brightness-110" style={{ color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)", background: "color-mix(in srgb, var(--ground) 88%, transparent)" }}><Icon name="edit" size={14} />Edit</button> : undefined,
       actions: <>
+        {/* A librarian edited it (ADR-0013); the solution page shows when and their explanation. */}
+        {solution.librarianEditedOn && <span title={`Edited by the librarian on ${solution.librarianEditedOn}`} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-[12px] font-semibold" style={{ color: "var(--accent)" }}><Icon name="edit" size={13} />Edited by librarian</span>}
         {/* Opens the solution, where its suggestions are listed below the details; no names on the card. */}
         {suggestionCount > 0 && <button type="button" onClick={() => open(solution)} title="View suggestions" aria-label={`View ${plural(suggestionCount, "suggestion")} for ${name}`}
           className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-semibold transition-colors hover:brightness-110" style={{ color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)", background: "color-mix(in srgb, var(--accent) 10%, transparent)" }}>

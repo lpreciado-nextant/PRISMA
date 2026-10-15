@@ -1,6 +1,6 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-14
+**Status:** Living · **Last updated:** 2026-10-15
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
@@ -9,6 +9,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
+| [2026-10-15](#2026-10-15--working-session-librarian-content-editing) | Librarian content editing | 50% — 0 Live, 1 In code / 1 |
 | [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 15 Live / 15 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
@@ -20,7 +21,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
-- Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
+- Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata (2026-10-15: likely all Capability Owners become librarians, so they would edit through [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md); scope tracked as [Q21](decision-log.md)) ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Whether to record that AI was used to build a solution (tools used are covered by Technologies); one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Whether to delete the retired `nx_startdate`/`nx_enddate` contributor columns (optional; first remove them from the unused "Information" form) ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08; legacy rows without hours are dummy data, no backfill
@@ -66,6 +67,21 @@ When a decision above gets resolved, delete its bullet here and update the match
 ```
 
 ---
+
+## 2026-10-15 — Working session: librarian content editing
+
+**Progress:** 50% — 0 Live, 1 In code / 1
+
+### Feedback
+
+- The librarian should be able to edit a solution, not only return it with comments.
+- The contributor must know when the librarian changed something and why; the existing review comment box should carry that, required only when something actually changed.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | In code | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md); plug-ins, tests and the connected editor (`#/review/:id/edit`, **Confirm changes**) on branch `feature/librarian-content-editing`. The three `nx_solution` columns were created 2026-10-15 (Juliana), editor lookup to `cr6b0_consultant`, column security verified. Next, each step separately approved: deploy the signed plug-in, publish the connected app, then a non-admin librarian test. Hours stay out of scope while the effort model changes |
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 
@@ -175,7 +191,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | **High** · Capture lessons learned and insights | 🟢 Live | Columns created 2026-10-13 (`nx_challenges` and `nx_lessonslearned`, both text area, 2000 characters). Signed plug-in deployed by Luis 2026-10-13 22:18 UTC (verified to contain both columns); connected app published from `5c6e00b` the same day with the "Challenges & lessons learned" section in Solution context and the internal panel on the solution page; hosted UI not yet checked. Schema decided 2026-10-13: two optional multiline columns on `nx_solution`, Challenges (`nx_challenges`) and Lessons learned (`nx_lessonslearned`), both **internal-only** like `nx_clientcontext`: the plug-ins omit them when `Present` is true (ADR-0005), the present catalogue query does not select them and the presentation download never exports them. Outside present mode any internal user who can read the solution sees them (no field-level security). Next: create the columns in `PRISMA_Dev`, then plug-ins, connected form ("Solution context" step) and detail section |
 | **Medium** · Adoption strategy; user guide; training videos and onboarding | 🔴 Pending to do | Rollout and enablement material, outside the app; to do (2026-10-14) |
 | **Medium** · Contextual guidance in forms for classifying solutions and capabilities | 🔴 Pending to do | Builds on the step introductions and field hints already in the submit flow; to do (2026-10-14) |
-| **Medium** · Content curation: may Capability Owners correct metadata before publication? | 🔴 Pending to do | To do (2026-10-14): whether Capability Owners may edit a submission's metadata depends on a decision outside the team; technically feasible once decided. Today librarians cannot edit contributor content; they return it with comments |
+| **Medium** · Content curation: may Capability Owners correct metadata before publication? | 🔴 Pending to do | To do (2026-10-14): whether Capability Owners may edit a submission's metadata depends on a decision outside the team; technically feasible once decided. Today librarians cannot edit contributor content; they return it with comments. 2026-10-15: librarian editing is defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md) (proposed); the Capability Owner question stays open |
 | **Medium** · Track tools used to build the solution (Copilot, Cowork, GitHub Copilot, …) and whether AI was used | 🟢 Live | Tools used: decided 2026-10-13, no new field; they are captured as Technologies, already live in the app. Marked Live 2026-10-14 at the user's request; whether AI was used has no field of its own |
 | **Medium** · Review whether one capability per solution is enough | Proposed | `nx_capability` is a single lookup today ([SchemaV2](../data_model/SchemaV2.md)) |
 | **Medium** · Retrieve roles from Azure AD instead of manual entry | 🟢 Live | Delivered 2026-10-08 for the contributor role: it now comes automatically from the consultant directory, `cr6b0_consultant.cr6b0_consultantlevel` (synced directory data), shown read-only, and a level naming customer success marks the solution's CSM; the manual `nx_role` entry was removed and the column deleted. The source is the `cr6b0_consultant` table, not a direct Microsoft Entra ID (Azure AD) call. The client role (`nx_clientrole`) is unchanged and still entered manually. `1c89c2d`, deployed 2026-10-08 ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level)) |

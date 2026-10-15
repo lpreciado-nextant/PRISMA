@@ -299,6 +299,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
         : state.kind === "error" ? <Message title="Catalogue unavailable" message="Check your Dataverse access and connection, then retry." onRetry={onRetry} alert />
         : !present && route.path === "/submit" ? <DraftsView draftId={route.query.get("draft") ?? undefined} owner={user.userPrincipalName} />
         : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
+        : !present && segments.length === 3 && segments[0] === "review" && segments[2] === "edit" ? <DraftsView key={route.path} draftId={segments[1]} owner={user.userPrincipalName} librarian />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} technologyUse={technologyUse} />
         : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
         : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} focused={focused} appLocation={appLocation}

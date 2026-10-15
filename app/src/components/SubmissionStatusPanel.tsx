@@ -14,9 +14,11 @@ const STATES: Record<SubmissionState, { icon: IconName; detail: string; feedback
  * The owner's view of where a submission stands: the state as the heading with its icon, one line of meaning, the
  * actions on the right behind a divider, and the librarian's words underneath. A faint state tint, no extra labels.
  */
-export function SubmissionStatusPanel({ state, feedback, feedbackAction, badge, actions, local = false, children }: {
+export function SubmissionStatusPanel({ state, feedback, edited, feedbackAction, badge, actions, local = false, children }: {
   state: SubmissionState;
   feedback?: string;
+  /** Date a librarian last edited the solution (ADR-0013); their explanation is the feedback. Connected only. */
+  edited?: string;
   /** Beside the librarian's words, e.g. the owner's "Mark as addressed" check. */
   feedbackAction?: ReactNode;
   /** Beside the state heading, e.g. a "New feedback" bubble. */
@@ -38,6 +40,7 @@ export function SubmissionStatusPanel({ state, feedback, feedbackAction, badge, 
         <div className="min-w-0">
           <h2 id={heading} className="flex flex-wrap items-center gap-2 text-[17px] leading-tight font-semibold" style={{ color }}>{state}{badge}</h2>
           <p className="mt-0.5 text-[13.5px] text-(--ink-2)">{meta.detail}{local && <span className="text-(--ink-3)"> · Local preview</span>}</p>
+          {edited && <p className="mt-1 inline-flex items-center gap-1.5 text-[13px] font-semibold" style={{ color: "var(--accent)" }}><Icon name="edit" size={13} />Edited by the librarian · {edited}</p>}
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2.5 sm:ml-auto sm:border-l sm:border-(--glass-edge) sm:pl-5">{actions}</div>}

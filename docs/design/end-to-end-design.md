@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
 **Status:** Agreed two-field story design; wizard resume, selectable MP4 captions and same-account video acceptance verified; Blob pilot for new attachments approved (ADR-0010), not deployed; production-host and least-privilege gates remain open
-**Last updated:** 2026-10-13
+**Last updated:** 2026-10-15
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
 
@@ -127,7 +127,7 @@ The subsequent [eight-area acceptance pass](../workflows/contribution-and-review
 
 The source-level parity pass adds rendered UI/adapter-wiring checks (`npm run test:ui`) and regressions for connected card tags, named incomplete drafts and caption version chaining. Local Play verified protected PNG/HTML uploads, caption Save draft/reopen, Back navigation with a simultaneous summary edit, upload-time caption flush, fresh safety and stale-save rejection. The subsequent [lifecycle check](../workflows/contribution-and-review.md#verified-lifecycle) verified positive approval, published discovery/presentation, withdrawal and explicit share revocation, including a linked asset. Both disposable fixtures were removed and the three original drafts were unchanged. Checks used a privileged owner/Librarian, not least-privilege identities. Remaining adapter-visible differences include Dataverse checkpoints on Continue, final safety reconfirmation, withdrawal before editing non-Drafts, and the additional Projects field. These checks do not establish effective non-admin access or full acceptance.
 
-Notifications, review diffs, librarian content editing and reference-data administration are future product work, not functioning PoC interactions silently removed from the connected app. Inert notification/AI simulations remain excluded. Recovery covers core text and contributor/tag/project selections only, not unsaved captions or media bytes; a changed server version cannot be overwritten by restoring a backup. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md).
+Notifications, review diffs, librarian content editing (defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md), proposed 2026-10-15) and reference-data administration are future product work, not functioning PoC interactions silently removed from the connected app. Inert notification/AI simulations remain excluded. Recovery covers core text and contributor/tag/project selections only, not unsaved captions or media bytes; a changed server version cannot be overwritten by restoring a backup. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md).
 
 **Approved media/access extension:** a private organization-owned `nx_uploadsession` table stores typed upload protocol state, not solution drafts or file payloads. Media is owned by the non-member **PRISMA Media Custodian** team; contributors receive read-only access after finalization. A separate **PRISMA Published Readers** team receives read-only Solution/contributor/media shares on approval, revoked on withdrawal/retirement. Both teams were created empty; user memberships remain administrator-managed. No Consultant/Project security or rows were changed. See [ADR-0009](../architecture/decisions/adr-0009-mediated-media-and-publication-access.md).
 

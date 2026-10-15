@@ -526,5 +526,121 @@ namespace Prisma.Plugins.Tests
             record["nx_publicationstatus"] = new OptionSetValue(125060000);
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.AssertEditable(record, owner, "100"));
         }
+
+        [Fact]
+        public void LibrarianEditsOthersPendingOrPublishedRecordsOnly()
+        {
+            var owner = Guid.NewGuid();
+            var librarian = Guid.NewGuid();
+            var record = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "100", ["ownerid"] = new EntityReference("systemuser", owner) };
+            record["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus);
+            Assert.Equal(EditMode.Owner, DraftPolicy.Editable(record, owner, "100", () => throw new InvalidOperationException("Owner drafts never check roles.")));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Editable(record, librarian, "100", () => true));
+            foreach (var status in new[] { ReviewPolicy.Pending, ReviewPolicy.Published })
+            {
+                record["nx_publicationstatus"] = new OptionSetValue(status);
+                Assert.Equal(EditMode.Librarian, DraftPolicy.Editable(record, librarian, "100", () => true));
+                Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Editable(record, librarian, "100", () => false));
+                Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Editable(record, librarian, "99", () => true));
+                // A librarian who owns the record withdraws it like any owner.
+                Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Editable(record, owner, "100", () => true));
+            }
+            record["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Retired);
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Editable(record, librarian, "100", () => true));
+        }
+
+        [Fact]
+        public void LibrarianEditMarksChangesAndPausesPublishedClearanceOnly()
+        {
+            var solution = Guid.NewGuid();
+            var librarian = new EntityReference("cr6b0_consultant", Guid.NewGuid());
+            var now = new DateTime(2026, 10, 15, 12, 0, 0, DateTimeKind.Utc);
+            var published = DraftPolicy.LibrarianEdit(solution, ReviewPolicy.Published, librarian, now);
+            Assert.True(published.GetAttributeValue<bool>(DraftPolicy.LibrarianEditPending));
+            Assert.Equal(librarian.Id, published.GetAttributeValue<EntityReference>(DraftPolicy.LibrarianEditedBy).Id);
+            Assert.Equal("cr6b0_consultant", published.GetAttributeValue<EntityReference>(DraftPolicy.LibrarianEditedBy).LogicalName);
+            // A librarian outside the consultant directory still edits; the earlier editor's name is cleared, not kept.
+            var unnamed = DraftPolicy.LibrarianEdit(solution, ReviewPolicy.Pending, null, now);
+            Assert.True(unnamed.Contains(DraftPolicy.LibrarianEditedBy));
+            Assert.Null(unnamed.GetAttributeValue<EntityReference>(DraftPolicy.LibrarianEditedBy));
+            Assert.Equal(now, published.GetAttributeValue<DateTime>(DraftPolicy.LibrarianEditedOn));
+            Assert.False(published.GetAttributeValue<bool>("nx_clientsafereviewed"));
+            Assert.True(published.Contains("nx_clientsafereviewed"));
+            Assert.False(DraftPolicy.LibrarianEdit(solution, ReviewPolicy.Pending, librarian, now).Contains("nx_clientsafereviewed"));
+            Assert.False(published.Contains("nx_safetyacknowledged"));
+            Assert.False(published.Contains("nx_publicationstatus"));
+        }
+
+        [Fact]
+        public void ChangeDetectionIgnoresBlankTextAndUnchangedValues()
+        {
+            var capability = Guid.NewGuid();
+            var stored = new Entity("nx_solution") { ["nx_solutionname"] = "Forge", ["nx_capability"] = new EntityReference("nx_capability", capability), ["nx_status"] = new OptionSetValue(125060004) };
+            var same = DraftPolicy.Parse("{\"name\":\" Forge \",\"capabilityId\":\"" + capability + "\",\"maturity\":125060004}");
+            same.Attributes.Remove("nx_safetyacknowledged");
+            Assert.False(DraftPolicy.Changed(stored, same));
+            var renamed = DraftPolicy.Parse("{\"name\":\"Forge 2\",\"capabilityId\":\"" + capability + "\",\"maturity\":125060004}");
+            renamed.Attributes.Remove("nx_safetyacknowledged");
+            Assert.True(DraftPolicy.Changed(stored, renamed));
+            var moved = DraftPolicy.Parse("{\"name\":\"Forge\",\"maturity\":125060000}");
+            moved.Attributes.Remove("nx_safetyacknowledged");
+            Assert.True(DraftPolicy.Changed(stored, moved));
+            Assert.False(DraftPolicy.Changed(new Entity("nx_solution") { ["nx_sortorder"] = 2 }, new Entity("nx_solution") { ["nx_sortorder"] = 2 }));
+            Assert.True(DraftPolicy.Changed(new Entity("nx_solution") { ["nx_caption"] = "Old" }, new Entity("nx_solution") { ["nx_caption"] = "New" }));
+        }
+
+        [Fact]
+        public void GraphChangeDetectionComparesLinksNotContributors()
+        {
+            Func<string, string, DraftGraphInput> graph = (tag, person) => new DraftGraphInput {
+                Contributors = new System.Collections.Generic.List<ContributorInput> { new ContributorInput { PersonId = person, DirectHours = 4 } },
+                TechnologyIds = new System.Collections.Generic.List<string> { tag }, IndustryIds = new System.Collections.Generic.List<string>(),
+                ProjectIds = new System.Collections.Generic.List<string>(), AreaIds = new System.Collections.Generic.List<string> { Area }
+            };
+            var technology = Guid.NewGuid().ToString();
+            Assert.False(DraftGraph.LinksChanged(graph(technology, Guid.NewGuid().ToString()), graph(technology.ToUpperInvariant(), Guid.NewGuid().ToString())));
+            Assert.True(DraftGraph.LinksChanged(graph(technology, Area), graph(Guid.NewGuid().ToString(), Area)));
+        }
+
+        [Fact]
+        public void LibrarianEditTransitionsRequireTheOwnerFacingExplanation()
+        {
+            var owner = Guid.NewGuid();
+            var librarian = Guid.NewGuid();
+            var parent = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "7", ["ownerid"] = new EntityReference("systemuser", owner),
+                ["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published), ["nx_status"] = new OptionSetValue(125060004), ["nx_clientsafereviewed"] = true };
+            // Librarian media/link/technology edits keep status, acknowledgment and clearance; the API records real changes.
+            foreach (var action in new[] { "media", "asset", "technology" })
+            {
+                var edit = ReviewPolicy.Change(parent, librarian, true, "7", action, "[]", false);
+                Assert.False(edit.Contains("nx_clientsafereviewed"));
+                Assert.False(edit.Contains("nx_safetyacknowledged"));
+                Assert.False(edit.Contains("nx_publicationstatus"));
+            }
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, librarian, false, "7", "media", "[]", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, owner, false, "7", "media", "[]", false));
+            // Confirming needs an unreported edit, clearance and an explanation.
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, librarian, true, "7", "confirm-edit", "Fixed the title", true));
+            parent[DraftPolicy.LibrarianEditPending] = true;
+            parent["nx_clientsafereviewed"] = false;
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, librarian, true, "7", "confirm-edit", "Fixed the title", false));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, librarian, true, "7", "confirm-edit", "  ", true));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, librarian, false, "7", "confirm-edit", "Fixed the title", true));
+            var confirmed = ReviewPolicy.Change(parent, librarian, true, "7", "confirm-edit", " Removed the client name from the title ", true);
+            Assert.True(confirmed.GetAttributeValue<bool>("nx_clientsafereviewed"));
+            Assert.False(confirmed.GetAttributeValue<bool>(DraftPolicy.LibrarianEditPending));
+            Assert.Equal("Removed the client name from the title", confirmed.GetAttributeValue<string>("nx_reviewcomments"));
+            Assert.False(confirmed.Contains("nx_publicationstatus"));
+            // An owner who withdraws settles the edit too.
+            Assert.False(ReviewPolicy.Change(parent, owner, false, "7", "withdraw", "", false).GetAttributeValue<bool>(DraftPolicy.LibrarianEditPending));
+            // Pending: approval comments become required only after a real librarian change.
+            parent["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Pending);
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, librarian, true, "7", "approve", " ", true));
+            var approved = ReviewPolicy.Change(parent, librarian, true, "7", "approve", "Shortened the summary", true);
+            Assert.False(approved.GetAttributeValue<bool>(DraftPolicy.LibrarianEditPending));
+            Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Change(parent, librarian, true, "7", "confirm-edit", "Fixed", true));
+            parent[DraftPolicy.LibrarianEditPending] = false;
+            Assert.False(ReviewPolicy.Change(parent, librarian, true, "7", "approve", "", true).Contains(DraftPolicy.LibrarianEditPending));
+        }
     }
 }

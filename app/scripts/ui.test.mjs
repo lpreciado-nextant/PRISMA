@@ -433,6 +433,33 @@ test("review panel: overview, required publication checklist, and a decision tha
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, notice: "Download started: document" }), /loading-state--inline/);
 });
 
+test("review panel: librarian edits need an explanation for the owner (ADR-0013)", () => {
+  const props = { status: "Pending review", owner: "Ana", comments: "", onComments: noop, cleared: true, onCleared: noop, busy: false, onReturn: noop, onApprove: noop };
+  // Edit is offered only when the caller passes it; the PoC never does.
+  assert.doesNotMatch(render(review.ReviewPanel, props), /Edit solution/);
+  assert.match(render(review.ReviewPanel, { ...props, onEdit: noop }), /Edit solution/);
+  // Pending: after a real edit the approval note is required and says why.
+  const publish = { ...props, defaultDecision: "publish", edit: { on: "2026-10-15", by: "Lia Librarian", pending: true } };
+  const unexplained = render(review.ReviewPanel, publish);
+  assert.match(unexplained, /Last librarian edit.*Lia Librarian · 2026-10-15.*not explained to the owner yet/s);
+  assert.match(unexplained, /What you changed and why.*required, you edited this solution/s);
+  assert.match(unexplained, /Tell the contributor what you changed and why\./);
+  assert.match(unexplained, /disabled=""[^>]*>.*Approve &amp; publish/s);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...publish, comments: "Shortened the summary" }), /disabled=""/);
+  assert.match(render(review.ReviewPanel, { ...publish, edit: { on: "2026-10-15", pending: false } }), /Note to the submitter.*optional/s);
+  // Published: Confirm changes repeats the checklist, needs the explanation and replaces Request changes / Retire.
+  const live = { ...props, status: "Published", cleared: false, onRequestChanges: noop, onRetire: noop, onConfirmEdit: noop, edit: { on: "2026-10-15", pending: true } };
+  const waiting = render(review.ReviewPanel, live);
+  assert.match(waiting, /Publication checklist.*Left out of present mode until you confirm your changes\..*Confirm your changes.*What you changed and why/s);
+  assert.match(waiting, /disabled=""[^>]*>.*Confirm changes/s);
+  assert.doesNotMatch(waiting, /Request changes<\/button>|Retire<\/button>/);
+  assert.match(render(review.ReviewPanel, { ...live, cleared: true }), /Tell the owner what you changed and why\./);
+  assert.doesNotMatch(render(review.ReviewPanel, { ...live, cleared: true, comments: "Removed the client name" }), /disabled=""[^>]*>.*Confirm changes/s);
+  assert.match(render(review.ReviewPanel, { ...live, cleared: true, comments: "Removed the client name", canApprove: false }), /Add the missing content before confirming\./);
+  // Without an unexplained edit, a published record is unchanged.
+  assert.match(render(review.ReviewPanel, { ...live, edit: { on: "2026-10-15", pending: false } }), /Available in the Solution Library\..*Request changes<\/button>/s);
+});
+
 test("review queue rows show area, capability, submitter and a friendly date, newest first", () => {
   const base = { summary: "Summary", status: "Working prototype", publicationStatus: "Pending review", reviewOutcome: "None", contributors: [], technologies: [], assets: [{ id: "a" }], images: [{ id: "i", src: "x" }, { id: "j", src: "y" }] };
   const entries = [

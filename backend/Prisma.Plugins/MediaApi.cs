@@ -320,10 +320,10 @@ namespace Prisma.Plugins
             var identifier = (Guid)context.InputParameters["SolutionId"];
             var parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("ownerid", "nx_publicationstatus", "nx_status"));
             var expected = read ? parent.RowVersion : context.InputParameters["ExpectedRowVersion"] as string;
-            DraftPolicy.AssertEditable(parent, context.InitiatingUserId, expected);
+            var mode = DraftPolicy.Editable(parent, context.InitiatingUserId, expected, () => ReviewApi.IsLibrarian(server, context.InitiatingUserId));
             if (!read)
                 server.Execute(new UpdateRequest {
-                    Target = new Entity("nx_solution", identifier) { RowVersion = expected, ["nx_clientsafereviewed"] = false, ["nx_safetyacknowledged"] = false },
+                    Target = Touch(server, parent, mode, context.MessageName == "nx_FinishMediaUpload" || context.MessageName == "nx_RemoveDraftMedia", context.InitiatingUserId),
                     ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
                 });
             Guid? sessionId = null;
@@ -338,7 +338,9 @@ namespace Prisma.Plugins
                 sessionId = (Guid)context.InputParameters["SessionId"];
                 var session = server.Retrieve("nx_uploadsession", sessionId.Value, SessionColumns);
                 blockSize = MediaPolicy.SessionBlockSize(session);
-                if (session.GetAttributeValue<string>("nx_parentid") != identifier.ToString("D") || session.GetAttributeValue<string>("nx_callerid") != context.InitiatingUserId.ToString("D"))
+                // A librarian may remove finished media someone else uploaded; unfinished uploads stay with whoever started them.
+                var removable = mode == EditMode.Librarian && context.MessageName == "nx_RemoveDraftMedia" && session.GetAttributeValue<bool>("nx_complete");
+                if (session.GetAttributeValue<string>("nx_parentid") != identifier.ToString("D") || (!removable && session.GetAttributeValue<string>("nx_callerid") != context.InitiatingUserId.ToString("D")))
                     throw MediaPolicy.Invalid("Upload does not belong to this caller and draft.");
                 if (context.MessageName == "nx_RemoveDraftMedia")
                 {
@@ -366,6 +368,20 @@ namespace Prisma.Plugins
                 Id = identifier.ToString(), RowVersion = latest.RowVersion, SessionId = sessionId?.ToString(),
                 BlockSize = blockSize, Media = Snapshots(server, identifier)
             });
+        }
+
+        /// <summary>
+        /// The version-checked parent update every media write makes. An owner edit clears acknowledgment and clearance;
+        /// a librarian edit keeps both and is recorded only when media is actually added or removed (ADR-0013).
+        /// </summary>
+        internal static Entity Touch(IOrganizationService server, Entity parent, EditMode mode, bool changes, Guid caller)
+        {
+            var target = mode == EditMode.Owner
+                ? new Entity("nx_solution", parent.Id) { ["nx_clientsafereviewed"] = false, ["nx_safetyacknowledged"] = false }
+                : changes ? DraftPolicy.LibrarianEdit(parent.Id, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, caller), DateTime.UtcNow)
+                : new Entity("nx_solution", parent.Id) { ["nx_status"] = parent["nx_status"] };
+            target.RowVersion = parent.RowVersion;
+            return target;
         }
 
         internal static Guid Begin(IOrganizationService server, Entity parent, IPluginExecutionContext context, MediaStorage storage, out int blockSize, string suppliedKind = null)

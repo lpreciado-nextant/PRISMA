@@ -8,11 +8,17 @@ using Microsoft.Xrm.Sdk;
 
 namespace Prisma.Plugins
 {
+    public enum EditMode { Owner, Librarian }
+
     public static class DraftPolicy
     {
         public const int DraftStatus = 125060003;
         public const string SaveMessage = "nx_SaveCoreDraft";
         public const string ListMessage = "nx_GetMyCoreDrafts";
+        /// <summary>Librarian edit trail on `nx_solution` (ADR-0013). Protected; written only by the PRISMA APIs.</summary>
+        public const string LibrarianEditedBy = "nx_librarianeditedby";
+        public const string LibrarianEditedOn = "nx_librarianeditedon";
+        public const string LibrarianEditPending = "nx_librarianeditpending";
         public static readonly string[] CoreColumns = {
             "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes", "nx_businessvalue",
             "nx_capability", "nx_status", "nx_clientcontext", "nx_clientcontextredacted", "nx_safetyacknowledged",
@@ -83,13 +89,65 @@ namespace Prisma.Plugins
 
         public static void AssertEditable(Entity current, Guid caller, string expectedVersion)
         {
+            Editable(current, caller, expectedVersion, () => false);
+        }
+
+        /// <summary>
+        /// The owner edits their own Draft; a PRISMA Librarian edits someone else's Pending review or Published record in
+        /// place (ADR-0013). The librarian check is deferred so owner saves never query roles.
+        /// </summary>
+        public static EditMode Editable(Entity current, Guid caller, string expectedVersion, Func<bool> librarian)
+        {
             var owner = current.GetAttributeValue<EntityReference>("ownerid");
-            if (owner == null || owner.LogicalName != "systemuser" || owner.Id != caller) throw Invalid("You can only edit your own drafts.");
-            if (current.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value != DraftStatus)
-                throw Invalid("Only Draft records can be edited in this workflow.");
+            var owns = owner != null && owner.LogicalName == "systemuser" && owner.Id == caller;
+            var status = current.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value;
+            EditMode mode;
+            if (owns && status == DraftStatus) mode = EditMode.Owner;
+            else if (!owns && (status == ReviewPolicy.Pending || status == ReviewPolicy.Published) && librarian()) mode = EditMode.Librarian;
+            else if (!owns) throw Invalid("You can only edit your own drafts.");
+            else throw Invalid("Only Draft records can be edited in this workflow.");
             if (string.IsNullOrWhiteSpace(expectedVersion) || expectedVersion.Any(character => character < '0' || character > '9'))
                 throw Invalid("A valid expected row version is required.");
             if (current.RowVersion != expectedVersion) throw Invalid("This draft changed. Reopen it before saving again.");
+            return mode;
+        }
+
+        /// <summary>
+        /// Marks a real librarian change: who and when, and that the owner has not been told yet. A Published record keeps
+        /// its status but leaves present mode until the librarian confirms the edit (`confirm-edit`). `editor` is the
+        /// librarian's consultant row; null when none matches, so an earlier editor's name is never left in place.
+        /// </summary>
+        public static Entity LibrarianEdit(Guid solution, int? status, EntityReference editor, DateTime now)
+        {
+            var edit = new Entity("nx_solution", solution) {
+                [LibrarianEditedBy] = editor, [LibrarianEditedOn] = now, [LibrarianEditPending] = true
+            };
+            if (status == ReviewPolicy.Published) edit["nx_clientsafereviewed"] = false;
+            return edit;
+        }
+
+        /// <summary>
+        /// The librarian as a `cr6b0_consultant` (PRISMA names people by consultant, not systemuser), by the same exact
+        /// email rule as favorites. A librarian missing from the directory still edits; the edit just carries no name.
+        /// </summary>
+        public static EntityReference Editor(IOrganizationService server, Guid caller)
+        {
+            try { return new EntityReference("cr6b0_consultant", FavoriteApi.ResolveConsultant(server, caller)); }
+            catch (InvalidPluginExecutionException) { return null; }
+        }
+
+        /// <summary>True when any supplied core value differs from the stored one; blank text equals no text.</summary>
+        public static bool Changed(Entity current, Entity input)
+        {
+            return input.Attributes.Any(pair => !Same(current.Contains(pair.Key) ? current[pair.Key] : null, pair.Value));
+        }
+
+        private static bool Same(object stored, object supplied)
+        {
+            if (stored is string || supplied is string) return ((stored as string) ?? "") == ((supplied as string) ?? "");
+            if (stored is EntityReference || supplied is EntityReference) return (stored as EntityReference)?.Id == (supplied as EntityReference)?.Id;
+            if (stored is OptionSetValue || supplied is OptionSetValue) return (stored as OptionSetValue)?.Value == (supplied as OptionSetValue)?.Value;
+            return Equals(stored ?? false, supplied ?? false);
         }
 
         public static bool IsSaveContext(IPluginExecutionContext context)

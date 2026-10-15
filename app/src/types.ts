@@ -99,6 +99,8 @@ export interface Solution {
   publicationStatus: PublicationStatus;
   reviewOutcome?: "None" | "Changes requested" | "Approved";
   reviewComments?: string;
+  /** Proposed `nx_librarianeditedon` (ADR-0013): when a librarian last edited this solution. Owner-facing; never in present mode. */
+  librarianEditedOn?: string;
   safetyAcknowledged: boolean;
   clientSafeReviewed: boolean;
   clientContext?: string;

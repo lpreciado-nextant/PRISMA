@@ -107,11 +107,12 @@ namespace Prisma.Plugins
             };
         }
 
-        public static void Save(IOrganizationService caller, Entity parent, DraftGraphInput input)
+        /// <summary>Saves the graph; a librarian save (ADR-0013) leaves every contributor row and its hours untouched.</summary>
+        public static void Save(IOrganizationService caller, Entity parent, DraftGraphInput input, bool contributors = true)
         {
-            var existing = Children(caller, parent.Id).ToDictionary(row => row.Id);
+            var existing = contributors ? Children(caller, parent.Id).ToDictionary(row => row.Id) : new Dictionary<Guid, Entity>();
             var retained = new HashSet<Guid>();
-            foreach (var person in input.Contributors)
+            foreach (var person in contributors ? input.Contributors : new List<ContributorInput>())
             {
                 var personId = ContributorPolicy.Identifier(person.PersonId);
                 caller.Retrieve("cr6b0_consultant", personId, new ColumnSet(false));
@@ -132,6 +133,14 @@ namespace Prisma.Plugins
             SyncLinks(caller, parent.Id, Relationships[1], "nx_industry", Identifiers(input.IndustryIds));
             SyncLinks(caller, parent.Id, Relationships[2], "cr6b0_project", Identifiers(input.ProjectIds));
             SyncLinks(caller, parent.Id, Relationships[3], "nx_specializationarea", Identifiers(input.AreaIds));
+        }
+
+        /// <summary>True when the tags, projects or areas differ from the stored graph. Contributors are not compared.</summary>
+        public static bool LinksChanged(DraftGraphInput stored, DraftGraphInput input)
+        {
+            Func<List<string>, HashSet<Guid>> set = values => new HashSet<Guid>(values.Select(ContributorPolicy.Identifier));
+            return !set(stored.TechnologyIds).SetEquals(set(input.TechnologyIds)) || !set(stored.IndustryIds).SetEquals(set(input.IndustryIds))
+                || !set(stored.ProjectIds).SetEquals(set(input.ProjectIds)) || !set(stored.AreaIds).SetEquals(set(input.AreaIds));
         }
 
         private static List<Entity> Children(IOrganizationService caller, Guid parent)
@@ -199,19 +208,22 @@ namespace Prisma.Plugins
             var caller = factory.CreateOrganizationService(context.InitiatingUserId);
             if (context.MessageName != DraftGraph.ReadMessage && context.MessageName != DraftGraph.SaveMessage) throw new InvalidPluginExecutionException("Invalid graph operation.");
             var identifier = (Guid)context.InputParameters["SolutionId"];
+            var server = factory.CreateOrganizationService(null);
             var parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("ownerid", "nx_publicationstatus", "nx_status"));
             var expected = context.MessageName == DraftGraph.ReadMessage ? parent.RowVersion : context.InputParameters["ExpectedRowVersion"] as string;
-            DraftPolicy.AssertEditable(parent, context.InitiatingUserId, expected);
+            var mode = DraftPolicy.Editable(parent, context.InitiatingUserId, expected, () => ReviewApi.IsLibrarian(server, context.InitiatingUserId));
             if (context.MessageName == DraftGraph.SaveMessage)
             {
                 if (!context.IsInTransaction) throw new InvalidPluginExecutionException("A transaction is required.");
                 var input = DraftGraph.Parse(context.InputParameters["GraphJson"] as string);
+                var changed = mode == EditMode.Librarian && DraftGraph.LinksChanged(DraftGraph.Read(caller, parent).Graph, input);
                 caller.Execute(new UpdateRequest {
                     Target = new Entity("nx_solution", identifier) { RowVersion = expected, ["nx_status"] = parent["nx_status"] },
                     ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
                 });
-                DraftGraph.Save(caller, parent, input);
-                factory.CreateOrganizationService(null).Update(new Entity("nx_solution", identifier) { ["nx_clientsafereviewed"] = false, ["nx_safetyacknowledged"] = false });
+                DraftGraph.Save(caller, parent, input, mode == EditMode.Owner);
+                if (mode == EditMode.Owner) server.Update(new Entity("nx_solution", identifier) { ["nx_clientsafereviewed"] = false, ["nx_safetyacknowledged"] = false });
+                else if (changed) server.Update(DraftPolicy.LibrarianEdit(identifier, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, context.InitiatingUserId), DateTime.UtcNow));
                 parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("nx_status"));
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(DraftGraph.Read(caller, parent));
