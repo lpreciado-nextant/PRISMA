@@ -1,6 +1,6 @@
 # ADR-0013 — Librarian content editing
 
-**Status:** Accepted; agreed with the user 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (about 22:05 UTC). Hosted browser check and non-admin acceptance are pending. The three columns were created on 2026-10-15 and their metadata and column security verified.
+**Status:** Accepted; agreed with the user 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (about 22:05 UTC). Redeployed with ADR-0014 from `5ad96bb` (plug-in 22:35:57 UTC, then the app), which also stops offering Edit on the librarian's own solutions. The editing flow was checked in the hosted app on Mauricio's "Budget Management Solution". Non-admin acceptance is pending. The three columns were created on 2026-10-15 and their metadata and column security verified.
 **Date:** 2026-10-15
 
 ## Context

@@ -1,6 +1,6 @@
 # Librarian runbook
 
-**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into overview, publication checklist and decision 2026-10-14; librarian content editing deployed 2026-10-15 (ADR-0013; hosted check pending); effort is a solution estimate and complexity (ADR-0014, on a branch) · **Last updated:** 2026-10-15
+**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into overview, publication checklist and decision 2026-10-14; librarian content editing deployed 2026-10-15 (ADR-0013; hosted check pending); effort is a solution estimate and complexity (ADR-0014, deployed 2026-10-15) · **Last updated:** 2026-10-15
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.

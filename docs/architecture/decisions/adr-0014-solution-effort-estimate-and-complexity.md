@@ -1,6 +1,6 @@
 # ADR-0014 — Solution effort as an estimate and a complexity
 
-**Status:** Accepted 2026-10-15. The two columns were created and their metadata verified the same day. The code is in `main` (`5aceac7`). **Pending:** the 2026-10-15 plug-in deploy was built before this change, so the plug-in must be redeployed from `main` and then the connected app published.
+**Status:** Accepted; deployed 2026-10-15. The two columns were created and their metadata verified the same day. The signed plug-in was redeployed by Luis from `main` `5ad96bb` (22:35:57 UTC), then the connected app was published from the same commit (about 22:40 UTC). A hosted browser check is pending.
 **Date:** 2026-10-15
 **Supersedes:** the effort part of [ADR-0007](adr-0007-contributor-effort.md). Its CSM-from-the-consultant-level decision stands.
 
