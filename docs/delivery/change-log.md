@@ -9,21 +9,20 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-15](#2026-10-15--working-session-librarian-content-editing) | Librarian content editing | 50% — 0 Live, 1 In code / 1 |
+| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort | 50% — 0 Live, 2 In code / 2 |
 | [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 15 Live / 15 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 50% — 5 Live, 4 Pending review, 3 Pending to do / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 69% — 9 Live / 13 (2 Dropped excluded) |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 77% — 9 Live, 2 In code / 13 (2 Dropped excluded) |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; whether Capability Owners may edit metadata (2026-10-15: likely all Capability Owners become librarians, so they would edit through [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md); scope tracked as [Q21](decision-log.md)) ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Whether to record that AI was used to build a solution (tools used are covered by Technologies); one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
-- Effort (PR-010/011): duration bands vs. Small/Medium/Large vs. both, and whether it replaces ADR-0007's hours model ([2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication))
 - Whether to delete the retired `nx_startdate`/`nx_enddate` contributor columns (optional; first remove them from the unused "Information" form) ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08; legacy rows without hours are dummy data, no backfill
 - Merging duplicate technologies needs a librarian-only plug-in operation; today only the read-only `technology-duplicates` report exists ([2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review))
 - Favorites ranking: whether to also count views/demo requests, and visibility in present mode ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux))
@@ -68,20 +67,22 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ---
 
-## 2026-10-15 — Working session: librarian content editing
+## 2026-10-15 — Working session: librarian content editing and solution-level effort
 
-**Progress:** 50% — 0 Live, 1 In code / 1
+**Progress:** 50% — 0 Live, 2 In code / 2
 
 ### Feedback
 
 - The librarian should be able to edit a solution, not only return it with comments.
 - The contributor must know when the librarian changed something and why; the existing review comment box should carry that, required only when something actually changed.
+- Effort should be one total estimate of minimum hours for the solution, not hours per person, plus how complex it was to build: Easy, Medium or Hard. Remove the per-contributor hours for now.
 
 ### Changes
 
 | Change | Status | Notes / next step |
 |---|---|---|
 | Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | In code | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md); plug-ins, tests and the connected editor (`#/review/:id/edit`, **Confirm changes**) on branch `feature/librarian-content-editing`. The three `nx_solution` columns were created 2026-10-15 (Juliana), editor lookup to `cr6b0_consultant`, column security verified. Next, each step separately approved: deploy the signed plug-in, publish the connected app, then a non-admin librarian test. Hours stay out of scope while the effort model changes |
+| Effort as a solution estimate (`nx_estimatedminimumhours`, whole hours, optional) and complexity (`nx_complexity`: Easy, Medium, Hard; required to submit and approve). Per-contributor hours retired | In code | [ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md). The user created both columns on 2026-10-15, and the metadata was verified with `inspect-effort-columns`. Plug-ins, PoC and connected app are on branch `feature/solution-effort`. Internal only: never in present mode or the deck. Resolves PR-010 and PR-011. Next: deploy the plug-in and the connected app together, because the response shapes change |
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 
@@ -278,7 +279,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 69% — 9 Live, 3 Proposed, 1 Pending to do / 13 (2 Dropped excluded)
+**Progress:** 77% — 9 Live, 2 In code, 1 Proposed, 1 Pending to do / 13 (2 Dropped excluded)
 
 ### Feedback
 
@@ -308,8 +309,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-007 Reduce chrome around the demo viewer | 🟢 Live | 2026-10-14: one centred 16:9 stage for every demo type, the same in the viewer and the solution page's main demo; the focused viewer (Open in new tab) shows the demo with only its title bar, no masthead, tabs or banner. `1f6a01b`, published and confirmed by the user |
 | PR-008 User feedback capture (comments/suggestions) | 🟢 Live | Live 2026-10-13: `nx_SuggestChange` and `nx_GetSolutionSuggestions` registered by Juliana (Web API, same definition as `Prisma.Deploy suggestion-api`), clients generated and the connected app published with **Suggest a change** and the **Suggestions** panel; hosted UI not yet checked. Table `nx_solutionsuggestion` created 2026-10-13; `SuggestionApi` plug-in, `suggestion-api` registration command and the connected button/panel in code ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)). Medium priority. Decided 2026-10-13: private **suggestions** on published solutions, not public comments (no social features in v1). Anyone who can read a published solution, outside present mode, uses **Suggest a change** on the solution page (owner included: second signed plug-in deployed by Luis and connected app republished 2026-10-14). Only the owner, the solution's contributors and the PRISMA Librarian read them, in a **Suggestions** panel on the same page, with the author's name and date; no status. Separate from the librarian review. Signed plug-in with `SuggestionApi` deployed 2026-10-13 22:18 UTC |
 | PR-009 Solution rating / usefulness score | Proposed | Low priority |
-| PR-010 Estimated duration metadata instead of hours | Proposed | Medium priority. Interacts with the minimum-hours effort model in [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md) |
-| PR-011 Complexity classification (Small / Medium / Large) | Proposed | Medium priority. Alternative or complement to duration bands above |
+| PR-010 Estimated duration metadata instead of hours | In code | 2026-10-15: resolved as one whole-hour estimate for the solution (`nx_estimatedminimumhours`, optional), replacing per-person hours ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)). Not deployed |
+| PR-011 Complexity classification (Small / Medium / Large) | In code | 2026-10-15: `nx_complexity` Easy / Medium / Hard, required to submit and approve, internal only ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)). Not deployed |
 | PR-012 Time-tracking system integration | 🟢 Live | Resolved 2026-10-06 as a time filter in the library: an "Added: …" picker beside "Sort by" with Any time / Last 30 days / Last 3 months / Last 6 months / Last 12 months, each showing how many solutions it leaves. Filters on creation date (`createdon`), months counted as calendar months back from today; kept in the URL (`added=3m`). `6e0b314`, `8a7b544`, published 2026-10-06 ([design system](../design/design-system.md#library-page)). Integration with an external time-tracking system is not part of this |
 | PR-013 Solution-to-workstream/project mapping | 🟢 Live | Resolved 2026-10-14 with the existing projects table: a solution links to any number of `cr6b0_project` rows through the native N:N (PR-030, live), chosen in the form's Projects picker and shown as **Associated projects** on the solution page (internal; hidden in present mode). No separate workstream table |
 | PR-014 Media display standardization (video/image/HTML/demo) | 🟢 Live | 2026-10-14: video, uploaded HTML, embedded links and images play in one centred 16:9 stage, the same size and place for every type, with the same Full screen and Open in new tab (`1f6a01b`). Decided 2026-10-14 (user): demos open on request, never auto-shown on the solution page, for quality; the connected app keeps listing them as rows. Screenshots keep their own gallery and lightbox; PDF and PowerPoint download |
@@ -318,7 +319,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ### Open decisions
 
 - ~~Modal/popup (PR-006)~~ resolved 2026-10-14: Open in new tab in a focused viewer replaces it.
-- How effort is represented going forward (PR-010/011) — duration bands, Small/Medium/Large complexity, or both — and whether this replaces or sits alongside the hours-based model in ADR-0007.
+- ~~How effort is represented going forward (PR-010/011)~~ decided 2026-10-15: a solution-level whole-hour estimate plus Easy/Medium/Hard complexity, replacing ADR-0007's per-person hours ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)).
 - ~~Workstream/project mapping (PR-013)~~ resolved 2026-10-14 through the projects table (N:N, PR-030).
 
 ## 2026-09-28 / 29 — Working sessions: integration, favorites ranking and library UX

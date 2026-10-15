@@ -13,7 +13,7 @@ Contributors still need to know when someone changed their solution, and why. Th
 
 **Who and when.** A caller holding the **PRISMA Librarian** role (direct or through a team, checked server-side as for review) may edit another person's solution while it is **Pending review** or **Published**. Draft records are the owner's work in progress and stay owner-only. Retired records are not editable; the owner withdraws and resubmits them as today. A librarian who owns a record edits it as its owner: withdraw first.
 
-**What.** The librarian edits the same content the owner can: core text, capability, maturity, client role, specialization areas, industries, technologies, projects and media (images, links and Blob attachments), plus the redacted client context. Contributors and their hours are not editable by the librarian: a librarian graph save writes no contributor rows. The effort model is being revised separately.
+**What.** The librarian edits the same content the owner can: core text, capability, maturity, client role, specialization areas, industries, technologies, projects and media (images, links and Blob attachments), plus the redacted client context. Contributors and their hours are not editable by the librarian: a librarian graph save writes no contributor rows. Since [ADR-0014](adr-0014-solution-effort-estimate-and-complexity.md) (2026-10-15), effort is the solution's complexity and hour estimate, so the librarian edits it like any other solution field.
 
 **Status while editing.**
 - The record keeps its publication status. A librarian save never sets Draft and never changes the owner's safety acknowledgment.

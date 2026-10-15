@@ -159,7 +159,7 @@ flowchart LR
 
 **Browse** is the alternative for CSMs who don't yet know what they're looking for: three specialization-area tabs, each with a short framing note and a visual card grid. Cards carry a thumbnail, name, one-liner, specialization colour coding, status badge, and a capability badge — enough to triage without clicking.
 
-**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths, shown as "name · level" from the consultant directory), the solution's CSM (the contributor whose directory level names customer success; nothing role-related is entered per contributor), total effort hours (the sum of each person's minimum hours required), the client/context it came from, tags, and the asset list. Per-person hours and the effort breakdown are internal-only and omitted in present mode, alongside library notes and internal client identity. Present mode uses only the authored anonymous context: builder names, the CSM, total effort and estimated cost are internal-only too, removed from the catalogue before render and never shown on cards or detail. Hours are self-reported minimums, not elapsed deployment time or a timesheet — and client-demo hours carry a warning that production delivery may take longer.
+**Solution detail** is the CSM's briefing document: what it does, business value, everyone who built it (with direct contact paths, shown as "name · level" from the consultant directory), the solution's CSM (the contributor whose directory level names customer success; nothing role-related is entered per contributor), the solution's complexity (Easy, Medium, Hard) and optional estimated minimum hours ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md); per-person hours were retired 2026-10-15), the client/context it came from, tags, and the asset list. Complexity and the hour estimate are internal-only and omitted in present mode, alongside library notes and internal client identity. Present mode uses only the authored anonymous context: builder names, the CSM, effort and estimated cost are internal-only too, removed from the catalogue before render and never shown on cards or detail. The hour estimate is a self-reported minimum, not elapsed deployment time or a timesheet, and client-demo effort carries a warning that production delivery may take longer.
 
 ### 3.3 Demo assets
 
@@ -256,6 +256,8 @@ Detail-page images collected in the unified Media step. Require one to six on ne
 Supports the live-demo handoff (§3.3): solution, requester, client/opportunity context, needed-by date, and a request status (New · Acknowledged · Scheduled · Delivered · Declined).
 
 ### 6.3a Contributors and effort
+
+> **2026-10-15:** per-person hours below are superseded by [ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md). Effort is now the solution's required complexity and optional whole-hour estimate, and contributor rows carry credit only.
 
 Replace the single `Built By` lookup and solution-wide `Effort / Time to Deploy` choice with `nx_solutioncontributor`: one row per Solution/person, with a `cr6b0_consultant` lookup and that person's hours. Contributor credit does not change record ownership or grant edit access.
 

@@ -1,8 +1,8 @@
 # ADR-0007 - Contributor-level effort in minimum hours required
 
-**Status:** Accepted; revised 2026-10-08 to directly entered minimum hours at every maturity (calendar/allocation model retired) and to derive the CSM from the consultant directory level (`nx_role` retired). Deployed 2026-10-08 (plug-ins, then connected app, from `main` `1c89c2d`); `nx_role` and `nx_allocationpercent` deleted from Dataverse the same day; hosted browser verification of the new UI not recorded
+**Status:** Effort superseded on 2026-10-15 by [ADR-0014](adr-0014-solution-effort-estimate-and-complexity.md): effort is now an estimate and a complexity on the solution, and per-person hours are retired. The CSM-from-the-consultant-level decision below still stands. Previously: Accepted; revised 2026-10-08 to directly entered minimum hours at every maturity (calendar/allocation model retired) and to derive the CSM from the consultant directory level (`nx_role` retired). Deployed 2026-10-08 (plug-ins, then connected app, from `main` `1c89c2d`); `nx_role` and `nx_allocationpercent` deleted from Dataverse the same day; hosted browser verification of the new UI not recorded
 **Date:** 2026-09-18
-**Last updated:** 2026-10-08
+**Last updated:** 2026-10-15
 
 ## Context
 

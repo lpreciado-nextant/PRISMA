@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
 **Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API, plug-in tracing and on-demand contributor screens were deployed and published on 2026-09-30, followed the same day by graph card thumbnails, shared detail reads and blur-only glass. Contributor minimum hours and the consultant-level CSM were deployed on 2026-10-08. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
-**Last updated:** 2026-10-08
+**Last updated:** 2026-10-15
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -18,7 +18,7 @@ The point of this PoC is the **experience**, not the data. Everything renders fr
 | Filter state encoded in the URL so a view is pasteable | `src/lib/router.ts` |
 | Zero-result state that suggests relaxing the narrowest facet | `src/views/LibraryView.tsx` |
 | Solution detail as a CSM briefing document | `src/views/DetailView.tsx` |
-| Contributor effort: minimum hours required per person at every maturity, summed | `src/views/SubmitView.tsx`, `src/views/DetailView.tsx`, `src/lib/effort.ts` |
+| Effort: required complexity (Easy, Medium, Hard) and optional whole-hour estimate for the whole solution (ADR-0014); contributors are credit only | `src/views/SubmitView.tsx`, `src/views/DetailView.tsx`, `src/lib/effort.ts` |
 | Searchable Person field by name/email, keyboard selection and duplicate prevention | `src/views/SubmitView.tsx` |
 | Captioned screenshot gallery (`nx_solutionimage`) on the detail page | `src/views/DetailView.tsx` |
 | Six-step safety-first form, required detail images, optional thumbnail and local media | `src/views/SubmitView.tsx` |
@@ -408,7 +408,7 @@ The entry point is `src/presentation/SubmissionPresentation.tsx`; `scripts/build
 
 ## Contributor effort
 
-The current [schema](../docs/data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort) uses contributor rows. Every maturity takes **Minimum hours required** per person: the minimum hours each person needed to work on the solution, including preparation and discovery (finite, nonnegative, at most two decimals, `contributorHours` in `src/lib/effort.ts`). The total is their sum, shown as "Incomplete" while anyone lacks hours. These are neither timesheets nor deployment duration. Dates, allocation and the US business calendar were removed on 2026-10-08.
+Since 2026-10-15 ([ADR-0014](../docs/architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)), effort belongs to the solution: a required **complexity** (`nx_complexity`: Easy, Medium, Hard) and an optional **estimated minimum hours** (`nx_estimatedminimumhours`, whole hours, 0 to 100,000), validated by `estimatedHours` in `src/lib/effort.ts` and entered with the shared `EffortFields`. Contributor rows are credit only; per-person hours (`nx_directhours`) are no longer read or written. Both values are internal: never in present mode or the presentation download.
 
 The submission form adds/removes contributors, saves inputs in the session draft, validates hours and previews the total. Its Person field searches the mock people list by name or email, excludes already assigned people and supports arrow keys/Enter or pointer selection. Escape or leaving the field restores the committed selection; unmatched search text is never stored as a person. This is not a live directory integration. There is no Role picker: a selected person's read-only **Level** comes from the directory (`cr6b0_consultantlevel`; the mock `BUILDERS`/`CSMS` carry illustrative levels), and a contributor whose level names customer success (`isCustomerSuccessLevel` in `src/lib/consultantLevel.ts`) is the solution's CSM: listed as CSM in detail, passed as CSM to the presentation download and left out of PoC card builder names. Catalogue search includes every builder. Detail shows a person-by-person breakdown internally; present mode omits builder names, per-person hours and the total.
 

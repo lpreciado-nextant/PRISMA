@@ -1,6 +1,6 @@
 # Librarian runbook
 
-**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into overview, publication checklist and decision 2026-10-14; librarian content editing proposed 2026-10-15 (ADR-0013, implemented on a branch, not deployed) · **Last updated:** 2026-10-15
+**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into overview, publication checklist and decision 2026-10-14; librarian content editing proposed 2026-10-15 (ADR-0013, implemented on a branch, not deployed); effort is a solution estimate and complexity (ADR-0014, on a branch) · **Last updated:** 2026-10-15
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
@@ -47,8 +47,8 @@ Review Comments allow up to 4000 characters and are separate from editorial Libr
 - [ ] Client identity stays internal; anonymous context is supplied when a client is named; no identifying details leak through body text or attachments
 - [ ] Exactly one capability is selected; tags are sensible; no duplicate technologies introduced. The connected review panel shows **Possible duplicate technologies** only when a new technology resembles an existing one; if it repeats it, request changes and name the existing one. It does not block approval
 - [ ] Thumbnail present or the generated poster is acceptable
-- [ ] At least one unique person, each with credible minimum hours required (every maturity): finite, nonnegative, at most two decimals. Check the [schema contract](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort)
-- [ ] Client demo or production solutions saved before 2026-10-08 may show "Incomplete" effort: their contributors have dates from the retired model but no hours (existing rows are test data). Ask the owner to enter minimum hours rather than deriving them from the old dates
+- [ ] At least one unique person credited. Effort is the solution's **complexity** (Easy, Medium or Hard; required) and an optional **estimated minimum hours** (whole hours). Check that both are credible for what the solution shows ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)). Since ADR-0013 you can correct them yourself, and you explain the change to the owner.
+- [ ] Solutions saved before 2026-10-15 have no complexity yet. The owner, or you through Edit solution, must set it before the next submit or approval. Old per-person hours are no longer shown.
 - [ ] Project links, if present, meet [intake criteria](../data_model/SchemaV2.md#intake-triage-not-every-legacy-record-gets-linked-to-a-solution); client engagement names and per-person effort details do not appear in present mode
 
 **Outcomes:** approve client-safe content (Published, Client Safe Reviewed true, Review Outcome Approved), or request changes (Draft, Review Outcome Changes requested, required Review Comments and both safety booleans false). Approval revalidates submission completeness. Acknowledgment and historical outcome alone never grant clearance. The connected app enforces this through [controlled transitions](../architecture/security-model.md#controlled-transitions); the PoC only simulates the role.
