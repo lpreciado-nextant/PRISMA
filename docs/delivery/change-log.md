@@ -9,7 +9,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-15](#2026-10-15--working-session-librarian-content-editing) | Librarian content editing (definition) | 0% — 0 Live / 1 |
+| [2026-10-15](#2026-10-15--working-session-librarian-content-editing) | Librarian content editing | 50% — 0 Live, 1 In code / 1 |
 | [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 15 Live / 15 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
@@ -70,7 +70,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-15 — Working session: librarian content editing
 
-**Progress:** 0% — 0 Live / 1
+**Progress:** 50% — 0 Live, 1 In code / 1
 
 ### Feedback
 
@@ -81,7 +81,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | Proposed | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md). Next: approve the three new `nx_solution` columns, then plug-in edit mode, policy tests and the connected editor route. Hours stay out of scope while the effort model changes |
+| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | In code | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md); plug-ins, tests and the connected editor (`#/review/:id/edit`, **Confirm changes**) on branch `feature/librarian-content-editing`. Next, each step separately approved: create the three `nx_solution` columns, deploy the signed plug-in, publish the connected app, then a non-admin librarian test. Hours stay out of scope while the effort model changes |
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 
