@@ -44,7 +44,7 @@ export function DraftsView({ draftId, owner, librarian = false }: { draftId?: st
     void Promise.all([draftId ? workflowApi.read(draftId).then(parseSubmission) : undefined, loadDraftReferences(readRows, controller.signal), loadGraphReferences(readRows, controller.signal)])
       .then(([detail, references, graphReferences]) => {
         controller.signal.throwIfAborted();
-        if (librarian ? !detail || !detail.librarian || ![125060000, 125060002].includes(detail.record.publication) : detail && detail.record.publication !== 125060003) throw new Error("Draft unavailable.");
+        if (librarian ? !detail || !detail.librarian || detail.librarianEdit === false || ![125060000, 125060002].includes(detail.record.publication) : detail && detail.record.publication !== 125060003) throw new Error("Draft unavailable.");
         if (detail && detail.record.core.id !== draftId) throw new Error("Draft unavailable.");
         createdId.current = undefined;
         setState({ kind: "ready", revision: ++revision.current, detail, references, graphReferences });
@@ -57,7 +57,7 @@ export function DraftsView({ draftId, owner, librarian = false }: { draftId?: st
 
   return <section className="mx-auto w-full max-w-[980px] px-4 pt-8 pb-24 sm:px-6">
     {state.kind === "loading" ? <LoadingState variant="page" label="Loading submission..." />
-      : state.kind === "error" ? <div role="alert"><h1 className="text-[28px] font-semibold">{librarian ? "Solution unavailable" : "Draft unavailable"}</h1><p className="my-4 text-(--ink-2)">{librarian ? "Check your Dataverse access and connection. Librarians edit Pending review and Published solutions only." : "Check your Dataverse access and connection. Only your Draft submissions can be edited."}</p><button className={buttonClass} onClick={retry}><Icon name="arrowRight" />Retry</button></div>
+      : state.kind === "error" ? <div role="alert"><h1 className="text-[28px] font-semibold">{librarian ? "Solution unavailable" : "Draft unavailable"}</h1><p className="my-4 text-(--ink-2)">{librarian ? "Check your Dataverse access and connection. Librarians edit other people's Pending review and Published solutions; your own you withdraw and edit as their owner." : "Check your Dataverse access and connection. Only your Draft submissions can be edited."}</p><button className={buttonClass} onClick={retry}><Icon name="arrowRight" />Retry</button></div>
       : <DraftEditor key={state.revision} owner={owner} librarian={librarian} initial={state.detail} references={state.references} graphReferences={state.graphReferences} onReload={retry} onCreated={id => { createdId.current = id; replaceQuery("/submit", { draft: id }); }} />}
   </section>;
 }

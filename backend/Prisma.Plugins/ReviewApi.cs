@@ -166,6 +166,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "graph")] public DraftGraphSnapshot Graph { get; set; }
         [DataMember(Name = "media")] public MediaSnapshot[] Media { get; set; }
         [DataMember(Name = "librarian")] public bool Librarian { get; set; }
+        /// <summary>Whether the caller may edit this record as librarian (ADR-0013): someone else's, Pending review or Published.</summary>
+        [DataMember(Name = "librarianEdit")] public bool LibrarianEdit { get; set; }
     }
 
     [DataContract]
@@ -311,7 +313,8 @@ namespace Prisma.Plugins
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionDetail {
                 Record = Summary(server, parent, librarian), Graph = DraftGraph.Read(caller, parent),
-                Media = MediaApi.Snapshots(server, identifier), Librarian = librarian
+                Media = MediaApi.Snapshots(server, identifier), Librarian = librarian,
+                LibrarianEdit = librarian && DraftPolicy.LibrarianMayEdit(parent, context.InitiatingUserId)
             });
         }
 

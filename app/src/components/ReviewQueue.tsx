@@ -61,7 +61,7 @@ const textArea = "mt-2 block w-full resize-y rounded-lg border border-(--glass-e
  * Connected librarians can also edit the solution (ADR-0013). After a real edit the comment becomes required: on
  * approval for a pending record, or through "Confirm changes" for a published one, which repeats the checklist.
  */
-export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, onEdit, edit, onConfirmEdit, children }: {
+export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, onEdit, editBlocked, edit, onConfirmEdit, children }: {
   status: string; owner?: string; client?: string; context?: string; feedback?: string;
   /** The capability's owner from `nx_capability.nx_capabilityowner`: a name, `null` when none is assigned, omitted when unknown. */
   capabilityOwner?: string | null;
@@ -74,6 +74,8 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
   onRequestChanges?: () => void; onRetire?: () => void;
   /** Opens the librarian editor for a pending or published record. */
   onEdit?: () => void;
+  /** Why Edit is not offered, e.g. the librarian's own solution, which they edit as its owner. */
+  editBlocked?: string;
   /** The last librarian edit: when, by whom, and whether the owner has been told yet (`pending`). */
   edit?: { on?: string; by?: string; pending: boolean };
   /** Confirms a published record's unexplained edit with the checklist and the comment. */
@@ -118,6 +120,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         </div>
         {onEdit && <button type="button" disabled={disabled} onClick={onEdit} className={compactAction}><Icon name="edit" size={14} />Edit solution</button>}
       </div>
+      {!onEdit && editBlocked && <p className="mt-2 flex items-start gap-1.5 text-[13px] text-(--ink-2)"><Icon name="edit" size={13} className="mt-0.5 shrink-0" />{editBlocked}</p>}
 
       {/* 2 · Solution overview: who and what, from the record's own fields; nothing invented when a value is missing. */}
       <section aria-labelledby={`${heading}-overview`} className={reviewSection}>

@@ -13,7 +13,7 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns", "inspect-plugin-traces" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
@@ -282,6 +282,28 @@ if (command == "repair-asset-url")
     Console.WriteLine("Update/publish completed; metadata remains 4000. A protected API write/readback probe is still required to confirm physical storage capacity.");
     return;
 }
+if (command == "inspect-plugin-traces")
+{
+    // Read-only: the latest PRISMA plug-in executions, newest first, with any exception. Optional argument: hours back (default 3).
+    var hours = args.Length > 1 && int.TryParse(args[1], out var parsed) ? parsed : 3;
+    var traces = new QueryExpression("plugintracelog") { ColumnSet = new ColumnSet("createdon", "messagename", "typename", "primaryentity", "exceptiondetails", "messageblock", "performanceexecutionduration", "depth"), TopCount = 40 };
+    traces.Criteria.AddCondition("createdon", ConditionOperator.OnOrAfter, DateTime.UtcNow.AddHours(-hours));
+    traces.Criteria.AddCondition("typename", ConditionOperator.Like, "Prisma.Plugins%");
+    traces.Orders.Add(new OrderExpression("createdon", OrderType.Descending));
+    var rows = client.RetrieveMultiple(traces).Entities;
+    Console.WriteLine($"{rows.Count} PRISMA plug-in trace rows in the last {hours} h (tracing must be enabled to record them).");
+    foreach (var row in rows)
+    {
+        var exception = row.GetAttributeValue<string>("exceptiondetails");
+        Console.WriteLine($"{row.GetAttributeValue<DateTime>("createdon"):u} {row.GetAttributeValue<string>("messagename")} {row.GetAttributeValue<string>("typename")?.Split(',')[0]} depth={row.GetAttributeValue<int>("depth")} {row.GetAttributeValue<int>("performanceexecutionduration")} ms{(string.IsNullOrWhiteSpace(exception) ? "" : " EXCEPTION")}");
+        if (!string.IsNullOrWhiteSpace(exception)) Console.WriteLine("  " + string.Join("\n  ", exception.Split('\n').Take(6)));
+        var block = row.GetAttributeValue<string>("messageblock");
+        if (!string.IsNullOrWhiteSpace(block)) Console.WriteLine("  trace: " + block.Trim().Replace("\n", " | ").Substring(0, Math.Min(300, block.Trim().Length)));
+    }
+    var setting = client.RetrieveMultiple(new QueryExpression("organization") { ColumnSet = new ColumnSet("plugintracelogsetting") }).Entities.FirstOrDefault();
+    Console.WriteLine($"Plug-in trace log setting: {setting?.GetAttributeValue<OptionSetValue>("plugintracelogsetting")?.Value} (0 off, 1 exceptions, 2 all). Read-only inspection. No changes made.");
+    return;
+}
 if (command == "inspect-effort-columns")
 {
     // Read-only (solution-level effort): the estimate and complexity columns on nx_solution, with their choice values.
@@ -344,6 +366,11 @@ if (command == "inspect-librarian-edit")
             Console.WriteLine($"  profile '{profile.Name}': read={Allowed("canread")}; create={Allowed("cancreate")}; update={Allowed("canupdate")}; users={client.RetrieveMultiple(members).Entities.Count}; teams={client.RetrieveMultiple(teams).Entities.Count}");
         }
     }
+    // Solutions a librarian has edited, and the most recently modified ones, to tell a failed save from a client problem.
+    var edited = new QueryExpression("nx_solution") { ColumnSet = new ColumnSet("nx_solutionname", "nx_publicationstatus", "nx_librarianeditedon", "nx_librarianeditpending", "modifiedon", "ownerid"), TopCount = 12 };
+    edited.Orders.Add(new OrderExpression("modifiedon", OrderType.Descending));
+    foreach (var row in client.RetrieveMultiple(edited).Entities)
+        Console.WriteLine($"  solution '{row.GetAttributeValue<string>("nx_solutionname")}' {row.Id}: owner {(row.GetAttributeValue<EntityReference>("ownerid")?.Id == identity.UserId ? "YOU" : row.GetAttributeValue<EntityReference>("ownerid")?.Name)}; publication {row.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value}; modified {row.GetAttributeValue<DateTime>("modifiedon"):u}; librarian edited {(row.Contains("nx_librarianeditedon") ? row.GetAttributeValue<DateTime>("nx_librarianeditedon").ToString("u") : "never")}; pending={row.GetAttributeValue<bool>("nx_librarianeditpending")}");
     // Whether the deployed assembly already carries librarian editing: its stored bytes contain the new action name.
     var assemblies = new QueryExpression("pluginassembly") { ColumnSet = new ColumnSet("name", "version", "modifiedon", "modifiedby", "content") };
     assemblies.Criteria.AddCondition("name", ConditionOperator.Equal, "Prisma.Plugins");

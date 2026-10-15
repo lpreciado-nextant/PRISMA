@@ -24,7 +24,7 @@ The review panel above the submission preview shows the status, then three secti
 - A retired record keeps its history and its reason is visible to the owner in My submissions. The owner can later withdraw it to Draft, refresh it and resubmit.
 - Every action carries the record's row version. If someone else changed it first, the action is rejected; reopen the record and review the latest version.
 
-Since 2026-10-15 ([ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md)), you can fix a contributor's content yourself instead of returning it. **Edit solution** in the review panel opens the solution at `#/review/:id/edit`. You can edit everything except contributors and hours, and the record keeps its status. Any real change must be explained to the owner: what you changed and why.
+Since 2026-10-15 ([ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md)), you can fix a contributor's content yourself instead of returning it. **Edit solution** in the review panel opens the solution at `#/review/:id/edit`. You can edit everything except the contributor list, and the record keeps its status. It is not offered on solutions you submitted yourself: withdraw those from My submissions and edit them as their owner. Any real change must be explained to the owner: what you changed and why.
 - On a Pending record, the approval note becomes required.
 - On a Published record, the solution leaves present mode at the first change. It stays in the library. **Confirm changes** repeats the publication checklist, takes your explanation and brings it back to present mode. Do not leave an edit unconfirmed. Owners can withdraw Pending, Published or Retired records to Draft at any time, which also revokes reader access.
 

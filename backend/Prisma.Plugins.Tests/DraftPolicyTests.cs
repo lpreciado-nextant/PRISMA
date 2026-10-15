@@ -588,6 +588,12 @@ namespace Prisma.Plugins.Tests
             }
             record["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Retired);
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Editable(record, librarian, "100", () => true));
+            // What the review page is told, so it never offers Edit on the librarian's own solution.
+            Assert.False(DraftPolicy.LibrarianMayEdit(record, librarian));
+            record["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Pending);
+            Assert.True(DraftPolicy.LibrarianMayEdit(record, librarian));
+            Assert.False(DraftPolicy.LibrarianMayEdit(record, owner));
+            Assert.Contains("\"librarianEdit\":false", DraftPolicy.Serialize(new SubmissionDetail()));
         }
 
         [Fact]

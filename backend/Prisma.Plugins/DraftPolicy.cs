@@ -122,13 +122,24 @@ namespace Prisma.Plugins
             var status = current.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value;
             EditMode mode;
             if (owns && status == DraftStatus) mode = EditMode.Owner;
-            else if (!owns && (status == ReviewPolicy.Pending || status == ReviewPolicy.Published) && librarian()) mode = EditMode.Librarian;
+            else if (LibrarianMayEdit(current, caller) && librarian()) mode = EditMode.Librarian;
             else if (!owns) throw Invalid("You can only edit your own drafts.");
             else throw Invalid("Only Draft records can be edited in this workflow.");
             if (string.IsNullOrWhiteSpace(expectedVersion) || expectedVersion.Any(character => character < '0' || character > '9'))
                 throw Invalid("A valid expected row version is required.");
             if (current.RowVersion != expectedVersion) throw Invalid("This draft changed. Reopen it before saving again.");
             return mode;
+        }
+
+        /// <summary>
+        /// Whether a librarian may edit this record as librarian: someone else's, Pending review or Published. A librarian's
+        /// own record is edited as its owner (withdraw first), so they never explain changes to themselves.
+        /// </summary>
+        public static bool LibrarianMayEdit(Entity record, Guid caller)
+        {
+            var owner = record.GetAttributeValue<EntityReference>("ownerid");
+            var status = record.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value;
+            return !(owner != null && owner.LogicalName == "systemuser" && owner.Id == caller) && (status == ReviewPolicy.Pending || status == ReviewPolicy.Published);
         }
 
         /// <summary>

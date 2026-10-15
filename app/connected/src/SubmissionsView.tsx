@@ -218,7 +218,8 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} notice={mediaAction.message} noticeBusy={mediaAction.downloading}
         error={error && <><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></>}
         onReturn={() => void transition("return")} onApprove={() => void transition("approve")}
-        onEdit={state.librarian && (status === 125060000 || status === 125060002) && !uncertain ? () => navigate(`/review/${id}/edit`) : undefined}
+        onEdit={state.librarian && state.librarianEdit !== false && (status === 125060000 || status === 125060002) && !uncertain ? () => navigate(`/review/${id}/edit`) : undefined}
+        editBlocked={state.librarian && state.librarianEdit === false && (status === 125060000 || status === 125060002) ? "You submitted this solution, so you edit it as its owner: withdraw it from My submissions, then resubmit it." : undefined}
         edit={{ on: state.record.librarianEditedOn, by: state.record.librarianEditedBy, pending: state.record.librarianEditPending === true }}
         onConfirmEdit={state.librarian && status === 125060000 && !uncertain ? () => void transition("confirm-edit") : undefined}
         onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}

@@ -190,6 +190,10 @@ test("workflow rejects mismatched versions, unknown states and internal presenta
   assert.equal(parseSubmission(result({ ...detail, record: { ...edited, librarianEditedBy: "Librarian Name" } })).record.librarianEditedBy, "Librarian Name");
   assert.throws(() => parseSubmission(result({ ...detail, record: { ...edited, librarianEditPending: "yes" } })), /librarian edit/);
   assert.throws(() => parseSubmission(result({ ...detail, record: { ...edited, librarianEditedBy: 7 } })), /metadata/);
+  // Whether the caller may edit it as librarian; older plug-ins omit it.
+  assert.equal(parseSubmission(result({ ...detail, librarian: true, librarianEdit: false })).librarianEdit, false);
+  assert.equal(parseSubmission(result(detail)).librarianEdit, undefined);
+  assert.throws(() => parseSubmission(result({ ...detail, librarianEdit: "no" })), /permission/);
 });
 
 test("submission paging rejects loops and cancelled responses", async () => {

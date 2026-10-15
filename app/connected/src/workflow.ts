@@ -10,7 +10,8 @@ import { readAll, type ReadRows } from "./catalogue.ts";
 export const PUBLICATIONS: Record<number, string> = { 125060000: "Published", 125060001: "Retired", 125060002: "Pending review", 125060003: "Draft" };
 /** `librarianEdit*` (ADR-0013): the last librarian edit. The editor's name reaches librarians only; `pending` until the librarian explains it. */
 export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string; librarianEditedOn?: string; librarianEditedBy?: string; librarianEditPending?: boolean };
-export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean };
+/** `librarianEdit`: the caller may edit it as librarian (someone else's, Pending review or Published). Absent from older plug-ins. */
+export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean; librarianEdit?: boolean };
 /** Contributor credit and the solution's effort; present mode carries neither. */
 export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; email?: string; level?: string }[]; estimatedMinimumHours?: number; complexity?: Solution["complexity"]; projects: string[]; media: MediaItem[]; libraryNotes?: string };
 export function mediaAsset(item: MediaItem, index: number): Solution["assets"][number] {
@@ -114,7 +115,8 @@ export function parseSubmission(value: unknown): SubmissionDetail {
   const graph = parseGraph(wrap(data.graph));
   const media = parseMedia(wrap({ id: record.core.id, rowVersion: record.core.rowVersion, sessionId: null, blockSize: 524288, media: data.media })).media;
   if (typeof data.librarian !== "boolean" || graph.id !== record.core.id || graph.rowVersion !== record.core.rowVersion) throw new Error("Mismatched submission response.");
-  return { record, graph, media, librarian: data.librarian };
+  if (data.librarianEdit !== undefined && typeof data.librarianEdit !== "boolean") throw new Error("Invalid librarian edit permission.");
+  return { record, graph, media, librarian: data.librarian, ...(data.librarianEdit === undefined ? {} : { librarianEdit: data.librarianEdit }) };
 }
 export async function loadSubmissions(api: WorkflowApi, review: boolean, signal: AbortSignal) {
   const records: Submission[] = [];

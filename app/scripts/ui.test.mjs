@@ -451,6 +451,10 @@ test("review panel: librarian edits need an explanation for the owner (ADR-0013)
   // Edit is offered only when the caller passes it; the PoC never does.
   assert.doesNotMatch(render(review.ReviewPanel, props), /Edit solution/);
   assert.match(render(review.ReviewPanel, { ...props, onEdit: noop }), /Edit solution/);
+  // A librarian's own solution: no Edit, and the reason instead.
+  const own = render(review.ReviewPanel, { ...props, editBlocked: "You submitted this solution, so you edit it as its owner." });
+  assert.doesNotMatch(own, /Edit solution/);
+  assert.match(own, /You submitted this solution, so you edit it as its owner\./);
   // Pending: after a real edit the approval note is required and says why.
   const publish = { ...props, defaultDecision: "publish", edit: { on: "2026-10-15", by: "Lia Librarian", pending: true } };
   const unexplained = render(review.ReviewPanel, publish);
