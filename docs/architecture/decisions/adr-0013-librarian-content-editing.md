@@ -1,6 +1,6 @@
 # ADR-0013 — Librarian content editing
 
-**Status:** Proposed; agreed with the user 2026-10-15. Plug-ins and connected app implemented on branch `feature/librarian-content-editing`, not deployed. The three columns were created 2026-10-15 and their metadata and column security verified.
+**Status:** Accepted; agreed with the user 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (about 22:05 UTC). Hosted browser check and non-admin acceptance are pending. The three columns were created on 2026-10-15 and their metadata and column security verified.
 **Date:** 2026-10-15
 
 ## Context

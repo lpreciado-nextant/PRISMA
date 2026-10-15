@@ -1,6 +1,6 @@
 # Librarian runbook
 
-**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into overview, publication checklist and decision 2026-10-14; librarian content editing proposed 2026-10-15 (ADR-0013, implemented on a branch, not deployed); effort is a solution estimate and complexity (ADR-0014, on a branch) · **Last updated:** 2026-10-15
+**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into overview, publication checklist and decision 2026-10-14; librarian content editing deployed 2026-10-15 (ADR-0013; hosted check pending); effort is a solution estimate and complexity (ADR-0014, on a branch) · **Last updated:** 2026-10-15
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
@@ -24,7 +24,7 @@ The review panel above the submission preview shows the status, then three secti
 - A retired record keeps its history and its reason is visible to the owner in My submissions. The owner can later withdraw it to Draft, refresh it and resubmit.
 - Every action carries the record's row version. If someone else changed it first, the action is rejected; reopen the record and review the latest version.
 
-Librarians cannot edit a contributor's content in the deployed app yet; return it with comments instead. Under [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md) (implemented, not deployed), **Edit solution** in the review panel opens the solution at `#/review/:id/edit`. You can edit everything except contributors and hours, and the record keeps its status. Any real change must be explained to the owner: what you changed and why.
+Since 2026-10-15 ([ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md)), you can fix a contributor's content yourself instead of returning it. **Edit solution** in the review panel opens the solution at `#/review/:id/edit`. You can edit everything except contributors and hours, and the record keeps its status. Any real change must be explained to the owner: what you changed and why.
 - On a Pending record, the approval note becomes required.
 - On a Published record, the solution leaves present mode at the first change. It stays in the library. **Confirm changes** repeats the publication checklist, takes your explanation and brings it back to present mode. Do not leave an edit unconfirmed. Owners can withdraw Pending, Published or Retired records to Draft at any time, which also revokes reader access.
 

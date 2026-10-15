@@ -1,6 +1,6 @@
 # Architecture decision records
 
-**Status:** Living; ADR-0010 deployed and enabled for the pilot, ADR-0006 not yet implemented, ADR-0011 deployed, ADR-0007 revision deployed 2026-10-08, ADR-0012 live, ADR-0013 proposed (merged, plug-in not deployed), ADR-0014 accepted (on a branch) · **Last updated:** 2026-10-15
+**Status:** Living; ADR-0010 deployed and enabled for the pilot, ADR-0006 not yet implemented, ADR-0011 deployed, ADR-0007 revision deployed 2026-10-08, ADR-0012 live, ADR-0013 deployed 2026-10-15, ADR-0014 merged but pending plug-in redeploy · **Last updated:** 2026-10-15
 
 Decisions with lasting consequences are recorded here as short ADRs. Open questions live in the [decision log](../../delivery/decision-log.md) until they resolve into an ADR or a doc change.
 
@@ -20,8 +20,8 @@ Decisions with lasting consequences are recorded here as short ADRs. Open questi
 | [0010](adr-0010-attachments-in-blob-through-plugins.md) | Uploaded attachments in Azure Blob through Dataverse plug-ins | Accepted for pilot; deployed and enabled 2026-09-29, non-admin acceptance pending |
 | [0011](adr-0011-asset-purpose.md) | Asset purpose on demo assets | Accepted; deployed and published 2026-10-06 |
 | [0012](adr-0012-private-solution-suggestions.md) | Private suggestions on published solutions | Accepted; live 2026-10-13 |
-| [0013](adr-0013-librarian-content-editing.md) | Librarian content editing | Proposed 2026-10-15; implemented on a branch, not deployed |
-| [0014](adr-0014-solution-effort-estimate-and-complexity.md) | Solution effort as an estimate and a complexity | Accepted 2026-10-15; columns created, code on a branch, not deployed |
+| [0013](adr-0013-librarian-content-editing.md) | Librarian content editing | Accepted; deployed 2026-10-15 (plug-in, then app); hosted check pending |
+| [0014](adr-0014-solution-effort-estimate-and-complexity.md) | Solution effort as an estimate and a complexity | Accepted 2026-10-15; columns created; code in `main` (`5aceac7`); **pending**: plug-in redeploy from `main`, then the app |
 
 ## Template
 

@@ -9,7 +9,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort | 50% — 0 Live, 2 In code / 2 |
+| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort | 38% — 1 Pending review, 1 Pending to do / 2 |
 | [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 15 Live / 15 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
@@ -69,7 +69,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-15 — Working session: librarian content editing and solution-level effort
 
-**Progress:** 50% — 0 Live, 2 In code / 2
+**Progress:** 38% — 1 Pending review, 1 Pending to do / 2
 
 ### Feedback
 
@@ -81,8 +81,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | In code | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md); plug-ins, tests and the connected editor (`#/review/:id/edit`, **Confirm changes**) on branch `feature/librarian-content-editing`. The three `nx_solution` columns were created 2026-10-15 (Juliana), editor lookup to `cr6b0_consultant`, column security verified. Next, each step separately approved: deploy the signed plug-in, publish the connected app, then a non-admin librarian test. Hours stay out of scope while the effort model changes |
-| Effort as a solution estimate (`nx_estimatedminimumhours`, whole hours, optional) and complexity (`nx_complexity`: Easy, Medium, Hard; required to submit and approve). Per-contributor hours retired | In code | [ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md). The user created both columns on 2026-10-15, and the metadata was verified with `inspect-effort-columns`. Plug-ins, PoC and connected app are on branch `feature/solution-effort`. Internal only: never in present mode or the deck. Resolves PR-010 and PR-011. Next: deploy the plug-in and the connected app together, because the response shapes change |
+| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | 🟡 Pending review | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md). Columns created 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (Juliana approved). Next: check it in the hosted app (edit and approve a Pending record; edit and confirm a Published one; owner view), then test with a non-admin librarian |
+| Effort as a solution estimate (`nx_estimatedminimumhours`, whole hours, optional) and complexity (`nx_complexity`: Easy, Medium, Hard; required to submit and approve). Per-contributor hours retired | 🔴 Pending to do | **Pending (2026-10-15):** code is in `main` (`5aceac7`) but Luis\'s plug-in deploy was built before it. Needs the plug-in redeployed from `main`, then the connected app. [ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md). The user created both columns on 2026-10-15, and the metadata was verified with `inspect-effort-columns`. Plug-ins, PoC and connected app are on branch `feature/solution-effort`. Internal only: never in present mode or the deck. Resolves PR-010 and PR-011. Deploy the plug-in and the connected app together, because the response shapes change |
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 

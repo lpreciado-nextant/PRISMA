@@ -1,6 +1,6 @@
 # ADR-0014 — Solution effort as an estimate and a complexity
 
-**Status:** Accepted 2026-10-15. The two columns were created and their metadata verified the same day. The plug-ins and both apps are implemented on branch `feature/solution-effort` and not deployed.
+**Status:** Accepted 2026-10-15. The two columns were created and their metadata verified the same day. The code is in `main` (`5aceac7`). **Pending:** the 2026-10-15 plug-in deploy was built before this change, so the plug-in must be redeployed from `main` and then the connected app published.
 **Date:** 2026-10-15
 **Supersedes:** the effort part of [ADR-0007](adr-0007-contributor-effort.md). Its CSM-from-the-consultant-level decision stands.
 

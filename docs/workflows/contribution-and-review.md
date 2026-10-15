@@ -119,7 +119,7 @@ There is no Role picker (retired 2026-10-08). Once a person is selected, a read-
 |---|---|
 | Material — summary, business value, media, client context, contributors, complexity or the hour estimate | Fresh acknowledgment; submitting returns to Pending review; saving unfinished edits returns to Draft. Both clear Client Safe Reviewed and withdraw the record from the catalogue; production librarian sees a diff |
 | Trivial — typo in library notes | Stays *Published* |
-| Librarian edit (proposed, [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md)) — any content except contributors and hours | Stays *Published* and in the library. It leaves present mode until the librarian confirms the changes (checklist plus the explanation of what changed and why). The owner sees "Edited by the librarian · date" with that comment on the submission page and a label on the My submissions card. Implemented on a branch, not deployed |
+| Librarian edit ([ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md)) — any content except contributors and hours | Stays *Published* and in the library. It leaves present mode until the librarian confirms the changes (checklist plus the explanation of what changed and why). The owner sees "Edited by the librarian · date" with that comment on the submission page and a label on the My submissions card. Deployed 2026-10-15 |
 
 ## Review (librarian side)
 
