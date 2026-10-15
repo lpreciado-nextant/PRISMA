@@ -37,9 +37,10 @@ export interface SolutionContributor {
   id: string;
   /** The `cr6b0_consultant` row; `level` is its `cr6b0_consultantlevel`, read from the directory, never entered here. */
   builtBy: { id: string; name: string; email: string; level?: string };
-  /** `nx_directhours` — the minimum hours this person needed to work on the solution, at every maturity. */
-  directHours?: number;
 }
+
+/** `nx_complexity`: how hard the solution was to build. Required at submission; internal only. */
+export type Complexity = "Easy" | "Medium" | "Hard";
 
 export type AssetType =
   | "Self-contained HTML file"
@@ -93,6 +94,10 @@ export interface Solution {
   contributorNames?: string[];
   /** Proposed `nx_estimatedcost` (Currency, USD). Internal only; stripped in present mode. */
   estimatedCost?: number;
+  /** `nx_estimatedminimumhours`: whole-hour estimate of the least time the whole solution took. Optional; internal only. */
+  estimatedMinimumHours?: number;
+  /** `nx_complexity`. Required at submission; internal only (never in present mode or the presentation download). */
+  complexity?: Complexity;
   /** `nx_clientrole` — the primary client role this solution supports. Optional, no default. Client-safe. */
   clientRole?: ClientRole;
   status: SolutionStatus;

@@ -287,19 +287,32 @@ test("the client question hides every client field until Yes", () => {
 
 test("safety and contributor rows preserve baseline copy and accessible field structure", () => {
   assert.match(render(form.SubmissionSafety, { accepted: false, onChange: noop }), /Help keep PRISMA content safe/);
-  const html = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), value: null, onChange: noop, result: { error: "Enter hours", hours: 0 } });
-  // Compact row: the legend is for screen readers; the hours sit beside the person, the level in small text under them.
+  const html = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }) });
+  // Compact row: the legend is for screen readers; the level in small text under the person. No hours: effort is the solution's.
   assert.match(html, /<legend class="sr-only">Contributor 1/);
-  assert.match(html, /Minimum hours required/);
-  assert.match(html, /role="alert"|aria-live="polite" class="mt-2[^"]*">Enter hours/);
-  assert.doesNotMatch(html, /Allocation|Start date|business days|>Level</);
-  const selected = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: "Customer Success Manager II", value: 4, onChange: noop, result: { error: "", hours: 4 } });
+  assert.doesNotMatch(html, /hours|Allocation|Start date|business days|>Level</i);
+  const selected = render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: "Customer Success Manager II" });
   assert.match(selected, /<p class="mt-1 truncate text-\[12px\][^>]*>Customer Success Manager II<\/p>/);
-  assert.match(selected, /class="sr-only">4 hours/);
   assert.doesNotMatch(selected, /<select|Role|>Level</);
-  assert.match(render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: null, value: 4, onChange: noop, result: { error: "", hours: 4 } }), /Level not recorded in the consultant directory/);
+  assert.match(render(form.ContributorRow, { index: 0, person: createElement("input", { "aria-label": "Person" }), level: null }), /Level not recorded in the consultant directory/);
   assert.doesNotMatch(html, /Remove contributor/);
-  assert.match(html, /aria-live="polite"/);
+  assert.match(render(form.ContributorRow, { index: 1, person: "P", onRemove: noop }), /Remove contributor 2/);
+  assert.doesNotMatch(render(form.ContributorEditor, { onAdd: noop, children: null }), /Total effort|hours/i);
+});
+
+test("effort fields: required complexity as a radio group, optional whole-hour estimate", () => {
+  const empty = render(form.EffortFields, { hours: "", onHours: noop, onComplexity: noop });
+  assert.match(empty, /<fieldset[^>]*>.*<legend[^>]*>How complex was it to build\?.*<\/legend>/s);
+  assert.equal((empty.match(/type="radio"/g) ?? []).length, 3);
+  assert.match(empty, />Easy<.*>Medium<.*>Hard</s);
+  assert.doesNotMatch(empty, /checked=""/);
+  assert.match(empty, /Estimated minimum hours.*type="number"[^>]*step="1"/s);
+  assert.doesNotMatch(empty, /role="alert"/);
+  const chosen = render(form.EffortFields, { hours: "12.5", complexity: "Hard", onHours: noop, onComplexity: noop, error: "Enter whole hours of zero or more." });
+  assert.match(chosen, /checked=""[^>]*\/?>Hard/);
+  assert.match(chosen, /New territory, many moving parts\./);
+  assert.match(chosen, /aria-invalid="true"/);
+  assert.match(chosen, /role="alert"[^>]*>Enter whole hours of zero or more\./);
 });
 
 test("media files demos, interactive demos and supporting material in their own sections", () => {
@@ -483,9 +496,10 @@ test("review queue rows show area, capability, submitter and a friendly date, ne
 });
 
 test("review summary and success use the baseline presentation", () => {
-  const html = render(form.SubmissionReview, { card: "Card", attachments: 1, contributors: "Builder", hours: 13.25, images: "Generated poster · 1 screenshot", safety: "Acknowledged; review required", client: "", context: "", nextState: "Pending review" });
+  const html = render(form.SubmissionReview, { card: "Card", attachments: 1, contributors: "Builder", effort: "~120 h · Medium", images: "Generated poster · 1 screenshot", safety: "Acknowledged; review required", client: "", context: "", nextState: "Pending review" });
   assert.match(html, /inert=""/);
-  assert.match(html, /13.25 hours/);
+  assert.match(html, /Effort.*~120 h · Medium/s);
+  assert.doesNotMatch(html, /Total effort/);
   assert.match(html, /No client/);
   assert.match(html, /rounded-xl border/);
   assert.match(render(form.SubmissionSuccess, { name: "Example", onSubmissions: noop, onAnother: noop, children: "is pending review." }), /Now it&#x27;s pending review/);
@@ -662,20 +676,22 @@ test("suggestions: readers see a private list with author and date; others get a
 
 test("solution sidebar: overview, business context and technologies for everyone; internal sections never in present mode", async () => {
   const { DetailView } = await server.ssrLoadModule("/src/views/DetailView.tsx");
-  const solution = { id: "s", name: "S", summary: "Sum", whatItDoes: "Does", businessValue: "Value", specializationArea: "ai", specializationAreas: ["ai"], status: "Working prototype", publicationStatus: "Published", capabilities: ["Data Engineering"], technologies: ["Power Apps code app", "Microsoft Fabric"], industries: ["Education", "IT"], clientRole: "Chief of Staff", clientContext: "MICROSOFT", clientContextRedacted: "A global software company", clientSafeReviewed: true, contributors: [], assets: [], projects: [{ id: "p", projectName: "Project Atlas" }], dateAdded: "2026-10-01" };
-  const effort = { contributors: [{ name: "Ana Gómez", hours: 15, level: "Senior Consultant" }, { name: "Luis Pérez", hours: 8, level: "Customer Success Manager" }], totalHours: 23 };
+  const solution = { id: "s", name: "S", summary: "Sum", whatItDoes: "Does", businessValue: "Value", specializationArea: "ai", specializationAreas: ["ai"], status: "Working prototype", publicationStatus: "Published", capabilities: ["Data Engineering"], technologies: ["Power Apps code app", "Microsoft Fabric"], industries: ["Education", "IT"], clientRole: "Chief of Staff", clientContext: "MICROSOFT", clientContextRedacted: "A global software company", clientSafeReviewed: true, contributors: [], assets: [], projects: [{ id: "p", projectName: "Project Atlas" }], dateAdded: "2026-10-01", estimatedMinimumHours: 230, complexity: "Medium" };
+  const effort = { contributors: [{ name: "Ana Gómez", level: "Senior Consultant" }, { name: "Luis Pérez", level: "Customer Success Manager" }] };
   const normal = render(DetailView, { solution, present: false, connected: true, effort, capabilityOwner: { name: "Marta Ruiz" }, aside: "SUGGEST" });
   assert.match(normal, /Solution overview.*Specialization area.*Capability.*Data Engineering.*Capability owner.*MR.*Marta Ruiz/s);
   assert.match(normal, /Business context.*Target role.*Chief of Staff.*Industries.*Education.*IT.*Client \(internal\).*MICROSOFT.*Shown to clients as.*A global software company/s);
   assert.match(normal, /Technologies used.*Power Apps code app.*Microsoft Fabric/s);
-  assert.match(normal, /Contributors &amp; development effort.*Ana Gómez.*Senior Consultant.*15 h.*Luis Pérez.*8 h.*Minimum hours invested.*23 hours.*Minimum recorded development effort for this solution\./s);
+  assert.match(normal, /Contributors &amp; development effort.*Ana Gómez.*Senior Consultant.*Luis Pérez.*Complexity.*Medium.*Estimated minimum hours.*~230 h.*Estimated development effort for the whole solution\./s);
+  assert.doesNotMatch(normal, /Minimum hours invested|15 h/);
+  assert.match(render(DetailView, { solution: { ...solution, estimatedMinimumHours: undefined, complexity: undefined }, present: false, connected: true, effort }), /Complexity.*Not set.*Estimated minimum hours.*Not estimated/s);
   assert.match(normal, /Associated projects · 1.*Project Atlas/s);
   assert.match(normal, /SUGGEST/);
   assert.doesNotMatch(normal, /Built on|At a glance|Built by|Delivered for|Total effort|>Context</);
   assert.match(render(DetailView, { solution, present: false, connected: true, effort, capabilityOwner: null }), /Capability owner.*Not assigned/s);
   const present = render(DetailView, { solution, present: true, connected: true, effort, capabilityOwner: { name: "Marta Ruiz" }, aside: "SUGGEST" });
   assert.match(present, /Solution overview.*Data Engineering.*Business context.*Chief of Staff.*Client context.*A global software company.*Technologies used/s);
-  assert.doesNotMatch(present, /Capability owner|Marta Ruiz|MICROSOFT|Contributors|Ana Gómez|Minimum hours|23 hours|Associated projects|Project Atlas|SUGGEST|Added/);
+  assert.doesNotMatch(present, /Capability owner|Marta Ruiz|MICROSOFT|Contributors|Ana Gómez|Complexity|Medium|minimum hours|230|Associated projects|Project Atlas|SUGGEST|Added/);
 });
 
 test("refine groups show five options, keep selected ones at zero, and search long lists", async () => {

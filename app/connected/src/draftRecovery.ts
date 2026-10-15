@@ -1,5 +1,6 @@
 import { coreFields, EMPTY_DRAFT, MATURITY_OPTIONS, type CoreDraft } from "./drafts.ts";
 import { emptyGraph, type DraftGraph } from "./draftGraph.ts";
+import { COMPLEXITY_BY_CHOICE, MAX_ESTIMATED_HOURS } from "../../src/lib/effort.ts";
 
 const prefix = "prisma.connected.recovery:";
 const guid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -10,7 +11,7 @@ export function clearRecoveries(storage: Storage) {
 }
 export function recoveryPayload(owner: string, id: string | undefined, rowVersion: string | undefined, draft: CoreDraft, graph: DraftGraph, step: number, uncertain = false): string {
   return JSON.stringify({ version: 1, owner: owner.toLowerCase(), id: id ?? "new", rowVersion: rowVersion ?? "", draft: coreFields(draft),
-    graph: { contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours })), technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds }, step, uncertain });
+    graph: { contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId })), technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds }, step, uncertain });
 }
 export function parseRecovery(text: string, owner: string, id?: string): DraftRecovery {
   if (text.length > 200000) throw new Error("Recovery is oversized.");
@@ -23,13 +24,13 @@ export function parseRecovery(text: string, owner: string, id?: string): DraftRe
   if (!draft || Object.keys(EMPTY_DRAFT).some(key => typeof draft[key as keyof CoreDraft] !== typeof EMPTY_DRAFT[key as keyof CoreDraft]) || !MATURITY_OPTIONS.some(option => option.value === draft.maturity)) throw new Error("Invalid recovery draft.");
   for (const [key, limit] of Object.entries({ name: 100, summary: 200, whatItDoes: 4000, businessValue: 4000, clientContext: 200, clientContextRedacted: 200, challenges: 2000, lessonsLearned: 2000 })) if ((draft[key as keyof CoreDraft] as string).length > limit) throw new Error("Invalid recovery text.");
   if (draft.capabilityId && !guid.test(draft.capabilityId)) throw new Error("Invalid recovery reference.");
+  if ((draft.estimatedMinimumHours != null && (!Number.isInteger(draft.estimatedMinimumHours) || draft.estimatedMinimumHours < 0 || draft.estimatedMinimumHours > MAX_ESTIMATED_HOURS))
+    || (draft.complexityValue != null && !COMPLEXITY_BY_CHOICE[draft.complexityValue])) throw new Error("Invalid recovery effort.");
   const graph = value.graph;
   if (!graph || !Array.isArray(graph.contributors) || graph.contributors.length > 100) throw new Error("Invalid recovery contributors.");
   for (const person of graph.contributors) {
     if (!person || (person.personId !== "" && !guid.test(person.personId)) || (person.id !== null && !guid.test(person.id))) throw new Error("Invalid recovery person.");
-    // Recoveries written before allocation was retired also carry dates and allocation; re-serializing below drops them.
-    if (person.directHours !== null && (typeof person.directHours !== "number" || !Number.isFinite(person.directHours) || person.directHours < 0 || person.directHours > 1e9)) throw new Error("Invalid recovery effort.");
-    // Recoveries written while contributors had a role carry roleValue; re-serializing below drops it.
+    // Older recoveries carry per-person hours, dates, allocation or a role; re-serializing below drops them.
   }
   // Recoveries written before specialization areas moved to the graph carry no areaIds; they restore with none selected.
   if (graph.areaIds === undefined) graph.areaIds = [];

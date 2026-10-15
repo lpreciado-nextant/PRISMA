@@ -79,7 +79,8 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
   aside?: React.ReactNode;
   catalogueOnly?: boolean;
   connected?: boolean;
-  effort?: { contributors: { name: string; hours: number | null; email?: string; level?: string }[]; totalHours: number | null };
+  /** Connected: contributor credit read from Dataverse. Effort itself is on the solution (estimate and complexity). */
+  effort?: { contributors: { name: string; email?: string; level?: string }[] };
   gallery?: React.ReactNode;
   poster?: React.ReactNode;
   imageCount?: number;
@@ -96,11 +97,9 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
   const inlineDemo = mainDemo && behaviourFor(mainDemo).mode === "viewer" ? mainDemo : undefined;
   const assetSections = ASSET_SECTIONS.map((section) => ({ ...section, items: assets.filter((asset) => asset !== mainDemo && assetPurpose(asset) === section.purpose) })).filter((section) => section.items.length > 0);
   const clientLine = present ? solution.clientContextRedacted : solution.clientContext;
-  const contributions = solution.contributors.map((contributor) => ({ ...contributor, hours: contributor.directHours ?? 0 }));
-  // Everyone who contributed, CSMs included, with the minimum hours each invested (ADR-0007) and their directory level
-  // (`cr6b0_consultantlevel`; there is no per-solution contributor role). The solution's minimum is their sum, as stored.
-  const people = effort ? effort.contributors : contributions.map((contributor) => ({ name: contributor.builtBy.name, email: contributor.builtBy.email, level: contributor.builtBy.level, hours: contributor.hours as number | null }));
-  const minimumHours = effort ? effort.totalHours : Math.round(contributions.reduce((total, contributor) => total + contributor.hours, 0) * 100) / 100;
+  // Everyone who contributed, CSMs included, with their directory level (`cr6b0_consultantlevel`; there is no
+  // per-solution contributor role). Effort is estimated for the whole solution, not per person (ADR-0014).
+  const people = effort ? effort.contributors : solution.contributors.map((contributor) => ({ name: contributor.builtBy.name, email: contributor.builtBy.email, level: contributor.builtBy.level }));
 
   return (
     <div className="animate-rise mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6 [overflow-wrap:anywhere]">
@@ -300,14 +299,19 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
                       <span className="block font-semibold" style={{ color: "var(--ink)" }}>{person.email && /^[^\s@]+@[^\s@]+$/.test(person.email) ? <a href={`mailto:${encodeURIComponent(person.email)}`} style={{ color: "var(--accent)" }}>{person.name}</a> : person.name}</span>
                       {person.level && <span className="block text-[12.5px]" style={{ color: "var(--ink-3)" }}>{person.level}</span>}
                     </span>
-                    <span className="shrink-0 font-mono text-[12.5px]" style={{ color: "var(--accent)" }} title="Minimum hours this person invested">{person.hours === null ? "Incomplete" : `${person.hours.toLocaleString()} h`}</span>
                   </li>
                 ))} />
-                <div className="mt-4 border-t border-(--glass-edge) pt-3">
-                  <p className="font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-2)" }}>Minimum hours invested</p>
-                  <p className="mt-1 font-mono text-[16px]" style={{ color: "var(--accent)" }}>{minimumHours === null ? "Incomplete" : `${minimumHours.toLocaleString()} hours`}</p>
-                  <p className="mt-0.5 text-[12.5px]" style={{ color: "var(--ink-3)" }}>Minimum recorded development effort for this solution{solution.status === "Client demo" ? "; demo effort only, production delivery may take longer." : "."}</p>
-                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-(--glass-edge) pt-3">
+                  <div className="min-w-0">
+                    <dt className="font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-2)" }}>Complexity</dt>
+                    <dd className="mt-1 font-mono text-[16px]" style={{ color: solution.complexity ? "var(--accent)" : "var(--ink-3)" }}>{solution.complexity ?? "Not set"}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-2)" }}>Estimated minimum hours</dt>
+                    <dd className="mt-1 font-mono text-[16px]" style={{ color: solution.estimatedMinimumHours === undefined ? "var(--ink-3)" : "var(--accent)" }}>{solution.estimatedMinimumHours === undefined ? "Not estimated" : `~${solution.estimatedMinimumHours.toLocaleString("en-US")} h`}</dd>
+                  </div>
+                </dl>
+                <p className="mt-1.5 text-[12.5px]" style={{ color: "var(--ink-3)" }}>Estimated development effort for the whole solution{solution.status === "Client demo" ? "; demo effort only, production delivery may take longer." : "."}</p>
                 {solution.estimatedCost !== undefined && <dl className="mt-3 text-[14px]"><Field label="Estimated cost">{solution.estimatedCost.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</Field></dl>}
               </SideSection>}
 

@@ -7,7 +7,7 @@ import { presentCatalogue } from "./catalogue.ts";
 
 const solution: Solution = {
   id: "submission", name: "Test solution", summary: "Summary", whatItDoes: "Description", businessValue: "Value",
-  specializationArea: "ai", contributors: [{ id: "contributor", builtBy: { id: "builder", name: "Builder", email: "builder@example.com" }, directHours: 12 }], status: "Working prototype", publicationStatus: "Draft",
+  specializationArea: "ai", contributors: [{ id: "contributor", builtBy: { id: "builder", name: "Builder", email: "builder@example.com" } }], complexity: "Medium", estimatedMinimumHours: 12, status: "Working prototype", publicationStatus: "Draft",
   safetyAcknowledged: true, clientSafeReviewed: false, dateAdded: "2026-09-21", searchKeywords: "",
   capabilities: ["AI & agents"], technologies: [], industries: [], assets: [], images: [{ id: "image", src: "data:image/png;base64,test" }],
 };
@@ -95,10 +95,12 @@ test("named incomplete drafts save, but submit and approval require complete val
     { ...solution, capabilities: [] }, { ...solution, capabilities: ["AI & agents", "Data platform"] },
     { ...solution, clientContext: "Internal client", clientContextRedacted: "" },
     { ...solution, contributors: [] }, { ...solution, contributors: [...solution.contributors, ...solution.contributors] },
-    { ...solution, contributors: [{ ...solution.contributors[0], directHours: undefined }] },
-    { ...solution, status: "Client demo", contributors: [{ ...solution.contributors[0], directHours: undefined }] },
+    { ...solution, complexity: undefined }, { ...solution, status: "Client demo", complexity: undefined },
+    { ...solution, estimatedMinimumHours: 12.5 }, { ...solution, estimatedMinimumHours: -1 },
   ];
   assert.doesNotThrow(() => saveContribution({ ...solution, status: "Live in production" }, "Pending review"));
+  // The hour estimate is optional; complexity is not.
+  assert.doesNotThrow(() => saveContribution({ ...solution, estimatedMinimumHours: undefined }, "Pending review"));
   for (const candidate of invalid) {
     assert.doesNotThrow(() => saveContribution(candidate, "Draft"));
     assert.throws(() => saveContribution(candidate, "Pending review"));
@@ -107,8 +109,8 @@ test("named incomplete drafts save, but submit and approval require complete val
 });
 test("the review checklist reports each publication requirement of a local record", () => {
   const ready = reviewChecklist(submissionFacts(solution));
-  assert.equal(ready.length, 7);
+  assert.equal(ready.length, 8);
   assert.ok(ready.every((check) => check.done));
-  const gaps = reviewChecklist(submissionFacts({ ...solution, capabilities: [], images: [], safetyAcknowledged: false, clientContext: "Bank X", clientContextRedacted: "", businessValue: " ", contributors: [{ ...solution.contributors[0], directHours: -1 }] }));
-  assert.deepEqual(gaps.filter((check) => !check.done).map((check) => check.label), ["Summary and capability", "What it does and business value", "Contributors with complete effort", "Detail images (1 to 6)", "Client context anonymized", "Contributor safety acknowledgment"]);
+  const gaps = reviewChecklist(submissionFacts({ ...solution, capabilities: [], images: [], safetyAcknowledged: false, clientContext: "Bank X", clientContextRedacted: "", businessValue: " ", contributors: [], complexity: undefined }));
+  assert.deepEqual(gaps.filter((check) => !check.done).map((check) => check.label), ["Summary and capability", "What it does and business value", "Contributors", "Complexity", "Detail images (1 to 6)", "Client context anonymized", "Contributor safety acknowledgment"]);
 });

@@ -45,10 +45,10 @@ export const SOLUTIONS: Solution[] = [
     specializationArea: "ai",
     specializationAreas: ["ai", "data"],
     contributors: [
-      { id: "bso-mp", builtBy: BUILDERS[0], directHours: 162 },
-      { id: "bso-lp", builtBy: BUILDERS[2], directHours: 56 },
+      { id: "bso-mp", builtBy: BUILDERS[0] },
+      { id: "bso-lp", builtBy: BUILDERS[2] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "bso-quota-csm", builtBy: CSMS[0], directHours: 0 },
+      { id: "bso-quota-csm", builtBy: CSMS[0] },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -58,6 +58,8 @@ export const SOLUTIONS: Solution[] = [
     clientContextRedacted: "a global technology vendor's partner organisation",
     dateAdded: "2026-02-11",
     estimatedCost: 48500,
+    estimatedMinimumHours: 218,
+    complexity: "Hard",
     clientRole: "Business Unit Leader",
     libraryNotes: "Copilot answers are scripted for the demo path — avoid freeform questions on stage.",
     searchKeywords:
@@ -102,9 +104,9 @@ export const SOLUTIONS: Solution[] = [
       "The adoption plan stops being a workbook filled in from memory the night before a review, and the customer answers questions about their own business instead of someone guessing at them.",
     specializationArea: "ai",
     contributors: [
-      { id: "adoption-mp", builtBy: BUILDERS[0], directHours: 96 },
+      { id: "adoption-mp", builtBy: BUILDERS[0] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "adoption-plan-studio-csm", builtBy: CSMS[1], directHours: 0 },
+      { id: "adoption-plan-studio-csm", builtBy: CSMS[1] },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -113,6 +115,8 @@ export const SOLUTIONS: Solution[] = [
     clientContext: "Internal build — three invented accounts",
     dateAdded: "2026-03-04",
     estimatedCost: 32000,
+    estimatedMinimumHours: 96,
+    complexity: "Medium",
     clientRole: "Chief of Staff",
     searchKeywords:
       "adoption consumption plan agent assistant MSX MSXi Lynx SPM workbook sponsor milestone copilot",
@@ -141,9 +145,9 @@ export const SOLUTIONS: Solution[] = [
       "Status decks disappear and risk surfaces the week it appears rather than at the quarterly review. The check-in is short enough that leads actually complete it, which is the only reason an executive view is ever current.",
     specializationArea: "ibo",
     contributors: [
-      { id: "score-mp", builtBy: BUILDERS[0], directHours: 52 },
+      { id: "score-mp", builtBy: BUILDERS[0] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "project-health-scorecard-csm", builtBy: CSMS[2], directHours: 0 },
+      { id: "project-health-scorecard-csm", builtBy: CSMS[2] },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -152,6 +156,8 @@ export const SOLUTIONS: Solution[] = [
     clientContext: "Seven sample engagements",
     dateAdded: "2026-01-22",
     estimatedCost: 18750,
+    estimatedMinimumHours: 52,
+    complexity: "Easy",
     clientRole: "Chief Operating Officer (COO)",
     searchKeywords:
       "portfolio delivery RAG health check-in engagement risk fluent dataverse executive scorecard PMO",
@@ -192,9 +198,9 @@ export const SOLUTIONS: Solution[] = [
       "Approvers stop reconstructing the allocation impact from a mail thread, nothing stalls invisibly, and finance sees committed demand before the invoice arrives.",
     specializationArea: "ibo",
     contributors: [
-      { id: "caip-jc", builtBy: BUILDERS[1], directHours: 84 },
+      { id: "caip-jc", builtBy: BUILDERS[1] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "caip-budget-csm", builtBy: CSMS[0], directHours: 0 },
+      { id: "caip-budget-csm", builtBy: CSMS[0] },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -203,6 +209,8 @@ export const SOLUTIONS: Solution[] = [
     clientContext: "Sample budget requests",
     dateAdded: "2026-02-28",
     estimatedCost: 27400,
+    estimatedMinimumHours: 84,
+    complexity: "Medium",
     clientRole: "Chief Financial Officer (CFO)",
     searchKeywords:
       "budget request approval GTM programs purchase order finance allocation requester owner react",
@@ -231,9 +239,9 @@ export const SOLUTIONS: Solution[] = [
       "A concrete answer to “can you build us something bespoke, hosted, and real?” — with a URL a prospect can open on their own phone.",
     specializationArea: "ai",
     contributors: [
-      { id: "padel-lp", builtBy: BUILDERS[2], directHours: 112 },
+      { id: "padel-lp", builtBy: BUILDERS[2] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "padelscope-csm", builtBy: CSMS[1], directHours: 0 },
+      { id: "padelscope-csm", builtBy: CSMS[1] },
     ],
     status: "Live in production",
     publicationStatus: "Published",
@@ -242,6 +250,8 @@ export const SOLUTIONS: Solution[] = [
     clientContext: "Internal build",
     dateAdded: "2026-04-09",
     estimatedCost: 9800,
+    estimatedMinimumHours: 112,
+    complexity: "Medium",
     clientRole: "Chief Executive Officer (CEO)",
     searchKeywords: "padel sport video analysis azure app service computer vision rally tagging",
     capabilities: ["AI & Agent Engineering"],
@@ -271,10 +281,10 @@ export const SOLUTIONS: Solution[] = [
       "Staffing decisions stop depending on who the resourcing manager happens to remember, and the reasoning behind a placement survives the conversation.",
     specializationArea: "data",
     contributors: [
-      { id: "kairo-mc", builtBy: BUILDERS[3], directHours: 264 },
-      { id: "kairo-jc", builtBy: BUILDERS[1], directHours: 40 },
+      { id: "kairo-mc", builtBy: BUILDERS[3] },
+      { id: "kairo-jc", builtBy: BUILDERS[1] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "kairo-csm", builtBy: CSMS[2], directHours: 0 },
+      { id: "kairo-csm", builtBy: CSMS[2] },
     ],
     status: "Live in production",
     publicationStatus: "Published",
@@ -284,6 +294,8 @@ export const SOLUTIONS: Solution[] = [
     clientContextRedacted: "a European professional-services firm",
     dateAdded: "2026-05-16",
     estimatedCost: 61200,
+    estimatedMinimumHours: 304,
+    complexity: "Hard",
     clientRole: "Chief Information Officer (CIO)",
     libraryNotes: "Real headcount figures in the skills matrix — do not screenshot outside present mode.",
     searchKeywords: "talent skills matching resourcing bench staffing people analytics power apps",
@@ -328,9 +340,9 @@ export const SOLUTIONS: Solution[] = [
     specializationArea: "data",
     specializationAreas: ["data", "ibo"],
     contributors: [
-      { id: "supply-jc", builtBy: BUILDERS[1], directHours: 264 },
+      { id: "supply-jc", builtBy: BUILDERS[1] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "supply-signal-csm", builtBy: CSMS[0], directHours: 0 },
+      { id: "supply-signal-csm", builtBy: CSMS[0] },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -340,6 +352,8 @@ export const SOLUTIONS: Solution[] = [
     clientContextRedacted: "a national logistics provider",
     dateAdded: "2026-06-02",
     estimatedCost: 39900,
+    estimatedMinimumHours: 264,
+    complexity: "Hard",
     clientRole: "Operation Manager",
     searchKeywords:
       "supply chain fabric lakehouse medallion power bi semantic model shipments ETA logistics",
@@ -380,9 +394,9 @@ export const SOLUTIONS: Solution[] = [
       "Close moves from nine days to four, and the exceptions that remain arrive with a hypothesis attached.",
     specializationArea: "data",
     contributors: [
-      { id: "ledger-mc", builtBy: BUILDERS[3], directHours: 48 },
+      { id: "ledger-mc", builtBy: BUILDERS[3] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "ledger-reconciler-csm", builtBy: CSMS[1], directHours: 0 },
+      { id: "ledger-reconciler-csm", builtBy: CSMS[1] },
     ],
     status: "Working prototype",
     publicationStatus: "Published",
@@ -391,6 +405,8 @@ export const SOLUTIONS: Solution[] = [
     clientContext: "Internal build",
     dateAdded: "2026-07-18",
     estimatedCost: 22300,
+    estimatedMinimumHours: 48,
+    complexity: "Easy",
     clientRole: "Chief Financial Officer (CFO)",
     searchKeywords: "finance close reconciliation general ledger journal exceptions audit fabric sql",
     capabilities: ["Data Engineering", "Process Automation & Integration"],
@@ -417,9 +433,9 @@ export const SOLUTIONS: Solution[] = [
       "First-response time drops from hours to seconds, and the service desk stops spending its morning sorting mail.",
     specializationArea: "ibo",
     contributors: [
-      { id: "intake-lp", builtBy: BUILDERS[2], directHours: 52 },
+      { id: "intake-lp", builtBy: BUILDERS[2] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "intake-triage-csm", builtBy: CSMS[2], directHours: 0 },
+      { id: "intake-triage-csm", builtBy: CSMS[2] },
     ],
     status: "Client demo",
     publicationStatus: "Published",
@@ -429,6 +445,8 @@ export const SOLUTIONS: Solution[] = [
     clientContextRedacted: "a multinational retailer's shared-services centre",
     dateAdded: "2026-08-05",
     estimatedCost: 15600,
+    estimatedMinimumHours: 52,
+    complexity: "Easy",
     clientRole: "Chief of Staff",
     searchKeywords:
       "service desk intake triage classification copilot studio teams routing queue ITSM shared services",
@@ -467,9 +485,9 @@ export const SOLUTIONS: Solution[] = [
       "Paperwork that used to land three days late lands before the engineer leaves site, which is the only way the invoice goes out on time.",
     specializationArea: "ibo",
     contributors: [
-      { id: "field-jc", builtBy: BUILDERS[1], directHours: 4 },
+      { id: "field-jc", builtBy: BUILDERS[1] },
       // CSM row: nx_role = CSM. Whether CSMs carry effort is still open in SchemaV2, so the mock records none.
-      { id: "field-ops-companion-csm", builtBy: CSMS[0], directHours: 0 },
+      { id: "field-ops-companion-csm", builtBy: CSMS[0] },
     ],
     status: "Idea / concept",
     publicationStatus: "Published",
@@ -478,6 +496,8 @@ export const SOLUTIONS: Solution[] = [
     clientContext: "Concept for an upcoming utilities pursuit",
     dateAdded: "2026-09-01",
     estimatedCost: 4500,
+    estimatedMinimumHours: 4,
+    complexity: "Easy",
     clientRole: "Operation Manager",
     libraryNotes: "Concept only — no working build yet. Do not show to clients.",
     searchKeywords: "field service offline mobile engineer job sheet PWA utilities voice capture",

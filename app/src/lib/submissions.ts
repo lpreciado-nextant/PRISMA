@@ -1,5 +1,5 @@
 import type { Solution } from "../types.ts";
-import { contributorHours } from "./effort.ts";
+import { estimatedHours } from "./effort.ts";
 import type { ReviewFacts } from "./reviewChecklist.ts";
 
 export interface SubmissionEntry {
@@ -21,21 +21,18 @@ export function assertSubmissionReady(solution: Solution): void {
   if (!solution.images?.length || solution.images.length > 6 || solution.images.some((image) => !image.src)) throw new Error("Add one to six detail images.");
   const people = solution.contributors.map((contributor) => contributor.builtBy.id);
   if (!people.length || people.some((person) => !person) || new Set(people).size !== people.length) throw new Error("Select at least one contributor, with no duplicate people.");
-  for (const contributor of solution.contributors) {
-    contributorHours(contributor.directHours);
-  }
+  if (!solution.complexity) throw new Error("Select how complex the solution was to build.");
+  estimatedHours(solution.estimatedMinimumHours);
 }
 
 /** The checklist facts for a local record, mirroring the checks in `assertSubmissionReady`. */
 export function submissionFacts(solution: Solution): ReviewFacts {
   const people = solution.contributors.map((contributor) => contributor.builtBy.id);
-  let effort = people.length > 0 && people.every(Boolean) && new Set(people).size === people.length;
-  if (effort) try {
-    for (const contributor of solution.contributors) contributorHours(contributor.directHours);
-  } catch { effort = false; }
+  let effort = !!solution.complexity;
+  try { estimatedHours(solution.estimatedMinimumHours); } catch { effort = false; }
   return {
     summary: !!solution.summary.trim() && solution.summary.length <= 200, story: !!solution.whatItDoes.trim() && !!solution.businessValue.trim(), capability: solution.capabilities.length === 1 && !!solution.capabilities[0].trim(),
-    contributors: effort, images: solution.images?.filter((image) => image.src).length ?? 0, uploadsComplete: true,
+    contributors: people.length > 0 && people.every(Boolean) && new Set(people).size === people.length, effort, images: solution.images?.filter((image) => image.src).length ?? 0, uploadsComplete: true,
     safety: solution.safetyAcknowledged, anonymized: !solution.clientContext?.trim() || !!solution.clientContextRedacted?.trim(),
   };
 }

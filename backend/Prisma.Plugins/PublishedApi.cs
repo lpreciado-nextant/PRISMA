@@ -11,11 +11,9 @@ namespace Prisma.Plugins
     public sealed class PublishedCredit
     {
         [DataMember(Name = "name")] public string Name { get; set; }
-        [DataMember(Name = "hours")] public decimal? Hours { get; set; }
         [DataMember(Name = "email", EmitDefaultValue = false)] public string Email { get; set; }
         /// <summary>The consultant's `cr6b0_consultantlevel`; a level naming customer success marks the solution's CSM.</summary>
         [DataMember(Name = "level", EmitDefaultValue = false)] public string Level { get; set; }
-        [DataMember(Name = "effort", EmitDefaultValue = false)] public ContributorInput Effort { get; set; }
     }
 
     [DataContract]
@@ -24,8 +22,10 @@ namespace Prisma.Plugins
         [DataMember(Name = "id")] public string Id { get; set; }
         [DataMember(Name = "rowVersion")] public string RowVersion { get; set; }
         [DataMember(Name = "contributors")] public PublishedCredit[] Contributors { get; set; }
-        /// <summary>Null while any contributor has no hours recorded, such as rows saved before allocation was retired.</summary>
-        [DataMember(Name = "totalHours")] public decimal? TotalHours { get; set; }
+        /// <summary>`nx_estimatedminimumhours` for the whole solution. Internal: never sent in present mode.</summary>
+        [DataMember(Name = "estimatedMinimumHours", EmitDefaultValue = false)] public int? EstimatedMinimumHours { get; set; }
+        /// <summary>`nx_complexity` as its label (Easy, Medium, Hard). Internal: never sent in present mode.</summary>
+        [DataMember(Name = "complexity", EmitDefaultValue = false)] public string Complexity { get; set; }
         [DataMember(Name = "projects")] public string[] Projects { get; set; }
         [DataMember(Name = "media")] public MediaSnapshot[] Media { get; set; }
         [DataMember(Name = "libraryNotes", EmitDefaultValue = false)] public string LibraryNotes { get; set; }
@@ -42,7 +42,7 @@ namespace Prisma.Plugins
             var identifier = (Guid)context.InputParameters["SolutionId"];
             var present = (bool)context.InputParameters["Present"];
             var query = new QueryExpression("nx_solution") { ColumnSet = new ColumnSet("nx_status", "nx_publicationstatus", "nx_clientsafereviewed"), TopCount = 1 };
-            if (!present) query.ColumnSet.AddColumn("nx_librarynote");
+            if (!present) query.ColumnSet.AddColumns("nx_librarynote", "nx_estimatedminimumhours", "nx_complexity");
             query.Criteria.AddCondition("nx_solutionid", ConditionOperator.Equal, identifier);
             query.Criteria.AddCondition("nx_publicationstatus", ConditionOperator.Equal, ReviewPolicy.Published);
             query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
@@ -55,16 +55,13 @@ namespace Prisma.Plugins
             if (parent == null) throw MediaPolicy.Invalid("Published detail is unavailable in this mode.");
             var graph = DraftGraph.Read(caller, parent);
             var credits = new List<PublishedCredit>();
-            decimal? totalHours = 0m;
             // Present mode is client-facing: no builder names, CSM rows or effort leave the server.
             if (!present)
                 foreach (var person in graph.Graph.Contributors)
                 {
                     var consultant = caller.Retrieve("cr6b0_consultant", Guid.Parse(person.PersonId), new ColumnSet("cr6b0_consultantname", "cr6b0_email", "cr6b0_consultantlevel"));
-                    var hours = person.DirectHours;
-                    totalHours = hours.HasValue ? totalHours + hours : null;
-                    credits.Add(new PublishedCredit { Name = consultant.GetAttributeValue<string>("cr6b0_consultantname") ?? "Consultant", Hours = hours,
-                        Email = consultant.GetAttributeValue<string>("cr6b0_email"), Level = Trimmed(consultant.GetAttributeValue<string>("cr6b0_consultantlevel")), Effort = person });
+                    credits.Add(new PublishedCredit { Name = consultant.GetAttributeValue<string>("cr6b0_consultantname") ?? "Consultant",
+                        Email = consultant.GetAttributeValue<string>("cr6b0_email"), Level = Trimmed(consultant.GetAttributeValue<string>("cr6b0_consultantlevel")) });
                 }
             var projects = new List<string>();
             if (!present)
@@ -76,9 +73,22 @@ namespace Prisma.Plugins
             var media = MediaApi.Sessions(factory.CreateOrganizationService(null), identifier);
             if (media.Any(row => !row.GetAttributeValue<bool>("nx_complete"))) throw MediaPolicy.Invalid("Published media is incomplete.");
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new PublishedDetail {
-                Id = identifier.ToString(), RowVersion = parent.RowVersion, Contributors = credits.ToArray(), TotalHours = totalHours, Projects = projects.ToArray(), Media = media.Select(row => MediaApi.Snapshot(caller, row)).OrderBy(item => item.SortOrder).ThenBy(item => item.Id).ToArray(),
-                LibraryNotes = present ? null : parent.GetAttributeValue<string>("nx_librarynote")
+                Id = identifier.ToString(), RowVersion = parent.RowVersion, Contributors = credits.ToArray(), Projects = projects.ToArray(), Media = media.Select(row => MediaApi.Snapshot(caller, row)).OrderBy(item => item.SortOrder).ThenBy(item => item.Id).ToArray(),
+                LibraryNotes = present ? null : parent.GetAttributeValue<string>("nx_librarynote"),
+                EstimatedMinimumHours = present ? null : parent.GetAttributeValue<int?>("nx_estimatedminimumhours"),
+                Complexity = present ? null : ComplexityName(parent.GetAttributeValue<OptionSetValue>("nx_complexity")?.Value)
             });
+        }
+
+        public static string ComplexityName(int? value)
+        {
+            switch (value)
+            {
+                case 125060000: return "Easy";
+                case 125060001: return "Medium";
+                case 125060002: return "Hard";
+                default: return null;
+            }
         }
 
         private static string Trimmed(string value) { return string.IsNullOrWhiteSpace(value) ? null : value.Trim(); }

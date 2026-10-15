@@ -191,13 +191,13 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const reload = () => { setError(""); setState(null); setNamesLoaded(false); setUncertain(false); setPreview(null); setAttempt(current => current + 1); };
   const core = state?.record.core;
   const status = state?.record.publication;
-  const missing = !core || !core.summary.trim() || !core.whatItDoes.trim() || !core.businessValue.trim() || !core.capabilityId || !core.safetyAcknowledged || (!!core.clientContext.trim() && !core.clientContextRedacted.trim()) || !state?.graph.hours.length || state.graph.hours.some(hours => hours === null) || !state.media.some(item => item.kind === "image" && item.complete) || state.media.some(item => !item.complete);
+  const missing = !core || !core.summary.trim() || !core.whatItDoes.trim() || !core.businessValue.trim() || !core.capabilityId || !core.safetyAcknowledged || (!!core.clientContext.trim() && !core.clientContextRedacted.trim()) || !state?.graph.graph.contributors.length || core.complexityValue == null || !state.media.some(item => item.kind === "image" && item.complete) || state.media.some(item => !item.complete);
   if (!state || !core || !namesLoaded || state.record.areaIds.some(area => !["ai", "data", "ibo"].includes(names[area]))) return <section className={shell}><button className={button} onClick={() => navigate(review ? "/review" : "/my-submissions")}><Icon name="chevronLeft" />{review ? "Review queue" : "My submissions"}</button>{error || namesLoaded ? <div role="alert" className="my-6"><p className="mb-3">{error || "Specialization unavailable. Check your reference-data access."}</p><button className={button} onClick={reload}><Icon name="arrowRight" />Reopen</button></div> : <LoadingState variant="page" label="Loading submission..." />}</section>;
   if (preview) return <MediaPreview key={preview.id} item={preview} solutionId={core.id} mode="submission" viewerTitle={core.name} onClose={() => setPreview(null)} />;
   const graph = state.graph.graph;
   const thumbnail = state.media.find(item => item.kind === "thumbnail" && item.complete);
   const solution: Solution = { ...submissionSolution(state.record, names), technologies: graph.technologyIds.map(id => names[id] ?? "Unavailable technology"), industries: graph.industryIds.map(id => names[id] ?? "Unavailable industry"), projects: graph.projectIds.map(id => ({ id, projectName: names[id] ?? `Untitled project (${id.slice(0, 8)})` })), assets: state.media.filter(item => item.kind === "attachment" && item.complete).map(mediaAsset) };
-  const effort = { contributors: graph.contributors.map((person, index) => ({ name: names[person.personId] ?? "Unavailable consultant", hours: state.graph.hours[index], email: emails[person.personId], level: levels[person.personId] })), totalHours: state.graph.hours.some(hours => hours === null) ? null : Math.round(state.graph.hours.reduce<number>((total, hours) => total + (hours ?? 0), 0) * 100) / 100 };
+  const effort = { contributors: graph.contributors.map(person => ({ name: names[person.personId] ?? "Unavailable consultant", email: emails[person.personId], level: levels[person.personId] })) };
   // Shown when there is something to read, or on a published record (where "no suggestions yet" is meaningful).
   // Open feedback items (librarian comment, suggestions), each confirmed on its own; the heading shows a bubble while any is open.
   const openItems = review ? [] : openFeedback(feedbackKeys(solution, suggestionList?.suggestions.map(item => item.id) ?? []));
@@ -211,7 +211,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       <>{review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
         solution={solution} capabilityOwner={capabilityOwnerName(capabilityOwners, core.capabilityId, names)} checks={reviewChecklist({
           summary: !!core.summary.trim(), story: !!core.whatItDoes.trim() && !!core.businessValue.trim(), capability: !!core.capabilityId,
-          contributors: state.graph.hours.length > 0 && state.graph.hours.every(hours => hours !== null),
+          contributors: graph.contributors.length > 0, effort: core.complexityValue != null,
           images: state.media.filter(item => item.kind === "image" && item.complete).length, uploadsComplete: state.media.every(item => item.complete),
           safety: core.safetyAcknowledged, anonymized: !core.clientContext.trim() || !!core.clientContextRedacted.trim(),
         })}
@@ -235,7 +235,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         {!core.safetyAcknowledged && <p className="mt-3 flex items-center gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} />Safety acknowledgment required</p>}
         {mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
         {error && <div role="alert" className="my-4"><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></div>}
-        {missing && status === 125060003 && <p role="status" className="mt-3 flex items-start gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} className="mt-0.5 shrink-0" />Complete the summary, what it does, business value, capability, contributor effort, redacted context when needed, detail images and safety acknowledgment before submitting.</p>}
+        {missing && status === 125060003 && <p role="status" className="mt-3 flex items-start gap-1.5 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} className="mt-0.5 shrink-0" />Complete the summary, what it does, business value, capability, contributors, complexity, redacted context when needed, detail images and safety acknowledgment before submitting.</p>}
         {busy && <LoadingState className="mt-4" label="Updating submission..." />}
       </SubmissionStatusPanel>}
         {confirmation && confirmCopy && <ConfirmDialog title={confirmCopy.title} confirmLabel={confirmCopy.label} onCancel={() => setConfirmation(null)} onConfirm={() => { setConfirmation(null); void transition(confirmation); }}>

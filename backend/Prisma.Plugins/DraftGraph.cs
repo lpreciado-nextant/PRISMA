@@ -30,7 +30,6 @@ namespace Prisma.Plugins
         [DataMember(Name = "id")] public string Id { get; set; }
         [DataMember(Name = "rowVersion")] public string RowVersion { get; set; }
         [DataMember(Name = "graph")] public DraftGraphInput Graph { get; set; }
-        [DataMember(Name = "hours")] public List<decimal?> Hours { get; set; }
     }
 
     public static class DraftGraph
@@ -91,8 +90,7 @@ namespace Prisma.Plugins
         public static DraftGraphSnapshot Read(IOrganizationService caller, Entity parent)
         {
             var contributors = Children(caller, parent.Id).Select(row => new ContributorInput {
-                Id = row.Id.ToString(), PersonId = row.GetAttributeValue<EntityReference>("nx_builtby")?.Id.ToString(),
-                DirectHours = row.Contains("nx_directhours") ? (decimal?)row["nx_directhours"] : null
+                Id = row.Id.ToString(), PersonId = row.GetAttributeValue<EntityReference>("nx_builtby")?.Id.ToString()
             }).ToList();
             return new DraftGraphSnapshot {
                 Id = parent.Id.ToString(), RowVersion = parent.RowVersion,
@@ -102,8 +100,7 @@ namespace Prisma.Plugins
                     IndustryIds = Links(caller, parent.Id, Relationships[1]).Select(identifier => identifier.ToString()).ToList(),
                     ProjectIds = Links(caller, parent.Id, Relationships[2]).Select(identifier => identifier.ToString()).ToList(),
                     AreaIds = AreaIds(caller, parent.Id)
-                },
-                Hours = contributors.Select(person => person.DirectHours).ToList()
+                }
             };
         }
 
@@ -121,9 +118,9 @@ namespace Prisma.Plugins
                 var row = new Entity("nx_solutioncontributor", identifier) {
                     ["nx_contributorname"] = "Contributor " + personId.ToString("D"),
                     ["nx_solution"] = parent.ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId),
-                    // Every maturity records direct hours; the retired dates and allocation columns are no longer written.
+                    // Effort is an estimate on the solution now: nx_directhours, the dates and allocation are no longer written.
                     // The person's role is their cr6b0_consultantlevel in the directory; nx_role is retired and never touched.
-                    ["nx_effortmode"] = new OptionSetValue(125060000), ["nx_directhours"] = person.DirectHours
+                    ["nx_effortmode"] = new OptionSetValue(125060000)
                 };
                 if (identifier == Guid.Empty) caller.Create(row);
                 else { caller.Update(row); retained.Add(identifier); }
@@ -146,7 +143,7 @@ namespace Prisma.Plugins
         private static List<Entity> Children(IOrganizationService caller, Guid parent)
         {
             var query = new QueryExpression("nx_solutioncontributor") {
-                ColumnSet = new ColumnSet("nx_builtby", "nx_directhours"), TopCount = 101
+                ColumnSet = new ColumnSet("nx_builtby"), TopCount = 101
             };
             query.Criteria.AddCondition("nx_solution", ConditionOperator.Equal, parent);
             query.Orders.Add(new OrderExpression("nx_solutioncontributorid", OrderType.Ascending));

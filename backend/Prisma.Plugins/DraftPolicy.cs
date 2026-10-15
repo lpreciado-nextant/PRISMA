@@ -22,8 +22,12 @@ namespace Prisma.Plugins
         public static readonly string[] CoreColumns = {
             "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes", "nx_businessvalue",
             "nx_capability", "nx_status", "nx_clientcontext", "nx_clientcontextredacted", "nx_safetyacknowledged",
-            "nx_clientrole", "nx_challenges", "nx_lessonslearned"
+            "nx_clientrole", "nx_challenges", "nx_lessonslearned", "nx_estimatedminimumhours", "nx_complexity"
         };
+        /// <summary>Live `nx_solution.nx_complexity` choice values: Easy, Medium, Hard. Required at submit/publication.</summary>
+        public static readonly int[] ComplexityValues = { 125060000, 125060001, 125060002 };
+        /// <summary>Upper bound for `nx_estimatedminimumhours`, a whole-number estimate for the whole solution.</summary>
+        public const int MaxEstimatedHours = 100000;
         /// <summary>Live `nx_solution.nx_clientrole` choice values (SchemaV2, 2026-09-23). Optional, no default.</summary>
         public static readonly int[] ClientRoleValues = {
             125060000, 125060001, 125060002, 125060008, 125060009, 125060003, 125060004, 125060005,
@@ -51,7 +55,7 @@ namespace Prisma.Plugins
                 throw Invalid("Draft content must be a JSON object.");
             }
             if (values == null) throw Invalid("Draft content must be a JSON object.");
-            var allowed = new HashSet<string>(TextColumns.Keys) { "capabilityId", "maturity", "safetyAcknowledged", "clientRoleValue" };
+            var allowed = new HashSet<string>(TextColumns.Keys) { "capabilityId", "maturity", "safetyAcknowledged", "clientRoleValue", "estimatedMinimumHours", "complexityValue" };
             if (values.Keys.Any(key => !allowed.Contains(key))) throw Invalid("Draft contains unsupported or protected fields.");
             var entity = new Entity("nx_solution");
             foreach (var pair in TextColumns)
@@ -84,6 +88,21 @@ namespace Prisma.Plugins
                 entity["nx_clientrole"] = new OptionSetValue((int)clientRole);
             }
             else entity["nx_clientrole"] = null;
+            // Solution-level effort: an optional whole-hour estimate and a complexity, both internal only.
+            object estimate;
+            if (values.TryGetValue("estimatedMinimumHours", out estimate) && estimate != null)
+            {
+                if (!(estimate is int) || (int)estimate < 0 || (int)estimate > MaxEstimatedHours) throw Invalid("Estimated minimum hours must be a whole number from 0 to " + MaxEstimatedHours + ".");
+                entity["nx_estimatedminimumhours"] = (int)estimate;
+            }
+            else entity["nx_estimatedminimumhours"] = null;
+            object complexity;
+            if (values.TryGetValue("complexityValue", out complexity) && complexity != null)
+            {
+                if (!(complexity is int) || !ComplexityValues.Contains((int)complexity)) throw Invalid("Select a supported complexity.");
+                entity["nx_complexity"] = new OptionSetValue((int)complexity);
+            }
+            else entity["nx_complexity"] = null;
             return entity;
         }
 

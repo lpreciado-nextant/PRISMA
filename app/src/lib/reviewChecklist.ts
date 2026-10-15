@@ -4,7 +4,10 @@ export type ReviewFacts = {
   /** What it does and business value: both required (`nx_whatitdoes`, `nx_businessvalue` are Business Required). */
   story: boolean;
   capability: boolean;
+  /** At least one unique contributor (no hours: effort is estimated for the whole solution). */
   contributors: boolean;
+  /** Complexity selected (`nx_complexity`); the optional hour estimate, when given, is a valid whole number. */
+  effort: boolean;
   images: number;
   uploadsComplete: boolean;
   safety: boolean;
@@ -19,7 +22,8 @@ export function reviewChecklist(facts: ReviewFacts): ReviewCheck[] {
   return [
     { label: "Summary and capability", done: facts.summary && facts.capability },
     { label: "What it does and business value", done: facts.story },
-    { label: "Contributors with complete effort", done: facts.contributors },
+    { label: "Contributors", done: facts.contributors },
+    { label: "Complexity", done: facts.effort },
     { label: "Detail images (1 to 6)", done: facts.images >= 1 && facts.images <= 6 },
     { label: "All uploads finished", done: facts.uploadsComplete },
     { label: "Client context anonymized", done: facts.anonymized },

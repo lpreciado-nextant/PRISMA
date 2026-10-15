@@ -4,7 +4,7 @@ import { createPublishedDetails } from "./publishedDetails.ts";
 
 const id = "4b7a3f2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b";
 const result = (data: unknown) => ({ success: true, data: { ResultJson: JSON.stringify(data) } });
-const detail = (projects: string[] = []) => result({ id, rowVersion: "1", contributors: [], totalHours: 0, projects, media: [] });
+const detail = (projects: string[] = []) => result({ id, rowVersion: "1", contributors: [], projects, media: [] });
 
 test("published details share in-flight and recent reads per projection", async () => {
   let clock = 0;
@@ -43,14 +43,14 @@ test("published details refresh always reads and forget failures", async () => {
 });
 
 test("published details reject an invalid projection without caching it", async () => {
-  const details = createPublishedDetails(async () => result({ id, rowVersion: "1", contributors: [], totalHours: 0, projects: [], media: [], libraryNotes: "Internal" }));
+  const details = createPublishedDetails(async () => result({ id, rowVersion: "1", contributors: [], projects: [], media: [], libraryNotes: "Internal" }));
   await assert.rejects(details.load(id, true), /projection/);
   assert.equal(details.peek(id, true), undefined);
 });
 
 test("published details stay bounded", async () => {
   const other = "5b7a3f2e-1c2d-4e5f-8a9b-0c1d2e3f4a5b";
-  const details = createPublishedDetails(async requested => result({ id: requested, rowVersion: "1", contributors: [], totalHours: 0, projects: [], media: [] }), 1000, 1);
+  const details = createPublishedDetails(async requested => result({ id: requested, rowVersion: "1", contributors: [], projects: [], media: [] }), 1000, 1);
   await details.load(id, false);
   await details.load(other, false);
   assert.equal(details.peek(id, false), undefined);

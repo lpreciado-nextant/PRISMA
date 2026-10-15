@@ -10,6 +10,8 @@ import type { AssetPurpose } from "../lib/assetPurpose";
 import { LINK_ASSET_TYPES, assetTypeLabel, validateLinkedAsset, type LinkedAssetInput, type LinkAssetType } from "../lib/linkedAssets";
 import { useVideoPreparation } from "../lib/useVideoPreparation";
 import { LocalVideoPreview } from "./ViewerFrame";
+import { COMPLEXITIES, MAX_ESTIMATED_HOURS } from "../lib/effort";
+import type { Complexity } from "../types";
 
 export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Tag it", "Solution context", "Media", "Review & submit"] as const;
 
@@ -30,11 +32,11 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
   "Before you start": "Help keep PRISMA content safe and ready to present to clients.",
   "Define the solution": "What it is and why it matters: the card and the story CSMs tell.",
   "Solution context": "Where it stands, who built it, and whether a client is involved.",
-  Status: "How mature the solution is today. It also decides how effort is entered below.",
+  Status: "How mature the solution is today.",
   "Solution details": "The card's first impression. Name it like a product, not a project code, and say in one line what it does.",
   Client: "Who this was built for, and how to talk about them in front of other clients.",
   "Challenges & lessons learned": "What made it hard and what you would tell the next team. Internal only: never shown in presentation mode.",
-  "Built by & effort": "Add the contributors who worked on this solution and capture the effort required to deliver it. This information is used for internal tracking only.",
+  "Built by & effort": "Add the contributors who worked on this solution and estimate the effort it took to build. This information is used for internal tracking only.",
   "What does it do, and why does it matter?": "CSMs rely on this step most. Write it for someone who wasn't on the project.",
   "Tag it": "Tags help CSMs find this later. Capabilities and industries come from a fixed list; technologies are free text.",
   Media: "Add at least one screenshot. A thumbnail, video, slides or HTML demo are optional.",
@@ -407,48 +409,56 @@ export function LessonsFields({ challenges, lessonsLearned, onChange }: { challe
   </NamedSection>;
 }
 
-export function SubmissionReview({ card, attachments, contributors, hours, images, safety, client, context, role, nextState, children }: {
-  card: ReactNode; attachments: number; contributors: string; hours: number | null; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
+export function SubmissionReview({ card, attachments, contributors, effort, images, safety, client, context, role, nextState, children }: {
+  card: ReactNode; attachments: number; contributors: string; effort: string; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
 }) {
-  const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Total effort", hours === null ? "Incomplete" : `${hours.toLocaleString()} hours`], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ...(role === undefined ? [] : [["Client role", role || "Not specified"]]), ["Next state", nextState]];
+  const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Effort", effort], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ...(role === undefined ? [] : [["Client role", role || "Not specified"]]), ["Next state", nextState]];
   return <StepShell title="Review & submit"><div className="pointer-events-none mx-auto w-full max-w-[400px]" inert>{card}</div>
     <dl className="grid gap-2 text-[14px] sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="flex min-w-0 gap-3 rounded-xl border border-(--glass-edge) px-3.5 py-2.5"><dt className="w-24 shrink-0 font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="min-w-0 flex-1 break-words text-(--ink)">{value}</dd></div>)}</dl>{children}
   </StepShell>;
 }
 
-export function ContributorEditor({ children, total, onAdd, addDisabled = false, bare = false }: { children: ReactNode; total: number | null; onAdd: () => void; addDisabled?: boolean; bare?: boolean }) {
+export function ContributorEditor({ children, onAdd, addDisabled = false, bare = false }: { children: ReactNode; onAdd: () => void; addDisabled?: boolean; bare?: boolean }) {
   return <section aria-labelledby={bare ? undefined : "contributors-heading"} aria-label={bare ? "Contributors" : undefined} className={bare ? "min-w-0" : "mt-2 min-w-0 border-t border-(--glass-edge) pt-5"}>
     {!bare && <h3 id="contributors-heading" className="text-[17px] font-semibold">Built by &amp; effort</h3>}
-    <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>Enter the minimum hours each person needed to work on this solution, including preparation and discovery.</p>
+    <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>Add everyone who worked on this solution.</p>
     {children}
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-      <button type="button" disabled={addDisabled} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[13px] font-semibold disabled:opacity-40" onClick={onAdd}><Icon name="plus" size={14} />Add contributor</button>
-      <p aria-live="polite" className="text-[14px] font-semibold">Total effort: {total === null ? "Incomplete" : `${total.toLocaleString()} hours`}</p>
-    </div>
+    <div className="mt-4"><button type="button" disabled={addDisabled} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[13px] font-semibold disabled:opacity-40" onClick={onAdd}><Icon name="plus" size={14} />Add contributor</button></div>
   </section>;
 }
 
 /** `level` is the selected consultant's directory level; leave it undefined until a person is selected. */
-export function ContributorRow({ index, person, level, value, onChange, onRemove, result }: {
-  index: number; person: ReactNode; level?: string | null; value: number | null; onChange: (directHours: number | null) => void;
-  onRemove?: () => void; result: { error: string; hours: number };
-}) {
-  const id = useId();
-  // One compact line per person: who (with their directory level underneath) beside their hours.
-  return <fieldset className="mt-4 min-w-0 border-b border-(--glass-edge) pb-4" aria-describedby={id}>
+export function ContributorRow({ index, person, level, onRemove }: { index: number; person: ReactNode; level?: string | null; onRemove?: () => void }) {
+  // One compact line per person: who, with their directory level underneath.
+  return <fieldset className="mt-4 min-w-0 border-b border-(--glass-edge) pb-4">
     <legend className="sr-only">Contributor {index + 1}</legend>
-    <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2 sm:flex-nowrap">
-      <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
+    <div className="flex min-w-0 items-start gap-3">
+      <div className="min-w-0 flex-1">
         {person}
         {level !== undefined && <p className="mt-1 truncate text-[12px] text-(--ink-3)" title={level || undefined}>{level || "Level not recorded in the consultant directory"}</p>}
       </div>
-      <div className="min-w-0 flex-1 sm:w-48 sm:flex-none"><Field label="Minimum hours required" required><input type="number" className={submissionInputClass} min={0} step={0.01} value={value ?? ""} onChange={event => onChange(event.target.value === "" ? null : Number(event.target.value))} /></Field></div>
       {onRemove && <button type="button" onClick={onRemove} className="mt-[30px] grid h-11 w-11 shrink-0 cursor-pointer place-items-center rounded-lg border border-(--glass-edge)" title="Remove contributor" aria-label={`Remove contributor ${index + 1}`}><Icon name="close" size={16} /></button>}
-      {/* Keeps the hours column aligned with rows that can be removed. */}
-      {!onRemove && <span aria-hidden="true" className="hidden w-11 shrink-0 sm:block" />}
     </div>
-    <p id={id} aria-live="polite" className={result.error ? "mt-2 text-[13px] text-(--proto)" : "sr-only"}>{result.error || `${result.hours.toLocaleString()} hours`}</p>
   </fieldset>;
+}
+
+/**
+ * Effort for the whole solution: an optional whole-hour estimate (`nx_estimatedminimumhours`) and the required
+ * complexity (`nx_complexity`). Internal only. `hours` is the raw input so a partial entry is never coerced.
+ */
+export function EffortFields({ hours, complexity, onHours, onComplexity, error }: { hours: string; complexity?: Complexity; onHours: (value: string) => void; onComplexity: (value: Complexity) => void; error?: string }) {
+  const id = useId();
+  return <div className="mt-5 grid min-w-0 gap-5">
+    <fieldset className="min-w-0">
+      <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>How complex was it to build?<RequiredMark /></legend>
+      <div className="flex flex-wrap gap-2">{COMPLEXITIES.map(option => <label key={option.value} title={option.hint} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${complexity === option.value ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
+        <input type="radio" className="sr-only" name={`${id}-complexity`} checked={complexity === option.value} onChange={() => onComplexity(option.value)} />{option.value}
+      </label>)}</div>
+      <p className="mt-1.5 text-[12px] text-(--ink-3)">{COMPLEXITIES.find(option => option.value === complexity)?.hint ?? "Easy: familiar work. Medium: some new ground. Hard: new territory, many moving parts."}</p>
+    </fieldset>
+    <div className="max-w-[260px]"><Field label="Estimated minimum hours" optional hint="For the whole solution, including preparation and discovery."><input type="number" inputMode="numeric" className={submissionInputClass} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={error ? `${id}-error` : undefined} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} /></Field>
+      {error && <p id={`${id}-error`} role="alert" className="mt-1.5 text-[13px] text-(--proto)">{error}</p>}</div>
+  </div>;
 }
 
 type Person = { id: string; name: string; email?: string };

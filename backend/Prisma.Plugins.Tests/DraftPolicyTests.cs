@@ -55,6 +55,43 @@ namespace Prisma.Plugins.Tests
             Assert.Contains("business value", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
             parent["nx_businessvalue"] = "Finance focuses on exceptions.";
             Assert.Contains("safety", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
+            // Complexity is required to submit; the hour estimate is not, and contributors need no hours.
+            parent["nx_safetyacknowledged"] = true;
+            Assert.Contains("complex", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
+            parent["nx_complexity"] = new OptionSetValue(125060001);
+            Assert.Contains("contributors", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
+            graph.Graph.Contributors.Add(new ContributorInput { PersonId = Area });
+            Assert.Contains("images", Assert.Throws<InvalidPluginExecutionException>(() => ReviewPolicy.Complete(parent, graph, media)).Message);
+        }
+
+        [Fact]
+        public void SolutionEffortIsAnOptionalWholeHourEstimateAndAComplexity()
+        {
+            var entity = DraftPolicy.Parse(Input(",\"estimatedMinimumHours\":120,\"complexityValue\":125060002"));
+            Assert.Equal(120, entity.GetAttributeValue<int?>("nx_estimatedminimumhours"));
+            Assert.Equal(125060002, entity.GetAttributeValue<OptionSetValue>("nx_complexity").Value);
+            var blank = DraftPolicy.Parse(Input(",\"estimatedMinimumHours\":null"));
+            Assert.True(blank.Contains("nx_estimatedminimumhours") && blank["nx_estimatedminimumhours"] == null);
+            Assert.True(blank.Contains("nx_complexity") && blank["nx_complexity"] == null);
+            Assert.Equal(0, DraftPolicy.Parse(Input(",\"estimatedMinimumHours\":0")).GetAttributeValue<int?>("nx_estimatedminimumhours"));
+            foreach (var invalid in new[] { "-1", "100001", "12.5", "\"12\"", "true" })
+                Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"estimatedMinimumHours\":" + invalid)));
+            foreach (var invalid in new[] { "125060003", "1", "\"Hard\"" })
+                Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"complexityValue\":" + invalid)));
+            Assert.Contains("nx_estimatedminimumhours", DraftPolicy.CoreColumns);
+            Assert.Contains("nx_complexity", DraftPolicy.CoreColumns);
+            var snapshot = DraftPolicy.Serialize(new DraftSnapshot { EstimatedMinimumHours = 80, ComplexityValue = 125060000 });
+            Assert.Contains("\"estimatedMinimumHours\":80", snapshot);
+            Assert.Contains("\"complexityValue\":125060000", snapshot);
+            Assert.Equal("Easy", PublishedApi.ComplexityName(125060000));
+            Assert.Equal("Medium", PublishedApi.ComplexityName(125060001));
+            Assert.Equal("Hard", PublishedApi.ComplexityName(125060002));
+            Assert.Null(PublishedApi.ComplexityName(null));
+            // Present mode never carries the estimate or the complexity.
+            var present = DraftPolicy.Serialize(new PublishedDetail { Id = "x", RowVersion = "1", Contributors = new PublishedCredit[0], Projects = new string[0], Media = new MediaSnapshot[0] });
+            Assert.DoesNotContain("estimatedMinimumHours", present);
+            Assert.DoesNotContain("complexity", present);
+            Assert.DoesNotContain("totalHours", present);
         }
 
         [Fact]
@@ -320,9 +357,10 @@ namespace Prisma.Plugins.Tests
         [Fact]
         public void PresentationCreditsOmitInternalOptionalFields()
         {
-            var json = DraftPolicy.Serialize(new PublishedDetail { Contributors = new[] { new PublishedCredit { Name = "Consultant", Hours = null } } });
+            var json = DraftPolicy.Serialize(new PublishedDetail { Contributors = new[] { new PublishedCredit { Name = "Consultant" } } });
             Assert.DoesNotContain("email", json);
             Assert.DoesNotContain("effort", json);
+            Assert.DoesNotContain("hours", json);
             Assert.DoesNotContain("libraryNotes", json);
             Assert.DoesNotContain("level", json);
             Assert.Contains("\"level\":\"Customer Success Manager\"", DraftPolicy.Serialize(new PublishedCredit { Name = "CSM", Level = "Customer Success Manager" }));
@@ -431,18 +469,20 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
-        public void ContributorsPermitIncompleteDraftsButRequireMinimumHoursToSubmit()
+        public void ContributorsNeedOnlyUniquePeopleToSubmit()
         {
             var person = new ContributorInput { PersonId = Area };
             ContributorPolicy.Validate(new[] { person }, false);
-            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person }, true));
-            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person, person }, false));
-            person.DirectHours = 0;
             ContributorPolicy.Validate(new[] { person }, true);
-            foreach (var invalid in new[] { -1m, 1.001m, 1000000000.01m })
+            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new ContributorInput[0], true));
+            ContributorPolicy.Validate(new ContributorInput[0], false);
+            Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person, person }, false));
+            // Per-person hours are retired: any value an older client sends is dropped, never validated or stored.
+            foreach (var retired in new[] { -1m, 1.001m, 12m })
             {
-                person.DirectHours = invalid;
-                Assert.Throws<InvalidPluginExecutionException>(() => ContributorPolicy.Validate(new[] { person }, false));
+                person.DirectHours = retired;
+                ContributorPolicy.Validate(new[] { person }, true);
+                Assert.Null(person.DirectHours);
             }
         }
 
@@ -451,7 +491,8 @@ namespace Prisma.Plugins.Tests
         {
             var json = "{\"contributors\":[{\"personId\":\"" + Area + "\",\"directHours\":12.5,\"startDate\":\"2026-01-01\",\"endDate\":\"2026-01-31\",\"allocation\":150,\"roleValue\":125060000}],\"technologyIds\":[],\"industryIds\":[],\"projectIds\":[],\"areaIds\":[]}";
             var person = DraftGraph.Parse(json).Contributors[0];
-            Assert.Equal(12.5m, person.DirectHours);
+            Assert.Null(person.DirectHours);
+            Assert.DoesNotContain("directHours", DraftPolicy.Serialize(person));
             Assert.DoesNotContain("allocation", DraftPolicy.Serialize(person));
             Assert.DoesNotContain("roleValue", DraftPolicy.Serialize(person));
         }

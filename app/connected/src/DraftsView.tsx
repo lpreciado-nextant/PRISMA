@@ -4,7 +4,7 @@ import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { TagPicker } from "../../src/components/TagPicker";
 import { SolutionCard } from "../../src/components/SolutionCard";
-import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, SolutionDetailsFields, ClientFields, StoryFields, LessonsFields, SubmissionReview, StatusField } from "../../src/components/SubmissionForm";
+import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, EffortFields, SolutionDetailsFields, ClientFields, StoryFields, LessonsFields, SubmissionReview, StatusField } from "../../src/components/SubmissionForm";
 import type { Solution, SpecializationArea } from "../../src/types";
 import { MAX_AREAS } from "../../src/lib/areas";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
@@ -13,7 +13,8 @@ import { DraftGraphEditor } from "./DraftGraphEditor";
 import { DraftMediaEditor } from "./DraftMediaEditor";
 import { draftApi, graphApi, mediaApi, readRows, workflowApi } from "./dataSource";
 import { coreFields, EMPTY_DRAFT, loadDraftReferences, MATURITY_OPTIONS, type CoreDraft, type DraftReferences, type SavedDraft } from "./drafts";
-import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, persistDraftGraph, loadGraphReferences, type GraphReferences, type DraftGraph } from "./draftGraph";
+import { COMPLEXITIES, COMPLEXITY_BY_CHOICE, effortSummary, estimatedHours } from "../../src/lib/effort";
+import { emptyGraph, graphPayload, initialContributor, isEmptyContributor, persistDraftGraph, loadGraphReferences, type GraphReferences, type DraftGraph } from "./draftGraph";
 import { createTechnology, parseSubmission, type SubmissionDetail } from "./workflow";
 import { hasCaptionChanges, saveMediaCaptions, type MediaItem } from "./media";
 import { parseRecovery, recoveryKey, recoveryPayload } from "./draftRecovery";
@@ -28,7 +29,7 @@ function areaName(name: string) {
 
 /**
  * The guided editor. With `librarian`, a PRISMA Librarian edits someone else's Pending review or Published solution in
- * place (ADR-0013): no safety step or acknowledgment, contributors and hours stay with the owner, and saving returns
+ * place (ADR-0013): no safety step or acknowledgment, contributors stay with the owner, and saving returns
  * to the review page, where the librarian tells the owner what changed and why.
  */
 export function DraftsView({ draftId, owner, librarian = false }: { draftId?: string; owner: string; librarian?: boolean }) {
@@ -77,7 +78,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const publishedEdit = librarian && initial?.record.publication === 125060000;
   const [submitted, setSubmitted] = useState(false);
   const [confirmation, setConfirmation] = useState<"leave" | "reopen" | null>(null);
-  const [hours, setHours] = useState<(number | null)[]>(initial?.graph.hours ?? []);
+  // The raw estimate input: only a valid whole number (or blank) reaches the draft, so a partial entry is never coerced.
+  const [hoursText, setHoursText] = useState(() => initial?.record.core.estimatedMinimumHours?.toString() ?? "");
   const [mediaBusy, setMediaBusy] = useState(false);
   const [mediaPending, setMediaPending] = useState(false);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "uncertain">("idle");
@@ -212,7 +214,6 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
         const detail = parseSubmission(await workflowApi.read(next.core.id));
         operation.signal.throwIfAborted();
         if (detail.record.core.id !== next.core.id || detail.record.core.rowVersion !== next.core.rowVersion) throw new Error("Draft changed before review.");
-        setHours(detail.graph.hours);
         setMedia(detail.media);
       }
       if (action === "submit" && librarian) { recoverySuppressed.current = true; allowedNavigation.current = true; navigate(reviewPath); }
@@ -249,15 +250,23 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     specializationArea: selectedAreas[0] ?? "ai", specializationAreas: selectedAreas, status: MATURITY_OPTIONS.find(option => option.value === draft.maturity)?.label as Solution["status"],
     publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted, challenges: draft.challenges, lessonsLearned: draft.lessonsLearned,
     clientRole: draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : undefined,
-    contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "", level: graphReferences.people?.find(option => option.id === person.personId)?.level }, directHours: person.directHours ?? undefined })),
+    contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "", level: graphReferences.people?.find(option => option.id === person.personId)?.level } })),
+    estimatedMinimumHours: draft.estimatedMinimumHours, complexity: draft.complexityValue != null ? COMPLEXITY_BY_CHOICE[draft.complexityValue] : undefined,
     dateAdded: "", searchKeywords: "", assets: [], capabilities: references.capabilities.filter(option => option.id === draft.capabilityId).map(option => option.name),
     technologies: (graphReferences.technologies ?? []).filter(option => graph.technologyIds.includes(option.id)).map(option => option.name), industries: (graphReferences.industries ?? []).filter(option => graph.industryIds.includes(option.id)).map(option => option.name),
   };
   const busy = status === "saving" || mediaBusy;
   const locked = busy || mediaPending || status === "uncertain" || !!recovery;
   const thumbnail = media.find(item => item.kind === "thumbnail" && item.complete);
-  const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person));
-  const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !contributorEffort(person).error);
+  let hoursError = "";
+  try { estimatedHours(hoursText.trim() === "" ? undefined : Number(hoursText)); } catch (error) { hoursError = error instanceof Error ? error.message : "Check the estimated hours."; }
+  const changeHours = (text: string) => {
+    setHoursText(text);
+    try { change("estimatedMinimumHours", estimatedHours(text.trim() === "" ? undefined : Number(text))); } catch { /* shown as hoursError; the draft keeps its last valid value */ }
+  };
+  const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person)) && !hoursError;
+  // Contributors are credit only; effort is the solution's complexity (required) and optional hour estimate.
+  const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !!person.personId) && draft.complexityValue != null;
   const storyComplete = !!draft.whatItDoes.trim() && !!draft.businessValue.trim();
   const complete = canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
   const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && !!draft.capabilityId : step === 3 ? canSave && effortComplete && clientValid : step === 4 ? complete : canSave;
@@ -268,12 +277,12 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   return <>
     <button type="button" disabled={busy} className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-(--ink-2)" onClick={() => { if (dirty) setConfirmation("leave"); else navigate(librarian ? reviewPath : "/"); }}><Icon name="chevronLeft" size={15} />{librarian ? "Back to review" : "Back to the library"}</button>
     <div className="animate-rise mt-4"><p className="eyebrow">{librarian ? "Librarian · editing a contributor's solution" : "Contributor · guided submission"}</p><h1 className="mt-2 text-[28px] font-bold">{librarian ? "Edit solution" : initial ? "Edit submission" : "Put your work on the shelf"}</h1><p role="status" className="mt-2 text-[14px] text-(--ink-2)">{busy ? "Saving..." : dirty || captionsDirty ? "Unsaved changes" : saved ? "Saved to Dataverse" : "Draft"}</p></div>
-    {librarian && <p className="mt-3 max-w-[70ch] text-[14px] text-(--ink-2)">It stays {publishedEdit ? "published" : "in Pending review"} while you edit; contributors and their hours stay with the owner. When you save, you return to the review to tell the owner what you changed and why{publishedEdit ? ". Until you confirm the changes there, it is left out of present mode" : ""}.</p>}
+    {librarian && <p className="mt-3 max-w-[70ch] text-[14px] text-(--ink-2)">It stays {publishedEdit ? "published" : "in Pending review"} while you edit; contributors stay with the owner. When you save, you return to the review to tell the owner what you changed and why{publishedEdit ? ". Until you confirm the changes there, it is left out of present mode" : ""}.</p>}
     {!librarian && initial?.record.comments && <section aria-label="Librarian feedback" className="mt-5 border-l-2 border-(--proto) pl-4"><h2 className="text-[15px] font-semibold">Librarian feedback</h2><p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{initial.record.comments}</p></section>}
     {status === "uncertain" && <div role="alert" className="mt-5 border-l-2 border-(--accent) pl-4"><p className="mb-3 text-[14px]">Save was not confirmed. Your edits remain here. Reopen from Dataverse before saving again.</p><button type="button" className={buttonClass} onClick={() => setConfirmation("reopen")}><Icon name="file" />{saved ? "Reopen saved draft" : "Check my submissions"}</button></div>}
     {recoveryError && <p role="alert" className="mt-4 text-[14px]">Tab recovery is unavailable. Save to Dataverse before leaving.</p>}
     {recovery && <ConfirmDialog title={recovery.rowVersion === (saved?.rowVersion ?? "") ? "Restore unsaved draft?" : "Saved draft has changed"} cancelLabel="Discard retained edits" confirmLabel={recovery.rowVersion === (saved?.rowVersion ?? "") ? "Restore edits" : "Use saved version"} onCancel={() => { clearRecovery(); setRecovery(null); }} onConfirm={() => {
-      if (recovery.rowVersion === (saved?.rowVersion ?? "")) { setDraft(recovery.draft); setGraph(recovery.graph); setStep(recovery.step); setAccepted(false); if (recovery.uncertain) setStatus("uncertain"); }
+      if (recovery.rowVersion === (saved?.rowVersion ?? "")) { setDraft(recovery.draft); setHoursText(recovery.draft.estimatedMinimumHours?.toString() ?? ""); setGraph(recovery.graph); setStep(recovery.step); setAccepted(false); if (recovery.uncertain) setStatus("uncertain"); }
       else clearRecovery();
       setRecovery(null);
     }}><p>{recovery.rowVersion === (saved?.rowVersion ?? "") ? "Unsaved text and selections are available from this tab. Media remains in Dataverse. Safety confirmation must be renewed." : "Dataverse has a newer version. These retained edits will not be applied over it. Review or copy them before discarding."}</p>{recovery.rowVersion !== (saved?.rowVersion ?? "") && <pre className="mt-4 max-h-64 overflow-auto whitespace-pre-wrap break-words text-[12px]">{JSON.stringify({ draft: recovery.draft, graph: recovery.graph }, null, 2)}</pre>}</ConfirmDialog>}
@@ -298,8 +307,10 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
             <StatusField status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
           </NamedSection>
           <NamedSection title="Built by & effort">
-            {librarian ? <p className="text-[14px] text-(--ink-2)">{preview.contributors.map(person => person.builtBy.name).join(", ") || "No contributors yet"}. Contributors and their hours are edited by the owner.</p>
+            {librarian ? <p className="text-[14px] text-(--ink-2)">{preview.contributors.map(person => person.builtBy.name).join(", ") || "No contributors yet"}. Contributors are edited by the owner.</p>
               : <DraftGraphEditor graph={graph} references={graphReferences} section="contributors" onChange={changeGraph} />}
+            <EffortFields hours={hoursText} complexity={draft.complexityValue != null ? COMPLEXITY_BY_CHOICE[draft.complexityValue] : undefined} error={hoursError} onHours={changeHours}
+              onComplexity={value => change("complexityValue", COMPLEXITIES.find(option => option.value === value)?.choice)} />
           </NamedSection>
           <ClientFields framed value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
             role={draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : ""} roles={CLIENT_ROLES} onRole={value => change("clientRoleValue", value ? CLIENT_ROLE_VALUES[value] : undefined)}
@@ -310,11 +321,11 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
       </fieldset>
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}
       {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}
-        contributors={preview.contributors.map(person => person.builtBy.name).join(", ")} hours={!hours.length || hours.some(value => value === null) ? null : Math.round(hours.reduce<number>((total, value) => total + (value ?? 0), 0) * 100) / 100}
+        contributors={preview.contributors.map(person => person.builtBy.name).join(", ")} effort={effortSummary(preview.estimatedMinimumHours, preview.complexity)}
         images={`${thumbnail ? "Thumbnail" : "Generated poster"} · ${media.filter(item => item.kind === "image" && item.complete).length} screenshots`} safety={draft.safetyAcknowledged ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.clientContextRedacted} nextState={publishedEdit ? "Published" : "Pending review"}>
-        {!librarian && <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>}{!complete && <p role="alert">{librarian ? "Complete Define the solution, the client question, a capability and at least one detail image before saving." : "Complete Define the solution, Solution context (status, effort and the client question), a capability and at least one detail image before submitting."}</p>}
+        {!librarian && <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>}{!complete && <p role="alert">{librarian ? "Complete Define the solution, the client question, a capability and at least one detail image before saving." : "Complete Define the solution, Solution context (status, contributors, complexity and the client question), a capability and at least one detail image before submitting."}</p>}
       </SubmissionReview>}
-      <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave} canContinue={canContinue} canSubmit={librarian ? complete && !captionsDirty : complete && !captionsDirty && draft.safetyAcknowledged && !!hours.length && hours.every(value => value !== null)}
+      <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave} canContinue={canContinue} canSubmit={librarian ? complete && !captionsDirty : complete && !captionsDirty && draft.safetyAcknowledged}
         saveLabel={librarian ? "Save & back to review" : undefined} submitLabel={librarian ? "Save & back to review" : undefined}
         onBack={() => goBack(step - 1)} onSave={() => void persist("close")} onContinue={() => void persist("continue")} onSubmit={() => void persist("submit")} />
     </div>

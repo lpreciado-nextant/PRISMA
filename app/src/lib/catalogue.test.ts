@@ -71,8 +71,7 @@ test("client role choices mirror the live nx_clientrole values", async () => {
   assert(SOLUTIONS.every((solution) => !solution.clientRole || CLIENT_ROLES.includes(solution.clientRole)));
 });
 
-test("the CSM is the contributor whose directory level names customer success, and adds no effort in the mock", async () => {
-  const { contributorHours } = await import("./effort.ts");
+test("the CSM is the contributor whose directory level names customer success", () => {
   for (const level of ["Customer Success Manager", "CustomerSuccessManager II", "customer succes manager"]) assert(isCustomerSuccessLevel(level), level);
   for (const level of ["Senior Consultant", "", undefined, null]) assert(!isCustomerSuccessLevel(level));
   for (const solution of SOLUTIONS) {
@@ -80,7 +79,6 @@ test("the CSM is the contributor whose directory level names customer success, a
     assert.equal(csms.length, 1, solution.id);
     assert(solution.contributors.some((contributor) => !isCustomerSuccessLevel(contributor.builtBy.level)), solution.id);
     assert(solution.contributors.every((contributor) => !("contributorRole" in contributor)), solution.id);
-    assert.equal(contributorHours(csms[0].directHours), 0);
   }
 });
 

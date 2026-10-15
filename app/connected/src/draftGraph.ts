@@ -1,20 +1,10 @@
 import { coreFields, saveDraft, type CoreDraft, type DraftApi, type DraftResult, type SavedDraft } from "./drafts.ts";
 import { readAll, type ReadRows } from "./catalogue.ts";
-import { contributorHours } from "../../src/lib/effort.ts";
-
-export function contributorEffort(person: Contributor) {
-  try {
-    if (!person.personId) throw new Error("Select a contributor.");
-    return { hours: contributorHours(person.directHours), error: "" };
-  } catch (error) {
-    return { hours: 0, error: error instanceof Error ? error.message : "Check contributor effort." };
-  }
-}
 
 export type GraphReferences = Record<"people" | "technologies" | "industries" | "projects", { id: string; name: string; email?: string; level?: string }[] | null>;
 export function initialContributor(references: GraphReferences, owner: string): DraftGraph {
   const people = references.people?.filter(person => person.email?.trim().toLowerCase() === owner.trim().toLowerCase()) ?? [];
-  return { ...emptyGraph(), contributors: people.length === 1 ? [{ id: null, personId: people[0].id, directHours: null }] : [] };
+  return { ...emptyGraph(), contributors: people.length === 1 ? [{ id: null, personId: people[0].id }] : [] };
 }
 export async function loadGraphReferences(read: ReadRows, signal: AbortSignal): Promise<GraphReferences> {
   const definitions = [
@@ -40,11 +30,10 @@ export async function loadGraphReferences(read: ReadRows, signal: AbortSignal): 
   return Object.fromEntries(definitions.map((definition, index) => [definition.table, lists[index]])) as GraphReferences;
 }
 
+/** Credit only: effort is estimated for the whole solution (`nx_estimatedminimumhours`, `nx_complexity`). */
 export interface Contributor {
   id: string | null;
   personId: string;
-  /** `nx_directhours`: the minimum hours this person needed to work on the solution, at every maturity. */
-  directHours: number | null;
 }
 export interface DraftGraph {
   contributors: Contributor[];
@@ -53,7 +42,7 @@ export interface DraftGraph {
   projectIds: string[];
   areaIds: string[];
 }
-export interface GraphSnapshot { id: string; rowVersion: string; graph: DraftGraph; hours: (number | null)[] }
+export interface GraphSnapshot { id: string; rowVersion: string; graph: DraftGraph }
 export interface GraphApi {
   read: (id: string) => Promise<DraftResult>;
   save: (id: string, version: string, json: string) => Promise<DraftResult>;
@@ -61,13 +50,13 @@ export interface GraphApi {
 export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] });
 
 export function isEmptyContributor(person: Contributor): boolean {
-  return !person.id && !person.personId && person.directHours === null;
+  return !person.id && !person.personId;
 }
 
 export async function persistDraftGraph(coreApi: DraftApi, graphApi: GraphApi, draft: CoreDraft, saved: SavedDraft | undefined, graph: DraftGraph, baseline: DraftGraph, signal: AbortSignal, onConfirmed: (core: SavedDraft, graph: DraftGraph) => void) {
   signal.throwIfAborted();
   graph = { ...graph, contributors: graph.contributors.filter(person => !isEmptyContributor(person)) };
-  if (graph.contributors.some(person => !person.personId)) throw new Error("Select a contributor before saving their effort.");
+  if (graph.contributors.some(person => !person.personId)) throw new Error("Select a person for every contributor before saving.");
   const graphChanged = graphPayload(graph) !== graphPayload(baseline) || (!!saved && saved.maturity !== draft.maturity);
   let current = saved;
   let confirmedGraph = baseline;
@@ -105,19 +94,18 @@ export function parseGraph(result: DraftResult): GraphSnapshot {
   const data = object(JSON.parse(result.data.ResultJson));
   if (typeof data.id !== "string" || !guid.test(data.id) || typeof data.rowVersion !== "string" || !/^\d+$/.test(data.rowVersion)) throw new Error("Invalid graph version.");
   const graph = object(data.graph);
-  if (!Array.isArray(graph.contributors) || !Array.isArray(data.hours) || data.hours.length !== graph.contributors.length || data.hours.some(hours => hours !== null && (typeof hours !== "number" || !Number.isFinite(hours) || hours < 0))) throw new Error("Invalid contributors or hours.");
+  if (!Array.isArray(graph.contributors)) throw new Error("Invalid contributors.");
   const contributors = graph.contributors.map(value => {
     const person = object(value);
     if (typeof person.id !== "string" || !guid.test(person.id) || typeof person.personId !== "string" || !guid.test(person.personId)) throw new Error("Invalid contributor identifier.");
-    if (person.directHours !== null && (typeof person.directHours !== "number" || !Number.isFinite(person.directHours) || person.directHours < 0)) throw new Error("Invalid effort number.");
-    return { id: person.id, personId: person.personId, directHours: person.directHours as number | null };
+    return { id: person.id, personId: person.personId };
   });
   if (new Set(contributors.map(person => person.personId)).size !== contributors.length) throw new Error("Duplicate contributor.");
-  return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds) }, hours: data.hours as (number | null)[] };
+  return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds) } };
 }
 export function graphPayload(graph: DraftGraph): string {
   return JSON.stringify({
-    contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId, directHours: person.directHours })),
+    contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId })),
     technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds,
   });
 }

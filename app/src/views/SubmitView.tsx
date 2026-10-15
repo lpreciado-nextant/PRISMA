@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   AssetType,
   ClientRole,
+  Complexity,
   DemoAsset,
   Solution,
   SolutionContributor,
@@ -17,11 +18,11 @@ import { TagPicker } from "../components/TagPicker";
 import { SolutionCard } from "../components/SolutionCard";
 import { navigate } from "../lib/router";
 import type { AppUser } from "../lib/powerContext";
-import { contributorHours } from "../lib/effort";
+import { effortSummary, estimatedHours } from "../lib/effort";
 import { MAX_AREAS, solutionAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
 import { assetPurpose, purposeAllows } from "../lib/assetPurpose";
-import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, LessonsFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
+import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, LessonsFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, EffortFields, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
 import { ImageFramer } from "../components/ImageFramer";
 
 const MAX_GALLERY = 6;
@@ -45,6 +46,9 @@ interface Draft {
   redacted: string;
   clientRole: ClientRole | "";
   contributors: SolutionContributor[];
+  /** Raw whole-hour input for `estimatedMinimumHours`, so a partial entry is never coerced. Optional. */
+  estimatedHours: string;
+  complexity: Complexity | "";
   /** Internal only; stripped from the present catalogue. */
   challenges: string;
   lessonsLearned: string;
@@ -68,6 +72,8 @@ const EMPTY_DRAFT: Draft = {
   redacted: "",
   clientRole: "",
   contributors: [],
+  estimatedHours: "",
+  complexity: "",
   challenges: "",
   lessonsLearned: "",
 };
@@ -103,9 +109,11 @@ function loadDraft(draftKey: string): Draft {
     // Drafts saved before specialization areas became N:N carry a single `area`.
     const legacyArea = (parsed as Partial<Draft> & { area?: SpecializationArea }).area;
     if (!parsed.areas?.length) parsed.areas = legacyArea ? [legacyArea] : EMPTY_DRAFT.areas;
-    // Drafts saved before allocation was retired carry dates, allocation and a calendar; only the hours remain.
-    // Drafts saved before contributor roles were retired carry `contributorRole`; the level now comes from the directory.
-    parsed.contributors = parsed.contributors.map(({ id, builtBy, directHours }) => ({ id, builtBy, directHours }));
+    // Drafts saved before effort moved to the solution carry per-person hours (and older ones dates, allocation and a
+    // contributor role); only the person remains. Effort is re-entered as the solution's estimate and complexity.
+    parsed.contributors = parsed.contributors.map(({ id, builtBy }) => ({ id, builtBy }));
+    if (typeof parsed.estimatedHours !== "string") parsed.estimatedHours = "";
+    if (!["Easy", "Medium", "Hard"].includes(parsed.complexity)) parsed.complexity = "";
     return parsed;
   } catch {
     return EMPTY_DRAFT;
@@ -139,6 +147,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
       redacted: initialSolution.clientContextRedacted ?? "", clientRole: initialSolution.clientRole ?? "",
+      estimatedHours: initialSolution.estimatedMinimumHours === undefined ? "" : String(initialSolution.estimatedMinimumHours), complexity: initialSolution.complexity ?? "",
       challenges: initialSolution.challenges ?? "", lessonsLearned: initialSolution.lessonsLearned ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
     } : loadDraft(draftKey);
     if (saved.contributors.length) return saved;
@@ -209,27 +218,22 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       { id: user.userPrincipalName, name: user.fullName, email: user.userPrincipalName },
     ...draft.contributors.map((contributor) => contributor.builtBy),
   ].filter((builder) => builder.id).map((builder) => [builder.email.toLowerCase(), builder])).values()];
-  const contributionResults = draft.contributors.map((contributor) => {
-    try {
-      if (!contributor.builtBy.id) throw new Error("Select a contributor.");
-      if (draft.contributors.filter((entry) => entry.builtBy.id === contributor.builtBy.id).length > 1) {
-        throw new Error("Each person can only be added once.");
-      }
-      return { hours: contributorHours(contributor.directHours), error: "" };
-    } catch (error) {
-      return { hours: 0, error: error instanceof Error ? error.message : "Check this contributor's effort." };
-    }
-  });
-  const contributorsValid = draft.contributors.length > 0 && contributionResults.every((result) => !result.error);
+  const contributorsValid = draft.contributors.length > 0 && draft.contributors.every((contributor) => contributor.builtBy.id
+    && draft.contributors.filter((entry) => entry.builtBy.id === contributor.builtBy.id).length === 1);
+  // Effort is estimated for the whole solution: complexity required, whole hours optional.
+  let hoursError = "";
+  let hoursValue: number | undefined;
+  try { hoursValue = estimatedHours(draft.estimatedHours.trim() === "" ? undefined : Number(draft.estimatedHours)); }
+  catch (error) { hoursError = error instanceof Error ? error.message : "Check the estimated hours."; }
+  const effortValid = !!draft.complexity && !hoursError;
   const nameValid = Boolean(draft.name.trim()) && draft.name.trim() !== UNTITLED_SOLUTION && draft.name.length <= 100;
   const detailsValid = nameValid && Boolean(draft.summary.trim()) && Boolean(draft.whatItDoes.trim()) && Boolean(draft.businessValue.trim()) && draft.areas.length > 0;
   const clientValid = clientAssociated === false || (clientAssociated === true && Boolean(draft.clientContext.trim()) && Boolean(draft.redacted.trim()));
-  const basicsValid = detailsValid && clientValid && contributorsValid;
+  const basicsValid = detailsValid && clientValid && contributorsValid && effortValid;
   const safetyValid = draft.safetyAcknowledged;
   const mediaValid = draft.images.length > 0 && !mediaBusy;
   const capabilityValid = draft.capabilities.length === 1;
-  const stepValid = safetyValid && (step === 1 ? detailsValid : step === 2 ? capabilityValid : step === 3 ? clientValid && contributorsValid : step === 4 ? mediaValid : true);
-  const totalHours = Math.round(contributionResults.reduce((total, result) => total + result.hours, 0) * 100) / 100;
+  const stepValid = safetyValid && (step === 1 ? detailsValid : step === 2 ? capabilityValid : step === 3 ? clientValid && contributorsValid && effortValid : step === 4 ? mediaValid : true);
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
     set("contributors", draft.contributors.map((contributor) => contributor.id === id ? { ...contributor, ...patch } : contributor));
 
@@ -244,6 +248,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       specializationArea: draft.areas[0] ?? "ai",
       specializationAreas: draft.areas,
       contributors: draft.contributors,
+      estimatedMinimumHours: hoursValue,
+      complexity: draft.complexity || undefined,
       status: draft.status,
       publicationStatus: "Draft",
       safetyAcknowledged: draft.safetyAcknowledged,
@@ -262,7 +268,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       industries: draft.industries,
       assets: draft.assets,
     }),
-    [draft, initialSolution],
+    [draft, initialSolution, hoursValue],
   );
 
   const persist = async (asDraft: boolean) => {
@@ -363,19 +369,17 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
               <StatusField status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
             </NamedSection>
             <NamedSection title="Built by & effort">
-            <ContributorEditor bare total={contributorsValid ? totalHours : null} onAdd={() => set("contributors", [...draft.contributors, {
+            <ContributorEditor bare onAdd={() => set("contributors", [...draft.contributors, {
               id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" },
             }])}>
               {draft.contributors.map((contributor, index) => {
-                const result = contributionResults[index];
-                return <ContributorRow key={contributor.id} index={index} result={result}
-                  value={contributor.directHours ?? null}
-                  onChange={directHours => updateContributor(contributor.id, { directHours: directHours ?? undefined })}
+                return <ContributorRow key={contributor.id} index={index}
                   onRemove={index > 0 ? () => set("contributors", draft.contributors.filter(entry => entry.id !== contributor.id)) : undefined}
                   level={contributor.builtBy.id ? contributor.builtBy.level ?? null : undefined}
                   person={<PersonPicker value={contributor.builtBy} options={builders.filter(builder => !draft.contributors.some(entry => entry.id !== contributor.id && entry.builtBy.id === builder.id))} onChange={builtBy => updateContributor(contributor.id, { builtBy })} />} />;
               })}
             </ContributorEditor>
+            <EffortFields hours={draft.estimatedHours} complexity={draft.complexity || undefined} onHours={value => set("estimatedHours", value)} onComplexity={value => set("complexity", value)} error={hoursError} />
             </NamedSection>
             <ClientFields framed value={draft} onText={set} role={draft.clientRole} roles={CLIENT_ROLES} onRole={value => set("clientRole", value)} associated={clientAssociated} onAssociated={setClientAssociated} />
             <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={set} />
@@ -423,9 +427,9 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         )}
 
         {step === 5 && safetyValid && (
-          <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.builtBy.level ? `${contributor.builtBy.name} (${contributor.builtBy.level})` : contributor.builtBy.name).join(", ")} hours={totalHours}
+          <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.builtBy.level ? `${contributor.builtBy.name} (${contributor.builtBy.level})` : contributor.builtBy.name).join(", ")} effort={effortSummary(hoursValue, draft.complexity || undefined)}
             images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.clientRole} nextState="Pending review (local)">
-            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution, Solution context (status, effort and the client question), select one capability and add at least one detail image before submitting.</p>}
+            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution, Solution context (status, contributors, complexity and the client question), select one capability and add at least one detail image before submitting.</p>}
           </SubmissionReview>
         )}
 

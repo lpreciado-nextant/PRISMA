@@ -115,6 +115,8 @@ namespace Prisma.Plugins
             if (!parent.GetAttributeValue<bool>("nx_safetyacknowledged")) throw MediaPolicy.Invalid("Renew the safety acknowledgment before submission.");
             if (!string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_clientcontext")) && string.IsNullOrWhiteSpace(parent.GetAttributeValue<string>("nx_clientcontextredacted")))
                 throw MediaPolicy.Invalid("Provide redacted client context.");
+            // nx_complexity is Business Required in Dataverse, which only its own forms enforce; the estimate stays optional.
+            if (parent.GetAttributeValue<OptionSetValue>("nx_complexity") == null) throw MediaPolicy.Invalid("Select how complex the solution was to build.");
             ContributorPolicy.Validate(graph.Graph.Contributors, true);
             var images = media.Count(row => row.GetAttributeValue<string>("nx_kind") == "image");
             if (images < 1 || images > 6 || media.Count(row => row.GetAttributeValue<string>("nx_kind") == "attachment") > 6 || media.Count(row => row.GetAttributeValue<string>("nx_kind") == "thumbnail") > 1 || media.Any(row => !row.GetAttributeValue<bool>("nx_complete")))

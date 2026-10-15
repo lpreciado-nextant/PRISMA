@@ -7,10 +7,12 @@ export function presentCatalogue(solutions: Solution[]): Solution[] {
       clientContext: undefined,
       challenges: undefined,
       lessonsLearned: undefined,
-      // Builder credit, CSM rows, effort and cost are internal-only.
+      // Builder credit, CSM rows, effort (estimate and complexity) and cost are internal-only.
       contributors: [],
       contributorNames: undefined,
       estimatedCost: undefined,
+      estimatedMinimumHours: undefined,
+      complexity: undefined,
       projects: undefined,
       libraryNotes: undefined,
       reviewOutcome: undefined,

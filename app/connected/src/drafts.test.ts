@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, coreFields, snapshot, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
-import { contributorEffort, emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
+import { emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
 import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
@@ -160,27 +160,25 @@ test("tab recovery is identity scoped, strips extras and requires renewed acknow
 });
 
 test("workflow rejects mismatched versions, unknown states and internal presentation projects", () => {
-  const graph = { id: draft.id, rowVersion: draft.rowVersion, graph: { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] }, hours: [] };
+  const graph = { id: draft.id, rowVersion: draft.rowVersion, graph: { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] } };
   const detail = { record: { core: draft, areaIds: [], publication: 125060003, outcome: 125060000, comments: "", cleared: false }, graph, media: [], librarian: false };
   assert.deepEqual(parseSubmission(result(detail)), detail);
   assert.throws(() => parseSubmission(result({ ...detail, graph: { ...graph, rowVersion: "1" } })), /Mismatched/);
   assert.throws(() => parseSubmission(result({ ...detail, record: { ...detail.record, publication: 99 } })), /state/);
-  const published = { id: draft.id, rowVersion: draft.rowVersion, contributors: [], totalHours: 0, projects: ["Internal project"], media: [] };
+  const published = { id: draft.id, rowVersion: draft.rowVersion, contributors: [], projects: ["Internal project"], media: [] };
   assert.throws(() => parsePublished(result(published), draft.id, true), /projection/);
   assert.deepEqual(parsePublished(result(published), draft.id, false), published);
-  const effort = { id: spare, personId: draft.id, directHours: 168 };
-  const credited = { ...published, contributors: [{ name: "Builder", hours: 168, email: "builder@example.com", effort }], totalHours: 168 };
-  assert.deepEqual(parsePublished(result(credited), draft.id, false).contributors[0].effort, effort);
-  const leveled = { ...credited, contributors: [{ ...credited.contributors[0], level: "Senior Consultant" }] };
-  assert.equal(parsePublished(result(leveled), draft.id, false).contributors[0].level, "Senior Consultant");
-  assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: null, level: "Senior Consultant" }] }), draft.id, true), /presentation/);
-  const legacy = { ...published, contributors: [{ name: "Builder", hours: null, effort: { ...effort, directHours: null } }], totalHours: null };
-  assert.equal(parsePublished(result(legacy), draft.id, false).totalHours, null);
-  assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: 1 }] }), draft.id, true), /credit/);
-  // nx_GetPublishedDetail with Present sends no credits and a zero total; the app must accept that projection.
+  // Credit carries no hours: effort is the solution's estimate and complexity, internal only.
+  const credited = { ...published, contributors: [{ name: "Builder", email: "builder@example.com", level: "Senior Consultant" }], estimatedMinimumHours: 168, complexity: "Hard" };
+  assert.deepEqual(parsePublished(result(credited), draft.id, false), credited);
+  assert.equal(parsePublished(result(published), draft.id, false).estimatedMinimumHours, undefined);
+  for (const invalid of [{ estimatedMinimumHours: 12.5 }, { estimatedMinimumHours: -1 }, { complexity: "Extreme" }]) assert.throws(() => parsePublished(result({ ...published, ...invalid }), draft.id, false), /estimate|complexity/);
+  assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", level: "Senior Consultant" }] }), draft.id, true), /presentation/);
+  assert.throws(() => parsePublished(result({ ...published, projects: [], complexity: "Easy" }), draft.id, true), /presentation/);
+  assert.throws(() => parsePublished(result({ ...published, projects: [], estimatedMinimumHours: 4 }), draft.id, true), /presentation/);
+  // nx_GetPublishedDetail with Present sends no credits and no effort; the app must accept that projection.
   assert.deepEqual(parsePublished(result({ ...published, projects: [] }), draft.id, true).contributors, []);
   assert.throws(() => parsePublished(result({ ...published, projects: [], libraryNotes: "Internal" }), draft.id, true), /projection/);
-  assert.throws(() => parsePublished(result({ ...published, projects: [], contributors: [{ name: "Builder", hours: null, email: "builder@example.com" }] }), draft.id, true), /credit/);
   const metadata = { ...detail.record, owner: "Owner", dateAdded: "2026-09-22", imageCount: 1, attachmentCount: 0, libraryNotes: "Internal" };
   assert.deepEqual(parseSubmission(result({ ...detail, record: metadata })).record, metadata);
   assert.throws(() => parseSubmission(result({ ...detail, record: { ...metadata, imageCount: -1 } })), /count/);
@@ -263,7 +261,7 @@ test("caption checkpoint chains into core and graph saves without restoring safe
   } }, { read: unusedRead, save: async (id, expected, json) => {
     assert.equal(expected, String(version));
     calls.push("graph");
-    return result({ id, rowVersion: String(++version), graph: JSON.parse(json), hours: [] });
+    return result({ id, rowVersion: String(++version), graph: JSON.parse(json) });
   } }, fields, checkpoint, desired, emptyGraph(), signal(), core => confirmed.push(core.rowVersion));
   assert.deepEqual(calls, ["captions", "core", "graph"]);
   assert.equal(saved.core.rowVersion, String(version));
@@ -295,7 +293,7 @@ test("media upload advances exact versions and stops after cancellation", async 
 
 test("graph response preserves nullable effort and string versions", () => {
   const graph: DraftGraph = { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] };
-  const data = { id: "45dc1e23-1bb6-f111-aaac-6045bd049fba", rowVersion: "90071992547409932", graph, hours: [] };
+  const data = { id: "45dc1e23-1bb6-f111-aaac-6045bd049fba", rowVersion: "90071992547409932", graph };
   assert.deepEqual(parseGraph(result(data)), data);
   assert.equal(graphPayload(graph), JSON.stringify(graph));
   assert.throws(() => parseGraph(result({ ...data, rowVersion: 123 })), /version/);
@@ -324,7 +322,7 @@ test("wizard save chains confirmed versions and acknowledges only after graph wr
   const graphApi: GraphApi = { read: unusedRead, save: async (id, expected, json) => {
     assert.equal(expected, String(version));
     calls.push("graph");
-    return result({ id, rowVersion: String(++version), graph: JSON.parse(json), hours: [] });
+    return result({ id, rowVersion: String(++version), graph: JSON.parse(json) });
   } };
   const saved = await persistDraftGraph(coreApi, graphApi, { ...draft, name: "Updated", safetyAcknowledged: true }, draft, desired, emptyGraph(), signal(), () => {});
   assert.deepEqual(calls, ["core:false", "graph", "core:true"]);
@@ -417,8 +415,8 @@ test("submission cards map live states without inventing a specialization or con
 });
 
 test("owned cards hydrate saved technology chips and reject missing or stale responses", async () => {
-  const graph = { ...emptyGraph(), technologyIds: [spare], contributors: [{ id: draft.id, personId: spare, directHours: 5 }] };
-  const detail = { record: { core: draft, areaIds: [], publication: 125060003, outcome: 125060000, comments: "", cleared: false }, graph: { id: draft.id, rowVersion: draft.rowVersion, graph, hours: [5] }, media: [], librarian: false };
+  const graph = { ...emptyGraph(), technologyIds: [spare], contributors: [{ id: draft.id, personId: spare }] };
+  const detail = { record: { core: draft, areaIds: [], publication: 125060003, outcome: 125060000, comments: "", cleared: false }, graph: { id: draft.id, rowVersion: draft.rowVersion, graph }, media: [], librarian: false };
   const reader: Parameters<typeof loadSubmissionCardDetails>[1] = async (table, query) => {
     assert.match(query.filter ?? "", new RegExp(spare));
     return { success: true, data: table === "technologies" ? [{ nx_technologyid: spare, nx_technologyname: "React" }] : [{ cr6b0_consultantid: spare, cr6b0_consultantname: "Builder" }] };
@@ -441,24 +439,30 @@ test("wizard creates one named draft and reuses its confirmed identifier", async
   assert.equal(reopened.core.id, draft.id);
 });
 
-test("named drafts ignore untouched contributor placeholders without dropping authored effort", async () => {
-  const placeholder = { id: null, personId: "", directHours: null };
+test("named drafts ignore untouched contributor placeholders", async () => {
+  const placeholder = { id: null, personId: "" };
   const graphApi: GraphApi = { read: unusedRead, save: async () => { throw new Error("Unexpected graph write"); } };
   const graph = { ...emptyGraph(), contributors: [placeholder] };
   const saved = await persistDraftGraph(api, graphApi, draft, draft, graph, emptyGraph(), signal(), () => {});
   assert.deepEqual(saved.graph.contributors, []);
   assert.equal(isEmptyContributor({ ...placeholder, personId: draft.id }), false);
   assert.equal(isEmptyContributor({ ...placeholder, id: draft.id }), false);
-  await assert.rejects(persistDraftGraph(api, graphApi, draft, draft, { ...graph, contributors: [{ ...placeholder, directHours: 2 }] }, emptyGraph(), signal(), () => {}), /Select a contributor/);
+  await assert.rejects(persistDraftGraph(api, graphApi, draft, draft, { ...graph, contributors: [{ ...placeholder, id: draft.id }] }, emptyGraph(), signal(), () => {}), /Select a person/);
 });
 
-test("live effort preview takes each person's minimum hours and validates them", () => {
-  const person = { id: null, personId: "consultant", directHours: 13.25 };
-  assert.deepEqual(contributorEffort(person), { hours: 13.25, error: "" });
-  assert.match(contributorEffort({ ...person, directHours: null }).error, /zero or more/);
-  assert.match(contributorEffort({ ...person, directHours: 1.001 }).error, /decimal/);
-  assert.match(contributorEffort({ ...person, directHours: 1_000_000_001 }).error, /limit/);
-  assert.match(contributorEffort({ ...person, personId: "" }).error, /Select a contributor/);
+test("drafts carry the solution's optional whole-hour estimate and complexity", async () => {
+  const effort = { ...draft, estimatedMinimumHours: 120, complexityValue: 125060001 };
+  assert.deepEqual(snapshot(effort), effort);
+  assert.deepEqual(coreFields({ ...draft, estimatedMinimumHours: undefined, complexityValue: undefined }), coreFields(draft));
+  for (const invalid of [{ estimatedMinimumHours: 12.5 }, { estimatedMinimumHours: -1 }, { estimatedMinimumHours: 100001 }, { complexityValue: 125060003 }]) assert.throws(() => snapshot({ ...draft, ...invalid }), /core draft/);
+  let sent = "";
+  const saving: DraftApi = { ...api, save: async json => { sent = json; return result({ ...effort, rowVersion: "999" }); } };
+  await saveDraft(saving, effort, draft, signal());
+  assert.equal(JSON.parse(sent).estimatedMinimumHours, 120);
+  assert.equal(JSON.parse(sent).complexityValue, 125060001);
+  const solution = submissionSolution({ core: effort, areaIds: [], publication: 125060003, outcome: 125060000, comments: "", cleared: false }, {});
+  assert.equal(solution.estimatedMinimumHours, 120);
+  assert.equal(solution.complexity, "Medium");
 });
 
 test("delete sends the displayed version and requires an exact acknowledgment", async () => {

@@ -1,7 +1,8 @@
 import type { AssetPurpose } from "../../src/lib/assetPurpose.ts";
 import { MATURITY_OPTIONS, snapshot, type SavedDraft } from "./drafts.ts";
 import type { Solution } from "../../src/types.ts";
-import { parseGraph, type GraphSnapshot, type Contributor } from "./draftGraph.ts";
+import { COMPLEXITIES, COMPLEXITY_BY_CHOICE, MAX_ESTIMATED_HOURS } from "../../src/lib/effort.ts";
+import { parseGraph, type GraphSnapshot } from "./draftGraph.ts";
 import { mediaRequest, parseMedia, type MediaItem } from "./media.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
 import { readAll, type ReadRows } from "./catalogue.ts";
@@ -10,7 +11,8 @@ export const PUBLICATIONS: Record<number, string> = { 125060000: "Published", 12
 /** `librarianEdit*` (ADR-0013): the last librarian edit. The editor's name reaches librarians only; `pending` until the librarian explains it. */
 export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string; librarianEditedOn?: string; librarianEditedBy?: string; librarianEditPending?: boolean };
 export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean };
-export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; hours: number | null; email?: string; level?: string; effort?: Contributor }[]; totalHours: number | null; projects: string[]; media: MediaItem[]; libraryNotes?: string };
+/** Contributor credit and the solution's effort; present mode carries neither. */
+export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; email?: string; level?: string }[]; estimatedMinimumHours?: number; complexity?: Solution["complexity"]; projects: string[]; media: MediaItem[]; libraryNotes?: string };
 export function mediaAsset(item: MediaItem, index: number): Solution["assets"][number] {
   if (item.linkedAsset) return { id: item.id, ...item.linkedAsset, sortOrder: item.sortOrder ?? index, ...(item.purpose ? { purpose: item.purpose } : {}) };
   return { id: item.id, name: item.name, assetType: item.mime === "text/html" ? "Self-contained HTML file" : item.mime.startsWith("video/") ? "Video walkthrough only" : "Client-ready one-pager / slide", allowsEmbedding: item.mime === "text/html" || item.mime.startsWith("video/"), sortOrder: index, ...(item.purpose ? { purpose: item.purpose } : {}) };
@@ -35,6 +37,8 @@ export function submissionSolution(record: Submission, names: Record<string, str
     reviewOutcome: record.outcome === 125060001 ? "Changes requested" : record.outcome === 125060002 ? "Approved" : "None", reviewComments: record.comments,
     safetyAcknowledged: core.safetyAcknowledged, clientSafeReviewed: record.cleared, clientContext: core.clientContext || undefined, clientContextRedacted: core.clientContextRedacted || undefined,
     challenges: core.challenges || undefined, lessonsLearned: core.lessonsLearned || undefined,
+    ...(core.estimatedMinimumHours != null ? { estimatedMinimumHours: core.estimatedMinimumHours } : {}),
+    ...(core.complexityValue != null ? { complexity: COMPLEXITY_BY_CHOICE[core.complexityValue] } : {}),
     dateAdded: record.dateAdded ?? "", libraryNotes: record.libraryNotes, ...(record.librarianEditedOn ? { librarianEditedOn: record.librarianEditedOn } : {}), searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
   };
 }
@@ -136,19 +140,19 @@ export function parsePublished(value: unknown, id: string, present: boolean): Pu
   if (present && data.libraryNotes !== undefined) throw new Error("Internal notes in presentation projection.");
   if (data.libraryNotes !== undefined && typeof data.libraryNotes !== "string") throw new Error("Invalid notes projection.");
   if (data.id !== id || !Array.isArray(data.contributors) || !Array.isArray(data.projects) || data.projects.some(project => typeof project !== "string") || (present && data.projects.length)) throw new Error("Invalid published projection.");
+  // Present mode is client-facing: no credit at all, and no effort.
+  if (present && (data.contributors.length || data.estimatedMinimumHours !== undefined || data.complexity !== undefined)) throw new Error("Internal credit or effort in presentation projection.");
   const contributors = data.contributors.map(value => {
     const row = object(value);
-    if (typeof row.name !== "string" || (row.hours !== null && (present || typeof row.hours !== "number" || !Number.isFinite(row.hours) || row.hours < 0))) throw new Error("Invalid contributor credit.");
-    if (present && (row.email !== undefined || row.level !== undefined || row.effort !== undefined)) throw new Error("Internal contributor credit in presentation projection.");
+    if (typeof row.name !== "string") throw new Error("Invalid contributor credit.");
     if (row.email !== undefined && typeof row.email !== "string") throw new Error("Invalid contributor email.");
     if (row.level !== undefined && typeof row.level !== "string") throw new Error("Invalid contributor level.");
-    const effort = row.effort === undefined ? undefined : parseGraph(wrap({ id, rowVersion: data.rowVersion, graph: { contributors: [row.effort], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] }, hours: [row.hours] })).graph.contributors[0];
-    return { name: row.name, hours: row.hours as number | null, ...(row.email === undefined ? {} : { email: row.email }), ...(row.level === undefined ? {} : { level: row.level }), ...(effort ? { effort } : {}) };
+    return { name: row.name, ...(row.email === undefined ? {} : { email: row.email }), ...(row.level === undefined ? {} : { level: row.level }) };
   });
-  // Null while a contributor has no hours yet, such as rows saved before allocation was retired.
-  if (data.totalHours !== null && (typeof data.totalHours !== "number" || !Number.isFinite(data.totalHours) || data.totalHours < 0)) throw new Error("Invalid effort total.");
+  if (data.estimatedMinimumHours !== undefined && (!Number.isInteger(data.estimatedMinimumHours) || (data.estimatedMinimumHours as number) < 0 || (data.estimatedMinimumHours as number) > MAX_ESTIMATED_HOURS)) throw new Error("Invalid effort estimate.");
+  if (data.complexity !== undefined && !COMPLEXITIES.some(option => option.value === data.complexity)) throw new Error("Invalid complexity.");
   if (media.some(item => !item.complete)) throw new Error("Published media is incomplete.");
-  return { id, rowVersion: data.rowVersion as string, contributors, totalHours: data.totalHours as number | null, projects: data.projects as string[], media, ...(data.libraryNotes === undefined ? {} : { libraryNotes: data.libraryNotes as string }) };
+  return { id, rowVersion: data.rowVersion as string, contributors, ...(data.estimatedMinimumHours === undefined ? {} : { estimatedMinimumHours: data.estimatedMinimumHours as number }), ...(data.complexity === undefined ? {} : { complexity: data.complexity as Solution["complexity"] }), projects: data.projects as string[], media, ...(data.libraryNotes === undefined ? {} : { libraryNotes: data.libraryNotes as string }) };
 }
 export async function createTechnology(api: WorkflowApi, core: Pick<SavedDraft, "id" | "rowVersion">, name: string, signal: AbortSignal) {
   signal.throwIfAborted();

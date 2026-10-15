@@ -11,8 +11,11 @@ namespace Prisma.Plugins
     {
         [DataMember(Name = "id")] public string Id { get; set; }
         [DataMember(Name = "personId", IsRequired = true)] public string PersonId { get; set; }
-        /// <summary>`nx_directhours`: the minimum hours this person needed to work on the solution, at every maturity.</summary>
-        [DataMember(Name = "directHours")] public decimal? DirectHours { get; set; }
+        /// <summary>
+        /// Retired with per-person effort: effort is now an estimate on the solution (`nx_estimatedminimumhours`,
+        /// `nx_complexity`). Older clients still send it; it is accepted, never validated, stored or returned.
+        /// </summary>
+        [DataMember(Name = "directHours", EmitDefaultValue = false)] public decimal? DirectHours { get; set; }
     }
 
     public static class ContributorPolicy
@@ -28,10 +31,7 @@ namespace Prisma.Plugins
                 if (contributor == null) throw Invalid("Invalid contributor.");
                 if (!people.Add(Identifier(contributor.PersonId))) throw Invalid("Select each contributor only once.");
                 if (!string.IsNullOrEmpty(contributor.Id) && !rows.Add(Identifier(contributor.Id))) throw Invalid("Duplicate contributor row.");
-                var hours = contributor.DirectHours;
-                if (hours.HasValue && (hours < 0 || hours > 1000000000m || decimal.Round(hours.Value, 2) != hours))
-                    throw Invalid("Hours must be nonnegative, within their range and have at most two decimal places.");
-                if (complete && !hours.HasValue) throw Invalid("Enter the minimum hours required for every contributor.");
+                contributor.DirectHours = null;
             }
         }
 
