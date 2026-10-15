@@ -553,11 +553,16 @@ namespace Prisma.Plugins.Tests
         public void LibrarianEditMarksChangesAndPausesPublishedClearanceOnly()
         {
             var solution = Guid.NewGuid();
-            var librarian = Guid.NewGuid();
+            var librarian = new EntityReference("cr6b0_consultant", Guid.NewGuid());
             var now = new DateTime(2026, 10, 15, 12, 0, 0, DateTimeKind.Utc);
             var published = DraftPolicy.LibrarianEdit(solution, ReviewPolicy.Published, librarian, now);
             Assert.True(published.GetAttributeValue<bool>(DraftPolicy.LibrarianEditPending));
-            Assert.Equal(librarian, published.GetAttributeValue<EntityReference>(DraftPolicy.LibrarianEditedBy).Id);
+            Assert.Equal(librarian.Id, published.GetAttributeValue<EntityReference>(DraftPolicy.LibrarianEditedBy).Id);
+            Assert.Equal("cr6b0_consultant", published.GetAttributeValue<EntityReference>(DraftPolicy.LibrarianEditedBy).LogicalName);
+            // A librarian outside the consultant directory still edits; the earlier editor's name is cleared, not kept.
+            var unnamed = DraftPolicy.LibrarianEdit(solution, ReviewPolicy.Pending, null, now);
+            Assert.True(unnamed.Contains(DraftPolicy.LibrarianEditedBy));
+            Assert.Null(unnamed.GetAttributeValue<EntityReference>(DraftPolicy.LibrarianEditedBy));
             Assert.Equal(now, published.GetAttributeValue<DateTime>(DraftPolicy.LibrarianEditedOn));
             Assert.False(published.GetAttributeValue<bool>("nx_clientsafereviewed"));
             Assert.True(published.Contains("nx_clientsafereviewed"));

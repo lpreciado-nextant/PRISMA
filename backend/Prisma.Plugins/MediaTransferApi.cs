@@ -85,7 +85,7 @@ namespace Prisma.Plugins
             {
                 var requested = context.InputParameters.Contains("BlockSize") ? context.InputParameters["BlockSize"] as int? ?? 0 : 0;
                 if (requested != 0 && requested != MediaPolicy.LargeBlockSize && requested != MediaPolicy.BlobBlockSize && requested != MediaPolicy.MaxBlobBlockSize) throw MediaPolicy.Invalid("Unsupported upload block size.");
-                server.Execute(new UpdateRequest { Target = MediaApi.Touch(draft, editMode, false, context.InitiatingUserId), ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
+                server.Execute(new UpdateRequest { Target = MediaApi.Touch(server, draft, editMode, false, context.InitiatingUserId), ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
                 int blockSize;
                 var createdSession = MediaApi.Begin(server, draft, context, storage, out blockSize,
                     requested == MediaPolicy.MaxBlobBlockSize ? "attachment:v5" : requested == MediaPolicy.BlobBlockSize ? "attachment:v4" : "attachment:v3");

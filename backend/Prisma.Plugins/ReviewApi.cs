@@ -315,7 +315,7 @@ namespace Prisma.Plugins
 
         private static void MarkEdited(IOrganizationService server, Entity parent, Guid caller)
         {
-            server.Update(DraftPolicy.LibrarianEdit(parent.Id, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, caller, DateTime.UtcNow));
+            server.Update(DraftPolicy.LibrarianEdit(parent.Id, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, caller), DateTime.UtcNow));
         }
 
         public static bool IsLibrarian(IOrganizationService server, Guid caller)

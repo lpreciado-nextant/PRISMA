@@ -48,7 +48,7 @@ namespace Prisma.Plugins
                 if (mode == EditMode.Librarian)
                 {
                     // Pending review and Published records keep their status; only a real change is recorded.
-                    if (changed) server.Update(DraftPolicy.LibrarianEdit(identifier, current.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, context.InitiatingUserId, DateTime.UtcNow));
+                    if (changed) server.Update(DraftPolicy.LibrarianEdit(identifier, current.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, context.InitiatingUserId), DateTime.UtcNow));
                     context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(Snapshot(caller.Retrieve("nx_solution", identifier, Columns())));
                     return;
                 }

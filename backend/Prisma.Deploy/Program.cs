@@ -13,7 +13,7 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
@@ -280,6 +280,50 @@ if (command == "repair-asset-url")
     client.Execute(new PublishXmlRequest { ParameterXml = "<importexportxml><entities><entity>nx_demoasset</entity></entities><nodes/><securityroles/><settings/><workflows/></importexportxml>" });
     if (ReadUrl(false).MaxLength != 4000 || ReadUrl(true).MaxLength != 4000) throw new InvalidOperationException("URL metadata verification failed after update/publish.");
     Console.WriteLine("Update/publish completed; metadata remains 4000. A protected API write/readback probe is still required to confirm physical storage capacity.");
+    return;
+}
+if (command == "inspect-librarian-edit")
+{
+    // Read-only (ADR-0013): the three librarian-edit columns, their solution membership and column security.
+    var expected = new Dictionary<string, AttributeTypeCode> { ["nx_librarianeditedby"] = AttributeTypeCode.Lookup, ["nx_librarianeditedon"] = AttributeTypeCode.DateTime, ["nx_librarianeditpending"] = AttributeTypeCode.Boolean };
+    var solutionId = Find(client, "solution", "uniquename", solutionName)?.Id ?? throw new InvalidOperationException("PRISMA_Dev is missing.");
+    var table = ((RetrieveEntityResponse)client.Execute(new RetrieveEntityRequest { LogicalName = "nx_solution", EntityFilters = EntityFilters.Entity })).EntityMetadata;
+    var root = new QueryExpression("solutioncomponent") { ColumnSet = new ColumnSet("rootcomponentbehavior"), TopCount = 1 };
+    root.Criteria.AddCondition("solutionid", ConditionOperator.Equal, solutionId);
+    root.Criteria.AddCondition("objectid", ConditionOperator.Equal, table.MetadataId);
+    Console.WriteLine($"nx_solution table in PRISMA_Dev: behavior={client.RetrieveMultiple(root).Entities.FirstOrDefault()?.GetAttributeValue<OptionSetValue>("rootcomponentbehavior")?.Value.ToString() ?? "absent"} (0 = all subcomponents)");
+    foreach (var (name, type) in expected.Append(new KeyValuePair<string, AttributeTypeCode>("nx_reviewoutcome", AttributeTypeCode.Picklist)))
+    {
+        AttributeMetadata attribute;
+        try { attribute = ((RetrieveAttributeResponse)client.Execute(new RetrieveAttributeRequest { EntityLogicalName = "nx_solution", LogicalName = name, RetrieveAsIfPublished = false })).AttributeMetadata; }
+        catch (Exception error) { Console.WriteLine($"nx_solution.{name}: MISSING or unpublished ({error.Message})"); continue; }
+        var detail = attribute switch {
+            LookupAttributeMetadata lookup => $"targets={string.Join(",", lookup.Targets ?? Array.Empty<string>())}",
+            DateTimeAttributeMetadata date => $"format={date.Format}; behavior={date.DateTimeBehavior?.Value}",
+            BooleanAttributeMetadata flag => $"default={flag.DefaultValue}",
+            _ => "",
+        };
+        var components = new QueryExpression("solutioncomponent") { ColumnSet = new ColumnSet(false), TopCount = 1 };
+        components.Criteria.AddCondition("solutionid", ConditionOperator.Equal, solutionId);
+        components.Criteria.AddCondition("objectid", ConditionOperator.Equal, attribute.MetadataId);
+        var inSolution = client.RetrieveMultiple(components).Entities.Count == 1;
+        Console.WriteLine($"nx_solution.{name}: type={attribute.AttributeType} (expected {type}); {detail}; required={attribute.RequiredLevel?.Value}; secured={attribute.IsSecured}; inPRISMA_Dev={inSolution}; schema={attribute.SchemaName}");
+        var permissions = new QueryExpression("fieldpermission") { ColumnSet = new ColumnSet("fieldsecurityprofileid", "canread", "cancreate", "canupdate") };
+        permissions.Criteria.AddCondition("entityname", ConditionOperator.Equal, "nx_solution");
+        permissions.Criteria.AddCondition("attributelogicalname", ConditionOperator.Equal, name);
+        foreach (var permission in client.RetrieveMultiple(permissions).Entities)
+        {
+            string Allowed(string column) => permission.GetAttributeValue<OptionSetValue>(column)?.Value == 4 ? "Allowed" : "Not allowed";
+            var profile = permission.GetAttributeValue<EntityReference>("fieldsecurityprofileid");
+            profile.Name = client.Retrieve("fieldsecurityprofile", profile.Id, new ColumnSet("name")).GetAttributeValue<string>("name");
+            var members = new QueryExpression("systemuserprofiles") { ColumnSet = new ColumnSet(false) };
+            members.Criteria.AddCondition("fieldsecurityprofileid", ConditionOperator.Equal, profile.Id);
+            var teams = new QueryExpression("teamprofiles") { ColumnSet = new ColumnSet(false) };
+            teams.Criteria.AddCondition("fieldsecurityprofileid", ConditionOperator.Equal, profile.Id);
+            Console.WriteLine($"  profile '{profile.Name}': read={Allowed("canread")}; create={Allowed("cancreate")}; update={Allowed("canupdate")}; users={client.RetrieveMultiple(members).Entities.Count}; teams={client.RetrieveMultiple(teams).Entities.Count}");
+        }
+    }
+    Console.WriteLine("Read-only inspection. No changes made.");
     return;
 }
 if (command == "inspect-asset-columns")

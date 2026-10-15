@@ -223,7 +223,7 @@ namespace Prisma.Plugins
                 });
                 DraftGraph.Save(caller, parent, input, mode == EditMode.Owner);
                 if (mode == EditMode.Owner) server.Update(new Entity("nx_solution", identifier) { ["nx_clientsafereviewed"] = false, ["nx_safetyacknowledged"] = false });
-                else if (changed) server.Update(DraftPolicy.LibrarianEdit(identifier, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, context.InitiatingUserId, DateTime.UtcNow));
+                else if (changed) server.Update(DraftPolicy.LibrarianEdit(identifier, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, context.InitiatingUserId), DateTime.UtcNow));
                 parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("nx_status"));
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(DraftGraph.Read(caller, parent));

@@ -1,6 +1,6 @@
 # ADR-0013 — Librarian content editing
 
-**Status:** Proposed; agreed with the user 2026-10-15. Plug-ins and connected app implemented on branch `feature/librarian-content-editing`, not deployed. The three columns are not created yet.
+**Status:** Proposed; agreed with the user 2026-10-15. Plug-ins and connected app implemented on branch `feature/librarian-content-editing`, not deployed. The three columns were created 2026-10-15 and their metadata and column security verified.
 **Date:** 2026-10-15
 
 ## Context
@@ -35,8 +35,11 @@ Contributors still need to know when someone changed their solution, and why. Th
 - Any other transition (withdraw, request changes, retire, delete) also clears the flag, because its own required comment or the owner's action supersedes the edit.
 - The rule is enforced in the plug-in, not only in the UI.
 
-**Traceability.** Add three protected columns to `nx_solution`. The logical names below are the ones the code uses. If the created columns get other names, the code changes with them.
-- `nx_librarianeditedby`: lookup to the calling `systemuser`.
+**Traceability.** Three columns on `nx_solution`, created 2026-10-15:
+- `nx_librarianeditedby`: lookup to `cr6b0_consultant`, because PRISMA names people by consultant rather than by `systemuser`.
+  - The plug-in resolves the librarian from their sign-in email to exactly one active consultant, with the same rule as favorites.
+  - When no consultant matches, the edit is still recorded, but without a name.
+  - Column security lets only the PRISMA Librarian and PRISMA Core Draft Librarian profiles read it.
 - `nx_librarianeditedon`: date and time.
 - `nx_librarianeditpending`: yes/no, the unreported-edit flag.
 
@@ -59,7 +62,7 @@ These columns are written only through the PRISMA APIs, by librarian saves that 
 
 Librarians fix small problems without bouncing a submission or unpublishing a solution, and the owner is always told what changed and why.
 
-- **Deployment order:** create the three columns first. The plug-ins read them on every submission read and transition, so the plug-in must not be deployed before them. Then deploy the signed plug-in, then the connected app.
+- **Deployment order:** the three columns exist, created first because the plug-ins read them on every submission read and transition. Next comes the signed plug-in, then the connected app.
 - **Permissions to verify:** a non-admin librarian must be able to update core fields of another person's record. Check field-security profiles on client context and the redacted field, and N:N append rights. The pilot's privileged accounts cannot prove this.
 - **Present mode:** a published record being edited is out of present mode until confirmed. An abandoned edit leaves it out until a librarian confirms or requests changes, and the review panel says so.
 

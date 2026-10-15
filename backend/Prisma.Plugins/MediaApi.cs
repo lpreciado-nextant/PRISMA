@@ -323,7 +323,7 @@ namespace Prisma.Plugins
             var mode = DraftPolicy.Editable(parent, context.InitiatingUserId, expected, () => ReviewApi.IsLibrarian(server, context.InitiatingUserId));
             if (!read)
                 server.Execute(new UpdateRequest {
-                    Target = Touch(parent, mode, context.MessageName == "nx_FinishMediaUpload" || context.MessageName == "nx_RemoveDraftMedia", context.InitiatingUserId),
+                    Target = Touch(server, parent, mode, context.MessageName == "nx_FinishMediaUpload" || context.MessageName == "nx_RemoveDraftMedia", context.InitiatingUserId),
                     ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
                 });
             Guid? sessionId = null;
@@ -374,11 +374,11 @@ namespace Prisma.Plugins
         /// The version-checked parent update every media write makes. An owner edit clears acknowledgment and clearance;
         /// a librarian edit keeps both and is recorded only when media is actually added or removed (ADR-0013).
         /// </summary>
-        internal static Entity Touch(Entity parent, EditMode mode, bool changes, Guid caller)
+        internal static Entity Touch(IOrganizationService server, Entity parent, EditMode mode, bool changes, Guid caller)
         {
             var target = mode == EditMode.Owner
                 ? new Entity("nx_solution", parent.Id) { ["nx_clientsafereviewed"] = false, ["nx_safetyacknowledged"] = false }
-                : changes ? DraftPolicy.LibrarianEdit(parent.Id, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, caller, DateTime.UtcNow)
+                : changes ? DraftPolicy.LibrarianEdit(parent.Id, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, caller), DateTime.UtcNow)
                 : new Entity("nx_solution", parent.Id) { ["nx_status"] = parent["nx_status"] };
             target.RowVersion = parent.RowVersion;
             return target;

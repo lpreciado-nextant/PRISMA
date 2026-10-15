@@ -81,7 +81,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | In code | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md); plug-ins, tests and the connected editor (`#/review/:id/edit`, **Confirm changes**) on branch `feature/librarian-content-editing`. Next, each step separately approved: create the three `nx_solution` columns, deploy the signed plug-in, publish the connected app, then a non-admin librarian test. Hours stay out of scope while the effort model changes |
+| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | In code | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md); plug-ins, tests and the connected editor (`#/review/:id/edit`, **Confirm changes**) on branch `feature/librarian-content-editing`. The three `nx_solution` columns were created 2026-10-15 (Juliana), editor lookup to `cr6b0_consultant`, column security verified. Next, each step separately approved: deploy the signed plug-in, publish the connected app, then a non-admin librarian test. Hours stay out of scope while the effort model changes |
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 

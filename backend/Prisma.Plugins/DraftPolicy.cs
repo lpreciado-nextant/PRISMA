@@ -114,15 +114,26 @@ namespace Prisma.Plugins
 
         /// <summary>
         /// Marks a real librarian change: who and when, and that the owner has not been told yet. A Published record keeps
-        /// its status but leaves present mode until the librarian confirms the edit (`confirm-edit`).
+        /// its status but leaves present mode until the librarian confirms the edit (`confirm-edit`). `editor` is the
+        /// librarian's consultant row; null when none matches, so an earlier editor's name is never left in place.
         /// </summary>
-        public static Entity LibrarianEdit(Guid solution, int? status, Guid caller, DateTime now)
+        public static Entity LibrarianEdit(Guid solution, int? status, EntityReference editor, DateTime now)
         {
             var edit = new Entity("nx_solution", solution) {
-                [LibrarianEditedBy] = new EntityReference("systemuser", caller), [LibrarianEditedOn] = now, [LibrarianEditPending] = true
+                [LibrarianEditedBy] = editor, [LibrarianEditedOn] = now, [LibrarianEditPending] = true
             };
             if (status == ReviewPolicy.Published) edit["nx_clientsafereviewed"] = false;
             return edit;
+        }
+
+        /// <summary>
+        /// The librarian as a `cr6b0_consultant` (PRISMA names people by consultant, not systemuser), by the same exact
+        /// email rule as favorites. A librarian missing from the directory still edits; the edit just carries no name.
+        /// </summary>
+        public static EntityReference Editor(IOrganizationService server, Guid caller)
+        {
+            try { return new EntityReference("cr6b0_consultant", FavoriteApi.ResolveConsultant(server, caller)); }
+            catch (InvalidPluginExecutionException) { return null; }
         }
 
         /// <summary>True when any supplied core value differs from the stored one; blank text equals no text.</summary>
