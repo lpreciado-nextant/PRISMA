@@ -9,14 +9,14 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Progress |
 |---|---|---|
-| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort | 38% — 1 Pending review, 1 Pending to do / 2 |
+| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort | 75% — 2 Pending review / 2 |
 | [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 15 Live / 15 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
 | [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 50% — 5 Live, 4 Pending review, 3 Pending to do / 16 |
 | [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 77% — 9 Live, 2 In code / 13 (2 Dropped excluded) |
+| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 81% — 9 Live, 2 Pending review / 13 (2 Dropped excluded) |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
 | [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
 
@@ -69,7 +69,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-15 — Working session: librarian content editing and solution-level effort
 
-**Progress:** 38% — 1 Pending review, 1 Pending to do / 2
+**Progress:** 75% — 2 Pending review / 2
 
 ### Feedback
 
@@ -81,8 +81,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | 🟡 Pending review | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md). Columns created 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (Juliana approved). Next: check it in the hosted app (edit and approve a Pending record; edit and confirm a Published one; owner view), then test with a non-admin librarian |
-| Effort as a solution estimate (`nx_estimatedminimumhours`, whole hours, optional) and complexity (`nx_complexity`: Easy, Medium, Hard; required to submit and approve). Per-contributor hours retired | 🔴 Pending to do | **Pending (2026-10-15):** code is in `main` (`5aceac7`) but Luis\'s plug-in deploy was built before it. Needs the plug-in redeployed from `main`, then the connected app. [ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md). The user created both columns on 2026-10-15, and the metadata was verified with `inspect-effort-columns`. Plug-ins, PoC and connected app are on branch `feature/solution-effort`. Internal only: never in present mode or the deck. Resolves PR-010 and PR-011. Deploy the plug-in and the connected app together, because the response shapes change |
+| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | 🟡 Pending review | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md). Columns created 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (Juliana approved). Checked in the hosted app on Mauricio's "Budget Management Solution". Redeployed with ADR-0014 from `5ad96bb`, which also hides Edit on the librarian's own solutions. Next: test with a non-admin librarian |
+| Effort as a solution estimate (`nx_estimatedminimumhours`, whole hours, optional) and complexity (`nx_complexity`: Easy, Medium, Hard; required to submit and approve). Per-contributor hours retired | 🟡 Pending review | Deployed 2026-10-15: plug-in redeployed by Luis from `5ad96bb` (22:35:57 UTC), then the connected app. Next: check it in the hosted app (complexity required to continue and submit, estimate optional, detail panel). [ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md). The user created both columns on 2026-10-15, and the metadata was verified with `inspect-effort-columns`. Code merged to `main`. Internal only: never in present mode or the deck. Resolves PR-010 and PR-011. Deploy the plug-in and the connected app together, because the response shapes change |
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
 
@@ -279,7 +279,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 ## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 77% — 9 Live, 2 In code, 1 Proposed, 1 Pending to do / 13 (2 Dropped excluded)
+**Progress:** 81% — 9 Live, 2 Pending review, 1 Proposed, 1 Pending to do / 13 (2 Dropped excluded)
 
 ### Feedback
 
@@ -309,8 +309,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-007 Reduce chrome around the demo viewer | 🟢 Live | 2026-10-14: one centred 16:9 stage for every demo type, the same in the viewer and the solution page's main demo; the focused viewer (Open in new tab) shows the demo with only its title bar, no masthead, tabs or banner. `1f6a01b`, published and confirmed by the user |
 | PR-008 User feedback capture (comments/suggestions) | 🟢 Live | Live 2026-10-13: `nx_SuggestChange` and `nx_GetSolutionSuggestions` registered by Juliana (Web API, same definition as `Prisma.Deploy suggestion-api`), clients generated and the connected app published with **Suggest a change** and the **Suggestions** panel; hosted UI not yet checked. Table `nx_solutionsuggestion` created 2026-10-13; `SuggestionApi` plug-in, `suggestion-api` registration command and the connected button/panel in code ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)). Medium priority. Decided 2026-10-13: private **suggestions** on published solutions, not public comments (no social features in v1). Anyone who can read a published solution, outside present mode, uses **Suggest a change** on the solution page (owner included: second signed plug-in deployed by Luis and connected app republished 2026-10-14). Only the owner, the solution's contributors and the PRISMA Librarian read them, in a **Suggestions** panel on the same page, with the author's name and date; no status. Separate from the librarian review. Signed plug-in with `SuggestionApi` deployed 2026-10-13 22:18 UTC |
 | PR-009 Solution rating / usefulness score | Proposed | Low priority |
-| PR-010 Estimated duration metadata instead of hours | In code | 2026-10-15: resolved as one whole-hour estimate for the solution (`nx_estimatedminimumhours`, optional), replacing per-person hours ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)). Not deployed |
-| PR-011 Complexity classification (Small / Medium / Large) | In code | 2026-10-15: `nx_complexity` Easy / Medium / Hard, required to submit and approve, internal only ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)). Not deployed |
+| PR-010 Estimated duration metadata instead of hours | 🟡 Pending review | 2026-10-15: resolved as one whole-hour estimate for the solution (`nx_estimatedminimumhours`, optional), replacing per-person hours ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)). Deployed 2026-10-15 |
+| PR-011 Complexity classification (Small / Medium / Large) | 🟡 Pending review | 2026-10-15: `nx_complexity` Easy / Medium / Hard, required to submit and approve, internal only ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md)). Deployed 2026-10-15 |
 | PR-012 Time-tracking system integration | 🟢 Live | Resolved 2026-10-06 as a time filter in the library: an "Added: …" picker beside "Sort by" with Any time / Last 30 days / Last 3 months / Last 6 months / Last 12 months, each showing how many solutions it leaves. Filters on creation date (`createdon`), months counted as calendar months back from today; kept in the URL (`added=3m`). `6e0b314`, `8a7b544`, published 2026-10-06 ([design system](../design/design-system.md#library-page)). Integration with an external time-tracking system is not part of this |
 | PR-013 Solution-to-workstream/project mapping | 🟢 Live | Resolved 2026-10-14 with the existing projects table: a solution links to any number of `cr6b0_project` rows through the native N:N (PR-030, live), chosen in the form's Projects picker and shown as **Associated projects** on the solution page (internal; hidden in present mode). No separate workstream table |
 | PR-014 Media display standardization (video/image/HTML/demo) | 🟢 Live | 2026-10-14: video, uploaded HTML, embedded links and images play in one centred 16:9 stage, the same size and place for every type, with the same Full screen and Open in new tab (`1f6a01b`). Decided 2026-10-14 (user): demos open on request, never auto-shown on the solution page, for quality; the connected app keeps listing them as rows. Screenshots keep their own gallery and lightbox; PDF and PowerPoint download |
