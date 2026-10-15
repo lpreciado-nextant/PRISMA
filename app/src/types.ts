@@ -92,8 +92,6 @@ export interface Solution {
   specializationAreas?: SpecializationArea[];
   contributors: SolutionContributor[];
   contributorNames?: string[];
-  /** Proposed `nx_estimatedcost` (Currency, USD). Internal only; stripped in present mode. */
-  estimatedCost?: number;
   /** `nx_estimatedminimumhours`: whole-hour estimate of the least time the whole solution took. Optional; internal only. */
   estimatedMinimumHours?: number;
   /** `nx_complexity`. Required at submission; internal only (never in present mode or the presentation download). */

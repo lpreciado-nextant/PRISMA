@@ -29,10 +29,11 @@ test("client identity is searchable internally but absent from present catalogue
 test("builders, CSM rows, effort and cost are absent from present catalogue", () => {
   const example = SOLUTIONS[0];
   const presented = presentCatalogue([example])[0];
-  assert(example.contributors.some((contributor) => isCustomerSuccessLevel(contributor.builtBy.level)) && example.estimatedCost);
+  assert(example.contributors.some((contributor) => isCustomerSuccessLevel(contributor.builtBy.level)) && example.complexity);
   assert.deepEqual(presented.contributors, []);
   assert.equal(presented.contributorNames, undefined);
-  assert.equal(presented.estimatedCost, undefined);
+  assert.equal(presented.complexity, undefined);
+  assert.equal(presented.estimatedMinimumHours, undefined);
   assert(!matchesQuery(presented, example.contributors[0].builtBy.name));
 });
 

@@ -477,6 +477,17 @@ test("review panel: librarian edits need an explanation for the owner (ADR-0013)
   assert.match(render(review.ReviewPanel, { ...live, edit: { on: "2026-10-15", pending: false } }), /Available in the Solution Library\..*Request changes<\/button>/s);
 });
 
+test("librarian edit notice: an informational note, with the present-mode rule only for published records", async () => {
+  const { LibrarianEditNotice } = await server.ssrLoadModule("/src/components/LibrarianEditNotice.tsx");
+  const pending = render(LibrarianEditNotice, { published: false });
+  assert.match(pending, /<section role="note" aria-labelledby="[^"]+"/);
+  assert.match(pending, /You&#x27;re editing as librarian.*stays in Pending review.*Contributors stay with the owner.*what you changed and why/s);
+  assert.doesNotMatch(pending, /present mode/);
+  const published = render(LibrarianEditNotice, { published: true });
+  assert.match(published, /stays published.*left out of present mode/s);
+  assert.match(published, /color:var\(--proto\)/);
+});
+
 test("review queue rows show area, capability, submitter and a friendly date, newest first", () => {
   const base = { summary: "Summary", status: "Working prototype", publicationStatus: "Pending review", reviewOutcome: "None", contributors: [], technologies: [], assets: [{ id: "a" }], images: [{ id: "i", src: "x" }, { id: "j", src: "y" }] };
   const entries = [
