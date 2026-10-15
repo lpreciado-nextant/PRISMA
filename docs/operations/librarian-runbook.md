@@ -1,6 +1,6 @@
 # Librarian runbook
 
-**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into overview, publication checklist and decision 2026-10-14 · **Last updated:** 2026-10-14
+**Status:** Connected review, publication sharing and retirement deployed through plug-ins (privileged accounts verified; non-admin acceptance pending); no notifications yet; review panel reorganized into overview, publication checklist and decision 2026-10-14; librarian content editing proposed 2026-10-15 (ADR-0013, not built) · **Last updated:** 2026-10-15
 **Role definition:** [End-to-end design §2.3](../design/end-to-end-design.md#23-librarian-admin)
 
 The librarian owns library quality: consistent, accurate, non-embarrassing entries; no stale content presented to clients. The librarian is **the only role that can publish** — this is the quality gate that makes sales use safe.
@@ -24,7 +24,7 @@ The review panel above the submission preview shows the status, then three secti
 - A retired record keeps its history and its reason is visible to the owner in My submissions. The owner can later withdraw it to Draft, refresh it and resubmit.
 - Every action carries the record's row version. If someone else changed it first, the action is rejected; reopen the record and review the latest version.
 
-Librarians cannot edit a contributor's content in the app; return it with comments instead. Owners can withdraw Pending, Published or Retired records to Draft at any time, which also revokes reader access.
+Librarians cannot edit a contributor's content in the app yet; return it with comments instead. [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md) (proposed, not built) will let a librarian edit Pending review and Published records in place, except contributors and hours. Any real change then requires a comment to the owner saying what changed and why: on approval for a Pending record, on save for a Published one. Owners can withdraw Pending, Published or Retired records to Draft at any time, which also revokes reader access.
 
 ### Mock PoC
 
@@ -51,7 +51,7 @@ Review Comments allow up to 4000 characters and are separate from editorial Libr
 
 **Outcomes:** approve client-safe content (Published, Client Safe Reviewed true, Review Outcome Approved), or request changes (Draft, Review Outcome Changes requested, required Review Comments and both safety booleans false). Approval revalidates submission completeness. Acknowledgment and historical outcome alone never grant clearance. The connected app enforces this through [controlled transitions](../architecture/security-model.md#controlled-transitions); the PoC only simulates the role.
 
-**Re-reviews:** a published record must be withdrawn to Draft before its owner can edit it; withdrawal removes it from the catalogue and clears client-safe approval, and resubmission returns it to *Pending review*. A diff and audit history remain follow-up work.
+**Re-reviews:** a published record must be withdrawn to Draft before its owner can edit it; withdrawal removes it from the catalogue and clears client-safe approval, and resubmission returns it to *Pending review*. Under ADR-0013 a librarian can instead correct a published record in place without unpublishing it, re-confirming client safety on save. A diff and audit history remain follow-up work.
 
 **SLA:** _TBD — set with the librarian team (see risk R4: more than one librarian, SLA on review)._
 

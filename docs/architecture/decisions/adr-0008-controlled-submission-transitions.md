@@ -2,7 +2,7 @@
 
 **Status:** Accepted; functional reviewer lifecycle and explicit share revocation verified; cross-account and least-privilege acceptance pending
 **Date:** 2026-09-21
-**Last updated:** 2026-10-02
+**Last updated:** 2026-10-15
 
 ## Context
 
@@ -25,4 +25,4 @@ Contributors must save incomplete drafts, submit and revise their work, while on
 
 Incomplete drafts do not force fake effort or summary values. Contributors can submit without being able to publish. Latest feedback is readable on authorized contributor records and absent from CSM/presentation projections. Schema changes add two columns, not a new table; full review history, reviewer identity and timestamps remain separate future work.
 
-The APIs, plug-ins, field profiles and child/link guards are registered. File lifecycle enforcement uses the private-session extension in [ADR-0009](adr-0009-mediated-media-and-publication-access.md), adding one protocol table but no review-history table. Owner save, submit, return, revise, resubmit, approve and withdraw passed with a privileged owner holding the explicit Librarian role; explicit reader-team shares were granted and revoked on parent/children. [Evidence](../../workflows/contribution-and-review.md#verified-lifecycle) does not establish separate-reviewer or effective non-admin acceptance. Connected editing requires owner withdrawal to Draft and does not yet expose librarian content editing. The PoC remains a simulation. The target matrix lives in [SchemaV2](../../data_model/SchemaV2.md#draft-and-transition-contract); deployed permissions are in the [security model](../security-model.md).
+The APIs, plug-ins, field profiles and child/link guards are registered. File lifecycle enforcement uses the private-session extension in [ADR-0009](adr-0009-mediated-media-and-publication-access.md), adding one protocol table but no review-history table. Owner save, submit, return, revise, resubmit, approve and withdraw passed with a privileged owner holding the explicit Librarian role; explicit reader-team shares were granted and revoked on parent/children. [Evidence](../../workflows/contribution-and-review.md#verified-lifecycle) does not establish separate-reviewer or effective non-admin acceptance. Connected editing requires owner withdrawal to Draft and does not yet expose librarian content editing; [ADR-0013](adr-0013-librarian-content-editing.md) (proposed 2026-10-15) defines it for Pending review and Published records. The PoC remains a simulation. The target matrix lives in [SchemaV2](../../data_model/SchemaV2.md#draft-and-transition-contract); deployed permissions are in the [security model](../security-model.md).

@@ -1,6 +1,6 @@
 # Contribution & review workflow
 
-**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain; My submissions redesigned as a status-filtered workspace; several projects per solution; owner status panel in the review style; form legend and Media notices restyled; Tag it before Solution context, which adds internal challenges and lessons learned; My submissions feedback filter 2026-10-14 · **Last updated:** 2026-10-14
+**Status:** Two-field story model adopted; deployed-app lifecycle previously passed with one privileged account; non-admin and separate-reviewer gates remain; My submissions redesigned as a status-filtered workspace; several projects per solution; owner status panel in the review style; form legend and Media notices restyled; Tag it before Solution context, which adds internal challenges and lessons learned; My submissions feedback filter 2026-10-14; librarian content editing proposed 2026-10-15 (ADR-0013) · **Last updated:** 2026-10-15
 **Source:** [End-to-end design §3.1](../design/end-to-end-design.md#31-contribution--publication) · Roles: [Contributor, Librarian](../design/end-to-end-design.md#2-users-and-roles)
 
 ## Lifecycle
@@ -119,6 +119,7 @@ There is no Role picker (retired 2026-10-08). Once a person is selected, a read-
 |---|---|
 | Material — summary, business value, media, client context, contributor or effort inputs | Fresh acknowledgment; submitting returns to Pending review; saving unfinished edits returns to Draft. Both clear Client Safe Reviewed and withdraw the record from the catalogue; production librarian sees a diff |
 | Trivial — typo in library notes | Stays *Published* |
+| Librarian edit (proposed, [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md)) — any content except contributors and hours | Stays *Published*; the librarian re-confirms client safety and must explain what changed and why. The owner sees "Edited by the librarian · date" with that comment in My submissions. Not built |
 
 ## Review (librarian side)
 
