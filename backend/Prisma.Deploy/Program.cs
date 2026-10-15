@@ -353,7 +353,7 @@ if (command == "inspect-librarian-edit")
         var bytes = string.IsNullOrEmpty(content) ? Array.Empty<byte>() : Convert.FromBase64String(content);
         var marker = System.Text.Encoding.Unicode.GetBytes("confirm-edit");
         var deployed = bytes.Length > 0 && bytes.AsSpan().IndexOf(marker) >= 0;
-        Console.WriteLine($"plug-in assembly {stored.GetAttributeValue<string>("name")} {stored.GetAttributeValue<string>("version")}: modified {stored.GetAttributeValue<DateTime>("modifiedon"):u} by {stored.GetAttributeValue<EntityReference>("modifiedby")?.Name}; {bytes.Length} bytes; librarian editing (ADR-0013) {(deployed ? "DEPLOYED" : "not deployed")}");
+        Console.WriteLine($"plug-in assembly {stored.GetAttributeValue<string>("name")} {stored.GetAttributeValue<string>("version")}: modified {stored.GetAttributeValue<DateTime>("modifiedon"):u} by {stored.GetAttributeValue<EntityReference>("modifiedby")?.Name}; {bytes.Length} bytes; librarian editing (ADR-0013) {(deployed ? "DEPLOYED" : "not deployed")}; solution effort (ADR-0014) {(bytes.Length > 0 && bytes.AsSpan().IndexOf(System.Text.Encoding.Unicode.GetBytes("nx_estimatedminimumhours")) >= 0 ? "DEPLOYED" : "not deployed")}");
     }
     Console.WriteLine("Read-only inspection. No changes made.");
     return;
