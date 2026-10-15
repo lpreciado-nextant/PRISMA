@@ -13,7 +13,7 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
@@ -282,6 +282,27 @@ if (command == "repair-asset-url")
     Console.WriteLine("Update/publish completed; metadata remains 4000. A protected API write/readback probe is still required to confirm physical storage capacity.");
     return;
 }
+if (command == "inspect-effort-columns")
+{
+    // Read-only (solution-level effort): the estimate and complexity columns on nx_solution, with their choice values.
+    foreach (var name in new[] { "nx_estimatedminimumhours", "nx_complexity" })
+    {
+        AttributeMetadata attribute;
+        try { attribute = ((RetrieveAttributeResponse)client.Execute(new RetrieveAttributeRequest { EntityLogicalName = "nx_solution", LogicalName = name, RetrieveAsIfPublished = false })).AttributeMetadata; }
+        catch (Exception error) { Console.WriteLine($"nx_solution.{name}: MISSING or unpublished ({error.Message})"); continue; }
+        var detail = attribute switch {
+            IntegerAttributeMetadata number => $"min={number.MinValue}; max={number.MaxValue}; format={number.Format}",
+            DecimalAttributeMetadata number => $"DECIMAL precision={number.Precision}; min={number.MinValue}; max={number.MaxValue}",
+            PicklistAttributeMetadata choice => $"global={choice.OptionSet?.IsGlobal}; default={choice.DefaultFormValue}",
+            _ => "",
+        };
+        Console.WriteLine($"nx_solution.{name}: type={attribute.AttributeType}; {detail}; required={attribute.RequiredLevel?.Value}; secured={attribute.IsSecured}; schema={attribute.SchemaName}; display={attribute.DisplayName?.UserLocalizedLabel?.Label}");
+        if (attribute is PicklistAttributeMetadata options)
+            foreach (var option in options.OptionSet?.Options ?? new OptionMetadataCollection()) Console.WriteLine($"  {option.Value} {option.Label?.UserLocalizedLabel?.Label}");
+    }
+    Console.WriteLine("Read-only inspection. No changes made.");
+    return;
+}
 if (command == "inspect-librarian-edit")
 {
     // Read-only (ADR-0013): the three librarian-edit columns, their solution membership and column security.
@@ -322,6 +343,17 @@ if (command == "inspect-librarian-edit")
             teams.Criteria.AddCondition("fieldsecurityprofileid", ConditionOperator.Equal, profile.Id);
             Console.WriteLine($"  profile '{profile.Name}': read={Allowed("canread")}; create={Allowed("cancreate")}; update={Allowed("canupdate")}; users={client.RetrieveMultiple(members).Entities.Count}; teams={client.RetrieveMultiple(teams).Entities.Count}");
         }
+    }
+    // Whether the deployed assembly already carries librarian editing: its stored bytes contain the new action name.
+    var assemblies = new QueryExpression("pluginassembly") { ColumnSet = new ColumnSet("name", "version", "modifiedon", "modifiedby", "content") };
+    assemblies.Criteria.AddCondition("name", ConditionOperator.Equal, "Prisma.Plugins");
+    foreach (var stored in client.RetrieveMultiple(assemblies).Entities)
+    {
+        var content = stored.GetAttributeValue<string>("content");
+        var bytes = string.IsNullOrEmpty(content) ? Array.Empty<byte>() : Convert.FromBase64String(content);
+        var marker = System.Text.Encoding.Unicode.GetBytes("confirm-edit");
+        var deployed = bytes.Length > 0 && bytes.AsSpan().IndexOf(marker) >= 0;
+        Console.WriteLine($"plug-in assembly {stored.GetAttributeValue<string>("name")} {stored.GetAttributeValue<string>("version")}: modified {stored.GetAttributeValue<DateTime>("modifiedon"):u} by {stored.GetAttributeValue<EntityReference>("modifiedby")?.Name}; {bytes.Length} bytes; librarian editing (ADR-0013) {(deployed ? "DEPLOYED" : "not deployed")}");
     }
     Console.WriteLine("Read-only inspection. No changes made.");
     return;
