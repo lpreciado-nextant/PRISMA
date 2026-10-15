@@ -218,10 +218,13 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} notice={mediaAction.message} noticeBusy={mediaAction.downloading}
         error={error && <><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></>}
         onReturn={() => void transition("return")} onApprove={() => void transition("approve")}
+        onEdit={state.librarian && (status === 125060000 || status === 125060002) && !uncertain ? () => navigate(`/review/${id}/edit`) : undefined}
+        edit={{ on: state.record.librarianEditedOn, by: state.record.librarianEditedBy, pending: state.record.librarianEditPending === true }}
+        onConfirmEdit={state.librarian && status === 125060000 && !uncertain ? () => void transition("confirm-edit") : undefined}
         onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
         {technologyUse && <NewTechnologies items={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologyLabels)} />}
-      </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined}
+      </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} edited={state.record.librarianEditedOn}
         badge={newFeedback && <span className="new-feedback">{openItems.length === 1 ? "New feedback" : `${openItems.length} new feedback`}</span>} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
           {status === 125060003 ? <><button type="button" className={outlinedStatusButton} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="edit" size={16} />Edit draft</button>
             <button type="button" className={statusButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" size={16} />Submit for review</button></>

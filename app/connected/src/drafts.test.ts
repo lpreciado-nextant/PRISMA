@@ -184,6 +184,14 @@ test("workflow rejects mismatched versions, unknown states and internal presenta
   const metadata = { ...detail.record, owner: "Owner", dateAdded: "2026-09-22", imageCount: 1, attachmentCount: 0, libraryNotes: "Internal" };
   assert.deepEqual(parseSubmission(result({ ...detail, record: metadata })).record, metadata);
   assert.throws(() => parseSubmission(result({ ...detail, record: { ...metadata, imageCount: -1 } })), /count/);
+  // ADR-0013: the last librarian edit reaches the owner as a date; the editor's name only reaches librarians.
+  const edited = { ...detail.record, publication: 125060000, librarianEditedOn: "2026-10-15", librarianEditPending: true };
+  assert.deepEqual(parseSubmission(result({ ...detail, record: edited })).record, edited);
+  assert.equal(submissionSolution(edited, {}).librarianEditedOn, "2026-10-15");
+  assert.equal(submissionSolution(detail.record, {}).librarianEditedOn, undefined);
+  assert.equal(parseSubmission(result({ ...detail, record: { ...edited, librarianEditedBy: "Librarian Name" } })).record.librarianEditedBy, "Librarian Name");
+  assert.throws(() => parseSubmission(result({ ...detail, record: { ...edited, librarianEditPending: "yes" } })), /librarian edit/);
+  assert.throws(() => parseSubmission(result({ ...detail, record: { ...edited, librarianEditedBy: 7 } })), /metadata/);
 });
 
 test("submission paging rejects loops and cancelled responses", async () => {

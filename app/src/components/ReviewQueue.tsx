@@ -57,8 +57,11 @@ const textArea = "mt-2 block w-full resize-y rounded-lg border border-(--glass-e
  * a time. Approval needs required content and every checklist item confirmed (sent as the client-safety clearance);
  * sending back needs a comment of at least MIN_CHANGE_COMMENT characters. The comment is shared state: an optional note
  * on approval (approval replaces the stored feedback, or clears it when blank). Transitions are unchanged.
+ *
+ * Connected librarians can also edit the solution (ADR-0013). After a real edit the comment becomes required: on
+ * approval for a pending record, or through "Confirm changes" for a published one, which repeats the checklist.
  */
-export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, children }: {
+export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, onEdit, edit, onConfirmEdit, children }: {
   status: string; owner?: string; client?: string; context?: string; feedback?: string;
   /** The capability's owner from `nx_capability.nx_capabilityowner`: a name, `null` when none is assigned, omitted when unknown. */
   capabilityOwner?: string | null;
@@ -68,7 +71,14 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
   cleared: boolean; onCleared: (value: boolean) => void; busy: boolean; locked?: boolean; canApprove?: boolean; local?: boolean;
   notice?: ReactNode; noticeBusy?: boolean; error?: ReactNode; onReturn: () => void; onApprove: () => void; defaultDecision?: Decision;
   /** Offered on a published record when the caller may take it out of the library; both send `comments`. */
-  onRequestChanges?: () => void; onRetire?: () => void; children?: ReactNode;
+  onRequestChanges?: () => void; onRetire?: () => void;
+  /** Opens the librarian editor for a pending or published record. */
+  onEdit?: () => void;
+  /** The last librarian edit: when, by whom, and whether the owner has been told yet (`pending`). */
+  edit?: { on?: string; by?: string; pending: boolean };
+  /** Confirms a published record's unexplained edit with the checklist and the comment. */
+  onConfirmEdit?: () => void;
+  children?: ReactNode;
 }) {
   const heading = useId();
   const [manage, setManage] = useState<"changes" | "retire" | undefined>();
@@ -90,6 +100,11 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
   const hint = decision === "changes" ? !commentReady && `Explain what needs to be corrected (at least ${MIN_CHANGE_COMMENT} characters).`
     : decision === "publish" ? !canApprove ? "Add the missing content before approving." : !cleared && `Confirm the publication checklist to approve (${remaining} of ${PUBLICATION_CHECKLIST.length} left).` : undefined;
   const pending = status === "Pending review";
+  // A real edit must be explained to the owner: required approval note, or Confirm changes on a published record.
+  const explain = !!edit?.pending;
+  const publishedEdit = explain && status === "Published" && !!onConfirmEdit;
+  const explained = !explain || !!comments.trim();
+  const approveHint = explain && decision === "publish" && !comments.trim() ? "You edited this solution. Tell the contributor what you changed and why." : hint;
   return <>
     <section aria-labelledby={heading} className="relative mt-6 overflow-hidden rounded-[22px] border p-5 sm:p-6"
       style={{ borderColor: "color-mix(in srgb, var(--accent) 34%, transparent)", background: "linear-gradient(180deg, color-mix(in srgb, var(--accent) 13%, transparent), color-mix(in srgb, var(--accent) 4%, transparent))" }}>
@@ -101,6 +116,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           <p className="eyebrow inline-flex items-center gap-1.5" style={{ color: "var(--accent)" }}><Icon name="shield" size={13} />Librarian review{local && " · local preview"}</p>
           <h2 id={heading} className="mt-2 text-[22px]">{returned ? "Changes requested" : status}</h2>
         </div>
+        {onEdit && <button type="button" disabled={disabled} onClick={onEdit} className={compactAction}><Icon name="edit" size={14} />Edit solution</button>}
       </div>
 
       {/* 2 · Solution overview: who and what, from the record's own fields; nothing invented when a value is missing. */}
@@ -118,6 +134,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
             {client && <>{client} <span className="text-(--ink-3)">→ shown as</span> </>}
             <span style={context ? undefined : { color: "var(--proto)" }}>{context ? `“${context}”` : "not provided"}</span>
           </OverviewRow>}
+          {edit?.on && <OverviewRow label="Last librarian edit">{edit.by || "Librarian"} · {edit.on}{explain && <span style={{ color: "var(--proto)" }}> · not explained to the owner yet</span>}</OverviewRow>}
         </dl>
         {feedback && !returned && status !== "Published" && <div className="mt-4 border-l-2 border-(--proto) pl-3">
           <h4 className="text-[13.5px] font-semibold">{pending && solution?.reviewOutcome === "Changes requested" ? "Resubmitted after changes requested" : "Latest review comments"}</h4>
@@ -126,7 +143,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
       </section>
 
       {/* 3 · Publication checklist (pending review only): required content first, then what the librarian confirms. */}
-      {pending && <section aria-labelledby={`${heading}-checklist`} className={reviewSection}>
+      {(pending || publishedEdit) && <section aria-labelledby={`${heading}-checklist`} className={reviewSection}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 id={`${heading}-checklist`} className="eyebrow">Publication checklist</h3>
           <span className="font-mono text-[11px] text-(--ink-3)">{PUBLICATION_CHECKLIST.length - remaining} / {PUBLICATION_CHECKLIST.length} confirmed</span>
@@ -148,7 +165,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         </fieldset>
         {children}
       </section>}
-      {!pending && children}
+      {!pending && !publishedEdit && children}
       {noticeBusy && typeof notice === "string" ? <LoadingState className="mt-3" label={notice} /> : notice && <div role="status" className="mt-3 text-[14px] text-(--ink-2)">{notice}</div>}
 
       {/* 3 · Review decision, then only the chosen decision's required action. */}
@@ -172,14 +189,27 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           <div className="flex min-w-0 flex-1 basis-56 items-center gap-2.5">
             <span className="grid size-7 shrink-0 place-items-center rounded-full" style={{ color: "var(--live)", background: "color-mix(in srgb, var(--live) 16%, transparent)" }}><Icon name="check" size={14} /></span>
             <p className="min-w-0"><span id={`${heading}-live`} className="text-[15px] font-semibold" style={{ color: "var(--live)" }}>Published</span>
-              <span className="text-[13.5px] text-(--ink-2)"> · Available in the Solution Library.</span></p>
+              <span className="text-[13.5px] text-(--ink-2)">{publishedEdit ? " · Left out of present mode until you confirm your changes." : " · Available in the Solution Library."}</span></p>
           </div>
-          {(onRequestChanges || onRetire) && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          {!publishedEdit && (onRequestChanges || onRetire) && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             {onRequestChanges && <button type="button" disabled={disabled} aria-expanded={manage === "changes"} aria-controls={`${heading}-manage`} onClick={() => { onComments(""); setManage(manage === "changes" ? undefined : "changes"); }} className={compactAction} style={manage === "changes" ? { color: "var(--proto)", borderColor: "color-mix(in srgb, var(--proto) 45%, transparent)" } : undefined}><Icon name="alert" size={14} />Request changes</button>}
             {onRetire && <button type="button" disabled={disabled} aria-expanded={manage === "retire"} aria-controls={`${heading}-manage`} onClick={() => { onComments(""); setManage(manage === "retire" ? undefined : "retire"); }} className={compactAction} style={manage === "retire" ? { color: "var(--ink)", borderColor: "var(--ink-3)" } : undefined}><Icon name="eyeOff" size={14} />Retire</button>}
           </div>}
         </div>
-        {feedback && !manage && <p className="mt-2.5 border-l-2 border-(--live) pl-3 text-[13.5px] whitespace-pre-wrap break-words text-(--ink-2)"><span className="font-semibold text-(--ink)">Your note to the contributor: </span>{feedback}</p>}
+        {publishedEdit && <fieldset disabled={disabled} className="animate-rise mt-3 min-w-0 border-t border-(--glass-edge) pt-3">
+          <legend className="text-[15px] font-semibold">Confirm your changes</legend>
+          <p className="mt-1 text-[13.5px] text-(--ink-2)">Confirm the publication checklist above, then tell the owner what you changed and why. They read it in My submissions.</p>
+          <label className="mt-3 block text-[14px] font-semibold">What you changed and why <span className="font-normal text-(--ink-2)">(required)</span>
+            <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={3} required aria-required="true" className={textArea}
+              placeholder="For example: “Removed the client name from the title and shortened the summary so it fits the card.”" />
+          </label>
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+            {(!cleared || !canApprove || !comments.trim()) && <p id={`${heading}-confirm-hint`} className="mr-auto text-[13px] text-(--ink-2)">{!canApprove ? "Add the missing content before confirming." : !cleared ? `Confirm the publication checklist (${remaining} of ${PUBLICATION_CHECKLIST.length} left).` : "Tell the owner what you changed and why."}</p>}
+            <button type="button" aria-describedby={cleared && canApprove && comments.trim() ? undefined : `${heading}-confirm-hint`} disabled={!cleared || !canApprove || !comments.trim() || disabled} onClick={onConfirmEdit}
+              className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--live)" }}><Icon name="check" size={15} />Confirm changes</button>
+          </div>
+        </fieldset>}
+        {feedback && !manage && !publishedEdit && <p className="mt-2.5 border-l-2 border-(--live) pl-3 text-[13.5px] whitespace-pre-wrap break-words text-(--ink-2)"><span className="font-semibold text-(--ink)">Your note to the contributor: </span>{feedback}</p>}
         {manage && <fieldset id={`${heading}-manage`} disabled={disabled} className="animate-rise mt-3 min-w-0 border-t border-(--glass-edge) pt-3">
           <legend className="sr-only">{manage === "changes" ? "Request changes" : "Retire from the library"}</legend>
           {/* One line on what each action means, so the two read differently. */}
@@ -216,14 +246,17 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
             <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={4} required aria-required="true" minLength={MIN_CHANGE_COMMENT}
               placeholder="Name each item to fix, e.g. “Blur the client logo in screenshot 2 and replace the client name in the summary.”" className={textArea} />
           </label> : <>
-            <label className="block text-[14px] font-semibold">Note to the submitter <span className="font-normal text-(--ink-2)">(optional)</span>
-              <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={2} className={textArea} />            </label>
+            {explain ? <label className="block text-[14px] font-semibold">What you changed and why <span className="font-normal text-(--ink-2)">(required, you edited this solution)</span>
+              <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={3} required aria-required="true" className={textArea}
+                placeholder="For example: “Removed the client name from the title and shortened the summary so it fits the card.”" />
+            </label> : <label className="block text-[14px] font-semibold">Note to the submitter <span className="font-normal text-(--ink-2)">(optional)</span>
+              <textarea value={comments} onChange={event => onComments(event.target.value)} maxLength={4000} rows={2} className={textArea} />            </label>}
           </>}
           <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
-            {hint && <p id={`${heading}-hint`} className="mr-auto text-[13px] text-(--ink-2)">{hint}</p>}
+            {approveHint && <p id={`${heading}-hint`} className="mr-auto text-[13px] text-(--ink-2)">{approveHint}</p>}
             {decision === "changes"
-              ? <button type="button" aria-describedby={hint ? `${heading}-hint` : undefined} disabled={!commentReady || disabled} onClick={onReturn} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--proto)" }}><Icon name="chevronLeft" />Send back for changes</button>
-              : <button type="button" aria-describedby={hint ? `${heading}-hint` : undefined} disabled={!cleared || !canApprove || disabled} onClick={onApprove} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--live)" }}><Icon name="check" />Approve &amp; publish</button>}
+              ? <button type="button" aria-describedby={approveHint ? `${heading}-hint` : undefined} disabled={!commentReady || disabled} onClick={onReturn} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--proto)" }}><Icon name="chevronLeft" />Send back for changes</button>
+              : <button type="button" aria-describedby={approveHint ? `${heading}-hint` : undefined} disabled={!cleared || !canApprove || !explained || disabled} onClick={onApprove} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--live)" }}><Icon name="check" />Approve &amp; publish</button>}
           </div>
         </div>}
       </fieldset>}

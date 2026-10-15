@@ -7,7 +7,8 @@ import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linked
 import { readAll, type ReadRows } from "./catalogue.ts";
 
 export const PUBLICATIONS: Record<number, string> = { 125060000: "Published", 125060001: "Retired", 125060002: "Pending review", 125060003: "Draft" };
-export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string };
+/** `librarianEdit*` (ADR-0013): the last librarian edit. The editor's name reaches librarians only; `pending` until the librarian explains it. */
+export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string; librarianEditedOn?: string; librarianEditedBy?: string; librarianEditPending?: boolean };
 export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean };
 export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; hours: number | null; email?: string; level?: string; effort?: Contributor }[]; totalHours: number | null; projects: string[]; media: MediaItem[]; libraryNotes?: string };
 export function mediaAsset(item: MediaItem, index: number): Solution["assets"][number] {
@@ -34,7 +35,7 @@ export function submissionSolution(record: Submission, names: Record<string, str
     reviewOutcome: record.outcome === 125060001 ? "Changes requested" : record.outcome === 125060002 ? "Approved" : "None", reviewComments: record.comments,
     safetyAcknowledged: core.safetyAcknowledged, clientSafeReviewed: record.cleared, clientContext: core.clientContext || undefined, clientContextRedacted: core.clientContextRedacted || undefined,
     challenges: core.challenges || undefined, lessonsLearned: core.lessonsLearned || undefined,
-    dateAdded: record.dateAdded ?? "", libraryNotes: record.libraryNotes, searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
+    dateAdded: record.dateAdded ?? "", libraryNotes: record.libraryNotes, ...(record.librarianEditedOn ? { librarianEditedOn: record.librarianEditedOn } : {}), searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
   };
 }
 export type WorkflowApi = {
@@ -96,11 +97,12 @@ export async function deleteSubmission(api: WorkflowApi, core: Pick<SavedDraft, 
 function submission(value: unknown): Submission {
   const row = object(value);
   if (typeof row.publication !== "number" || !PUBLICATIONS[row.publication] || ![125060000, 125060001, 125060002].includes(row.outcome as number) || typeof row.comments !== "string" || typeof row.cleared !== "boolean") throw new Error("Invalid submission state.");
-  const metadata: Pick<Submission, "owner" | "dateAdded" | "imageCount" | "attachmentCount" | "libraryNotes"> = {};
-  for (const key of ["owner", "dateAdded", "libraryNotes"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "string") throw new Error("Invalid submission metadata."); metadata[key] = row[key]; }
+  const metadata: Pick<Submission, "owner" | "dateAdded" | "imageCount" | "attachmentCount" | "libraryNotes" | "librarianEditedOn" | "librarianEditedBy"> = {};
+  for (const key of ["owner", "dateAdded", "libraryNotes", "librarianEditedOn", "librarianEditedBy"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "string") throw new Error("Invalid submission metadata."); metadata[key] = row[key]; }
   for (const key of ["imageCount", "attachmentCount"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "number" || !Number.isInteger(row[key]) || row[key] < 0 || row[key] > 6) throw new Error("Invalid submission media count."); metadata[key] = row[key]; }
   if (!Array.isArray(row.areaIds) || row.areaIds.some(id => typeof id !== "string" || !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id)) || new Set(row.areaIds).size !== row.areaIds.length) throw new Error("Invalid submission areas.");
-  return { core: snapshot(row.core), areaIds: row.areaIds as string[], publication: row.publication, outcome: row.outcome as number, comments: row.comments, cleared: row.cleared, ...metadata };
+  if (row.librarianEditPending !== undefined && typeof row.librarianEditPending !== "boolean") throw new Error("Invalid librarian edit state.");
+  return { core: snapshot(row.core), areaIds: row.areaIds as string[], publication: row.publication, outcome: row.outcome as number, comments: row.comments, cleared: row.cleared, ...metadata, ...(row.librarianEditPending === undefined ? {} : { librarianEditPending: row.librarianEditPending as boolean }) };
 }
 export function parseSubmission(value: unknown): SubmissionDetail {
   const data = workflowData(value);

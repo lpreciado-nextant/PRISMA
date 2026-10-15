@@ -70,17 +70,17 @@ export function StepShell({ title, lede, notices, children }: { title: string; l
   return <section>{top}<h2 className="text-[20px] font-semibold">{title}</h2>{introduction && <p className="mt-1 text-[14px] text-(--ink-3)">{introduction}</p>}<div className="mt-6 flex flex-col gap-5">{content}</div></section>;
 }
 
-export function SubmissionFooter({ step, stepCount = SUBMISSION_STEPS.length, nextLabel = "Continue", busy = false, locked = false, canSave, canContinue, canSubmit, onBack, onSave, onContinue, onSubmit }: {
-  step: number; stepCount?: number; nextLabel?: string; busy?: boolean; locked?: boolean; canSave: boolean; canContinue: boolean; canSubmit: boolean;
+export function SubmissionFooter({ step, stepCount = SUBMISSION_STEPS.length, nextLabel = "Continue", saveLabel = "Save draft & close", submitLabel = "Submit for review", busy = false, locked = false, canSave, canContinue, canSubmit, onBack, onSave, onContinue, onSubmit }: {
+  step: number; stepCount?: number; nextLabel?: string; saveLabel?: string; submitLabel?: string; busy?: boolean; locked?: boolean; canSave: boolean; canContinue: boolean; canSubmit: boolean;
   onBack: () => void; onSave?: () => void; onContinue: () => void; onSubmit: () => void;
 }) {
   const command = "cursor-pointer rounded-xl px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40";
   return <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-(--glass-edge) pt-5">
     {step > 0 && <button type="button" disabled={busy || locked} onClick={onBack} className={`${command} border border-(--glass-edge) text-(--ink-2)`}>Back</button>}
-    {onSave && <button type="button" disabled={busy || locked || !canSave} onClick={onSave} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"><Icon name="file" />{busy ? "Saving..." : "Save draft & close"}</button>}
+    {onSave && <button type="button" disabled={busy || locked || !canSave} onClick={onSave} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-40"><Icon name="file" />{busy ? "Saving..." : saveLabel}</button>}
     <span className="ml-auto font-mono text-[10.5px] tracking-[0.12em] text-(--ink-3) uppercase">Step {step + 1} of {stepCount}</span>
     {step < stepCount - 1 ? <button type="button" disabled={busy || locked || !canContinue} onClick={onContinue} className={`${command} bg-(--accent) text-(--on-accent)`}>{nextLabel}</button>
-      : <button type="button" disabled={busy || locked || !canSubmit} onClick={onSubmit} className={`${command} bg-(--live) text-(--ground)`}>{busy ? "Saving..." : "Submit for review"}</button>}
+      : <button type="button" disabled={busy || locked || !canSubmit} onClick={onSubmit} className={`${command} bg-(--live) text-(--ground)`}>{busy ? "Saving..." : submitLabel}</button>}
   </div>;
 }
 
