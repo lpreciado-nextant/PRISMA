@@ -30,6 +30,12 @@ export function HelpView({ connected = false, librarian = true }: { connected?: 
         ? <>To change a published solution, use <b>Unpublish &amp; edit</b>. It leaves the library until it is approved again. A librarian may also correct it directly; you then see what changed and why.</>
         : <>To change a submission, open it from My submissions and choose <b>Edit submission</b>.</>,
     ] },
+    ...(connected ? [{ id: "help-feedback", icon: "message" as const, eyebrow: "Everyone · Solution teams", title: "Suggestions and feedback", steps: [
+      <>Anyone can open a published solution and use <b>Suggest an improvement</b>, at the end of its side column, to share an idea with the team that built it.</>,
+      <>It is private, not a public comment: only the solution's owner, its contributors and librarians see it, with who sent it and when. It cannot be edited once sent.</>,
+      <>The team sees it on the solution's page and in <b>My submissions</b>, where it counts as <b>new</b> (on the card, the Suggestions tab and the top bar) until someone in the team marks it <b>Addressed</b>. There are no emails yet, so check My submissions from time to time.</>,
+      <><b>Addressed</b> only means "we have seen this and dealt with it". Nothing changes automatically: you decide whether to update the solution. You can undo it.</>,
+    ] }] : []),
     ...(librarian ? [{ id: "help-review", icon: "clipboardCheck" as const, eyebrow: "Librarians", title: "Review and curate", steps: [
       <>Open the <b>Review queue</b>, then a submission. Check its content and the <b>Publication checklist</b>.</>,
       <><b>Approve</b> to publish it, or <b>Request changes</b> with a comment saying what to fix. The owner then corrects and resubmits it.</>,
@@ -48,6 +54,7 @@ export function HelpView({ connected = false, librarian = true }: { connected?: 
     ] : []),
     { question: "What do complexity and estimated hours mean?", answer: <>How hard the whole solution was to build (Easy, Medium or Hard; required to submit) and, optionally, the least time it took in whole hours, including preparation and discovery. Both are internal and never shown to clients.</> },
     { question: "Who sees my drafts?", answer: <>{connected ? "A draft stays with you until you submit it; then librarians review it. Published solutions are visible to everyone with access to PRISMA." : "In this local preview, drafts and submissions live in this browser only."}</> },
+    ...(connected ? [{ question: "Why does My submissions keep showing \"new\"?", answer: <>It counts feedback still waiting for you: each suggestion until you or a contributor marks it <b>Addressed</b>, and each solution a librarian sent back until you resubmit it. Reading a suggestion does not clear it; marking it addressed does.</> }] : []),
     ...(connected ? [{ question: "Why can't I edit my own solution from the review queue?", answer: <>A librarian edits other people's solutions and explains the change to them. Your own you edit as its owner: withdraw it from My submissions, change it and resubmit it.</> }] : []),
   ];
   const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
@@ -56,9 +63,16 @@ export function HelpView({ connected = false, librarian = true }: { connected?: 
     <button type="button" className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-(--ink-2)" onClick={() => navigate("/")}><Icon name="chevronLeft" size={15} />Back to the library</button>
     <p className="eyebrow mt-4">Help</p>
     <h1 id="help-title" className="mt-2 text-[28px] font-bold">How PRISMA works</h1>
-    <p className="mt-2 max-w-[68ch] text-[15px] text-(--ink-2)">PRISMA is Nextant's solution library. Builders publish what they have built, a librarian reviews it, and CSMs find it and present it live to clients.</p>
+    <p className="mt-2 max-w-[68ch] text-[15px] text-(--ink-2)">PRISMA is where Nextant keeps the demos, prototypes and products it has built, so anyone can find the right one and show it to a client.</p>
+    <ol aria-label="How a solution gets into PRISMA" className="mt-5 grid gap-3 sm:grid-cols-3">
+      {([["plus", "Share", "A team adds a solution it built."], ["shield", "Review", "A librarian checks it is complete and safe to show clients."], ["present", "Find & present", "Anyone at Nextant finds it and presents it live."]] as const).map(([icon, title, text], index) => <li key={title} className="flex items-start gap-3 rounded-[18px] border border-(--glass-edge) p-4">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}><Icon name={icon} size={17} /></span>
+        <span className="min-w-0"><span className="block text-[15px] font-semibold"><span className="font-mono text-[12px] text-(--ink-3)">{index + 1} · </span>{title}</span><span className="mt-0.5 block text-[13.5px] text-(--ink-2)">{text}</span></span>
+      </li>)}
+    </ol>
 
-    <nav aria-label="Guides" className="mt-6 grid gap-3 sm:grid-cols-3">
+    <h2 className="eyebrow mt-8">Guides</h2>
+    <nav aria-label="Guides" className={`mt-3 grid gap-3 ${roles.length === 4 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
       {roles.map(role => <button key={role.id} type="button" onClick={() => jump(role.id)} className="glass glass-lite flex cursor-pointer items-start gap-3 rounded-[18px] p-4 text-left transition-[filter] hover:brightness-105">
         <span className="grid size-9 shrink-0 place-items-center rounded-full" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}><Icon name={role.icon} size={17} /></span>
         <span className="min-w-0"><span className="eyebrow block text-[10px]">{role.eyebrow}</span><span className="mt-1 block text-[15px] font-semibold">{role.title}</span></span>
