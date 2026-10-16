@@ -109,7 +109,7 @@ Code apps must be enabled in the target environment. Publishing requires edit ac
 
 A published code app is served under a platform-owned path (this deployment uses `/play/e/{environmentId}/app/{appId}`). These rules are not stylistic; violating them breaks the published app:
 
-- **Hash routing only.** All navigation goes through `window.location.hash` via `src/lib/router.ts`. Never introduce path-based routing or a router library that owns the path segment. Shared routes: `#/`, `#/s/:id`, `#/s/:id/demo/:assetId`, `#/submit`, `#/my-submissions`, `#/review`. The connected app adds `#/submit?draft=:id`, `#/submission/:id`, `#/review/:id`, `#/review/:id/edit` (librarian editor, ADR-0013) and `#/favorites`.
+- **Hash routing only.** All navigation goes through `window.location.hash` via `src/lib/router.ts`. Never introduce path-based routing or a router library that owns the path segment. Shared routes: `#/`, `#/s/:id`, `#/s/:id/demo/:assetId`, `#/submit`, `#/my-submissions`, `#/review`, `#/help`. The connected app adds `#/submit?draft=:id`, `#/submission/:id`, `#/review/:id`, `#/review/:id/edit` (librarian editor, ADR-0013) and `#/favorites`.
 - **Single-page app, no server-side code.** No API routes, no SSR, no build-time secrets, nothing sensitive in the bundle.
 - **Relative asset references** (`./file.svg`, never `/file.svg`) so assets resolve under the published base path.
 - **No `initialize()`.** The Power Apps client library is v1.0+; the only SDK call is `getContext()`, wrapped so the app still renders outside the host.

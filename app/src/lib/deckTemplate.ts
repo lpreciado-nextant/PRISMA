@@ -24,7 +24,7 @@ const TOKEN = /\{\{\s*([a-z0-9_]+)\s*\}\}/g;
 
 const PALETTES: Record<DeckVariant, Record<string, string>> = {
   dark: { ai: "7FB6D9", data: "4FBFAB", ibo: "A99AE6", live: "5FD3A2", proto: "E0B860", idea: "9BB0BF" },
-  light: { ai: "1C567C", data: "0B6157", ibo: "57468C", live: "0B6145", proto: "7C5408", idea: "5B6B77" },
+  light: { ai: "1C567C", data: "0B604C", ibo: "57468C", live: "0B6145", proto: "7C5408", idea: "5B6B77" },
 };
 const AREA_KEY: Record<string, string> = { "ai & automation": "ai", "data solutions": "data", "intelligent business operations": "ibo" };
 const MATURITY_KEY: Record<string, string> = { live: "live", "working prototype": "proto", "idea / concept": "idea" };

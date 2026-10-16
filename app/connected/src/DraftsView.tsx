@@ -19,6 +19,7 @@ import { createTechnology, parseSubmission, type SubmissionDetail } from "./work
 import { hasCaptionChanges, saveMediaCaptions, type MediaItem } from "./media";
 import { parseRecovery, recoveryKey, recoveryPayload } from "./draftRecovery";
 import { ProtectedImage } from "./ProtectedImage";
+import { LibrarianEditNotice } from "../../src/components/LibrarianEditNotice";
 
 type LoadState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; revision: number; detail?: SubmissionDetail; references: DraftReferences; graphReferences: GraphReferences };
 const buttonClass = "inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-50";
@@ -277,7 +278,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   return <>
     <button type="button" disabled={busy} className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-(--ink-2)" onClick={() => { if (dirty) setConfirmation("leave"); else navigate(librarian ? reviewPath : "/"); }}><Icon name="chevronLeft" size={15} />{librarian ? "Back to review" : "Back to the library"}</button>
     <div className="animate-rise mt-4"><p className="eyebrow">{librarian ? "Librarian · editing a contributor's solution" : "Contributor · guided submission"}</p><h1 className="mt-2 text-[28px] font-bold">{librarian ? "Edit solution" : initial ? "Edit submission" : "Put your work on the shelf"}</h1><p role="status" className="mt-2 text-[14px] text-(--ink-2)">{busy ? "Saving..." : dirty || captionsDirty ? "Unsaved changes" : saved ? "Saved to Dataverse" : "Draft"}</p></div>
-    {librarian && <p className="mt-3 max-w-[70ch] text-[14px] text-(--ink-2)">It stays {publishedEdit ? "published" : "in Pending review"} while you edit; contributors stay with the owner. When you save, you return to the review to tell the owner what you changed and why{publishedEdit ? ". Until you confirm the changes there, it is left out of present mode" : ""}.</p>}
+    {librarian && <LibrarianEditNotice published={publishedEdit} />}
     {!librarian && initial?.record.comments && <section aria-label="Librarian feedback" className="mt-5 border-l-2 border-(--proto) pl-4"><h2 className="text-[15px] font-semibold">Librarian feedback</h2><p className="mt-1 whitespace-pre-wrap break-words text-[14px]">{initial.record.comments}</p></section>}
     {status === "uncertain" && <div role="alert" className="mt-5 border-l-2 border-(--accent) pl-4"><p className="mb-3 text-[14px]">Save was not confirmed. Your edits remain here. Reopen from Dataverse before saving again.</p><button type="button" className={buttonClass} onClick={() => setConfirmation("reopen")}><Icon name="file" />{saved ? "Reopen saved draft" : "Check my submissions"}</button></div>}
     {recoveryError && <p role="alert" className="mt-4 text-[14px]">Tab recovery is unavailable. Save to Dataverse before leaving.</p>}

@@ -18,6 +18,7 @@ import { filtersFromQuery, filtersToQuery, type Filters } from "./lib/search";
 import { presentCatalogue } from "./lib/catalogue";
 import { useFavorites } from "./lib/favorites";
 import { FavoritesView } from "./views/FavoritesView";
+import { HelpView } from "./views/HelpView";
 import { deleteSubmission, loadSubmissions, reviewContribution, saveContribution, storeSubmission, type SubmissionEntry } from "./lib/submissions";
 
 const PRESENT_KEY = "nsl.present";
@@ -106,7 +107,7 @@ export default function App() {
   useEffect(() => {
     if (isSolutionRoute && !solution && storageReady) navigate("/");
     if (ownSolution?.publicationStatus === "Draft") navigate(`/submit/${ownSolution.id}`);
-    if (present && (isSubmissionRoute || isReviewRoute || route.path === "/my-submissions" || route.path === "/favorites")) navigate("/");
+    if (present && (isSubmissionRoute || isReviewRoute || route.path === "/my-submissions" || route.path === "/favorites" || route.path === "/help")) navigate("/");
     if (!present && storageReady && isSubmissionRoute && recordId && !editing) navigate("/my-submissions");
   }, [isSolutionRoute, solution, ownSolution, present, route.path, isSubmissionRoute, isReviewRoute, editing, recordId, storageReady]);
 
@@ -158,6 +159,8 @@ export default function App() {
           <DetailView solution={solution} present={present} favoritable={!ownSolution} onEdit={ownSolution ? () => navigate(`/submit/${solution.id}`) : undefined} />
         ) : isSubmissionRoute && !present && (!segments[1] || editing) ? (
           <SubmitView user={user} initialSolution={editing} draftKey={editing ? `nsl.edit.${editing.id}` : `nsl.draft.v2.${owner}`} onSubmitted={(solution) => saveSubmission(solution, "Pending review")} onSaveDraft={(solution) => saveSubmission(solution, "Draft")} />
+        ) : route.path === "/help" && !present ? (
+          <HelpView />
         ) : route.path === "/favorites" && !present ? (
           <FavoritesView catalogue={catalogue} />
         ) : route.path === "/my-submissions" && !present ? (

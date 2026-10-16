@@ -30,7 +30,7 @@ const shell = "mx-auto max-w-[1100px] px-6 py-10";
 // Transitions that change what CSMs can see are confirmed first; each key is the plug-in action it sends.
 const CONFIRMATIONS = {
   withdraw: { title: "Withdraw submission?", label: "Withdraw & edit", body: "This submission will return to Draft for editing. Any published access will be removed until it is approved again." },
-  "request-changes": { title: "Send back for changes?", label: "Send back for changes", body: "It leaves the library and CSMs lose access to it. The owner sees your comments as Changes requested, and it returns to the review queue when they resubmit." },
+  "request-changes": { title: "Send back to the owner?", label: "Send back to owner", body: "This is not an edit. It leaves the library and CSMs lose access to it; the owner sees your comments as Changes requested and must resubmit it. To fix it yourself, cancel and use Edit solution." },
   retire: { title: "Retire from the library?", label: "Retire from library", body: "It is removed from the Solution Library for good: it disappears from search and browse and CSMs lose access to it. The record is kept, not deleted, and the owner sees your reason." },
 } as const;
 const UNPUBLISH = { title: "Unpublish to edit?", label: "Unpublish & edit", body: "It leaves the Solution Library and returns to Draft so you can edit it. It is published again once a librarian approves it." };

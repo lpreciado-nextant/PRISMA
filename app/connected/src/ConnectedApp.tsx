@@ -23,6 +23,7 @@ import { ConnectedSolutionCard, PublishedThumbnail } from "./ConnectedSolutionCa
 import { FavoritesView } from "./FavoritesView";
 import { clearRecoveries } from "./draftRecovery";
 import { WelcomeScreen } from "./WelcomeScreen";
+import { HelpView } from "../../src/views/HelpView";
 
 // Contributor and librarian screens load on first use, keeping the CSM's library-to-viewer path lighter.
 const DraftsView = lazy(() => import("./DraftsView").then(module => ({ default: module.DraftsView })));
@@ -63,7 +64,9 @@ export default function ConnectedApp() {
       setAppLocation(launch);
       const hash = routeHash(launch.route);
       // A link only picks the first screen; once the person has moved, their own navigation wins.
-      if (!hash || (window.location.hash || "#/") !== "#/") return;
+      // A host fragment that is not a PRISMA route (it does not start with "#/") counts as the first screen too.
+      const current = window.location.hash || "#/";
+      if (!hash || (current !== "#/" && current.startsWith("#/"))) return;
       const { path, query } = parseHash(hash);
       // "Open in new tab": a focused demo goes straight to the viewer, in present mode when it was opened from it.
       if (query.get("focus") === "1") {
@@ -281,7 +284,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   const solution = state.kind === "ready" && (segments.length === 2 || (segments.length === 4 && segments[2] === "demo")) && segments[0] === "s"
     ? state.catalogue.find(entry => entry.id === segments[1]) : undefined;
   useEffect(() => {
-    if (present && (section === "submit" || section === "submission" || section === "review" || route.path === "/my-submissions" || route.path === "/favorites")) navigate("/");
+    if (present && (section === "submit" || section === "submission" || section === "review" || route.path === "/my-submissions" || route.path === "/favorites" || route.path === "/help")) navigate("/");
     else if (present && state.kind === "ready" && section === "s" && !solution) navigate("/");
   }, [present, route.path, section, solution, state.kind]);
   // A demo opened in its own tab shows the viewer alone: no masthead, tabs or banner.
@@ -294,13 +297,14 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
     <main key={route.path} ref={main} tabIndex={-1} className="focus-visible:outline-none">
       <Suspense fallback={<LoadingState variant="page" label="Loading..." />}>
-      {state.kind === "loading" || (state.kind === "ready" && !entered) ? <WelcomeScreen authenticated={user.live} present={present} ready={state.kind === "ready"} entering={entering} onBegin={onBegin} />
+      {state.kind === "loading" || (state.kind === "ready" && !entered) ? <WelcomeScreen authenticated={user.live} present={present} ready={state.kind === "ready"} entering={entering} onBegin={onBegin} onHelp={() => { navigate("/help"); onBegin(); }} />
         : state.kind === "host-required" ? <Message title="Power Apps sign-in required" message="Open this app through Power Apps Local Play in your signed-in browser." onRetry={onRetry} />
         : state.kind === "error" ? <Message title="Catalogue unavailable" message="Check your Dataverse access and connection, then retry." onRetry={onRetry} alert />
         : !present && route.path === "/submit" ? <DraftsView draftId={route.query.get("draft") ?? undefined} owner={user.userPrincipalName} />
         : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
         : !present && segments.length === 3 && segments[0] === "review" && segments[2] === "edit" ? <DraftsView key={route.path} draftId={segments[1]} owner={user.userPrincipalName} librarian />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} technologyUse={technologyUse} />
+        : !present && route.path === "/help" ? <HelpView connected librarian={librarian} />
         : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
         : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} focused={focused} appLocation={appLocation}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id), saves: topSaves.get(solution.id.toLowerCase()) } : undefined} />

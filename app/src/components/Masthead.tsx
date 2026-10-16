@@ -86,6 +86,24 @@ export function Masthead({
 
           <PresentToggle present={present} onToggle={onTogglePresent} />
 
+          {showNav && (
+            <button
+              type="button"
+              onClick={() => navigate("/help")}
+              aria-label="Help: how PRISMA works"
+              title="How PRISMA works"
+              aria-current={route.path === "/help" ? "page" : undefined}
+              className="grid h-10 w-10 cursor-pointer place-items-center rounded-xl border transition-colors duration-200"
+              style={{
+                borderColor: route.path === "/help" ? "color-mix(in srgb, var(--accent) 45%, transparent)" : "var(--glass-edge)",
+                background: "color-mix(in srgb, var(--ink) 6%, transparent)",
+                color: route.path === "/help" ? "var(--accent)" : "var(--ink-2)",
+              }}
+            >
+              <Icon name="info" size={17} />
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onToggleTheme}

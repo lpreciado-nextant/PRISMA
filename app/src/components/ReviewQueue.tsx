@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from "react";
 import type { Solution, SpecializationArea } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
 import { navigate } from "../lib/router";
+import { OverflowMenu } from "./OverflowMenu";
 import { Icon, type IconName } from "./Icon";
 import { LoadingState } from "./LoadingState";
 import { SelectPicker } from "./SelectPicker";
@@ -9,6 +10,7 @@ import { solutionAreas } from "../lib/areas";
 import { submissionState } from "../lib/submissionState";
 import type { ReviewCheck } from "../lib/reviewChecklist";
 import { AreaTag } from "./Badges";
+import { Notice } from "./Notice";
 
 const filters = ["Pending review", "Changes requested", "Published"] as const;
 type Entry = { solution: Solution; owner?: string; imageCount?: number; attachmentCount?: number };
@@ -31,6 +33,8 @@ const PUBLICATION_CHECKLIST = [
 /** A returned submission needs feedback the submitter can act on, not a one-word note. */
 const MIN_CHANGE_COMMENT = 15;
 /** Compact secondary buttons for the published row and its Cancel. */
+/** The librarian's primary "Edit solution": filled, so it never reads like the take-it-out actions beside it. */
+const primaryAction = "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[13.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-40";
 const compactAction = "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-(--glass-edge) bg-(--ground)/50 px-3 py-1.5 text-[13.5px] font-semibold text-(--ink-2) hover:text-(--ink) disabled:cursor-not-allowed disabled:opacity-40";
 
 /** One option of a decision, as a selectable card backed by a native radio (arrow keys move between options). */
@@ -118,7 +122,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           <p className="eyebrow inline-flex items-center gap-1.5" style={{ color: "var(--accent)" }}><Icon name="shield" size={13} />Librarian review{local && " · local preview"}</p>
           <h2 id={heading} className="mt-2 text-[22px]">{returned ? "Changes requested" : status}</h2>
         </div>
-        {onEdit && <button type="button" disabled={disabled} onClick={onEdit} className={compactAction}><Icon name="edit" size={14} />Edit solution</button>}
+        {onEdit && status !== "Published" && <button type="button" disabled={disabled} onClick={onEdit} className={primaryAction} style={{ background: "var(--accent)", color: "var(--on-accent)" }}><Icon name="edit" size={14} />Edit solution</button>}
       </div>
       {!onEdit && editBlocked && <p className="mt-2 flex items-start gap-1.5 text-[13px] text-(--ink-2)"><Icon name="edit" size={13} className="mt-0.5 shrink-0" />{editBlocked}</p>}
 
@@ -172,17 +176,17 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
       {noticeBusy && typeof notice === "string" ? <LoadingState className="mt-3" label={notice} /> : notice && <div role="status" className="mt-3 text-[14px] text-(--ink-2)">{notice}</div>}
 
       {/* 3 · Review decision, then only the chosen decision's required action. */}
-      {returned && <section aria-labelledby={`${heading}-waiting`} className="mt-6 rounded-xl border p-4 sm:p-5" style={{ borderColor: "color-mix(in srgb, var(--proto) 40%, transparent)", background: "color-mix(in srgb, var(--proto) 7%, transparent)" }}>
+      {returned && <section aria-labelledby={`${heading}-waiting`} className="mt-6 rounded-xl border p-4 sm:p-5" style={{ borderColor: "var(--glass-edge)", background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
         <div className="flex items-start gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ color: "var(--proto)", background: "color-mix(in srgb, var(--proto) 16%, transparent)" }}><Icon name="clock" size={18} /></span>
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ color: "var(--ink-2)", background: "color-mix(in srgb, var(--ink) 8%, transparent)" }}><Icon name="clock" size={18} /></span>
           <div className="min-w-0">
-            <h3 id={`${heading}-waiting`} className="text-[16px] font-semibold" style={{ color: "var(--proto)" }}>Waiting for corrections</h3>
+            <h3 id={`${heading}-waiting`} className="text-[16px] font-semibold text-(--ink)">Waiting for corrections</h3>
             <p className="mt-0.5 text-[13.5px] text-(--ink-2)">Sent back to the contributor. It returns to Pending review when they resubmit.</p>
           </div>
         </div>
         {feedback && <div className="mt-4 border-t border-(--glass-edge) pt-4">
           <h4 className="eyebrow">Your feedback</h4>
-          <p className="mt-2 border-l-2 border-(--proto) pl-3 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{feedback}</p>
+          <p className="mt-2 border-l-2 border-(--ink-3) pl-3 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{feedback}</p>
         </div>}
       </section>}
 
@@ -194,7 +198,14 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
             <p className="min-w-0"><span id={`${heading}-live`} className="text-[15px] font-semibold" style={{ color: "var(--live)" }}>Published</span>
               <span className="text-[13.5px] text-(--ink-2)">{publishedEdit ? " · Left out of present mode until you confirm your changes." : " · Available in the Solution Library."}</span></p>
           </div>
-          {!publishedEdit && (onRequestChanges || onRetire) && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          {!publishedEdit && onEdit && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            <button type="button" disabled={disabled} onClick={onEdit} className={primaryAction} style={{ background: "var(--accent)", color: "var(--on-accent)" }}><Icon name="edit" size={14} />Edit solution</button>
+            {(onRequestChanges || onRetire) && <OverflowMenu label="More actions: take it out of the library" items={[
+              ...(onRequestChanges ? [{ label: "Send back to owner…", icon: "chevronLeft" as const, onSelect: () => { onComments(""); setManage("changes"); } }] : []),
+              ...(onRetire ? [{ label: "Retire from library…", icon: "eyeOff" as const, onSelect: () => { onComments(""); setManage("retire"); } }] : []),
+            ]} />}
+          </div>}
+          {!publishedEdit && !onEdit && (onRequestChanges || onRetire) && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             {onRequestChanges && <button type="button" disabled={disabled} aria-expanded={manage === "changes"} aria-controls={`${heading}-manage`} onClick={() => { onComments(""); setManage(manage === "changes" ? undefined : "changes"); }} className={compactAction} style={manage === "changes" ? { color: "var(--proto)", borderColor: "color-mix(in srgb, var(--proto) 45%, transparent)" } : undefined}><Icon name="alert" size={14} />Request changes</button>}
             {onRetire && <button type="button" disabled={disabled} aria-expanded={manage === "retire"} aria-controls={`${heading}-manage`} onClick={() => { onComments(""); setManage(manage === "retire" ? undefined : "retire"); }} className={compactAction} style={manage === "retire" ? { color: "var(--ink)", borderColor: "var(--ink-3)" } : undefined}><Icon name="eyeOff" size={14} />Retire</button>}
           </div>}
@@ -217,7 +228,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           <legend className="sr-only">{manage === "changes" ? "Request changes" : "Retire from the library"}</legend>
           {/* One line on what each action means, so the two read differently. */}
           <p className="text-[13.5px] text-(--ink-2)">{manage === "changes"
-            ? "Use this when something must be fixed. It leaves the library until the owner corrects it and resubmits it for review."
+            ? onEdit ? "This is not an edit: it leaves the library, and the owner must make the changes and resubmit. To fix it yourself, cancel and use Edit solution." : "Use this when something must be fixed. It leaves the library until the owner corrects it and resubmits it for review."
             : "Use this when the solution is obsolete or replaced. It is removed from the Solution Library for good; the record is kept, not deleted, and the owner sees your reason."}</p>
           {/* Both transitions send the words the owner will read (the plug-in requires them); the caller confirms first. */}
           <label className="mt-3 block text-[14px] font-semibold">{manage === "changes" ? "What needs to be corrected" : "Reason for retiring"} <span className="font-normal text-(--ink-2)">(required)</span>
@@ -241,7 +252,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         <legend className="sr-only">Review decision</legend>
         <h3 aria-hidden="true" className="eyebrow">Review decision</h3>
         <div role="radiogroup" aria-label="Review decision" className="mt-3 grid gap-3 sm:grid-cols-2">
-          {DECISIONS.map(option => <ChoiceCard key={option.value} name={`${heading}-decision`} option={option} selected={decision === option.value} onSelect={() => setDecision(option.value)} />)}
+          {DECISIONS.map(option => <ChoiceCard key={option.value} name={`${heading}-decision`} option={onEdit && option.value === "changes" ? { ...option, detail: "The submitter makes the changes and resubmits. To fix it yourself, use Edit solution." } : option} selected={decision === option.value} onSelect={() => setDecision(option.value)} />)}
         </div>
 
         {chosen && <div className="animate-rise mt-4 rounded-xl border p-4" style={{ borderColor: `color-mix(in srgb, ${chosen.color} 40%, transparent)`, background: `color-mix(in srgb, ${chosen.color} 6%, transparent)` }}>
@@ -274,9 +285,21 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
 }
 
 type Sort = "newest" | "oldest";
+/** The compact toolbar look, with room for long area and capability names and the arrow kept at the right edge. */
+const filterButton = "toolbar-control flex h-9 cursor-pointer items-center justify-between gap-3 rounded-[10px] px-3.5 text-left text-[13px] font-semibold outline-none";
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "" : "s"}`;
-/** Same state colours as My submissions: the row's edge says where each record stands. */
-const STATE_COLOR: Record<typeof filters[number], string> = { "Pending review": "var(--accent)", "Changes requested": "var(--proto)", Published: "var(--live)" };
+/**
+ * The row's edge says where each record stands, from the librarian's side: amber is reserved for "your turn" (the
+ * Pending review count, as on the masthead tab), so a record sent back, now waiting on its contributor, is neutral.
+ * My submissions keeps amber for Changes requested, because there it is the contributor's turn.
+ */
+const STATE_COLOR: Record<typeof filters[number], string> = { "Pending review": "var(--accent)", "Changes requested": "var(--ink-3)", Published: "var(--live)" };
+/** One line under the tabs on what the open tab holds, in the colour of whose turn it is (amber: yours). */
+const TAB_NOTICE: Record<typeof filters[number], { icon: IconName; tone: string; title: string; text: (connected: boolean) => string }> = {
+  "Pending review": { icon: "clock", tone: "var(--proto)", title: "Your turn", text: () => "Submissions waiting for your review. Approve them, or send them back with what to fix." },
+  "Changes requested": { icon: "users", tone: "var(--ink-3)", title: "Waiting for contributors", text: () => "You sent these back. They return to Pending review when the contributor resubmits; nothing to do for now." },
+  Published: { icon: "check", tone: "var(--live)", title: "In the library", text: connected => connected ? "Live for everyone. Use Edit solution to fix something yourself, or the ••• menu to take one out." : "Live for everyone in this local preview." },
+};
 /** The record's `yyyy-MM-dd` date, read as a calendar date so no time zone shifts it: "Sep 30" (year only when not current) and the full form. */
 function submittedOn(value?: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? "");
@@ -317,16 +340,21 @@ export function ReviewQueue({ entries, connected = false }: { entries: Entry[]; 
         const active = filter === option;
         return <button type="button" key={option} aria-pressed={active} onClick={() => setFilter(option)} className="-mb-px cursor-pointer border-b-[3px] px-3 py-3 text-[14px] font-semibold transition-colors" style={{ borderColor: active ? "var(--accent)" : "transparent", color: active ? "var(--accent)" : "var(--ink-2)" }}>
           {option}
-          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={{ background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{entries.filter(entry => matches(entry, option)).length}</span>
+          {/* Pending review is the librarian's to-do: its count is amber like the masthead's Review queue badge. */}
+          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={option === "Pending review" && entries.some(entry => matches(entry, option))
+            ? { color: "color-mix(in srgb, var(--proto) 85%, var(--ink))", background: "color-mix(in srgb, var(--proto) 20%, transparent)" }
+            : { background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{entries.filter(entry => matches(entry, option)).length}</span>
         </button>;
       })}
     </div>
 
+    <div className="mt-4"><Notice icon={TAB_NOTICE[filter].icon} tone={TAB_NOTICE[filter].tone} title={TAB_NOTICE[filter].title}>{TAB_NOTICE[filter].text(connected)}</Notice></div>
+
     {/* Search & filters: search stays the widest control; area narrows capability. */}
     <div className="mt-5 flex flex-wrap items-center gap-2.5">
       <label className="flex h-9 min-w-0 flex-1 basis-72 items-center gap-2 rounded-[10px] border border-(--glass-edge) px-3" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}><Icon name="search" /><input type="search" aria-label="Search review queue" placeholder={connected ? "Search submissions" : "Search submissions or owners"} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px]" /></label>
-      <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={setArea} getLabel={value => value ? AREAS[value].name : "All areas"} />
-      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={setCapability} getLabel={value => value || "All capabilities"} />
+      <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={setArea} getLabel={value => value ? AREAS[value].name : "All areas"} buttonClassName={`${filterButton} min-w-[200px]`} />
+      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={setCapability} getLabel={value => value || "All capabilities"} buttonClassName={`${filterButton} min-w-[240px]`} />
       <SelectPicker compact label="Sort" value={sort} options={["newest", "oldest"] as const} onChange={setSort} getLabel={value => value === "newest" ? "Newest first" : "Oldest first"} getButtonLabel={value => `Sort: ${value === "newest" ? "Newest" : "Oldest"}`} />
     </div>
 

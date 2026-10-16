@@ -473,8 +473,27 @@ test("review panel: librarian edits need an explanation for the owner (ADR-0013)
   assert.match(render(review.ReviewPanel, { ...live, cleared: true }), /Tell the owner what you changed and why\./);
   assert.doesNotMatch(render(review.ReviewPanel, { ...live, cleared: true, comments: "Removed the client name" }), /disabled=""[^>]*>.*Confirm changes/s);
   assert.match(render(review.ReviewPanel, { ...live, cleared: true, comments: "Removed the client name", canApprove: false }), /Add the missing content before confirming\./);
-  // Without an unexplained edit, a published record is unchanged.
-  assert.match(render(review.ReviewPanel, { ...live, edit: { on: "2026-10-15", pending: false } }), /Available in the Solution Library\..*Request changes<\/button>/s);
+  // Without an unexplained edit, Edit solution is the primary action and taking it out of the library sits in a menu.
+  const editable = render(review.ReviewPanel, { ...live, onEdit: noop, edit: { on: "2026-10-15", pending: false } });
+  assert.match(editable, /Available in the Solution Library\..*Edit solution<\/button>.*aria-label="More actions: take it out of the library"/s);
+  assert.match(editable, /Send back to owner….*Retire from library…/s);
+  assert.doesNotMatch(editable, /Request changes<\/button>|Retire<\/button>/);
+  assert.equal((editable.match(/Edit solution/g) ?? []).length, 1);
+  // Without Edit (the PoC), the published row keeps its two buttons.
+  assert.match(render(review.ReviewPanel, { ...live, onEdit: undefined, onConfirmEdit: undefined, edit: undefined }), /Request changes<\/button>.*Retire<\/button>/s);
+  // Pending with Edit: the decision card points to Edit solution.
+  assert.match(render(review.ReviewPanel, { ...props, onEdit: noop }), /To fix it yourself, use Edit solution\./);
+});
+
+test("librarian edit notice: an informational note, with the present-mode rule only for published records", async () => {
+  const { LibrarianEditNotice } = await server.ssrLoadModule("/src/components/LibrarianEditNotice.tsx");
+  const pending = render(LibrarianEditNotice, { published: false });
+  assert.match(pending, /<section role="note" aria-labelledby="[^"]+"/);
+  assert.match(pending, /You&#x27;re editing as librarian.*stays in Pending review.*Contributors stay with the owner.*what you changed and why/s);
+  assert.doesNotMatch(pending, /present mode/);
+  const published = render(LibrarianEditNotice, { published: true });
+  assert.match(published, /stays published.*left out of present mode/s);
+  assert.match(published, /color:var\(--proto\)/);
 });
 
 test("review queue rows show area, capability, submitter and a friendly date, newest first", () => {
@@ -490,6 +509,11 @@ test("review queue rows show area, capability, submitter and a friendly date, ne
   assert.match(html, /Search review queue.*aria-label="Specialization area".*All areas.*aria-label="Capability".*All capabilities.*aria-label="Sort".*Sort: Newest.*2 submissions/s);
   assert.match(html, /PRISMA APP.*Older app/s);
   assert.doesNotMatch(html, /Live one/);
+  // Amber means "your turn": the Pending review count matches the masthead badge; other counts stay neutral.
+  assert.match(html, /Pending review<span[^>]*style="color:color-mix\(in srgb, var\(--proto\) 85%, var\(--ink\)\)/);
+  assert.doesNotMatch(html, /Published<span[^>]*var\(--proto\)/);
+  // One line under the tabs says what the open tab holds, in its colour.
+  assert.match(html, /aria-label="Review status".*border-color:var\(--proto\)[^>]*>.*Your turn<\/span> · Submissions waiting for your review/s);
   // A small date in the top corner; the full date stays in its title and for screen readers.
   const short = new Date().getFullYear() === 2026 ? "Sep 30" : "Sep 30, 2026";
   assert.match(html, new RegExp(`<time dateTime="2026-09-30" title="Submitted Sep 30, 2026"[^>]*><span class="sr-only">Submitted </span>${short}</time>`));
@@ -686,7 +710,8 @@ test("solution sidebar: overview, business context and technologies for everyone
   assert.match(normal, /Solution overview.*Specialization area.*Capability.*Data Engineering.*Capability owner.*MR.*Marta Ruiz/s);
   assert.match(normal, /Business context.*Target role.*Chief of Staff.*Industries.*Education.*IT.*Client \(internal\).*MICROSOFT.*Shown to clients as.*A global software company/s);
   assert.match(normal, /Technologies used.*Power Apps code app.*Microsoft Fabric/s);
-  assert.match(normal, /Contributors &amp; development effort.*Ana Gómez.*Senior Consultant.*Luis Pérez.*Complexity.*Medium.*Estimated minimum hours.*~230 h.*Estimated development effort for the whole solution\./s);
+  assert.match(normal, /Contributors &amp; development effort.*Ana Gómez.*Senior Consultant.*Luis Pérez.*Complexity.*Medium.*Estimated minimum hours.*230 h/s);
+  assert.doesNotMatch(normal, /~230|Estimated development effort/);
   assert.doesNotMatch(normal, /Minimum hours invested|15 h/);
   assert.match(render(DetailView, { solution: { ...solution, estimatedMinimumHours: undefined, complexity: undefined }, present: false, connected: true, effort }), /Complexity.*Not set.*Estimated minimum hours.*Not estimated/s);
   assert.match(normal, /Associated projects · 1.*Project Atlas/s);
@@ -742,6 +767,35 @@ test("masthead: primary row with Submit, Present and utilities; section navigati
   // Present mode and read-only (before entry) show no section navigation.
   assert.doesNotMatch(render(masthead.Masthead, { ...props, present: true }), /aria-label="Sections"/);
   assert.doesNotMatch(render(masthead.Masthead, { ...props, readOnly: true }), /aria-label="Sections"/);
+  // Help sits with the utilities; never in present mode or before entry.
+  assert.match(html, /aria-label="Help: how PRISMA works"/);
+  assert.doesNotMatch(render(masthead.Masthead, { ...props, present: true }), /Help: how PRISMA works/);
+  assert.doesNotMatch(render(masthead.Masthead, { ...props, readOnly: true }), /Help: how PRISMA works/);
+});
+
+test("help page: one guide per role and common questions, tailored to the app, with no in-page hash links", async () => {
+  const { HelpView } = await server.ssrLoadModule("/src/views/HelpView.tsx");
+  const poc = render(HelpView, {});
+  assert.match(poc, /How PRISMA works.*<nav aria-label="Guides".*Find and present a solution.*Share your work.*Review and curate/s);
+  assert.match(poc, /Present mode.*Common questions.*What does present mode hide\?/s);
+  assert.match(poc, /<details[^>]*><summary/);
+  // The PoC promises only what it has.
+  assert.doesNotMatch(poc, /Download presentation|Suggest an improvement|Edit solution|Unpublish &amp; edit|Confirm changes/);
+  assert.match(poc, /Edit submission/);
+  const connected = render(HelpView, { connected: true, librarian: true });
+  assert.match(connected, /Download presentation.*Suggest an improvement.*Unpublish &amp; edit.*Edit solution.*Confirm changes.*Send back to owner/s);
+  assert.match(connected, /Why can&#x27;t I edit my own solution from the review queue\?/);
+  // Plain introduction: what PRISMA is, then share → review → find and present.
+  assert.match(poc, /demos, prototypes and products.*1 · <\/span>Share.*2 · <\/span>Review.*3 · <\/span>Find &amp; present/s);
+  // Suggestions exist only in the connected app: who sees them, why they stay new, what Addressed means.
+  assert.match(connected, /Suggestions and feedback.*Suggest an improvement.*only the solution&#x27;s owner, its contributors and librarians.*counts as <b>new<\/b>.*marks it <b>Addressed<\/b>.*Nothing changes automatically/s);
+  assert.match(connected, /Why does My submissions keep showing &quot;new&quot;\?/);
+  assert.doesNotMatch(poc, /Suggestions and feedback|Addressed/);
+  // Librarian guidance only for librarians in the connected app.
+  const contributor = render(HelpView, { connected: true, librarian: false });
+  assert.doesNotMatch(contributor, /Review and curate|Edit solution/);
+  // The hash belongs to the router: shortcuts are buttons, never in-page anchors.
+  assert.doesNotMatch(connected, /href="#/);
 });
 test("library area filter is editorial text: plain options with colour dots, a tint only on the chosen one", async () => {
   const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");

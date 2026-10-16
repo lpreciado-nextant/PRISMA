@@ -15,8 +15,8 @@ test("only published, Cleared solutions export", () => {
   assert.throws(() => buildDeckFields({ ...input, solution: { ...cleared, clientSafeReviewed: false } }), DeckNotExportableError);
 });
 
-test("export never carries effort, builders, cost or client names", () => {
-  const solution: Solution = { ...base, clientSafeReviewed: true, publicationStatus: "Published", status: "Working prototype", clientContext: "ACME Corp secret", estimatedCost: 987654, libraryNotes: "internal note" };
+test("export never carries effort, builders or client names", () => {
+  const solution: Solution = { ...base, clientSafeReviewed: true, publicationStatus: "Published", status: "Working prototype", clientContext: "ACME Corp secret", estimatedMinimumHours: 987654, complexity: "Hard", libraryNotes: "internal note" };
   const dump = JSON.stringify(buildDeckFields({ ...input, solution }));
   for (const contributor of solution.contributors) assert.ok(!dump.includes(contributor.builtBy.name), contributor.builtBy.name);
   assert.ok(!dump.includes("ACME Corp secret") && !dump.includes("987654") && !dump.includes("internal note"));

@@ -290,7 +290,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
             </SideSection>}
           </section>
 
-          {!present && (!catalogueOnly || (solution.projects?.length ?? 0) > 0 || solution.estimatedCost !== undefined) && (
+          {!present && (!catalogueOnly || (solution.projects?.length ?? 0) > 0) && (
             <section className="glass glass-lite glass-sheen rounded-[20px] px-6 py-5" aria-label="Internal details">
               {!catalogueOnly && <SideSection title="Contributors & development effort" first>
                 <ExpandableList limit={4} label="contributors" items={people.map((person, index) => (
@@ -301,18 +301,11 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
                     </span>
                   </li>
                 ))} />
-                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-(--glass-edge) pt-3">
-                  <div className="min-w-0">
-                    <dt className="font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-2)" }}>Complexity</dt>
-                    <dd className="mt-1 font-mono text-[16px]" style={{ color: solution.complexity ? "var(--accent)" : "var(--ink-3)" }}>{solution.complexity ?? "Not set"}</dd>
-                  </div>
-                  <div className="min-w-0">
-                    <dt className="font-mono text-[10.5px] tracking-[0.1em] uppercase" style={{ color: "var(--ink-2)" }}>Estimated minimum hours</dt>
-                    <dd className="mt-1 font-mono text-[16px]" style={{ color: solution.estimatedMinimumHours === undefined ? "var(--ink-3)" : "var(--accent)" }}>{solution.estimatedMinimumHours === undefined ? "Not estimated" : `~${solution.estimatedMinimumHours.toLocaleString("en-US")} h`}</dd>
-                  </div>
+                {/* Stacked like the rest of the sidebar's fields: small caps label, body-text value. */}
+                <dl className="mt-4 flex flex-col gap-3 border-t border-(--glass-edge) pt-3 text-[14px]">
+                  <Field label="Complexity">{solution.complexity ?? <span style={{ color: "var(--ink-3)" }}>Not set</span>}</Field>
+                  <Field label="Estimated minimum hours">{solution.estimatedMinimumHours === undefined ? <span style={{ color: "var(--ink-3)" }}>Not estimated</span> : `${solution.estimatedMinimumHours.toLocaleString("en-US")} h`}</Field>
                 </dl>
-                <p className="mt-1.5 text-[12.5px]" style={{ color: "var(--ink-3)" }}>Estimated development effort for the whole solution{solution.status === "Client demo" ? "; demo effort only, production delivery may take longer." : "."}</p>
-                {solution.estimatedCost !== undefined && <dl className="mt-3 text-[14px]"><Field label="Estimated cost">{solution.estimatedCost.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</Field></dl>}
               </SideSection>}
 
               {solution.projects && solution.projects.length > 0 && <SideSection title={`Associated projects · ${solution.projects.length}`} first={catalogueOnly}>

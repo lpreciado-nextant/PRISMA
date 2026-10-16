@@ -371,6 +371,16 @@ if (command == "inspect-librarian-edit")
     edited.Orders.Add(new OrderExpression("modifiedon", OrderType.Descending));
     foreach (var row in client.RetrieveMultiple(edited).Entities)
         Console.WriteLine($"  solution '{row.GetAttributeValue<string>("nx_solutionname")}' {row.Id}: owner {(row.GetAttributeValue<EntityReference>("ownerid")?.Id == identity.UserId ? "YOU" : row.GetAttributeValue<EntityReference>("ownerid")?.Name)}; publication {row.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value}; modified {row.GetAttributeValue<DateTime>("modifiedon"):u}; librarian edited {(row.Contains("nx_librarianeditedon") ? row.GetAttributeValue<DateTime>("nx_librarianeditedon").ToString("u") : "never")}; pending={row.GetAttributeValue<bool>("nx_librarianeditpending")}");
+    // Optional solution id: its contributors' stored hours and client fields, which decide whether the editor can continue.
+    if (args.Length > 1 && Guid.TryParse(args[1], out var inspected))
+    {
+        var record = client.Retrieve("nx_solution", inspected, new ColumnSet("nx_solutionname", "nx_clientcontext", "nx_clientcontextredacted", "nx_clientrole", "nx_librarianeditedon", "nx_librarianeditpending", "nx_reviewcomments"));
+        Console.WriteLine($"Solution '{record.GetAttributeValue<string>("nx_solutionname")}': client={(record.Contains("nx_clientcontext") ? "set" : "empty")}; redacted={(record.Contains("nx_clientcontextredacted") ? "set" : "empty")}; role={(record.Contains("nx_clientrole") ? "set" : "empty")}; librarian edited {(record.Contains("nx_librarianeditedon") ? record.GetAttributeValue<DateTime>("nx_librarianeditedon").ToString("u") : "never")}; pending={record.GetAttributeValue<bool>("nx_librarianeditpending")}");
+        var people = new QueryExpression("nx_solutioncontributor") { ColumnSet = new ColumnSet("nx_builtby", "nx_directhours") };
+        people.Criteria.AddCondition("nx_solution", ConditionOperator.Equal, inspected);
+        foreach (var person in client.RetrieveMultiple(people).Entities)
+            Console.WriteLine($"  contributor {person.GetAttributeValue<EntityReference>("nx_builtby")?.Name}: hours {(person.Contains("nx_directhours") ? person["nx_directhours"].ToString() : "EMPTY")}");
+    }
     // Whether the deployed assembly already carries librarian editing: its stored bytes contain the new action name.
     var assemblies = new QueryExpression("pluginassembly") { ColumnSet = new ColumnSet("name", "version", "modifiedon", "modifiedby", "content") };
     assemblies.Criteria.AddCondition("name", ConditionOperator.Equal, "Prisma.Plugins");

@@ -7,7 +7,7 @@ import { AREAS } from "../data/catalogueMetadata.ts";
  *
  * Export rules (do not relax):
  * - Only solutions with Client review = Cleared can be exported.
- * - Never export effort hours, builder names or contributor rows, estimated cost, projects or library notes.
+ * - Never export effort (hours or complexity), builder names or contributor rows, projects or library notes.
  * - The redacted client context is the only client-facing text; the deck never reads `clientContext`.
  */
 
