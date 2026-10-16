@@ -762,6 +762,29 @@ test("masthead: primary row with Submit, Present and utilities; section navigati
   // Present mode and read-only (before entry) show no section navigation.
   assert.doesNotMatch(render(masthead.Masthead, { ...props, present: true }), /aria-label="Sections"/);
   assert.doesNotMatch(render(masthead.Masthead, { ...props, readOnly: true }), /aria-label="Sections"/);
+  // Help sits with the utilities; never in present mode or before entry.
+  assert.match(html, /aria-label="Help: how PRISMA works"/);
+  assert.doesNotMatch(render(masthead.Masthead, { ...props, present: true }), /Help: how PRISMA works/);
+  assert.doesNotMatch(render(masthead.Masthead, { ...props, readOnly: true }), /Help: how PRISMA works/);
+});
+
+test("help page: one guide per role and common questions, tailored to the app, with no in-page hash links", async () => {
+  const { HelpView } = await server.ssrLoadModule("/src/views/HelpView.tsx");
+  const poc = render(HelpView, {});
+  assert.match(poc, /How PRISMA works.*<nav aria-label="Guides".*Find and present a solution.*Share your work.*Review and curate/s);
+  assert.match(poc, /Present mode.*Common questions.*What does present mode hide\?/s);
+  assert.match(poc, /<details[^>]*><summary/);
+  // The PoC promises only what it has.
+  assert.doesNotMatch(poc, /Download presentation|Suggest an improvement|Edit solution|Unpublish &amp; edit|Confirm changes/);
+  assert.match(poc, /Edit submission/);
+  const connected = render(HelpView, { connected: true, librarian: true });
+  assert.match(connected, /Download presentation.*Suggest an improvement.*Unpublish &amp; edit.*Edit solution.*Confirm changes.*Send back to owner/s);
+  assert.match(connected, /Why can&#x27;t I edit my own solution from the review queue\?/);
+  // Librarian guidance only for librarians in the connected app.
+  const contributor = render(HelpView, { connected: true, librarian: false });
+  assert.doesNotMatch(contributor, /Review and curate|Edit solution/);
+  // The hash belongs to the router: shortcuts are buttons, never in-page anchors.
+  assert.doesNotMatch(connected, /href="#/);
 });
 test("library area filter is editorial text: plain options with colour dots, a tint only on the chosen one", async () => {
   const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");

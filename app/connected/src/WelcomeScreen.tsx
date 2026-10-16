@@ -7,8 +7,10 @@ const HOLD = 0.92;
 const APPROACH_MS = 1200;
 const ARRIVE_MS = 380;
 
-export function WelcomeScreen({ authenticated, present, ready = false, entering = false, onBegin }: {
+export function WelcomeScreen({ authenticated, present, ready = false, entering = false, onBegin, onHelp }: {
   authenticated: boolean; present: boolean; ready?: boolean; entering?: boolean; onBegin?: () => void;
+  /** Enters the app on the help page; offered only outside present mode. */
+  onHelp?: () => void;
 }) {
   // No visible status text: the beam is the indicator, and this line keeps it announced.
   const status = ready ? (present ? "Presentation ready" : "Catalogue ready")
@@ -86,6 +88,7 @@ export function WelcomeScreen({ authenticated, present, ready = false, entering 
       {ready && <button type="button" className="welcome-begin glass" disabled={entering} onClick={onBegin}>
         Explore the Library <Icon name="arrowRight" size={18} />
       </button>}
+      {ready && !present && onHelp && <button type="button" className="welcome-help" disabled={entering} onClick={onHelp}>New to PRISMA? See how it works</button>}
     </div>
   </section>;
 }

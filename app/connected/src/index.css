@@ -223,6 +223,25 @@
 }
 .welcome-begin:hover:not(:disabled) svg { transform: translateX(3px); }
 .welcome-begin:disabled { cursor: default; }
+/* A quiet text link under Explore: the way in for first-time visitors, never competing with the main action. */
+.welcome-help {
+	display: block;
+	margin: 14px auto 0;
+	padding: 6px 10px;
+	border: 0;
+	border-radius: 6px;
+	background: none;
+	font-size: 14px;
+	color: var(--ink-2);
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, var(--ink-2) 40%, transparent);
+	text-underline-offset: 3px;
+	cursor: pointer;
+	animation: welcome-rise 600ms 220ms ease-out both;
+}
+.welcome-help:hover:not(:disabled) { color: var(--ink); text-decoration-color: currentColor; }
+.welcome-help:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.welcome-help:disabled { cursor: default; }
 
 .welcome-flash {
 	position: fixed;
@@ -276,7 +295,7 @@
 /* Reduced motion: no travel, glow or fan-out. The beam waits near the prism while loading,
    then the beam and rays are shown complete. */
 @media (prefers-reduced-motion: reduce) {
-	.welcome-stage, .welcome-beam span::after, .welcome-begin { animation: none; }
+	.welcome-stage, .welcome-beam span::after, .welcome-begin, .welcome-help { animation: none; }
 	.welcome-copy, .welcome-begin, .welcome-begin svg { transition: none; transform: none; }
 	.welcome-screen[data-arrived="true"] .welcome-mark { animation: none; }
 	.welcome-screen[data-arrived="true"] .welcome-beam span::after { animation: none; opacity: 0; }

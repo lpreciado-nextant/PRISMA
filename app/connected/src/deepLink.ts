@@ -13,7 +13,7 @@ export interface AppLocation {
 }
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const PAGES = new Set(["/my-submissions", "/review", "/favorites"]);
+const PAGES = new Set(["/my-submissions", "/review", "/favorites", "/help"]);
 
 /** The in-app hash for a known PRISMA route, or undefined for anything else. */
 export function routeHash(route: string | undefined): string | undefined {

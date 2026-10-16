@@ -17,7 +17,7 @@ test("deep links map known routes to normalized hashes", () => {
   assert.equal(routeHash(`/s/${solution}?focus=1`), `#/s/${solution}`);
   assert.equal(routeHash(`/submission/${solution}`), `#/submission/${solution}`);
   assert.equal(routeHash(`/review/${solution}`), `#/review/${solution}`);
-  for (const page of ["/review", "/my-submissions", "/favorites", "/submit"]) assert.equal(routeHash(page), `#${page}`);
+  for (const page of ["/review", "/my-submissions", "/favorites", "/help", "/submit"]) assert.equal(routeHash(page), `#${page}`);
   assert.equal(routeHash(`/submit?draft=${solution.toUpperCase()}`), `#/submit?draft=${solution}`);
   assert.equal(routeHash("/?q=power+bi&area=data&tech=Fabric~Power%20BI&junk=1"), "#/?q=power+bi&area=data&tech=Fabric%7EPower+BI");
   assert.equal(routeHash("/?area=unknown"), "#/");
