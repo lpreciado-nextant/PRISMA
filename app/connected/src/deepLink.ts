@@ -17,7 +17,8 @@ const PAGES = new Set(["/my-submissions", "/review", "/favorites", "/help"]);
 
 /** The in-app hash for a known PRISMA route, or undefined for anything else. */
 export function routeHash(route: string | undefined): string | undefined {
-  if (typeof route !== "string" || route.length > 2000) return;
+  // PRISMA routes start with "/" (or are empty for the library); anything else is not a link we produce.
+  if (typeof route !== "string" || route.length > 2000 || !/^#?(\/|$)/.test(route)) return;
   const { path, query } = parseHash(route.startsWith("#") ? route : `#${route}`);
   if (path === "/") return buildHash("/", filtersToQuery(filtersFromQuery(query)));
   if (PAGES.has(path)) return buildHash(path);

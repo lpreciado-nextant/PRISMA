@@ -40,6 +40,9 @@ function getSnapshot() {
 
 export function parseHash(hash: string): Route {
   const raw = hash.replace(/^#/, "") || "/";
+  // Every PRISMA route starts with "/". Any other fragment belongs to the host, such as a sign-in redirect's
+  // "#code=…" left by mobile players, so it opens the library instead of "Page unavailable".
+  if (!raw.startsWith("/")) return { path: "/", query: new URLSearchParams() };
   const [path, search = ""] = raw.split("?");
   return { path: path || "/", query: new URLSearchParams(search) };
 }

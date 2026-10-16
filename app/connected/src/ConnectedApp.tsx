@@ -64,7 +64,9 @@ export default function ConnectedApp() {
       setAppLocation(launch);
       const hash = routeHash(launch.route);
       // A link only picks the first screen; once the person has moved, their own navigation wins.
-      if (!hash || (window.location.hash || "#/") !== "#/") return;
+      // A host fragment that is not a PRISMA route (it does not start with "#/") counts as the first screen too.
+      const current = window.location.hash || "#/";
+      if (!hash || (current !== "#/" && current.startsWith("#/"))) return;
       const { path, query } = parseHash(hash);
       // "Open in new tab": a focused demo goes straight to the viewer, in present mode when it was opened from it.
       if (query.get("focus") === "1") {
