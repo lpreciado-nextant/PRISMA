@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from "react";
 import type { Solution, SpecializationArea } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
 import { navigate } from "../lib/router";
+import { OverflowMenu } from "./OverflowMenu";
 import { Icon, type IconName } from "./Icon";
 import { LoadingState } from "./LoadingState";
 import { SelectPicker } from "./SelectPicker";
@@ -31,6 +32,8 @@ const PUBLICATION_CHECKLIST = [
 /** A returned submission needs feedback the submitter can act on, not a one-word note. */
 const MIN_CHANGE_COMMENT = 15;
 /** Compact secondary buttons for the published row and its Cancel. */
+/** The librarian's primary "Edit solution": filled, so it never reads like the take-it-out actions beside it. */
+const primaryAction = "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-[13.5px] font-semibold disabled:cursor-not-allowed disabled:opacity-40";
 const compactAction = "inline-flex min-h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-(--glass-edge) bg-(--ground)/50 px-3 py-1.5 text-[13.5px] font-semibold text-(--ink-2) hover:text-(--ink) disabled:cursor-not-allowed disabled:opacity-40";
 
 /** One option of a decision, as a selectable card backed by a native radio (arrow keys move between options). */
@@ -118,7 +121,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           <p className="eyebrow inline-flex items-center gap-1.5" style={{ color: "var(--accent)" }}><Icon name="shield" size={13} />Librarian review{local && " · local preview"}</p>
           <h2 id={heading} className="mt-2 text-[22px]">{returned ? "Changes requested" : status}</h2>
         </div>
-        {onEdit && <button type="button" disabled={disabled} onClick={onEdit} className={compactAction}><Icon name="edit" size={14} />Edit solution</button>}
+        {onEdit && status !== "Published" && <button type="button" disabled={disabled} onClick={onEdit} className={primaryAction} style={{ background: "var(--accent)", color: "var(--on-accent)" }}><Icon name="edit" size={14} />Edit solution</button>}
       </div>
       {!onEdit && editBlocked && <p className="mt-2 flex items-start gap-1.5 text-[13px] text-(--ink-2)"><Icon name="edit" size={13} className="mt-0.5 shrink-0" />{editBlocked}</p>}
 
@@ -194,7 +197,14 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
             <p className="min-w-0"><span id={`${heading}-live`} className="text-[15px] font-semibold" style={{ color: "var(--live)" }}>Published</span>
               <span className="text-[13.5px] text-(--ink-2)">{publishedEdit ? " · Left out of present mode until you confirm your changes." : " · Available in the Solution Library."}</span></p>
           </div>
-          {!publishedEdit && (onRequestChanges || onRetire) && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          {!publishedEdit && onEdit && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            <button type="button" disabled={disabled} onClick={onEdit} className={primaryAction} style={{ background: "var(--accent)", color: "var(--on-accent)" }}><Icon name="edit" size={14} />Edit solution</button>
+            {(onRequestChanges || onRetire) && <OverflowMenu label="More actions: take it out of the library" items={[
+              ...(onRequestChanges ? [{ label: "Send back to owner…", icon: "chevronLeft" as const, onSelect: () => { onComments(""); setManage("changes"); } }] : []),
+              ...(onRetire ? [{ label: "Retire from library…", icon: "eyeOff" as const, onSelect: () => { onComments(""); setManage("retire"); } }] : []),
+            ]} />}
+          </div>}
+          {!publishedEdit && !onEdit && (onRequestChanges || onRetire) && <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             {onRequestChanges && <button type="button" disabled={disabled} aria-expanded={manage === "changes"} aria-controls={`${heading}-manage`} onClick={() => { onComments(""); setManage(manage === "changes" ? undefined : "changes"); }} className={compactAction} style={manage === "changes" ? { color: "var(--proto)", borderColor: "color-mix(in srgb, var(--proto) 45%, transparent)" } : undefined}><Icon name="alert" size={14} />Request changes</button>}
             {onRetire && <button type="button" disabled={disabled} aria-expanded={manage === "retire"} aria-controls={`${heading}-manage`} onClick={() => { onComments(""); setManage(manage === "retire" ? undefined : "retire"); }} className={compactAction} style={manage === "retire" ? { color: "var(--ink)", borderColor: "var(--ink-3)" } : undefined}><Icon name="eyeOff" size={14} />Retire</button>}
           </div>}
@@ -217,7 +227,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           <legend className="sr-only">{manage === "changes" ? "Request changes" : "Retire from the library"}</legend>
           {/* One line on what each action means, so the two read differently. */}
           <p className="text-[13.5px] text-(--ink-2)">{manage === "changes"
-            ? "Use this when something must be fixed. It leaves the library until the owner corrects it and resubmits it for review."
+            ? onEdit ? "This is not an edit: it leaves the library, and the owner must make the changes and resubmit. To fix it yourself, cancel and use Edit solution." : "Use this when something must be fixed. It leaves the library until the owner corrects it and resubmits it for review."
             : "Use this when the solution is obsolete or replaced. It is removed from the Solution Library for good; the record is kept, not deleted, and the owner sees your reason."}</p>
           {/* Both transitions send the words the owner will read (the plug-in requires them); the caller confirms first. */}
           <label className="mt-3 block text-[14px] font-semibold">{manage === "changes" ? "What needs to be corrected" : "Reason for retiring"} <span className="font-normal text-(--ink-2)">(required)</span>
@@ -241,7 +251,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         <legend className="sr-only">Review decision</legend>
         <h3 aria-hidden="true" className="eyebrow">Review decision</h3>
         <div role="radiogroup" aria-label="Review decision" className="mt-3 grid gap-3 sm:grid-cols-2">
-          {DECISIONS.map(option => <ChoiceCard key={option.value} name={`${heading}-decision`} option={option} selected={decision === option.value} onSelect={() => setDecision(option.value)} />)}
+          {DECISIONS.map(option => <ChoiceCard key={option.value} name={`${heading}-decision`} option={onEdit && option.value === "changes" ? { ...option, detail: "The submitter makes the changes and resubmits. To fix it yourself, use Edit solution." } : option} selected={decision === option.value} onSelect={() => setDecision(option.value)} />)}
         </div>
 
         {chosen && <div className="animate-rise mt-4 rounded-xl border p-4" style={{ borderColor: `color-mix(in srgb, ${chosen.color} 40%, transparent)`, background: `color-mix(in srgb, ${chosen.color} 6%, transparent)` }}>

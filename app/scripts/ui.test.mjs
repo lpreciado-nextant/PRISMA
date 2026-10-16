@@ -473,8 +473,16 @@ test("review panel: librarian edits need an explanation for the owner (ADR-0013)
   assert.match(render(review.ReviewPanel, { ...live, cleared: true }), /Tell the owner what you changed and why\./);
   assert.doesNotMatch(render(review.ReviewPanel, { ...live, cleared: true, comments: "Removed the client name" }), /disabled=""[^>]*>.*Confirm changes/s);
   assert.match(render(review.ReviewPanel, { ...live, cleared: true, comments: "Removed the client name", canApprove: false }), /Add the missing content before confirming\./);
-  // Without an unexplained edit, a published record is unchanged.
-  assert.match(render(review.ReviewPanel, { ...live, edit: { on: "2026-10-15", pending: false } }), /Available in the Solution Library\..*Request changes<\/button>/s);
+  // Without an unexplained edit, Edit solution is the primary action and taking it out of the library sits in a menu.
+  const editable = render(review.ReviewPanel, { ...live, onEdit: noop, edit: { on: "2026-10-15", pending: false } });
+  assert.match(editable, /Available in the Solution Library\..*Edit solution<\/button>.*aria-label="More actions: take it out of the library"/s);
+  assert.match(editable, /Send back to owner….*Retire from library…/s);
+  assert.doesNotMatch(editable, /Request changes<\/button>|Retire<\/button>/);
+  assert.equal((editable.match(/Edit solution/g) ?? []).length, 1);
+  // Without Edit (the PoC), the published row keeps its two buttons.
+  assert.match(render(review.ReviewPanel, { ...live, onEdit: undefined, onConfirmEdit: undefined, edit: undefined }), /Request changes<\/button>.*Retire<\/button>/s);
+  // Pending with Edit: the decision card points to Edit solution.
+  assert.match(render(review.ReviewPanel, { ...props, onEdit: noop }), /To fix it yourself, use Edit solution\./);
 });
 
 test("librarian edit notice: an informational note, with the present-mode rule only for published records", async () => {
