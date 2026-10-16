@@ -509,6 +509,11 @@ test("review queue rows show area, capability, submitter and a friendly date, ne
   assert.match(html, /Search review queue.*aria-label="Specialization area".*All areas.*aria-label="Capability".*All capabilities.*aria-label="Sort".*Sort: Newest.*2 submissions/s);
   assert.match(html, /PRISMA APP.*Older app/s);
   assert.doesNotMatch(html, /Live one/);
+  // Amber means "your turn": the Pending review count matches the masthead badge; other counts stay neutral.
+  assert.match(html, /Pending review<span[^>]*style="color:color-mix\(in srgb, var\(--proto\) 85%, var\(--ink\)\)/);
+  assert.doesNotMatch(html, /Published<span[^>]*var\(--proto\)/);
+  // One line under the tabs says what the open tab holds, in its colour.
+  assert.match(html, /aria-label="Review status".*border-color:var\(--proto\)[^>]*>.*Your turn<\/span> · Submissions waiting for your review/s);
   // A small date in the top corner; the full date stays in its title and for screen readers.
   const short = new Date().getFullYear() === 2026 ? "Sep 30" : "Sep 30, 2026";
   assert.match(html, new RegExp(`<time dateTime="2026-09-30" title="Submitted Sep 30, 2026"[^>]*><span class="sr-only">Submitted </span>${short}</time>`));

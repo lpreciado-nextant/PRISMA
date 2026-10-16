@@ -10,6 +10,7 @@ import { solutionAreas } from "../lib/areas";
 import { submissionState } from "../lib/submissionState";
 import type { ReviewCheck } from "../lib/reviewChecklist";
 import { AreaTag } from "./Badges";
+import { Notice } from "./Notice";
 
 const filters = ["Pending review", "Changes requested", "Published"] as const;
 type Entry = { solution: Solution; owner?: string; imageCount?: number; attachmentCount?: number };
@@ -175,17 +176,17 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
       {noticeBusy && typeof notice === "string" ? <LoadingState className="mt-3" label={notice} /> : notice && <div role="status" className="mt-3 text-[14px] text-(--ink-2)">{notice}</div>}
 
       {/* 3 · Review decision, then only the chosen decision's required action. */}
-      {returned && <section aria-labelledby={`${heading}-waiting`} className="mt-6 rounded-xl border p-4 sm:p-5" style={{ borderColor: "color-mix(in srgb, var(--proto) 40%, transparent)", background: "color-mix(in srgb, var(--proto) 7%, transparent)" }}>
+      {returned && <section aria-labelledby={`${heading}-waiting`} className="mt-6 rounded-xl border p-4 sm:p-5" style={{ borderColor: "var(--glass-edge)", background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
         <div className="flex items-start gap-3">
-          <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ color: "var(--proto)", background: "color-mix(in srgb, var(--proto) 16%, transparent)" }}><Icon name="clock" size={18} /></span>
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ color: "var(--ink-2)", background: "color-mix(in srgb, var(--ink) 8%, transparent)" }}><Icon name="clock" size={18} /></span>
           <div className="min-w-0">
-            <h3 id={`${heading}-waiting`} className="text-[16px] font-semibold" style={{ color: "var(--proto)" }}>Waiting for corrections</h3>
+            <h3 id={`${heading}-waiting`} className="text-[16px] font-semibold text-(--ink)">Waiting for corrections</h3>
             <p className="mt-0.5 text-[13.5px] text-(--ink-2)">Sent back to the contributor. It returns to Pending review when they resubmit.</p>
           </div>
         </div>
         {feedback && <div className="mt-4 border-t border-(--glass-edge) pt-4">
           <h4 className="eyebrow">Your feedback</h4>
-          <p className="mt-2 border-l-2 border-(--proto) pl-3 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{feedback}</p>
+          <p className="mt-2 border-l-2 border-(--ink-3) pl-3 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{feedback}</p>
         </div>}
       </section>}
 
@@ -285,8 +286,18 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
 
 type Sort = "newest" | "oldest";
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "" : "s"}`;
-/** Same state colours as My submissions: the row's edge says where each record stands. */
-const STATE_COLOR: Record<typeof filters[number], string> = { "Pending review": "var(--accent)", "Changes requested": "var(--proto)", Published: "var(--live)" };
+/**
+ * The row's edge says where each record stands, from the librarian's side: amber is reserved for "your turn" (the
+ * Pending review count, as on the masthead tab), so a record sent back, now waiting on its contributor, is neutral.
+ * My submissions keeps amber for Changes requested, because there it is the contributor's turn.
+ */
+const STATE_COLOR: Record<typeof filters[number], string> = { "Pending review": "var(--accent)", "Changes requested": "var(--ink-3)", Published: "var(--live)" };
+/** One line under the tabs on what the open tab holds, in the colour of whose turn it is (amber: yours). */
+const TAB_NOTICE: Record<typeof filters[number], { icon: IconName; tone: string; title: string; text: (connected: boolean) => string }> = {
+  "Pending review": { icon: "clock", tone: "var(--proto)", title: "Your turn", text: () => "Submissions waiting for your review. Approve them, or send them back with what to fix." },
+  "Changes requested": { icon: "users", tone: "var(--ink-3)", title: "Waiting for contributors", text: () => "You sent these back. They return to Pending review when the contributor resubmits; nothing to do for now." },
+  Published: { icon: "check", tone: "var(--live)", title: "In the library", text: connected => connected ? "Live for everyone. Use Edit solution to fix something yourself, or the ••• menu to take one out." : "Live for everyone in this local preview." },
+};
 /** The record's `yyyy-MM-dd` date, read as a calendar date so no time zone shifts it: "Sep 30" (year only when not current) and the full form. */
 function submittedOn(value?: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? "");
@@ -327,10 +338,15 @@ export function ReviewQueue({ entries, connected = false }: { entries: Entry[]; 
         const active = filter === option;
         return <button type="button" key={option} aria-pressed={active} onClick={() => setFilter(option)} className="-mb-px cursor-pointer border-b-[3px] px-3 py-3 text-[14px] font-semibold transition-colors" style={{ borderColor: active ? "var(--accent)" : "transparent", color: active ? "var(--accent)" : "var(--ink-2)" }}>
           {option}
-          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={{ background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{entries.filter(entry => matches(entry, option)).length}</span>
+          {/* Pending review is the librarian's to-do: its count is amber like the masthead's Review queue badge. */}
+          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={option === "Pending review" && entries.some(entry => matches(entry, option))
+            ? { color: "color-mix(in srgb, var(--proto) 85%, var(--ink))", background: "color-mix(in srgb, var(--proto) 20%, transparent)" }
+            : { background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{entries.filter(entry => matches(entry, option)).length}</span>
         </button>;
       })}
     </div>
+
+    <div className="mt-4"><Notice icon={TAB_NOTICE[filter].icon} tone={TAB_NOTICE[filter].tone} title={TAB_NOTICE[filter].title}>{TAB_NOTICE[filter].text(connected)}</Notice></div>
 
     {/* Search & filters: search stays the widest control; area narrows capability. */}
     <div className="mt-5 flex flex-wrap items-center gap-2.5">
