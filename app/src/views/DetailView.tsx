@@ -301,12 +301,11 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
                     </span>
                   </li>
                 ))} />
-                {/* Same field style as the rest of the sidebar: small caps label, body-text value. */}
-                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-(--glass-edge) pt-3 text-[14px]">
+                {/* Stacked like the rest of the sidebar's fields: small caps label, body-text value. */}
+                <dl className="mt-4 flex flex-col gap-3 border-t border-(--glass-edge) pt-3 text-[14px]">
                   <Field label="Complexity">{solution.complexity ?? <span style={{ color: "var(--ink-3)" }}>Not set</span>}</Field>
-                  <Field label="Estimated minimum hours">{solution.estimatedMinimumHours === undefined ? <span style={{ color: "var(--ink-3)" }}>Not estimated</span> : `~${solution.estimatedMinimumHours.toLocaleString("en-US")} h`}</Field>
+                  <Field label="Estimated minimum hours">{solution.estimatedMinimumHours === undefined ? <span style={{ color: "var(--ink-3)" }}>Not estimated</span> : `${solution.estimatedMinimumHours.toLocaleString("en-US")} h`}</Field>
                 </dl>
-                <p className="mt-2 text-[12.5px]" style={{ color: "var(--ink-3)" }}>Estimated development effort for the whole solution{solution.status === "Client demo" ? "; demo effort only, production delivery may take longer." : "."}</p>
               </SideSection>}
 
               {solution.projects && solution.projects.length > 0 && <SideSection title={`Associated projects · ${solution.projects.length}`} first={catalogueOnly}>

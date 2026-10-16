@@ -65,7 +65,7 @@
 
   /* AI is a saturated blue (hue 215) so it never reads as Data's teal (hue 169). */
   --sa-ai: #6aa5f5;
-  --sa-data: #6cc47a;
+  --sa-data: #4fbfab;
   --sa-ibo: #a99ae6;
   /* The colour the wordmark's "P" shows (its gradient opens 40% ink, 60% accent): a deep steel
      blue in the light theme, a light blue here. Section headings use it to echo the mark. */
@@ -113,7 +113,7 @@
   --on-accent: #ffffff;
 
   --sa-ai: #1c567c;
-  --sa-data: #276129;
+  --sa-data: #0b604c;
   --sa-ibo: #57468c;
   --brand-p: color-mix(in srgb, var(--ink) 40%, var(--accent));
 

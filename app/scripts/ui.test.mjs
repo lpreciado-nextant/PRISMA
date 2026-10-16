@@ -697,7 +697,8 @@ test("solution sidebar: overview, business context and technologies for everyone
   assert.match(normal, /Solution overview.*Specialization area.*Capability.*Data Engineering.*Capability owner.*MR.*Marta Ruiz/s);
   assert.match(normal, /Business context.*Target role.*Chief of Staff.*Industries.*Education.*IT.*Client \(internal\).*MICROSOFT.*Shown to clients as.*A global software company/s);
   assert.match(normal, /Technologies used.*Power Apps code app.*Microsoft Fabric/s);
-  assert.match(normal, /Contributors &amp; development effort.*Ana Gómez.*Senior Consultant.*Luis Pérez.*Complexity.*Medium.*Estimated minimum hours.*~230 h.*Estimated development effort for the whole solution\./s);
+  assert.match(normal, /Contributors &amp; development effort.*Ana Gómez.*Senior Consultant.*Luis Pérez.*Complexity.*Medium.*Estimated minimum hours.*230 h/s);
+  assert.doesNotMatch(normal, /~230|Estimated development effort/);
   assert.doesNotMatch(normal, /Minimum hours invested|15 h/);
   assert.match(render(DetailView, { solution: { ...solution, estimatedMinimumHours: undefined, complexity: undefined }, present: false, connected: true, effort }), /Complexity.*Not set.*Estimated minimum hours.*Not estimated/s);
   assert.match(normal, /Associated projects · 1.*Project Atlas/s);
