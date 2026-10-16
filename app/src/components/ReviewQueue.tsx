@@ -285,6 +285,8 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
 }
 
 type Sort = "newest" | "oldest";
+/** The compact toolbar look, with room for long area and capability names and the arrow kept at the right edge. */
+const filterButton = "toolbar-control flex h-9 cursor-pointer items-center justify-between gap-3 rounded-[10px] px-3.5 text-left text-[13px] font-semibold outline-none";
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "" : "s"}`;
 /**
  * The row's edge says where each record stands, from the librarian's side: amber is reserved for "your turn" (the
@@ -351,8 +353,8 @@ export function ReviewQueue({ entries, connected = false }: { entries: Entry[]; 
     {/* Search & filters: search stays the widest control; area narrows capability. */}
     <div className="mt-5 flex flex-wrap items-center gap-2.5">
       <label className="flex h-9 min-w-0 flex-1 basis-72 items-center gap-2 rounded-[10px] border border-(--glass-edge) px-3" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}><Icon name="search" /><input type="search" aria-label="Search review queue" placeholder={connected ? "Search submissions" : "Search submissions or owners"} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px]" /></label>
-      <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={setArea} getLabel={value => value ? AREAS[value].name : "All areas"} />
-      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={setCapability} getLabel={value => value || "All capabilities"} />
+      <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={setArea} getLabel={value => value ? AREAS[value].name : "All areas"} buttonClassName={`${filterButton} min-w-[200px]`} />
+      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={setCapability} getLabel={value => value || "All capabilities"} buttonClassName={`${filterButton} min-w-[240px]`} />
       <SelectPicker compact label="Sort" value={sort} options={["newest", "oldest"] as const} onChange={setSort} getLabel={value => value === "newest" ? "Newest first" : "Oldest first"} getButtonLabel={value => `Sort: ${value === "newest" ? "Newest" : "Oldest"}`} />
     </div>
 
