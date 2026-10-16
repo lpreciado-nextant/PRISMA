@@ -1,6 +1,6 @@
 # PRISMA documentation
 
-**Status:** Living; connected PRISMA pilot published with plug-in backend and Azure Blob media pilot live since 2026-09-29; offline migration tooling and production infrastructure templates remain undeployed · **Last updated:** 2026-10-08
+**Status:** Living; connected PRISMA pilot published with plug-in backend and Azure Blob media pilot live since 2026-09-29; offline migration tooling and production infrastructure templates remain undeployed; two-stage AI authoring planned, not implemented · **Last updated:** 2026-10-16
 
 Documentation map for the PRISMA — Nextant Solution Library project. The [end-to-end design](design/end-to-end-design.md) is the overview; each aspect below has a dedicated living document.
 
@@ -27,6 +27,7 @@ Documentation map for the PRISMA — Nextant Solution Library project. The [end-
 | | [Present mode](workflows/present-mode.md) | Client-safe restriction, redaction, visual treatment |
 | | [Demo requests](workflows/demo-requests.md) | Live-demo handoff from CSM to builder |
 | **Delivery** | [Roadmap](delivery/roadmap.md) | Phases 1–5, current status |
+| | [AI authoring integration plan](delivery/roadmap.md#ai-authoring-integration) | Inline narrative rewrites, then private document-to-form suggestions; agreed scope, proposed architecture, dependencies and acceptance gates; not implemented |
 | | [Success metrics](delivery/success-metrics.md) | Goal-mapped metrics and targets |
 | | [Risks](delivery/risks.md) | Risk register with mitigations |
 | | [Decision log](delivery/decision-log.md) | Open questions and their resolutions |
