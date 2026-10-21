@@ -109,8 +109,8 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
 
     {contact && <section id="help-contact" aria-labelledby="help-contact-title" className="glass glass-lite glass-sheen mt-8 scroll-mt-24 rounded-[24px] p-6 sm:p-8">
       <p className="eyebrow">Contact</p>
-      <h2 id="help-contact-title" className="mt-1.5 text-[21px] font-bold">Questions or something looks wrong?</h2>
-      <p className="mt-2 max-w-[68ch] text-[15px] leading-relaxed text-(--ink-2)">If something in PRISMA seems inconsistent, a solution looks wrong, or you are not sure how something works, tell the PRISMA team. The message includes the page you were on, so add what you saw and what you expected.</p>
+      <h2 id="help-contact-title" className="mt-1.5 text-[21px] font-bold">Questions or Issues?</h2>
+      <p className="mt-2 max-w-[68ch] text-[15px] leading-relaxed text-(--ink-2)">Have a question about PRISMA or noticed something that doesn&apos;t seem right? Reach out to our support team. If you&apos;re reporting an issue, please include a brief description and any relevant screenshots or evidence to help us investigate.</p>
       <div className="mt-4 flex flex-wrap gap-3">
         <a href={contact.teams} target="_blank" rel="noopener noreferrer" className={contactButton} style={{ color: "var(--on-accent)", background: "var(--accent)" }}><Icon name="message" size={16} />Chat in Teams<span className="sr-only"> (opens in a new tab)</span></a>
         <a href={contact.email} target="_blank" rel="noopener noreferrer" className={`${contactButton} border border-(--glass-edge) text-(--ink)`}><Icon name="mail" size={16} />Email us</a>
