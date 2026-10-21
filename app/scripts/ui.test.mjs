@@ -799,6 +799,12 @@ test("help page: one guide per role and common questions, tailored to the app, w
   assert.doesNotMatch(contributor, /Review and curate|Edit solution/);
   // The hash belongs to the router: shortcuts are buttons, never in-page anchors.
   assert.doesNotMatch(connected, /href="#/);
+  // Contact appears only when the connected app passes it: a shortcut at the top and a card with Teams and email.
+  assert.doesNotMatch(poc + connected, /Questions or something looks wrong/);
+  const contact = render(HelpView, { connected: true, contact: { names: ["Luis", "Juliana"], teams: "https://teams.microsoft.com/l/chat/0/0?users=a", email: "mailto:a@example.com?subject=PRISMA" } });
+  assert.match(contact, /<button[^>]*>.*Questions or something looks wrong\? Contact us<\/button>.*Common questions.*id="help-contact".*tell Luis or Juliana/s);
+  assert.match(contact, /href="https:\/\/teams\.microsoft\.com\/l\/chat\/0\/0\?users=a" target="_blank" rel="noopener noreferrer"[^>]*>.*Chat in Teams/s);
+  assert.match(contact, /href="mailto:a@example\.com\?subject=PRISMA"[^>]*>.*Email us/s);
 });
 test("library area filter is editorial text: plain options with colour dots, a tint only on the chosen one", async () => {
   const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");

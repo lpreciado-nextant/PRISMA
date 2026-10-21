@@ -3,14 +3,18 @@ import { Icon, type IconName } from "../components/Icon";
 import { navigate } from "../lib/router";
 
 type Role = { id: string; icon: IconName; eyebrow: string; title: string; steps: ReactNode[] };
+/** Who to contact and the prefilled links to reach them. */
+export type HelpContact = { names: string[]; teams: string; email: string };
+const contactButton = "inline-flex min-h-10 items-center gap-2 rounded-lg px-4 py-2 text-[14px] font-semibold outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)";
 
 /**
  * "How PRISMA works" (`#/help`): one short guide per role and common questions, reached from the masthead's help button.
  * It never sits in the hero flow (search → grid → detail → viewer) and is not offered in present mode. `connected` adds
  * what only the Dataverse app does (librarian editing, Dataverse permissions); the PoC shows the shared basics.
  * Section shortcuts scroll instead of linking to `#id`, because the hash belongs to the router.
+ * `contact` (connected only) adds "Questions or something looks wrong?" with a Teams chat and an email to the PRISMA team.
  */
-export function HelpView({ connected = false, librarian = true }: { connected?: boolean; librarian?: boolean }) {
+export function HelpView({ connected = false, librarian = true, contact }: { connected?: boolean; librarian?: boolean; contact?: HelpContact }) {
   const roles: Role[] = [
     { id: "help-find", icon: "search", eyebrow: "Everyone · CSMs", title: "Find and present a solution", steps: [
       <>Search the <b>Library</b> by name, problem or technology, and narrow it with <b>Refine</b> (area, capability, industry, demo type and more).</>,
@@ -64,6 +68,7 @@ export function HelpView({ connected = false, librarian = true }: { connected?: 
     <p className="eyebrow mt-4">Help</p>
     <h1 id="help-title" className="mt-2 text-[28px] font-bold">How PRISMA works</h1>
     <p className="mt-2 max-w-[68ch] text-[15px] text-(--ink-2)">PRISMA is where Nextant keeps the demos, prototypes and products it has built, so anyone can find the right one and show it to a client.</p>
+    {contact && <button type="button" onClick={() => jump("help-contact")} className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-[14px] font-semibold text-(--accent)"><Icon name="message" size={15} />Questions or something looks wrong? Contact us</button>}
     <ol aria-label="How a solution gets into PRISMA" className="mt-5 grid gap-3 sm:grid-cols-3">
       {([["plus", "Share", "A team adds a solution it built."], ["shield", "Review", "A librarian checks it is complete and safe to show clients."], ["present", "Find & present", "Anyone at Nextant finds it and presents it live."]] as const).map(([icon, title, text], index) => <li key={title} className="flex items-start gap-3 rounded-[18px] border border-(--glass-edge) p-4">
         <span className="grid size-9 shrink-0 place-items-center rounded-full" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}><Icon name={icon} size={17} /></span>
@@ -101,5 +106,15 @@ export function HelpView({ connected = false, librarian = true }: { connected?: 
         </details>)}
       </div>
     </section>
+
+    {contact && <section id="help-contact" aria-labelledby="help-contact-title" className="glass glass-lite glass-sheen mt-8 scroll-mt-24 rounded-[24px] p-6 sm:p-8">
+      <p className="eyebrow">Contact</p>
+      <h2 id="help-contact-title" className="mt-1.5 text-[21px] font-bold">Questions or something looks wrong?</h2>
+      <p className="mt-2 max-w-[68ch] text-[15px] leading-relaxed text-(--ink-2)">If something in PRISMA seems inconsistent, a solution looks wrong, or you are not sure how something works, tell {contact.names.join(" or ")}. The message includes the page you were on, so add what you saw and what you expected.</p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <a href={contact.teams} target="_blank" rel="noopener noreferrer" className={contactButton} style={{ color: "var(--on-accent)", background: "var(--accent)" }}><Icon name="message" size={16} />Chat in Teams<span className="sr-only"> (opens in a new tab)</span></a>
+        <a href={contact.email} target="_blank" rel="noopener noreferrer" className={`${contactButton} border border-(--glass-edge) text-(--ink)`}><Icon name="mail" size={16} />Email us</a>
+      </div>
+    </section>}
   </section>;
 }
