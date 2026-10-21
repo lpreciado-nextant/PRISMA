@@ -13,7 +13,7 @@ import { filtersFromQuery, filtersToQuery } from "../../src/lib/search";
 import { useTheme } from "../../src/lib/theme";
 import { loadCatalogue, type CatalogueSolution } from "./catalogue";
 import { getAppLocation, getSignedInUser, getUserPhoto, readCatalogueGraph, readRows, workflowApi, favoriteApi, publishedDetails, suggestionApi } from "./dataSource";
-import { routeHash, type AppLocation } from "./deepLink";
+import { routeHash, shareUrl, type AppLocation } from "./deepLink";
 import { loadSubmissions, submissionFeedbackFields, workflowData } from "./workflow";
 import { addressSuggestion, loadOpenFeedback, loadSuggestions } from "./suggestions";
 import { feedbackKeys, recordServerAddressed, setAddressWriter, setFeedbackItems, suggestionFeedbackKey } from "../../src/lib/feedbackSeen";
@@ -24,6 +24,7 @@ import { FavoritesView } from "./FavoritesView";
 import { clearRecoveries } from "./draftRecovery";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { HelpView } from "../../src/views/HelpView";
+import { contactLinks, PRISMA_CONTACTS } from "./contact";
 
 // Contributor and librarian screens load on first use, keeping the CSM's library-to-viewer path lighter.
 const DraftsView = lazy(() => import("./DraftsView").then(module => ({ default: module.DraftsView })));
@@ -115,6 +116,9 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   }, [transitionComplete]);
   const route = useRoute();
   const previousPath = useRef(route.path);
+  // The last page before help, so a contact message says where the person was.
+  const [beforeHelp, setBeforeHelp] = useState(route.path === "/help" ? "/" : route.path);
+  if (route.path !== "/help" && route.path !== beforeHelp) setBeforeHelp(route.path);
   useEffect(() => {
     const controller = new AbortController();
     let authenticated = false;
@@ -304,7 +308,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
         : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
         : !present && segments.length === 3 && segments[0] === "review" && segments[2] === "edit" ? <DraftsView key={route.path} draftId={segments[1]} owner={user.userPrincipalName} librarian />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} technologyUse={technologyUse} />
-        : !present && route.path === "/help" ? <HelpView connected librarian={librarian} />
+        : !present && route.path === "/help" ? <HelpView connected librarian={librarian} contact={{ names: PRISMA_CONTACTS.map(person => person.name), ...contactLinks(PRISMA_CONTACTS, (appLocation && shareUrl(appLocation, beforeHelp)) || `#${beforeHelp}`) }} />
         : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
         : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} focused={focused} appLocation={appLocation}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id), saves: topSaves.get(solution.id.toLowerCase()) } : undefined} />

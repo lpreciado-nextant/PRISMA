@@ -11,6 +11,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Source | Progress |
 |---|---|---|---|
+| [2026-10-21](#2026-10-21--working-session-contact-from-the-help-page) | Contact from the help page | 🛠️ Own changes | 50% — 1 In code / 1 |
 | [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort; visual tweaks | 🛠️ Own changes | 85% — 2 Live, 3 Pending review / 5 |
 | [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 🛠️ Own changes | 100% — 15 Live / 15 |
 | [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 🛠️ Own changes | 100% — 5 Live / 5 |
@@ -68,6 +69,22 @@ When a decision above gets resolved, delete its bullet here and update the match
 ```
 
 ---
+
+## 2026-10-21 — Working session: contact from the help page
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 50% — 1 In code / 1
+
+### Feedback
+
+- People who find an inconsistency or have a question need a way to reach the PRISMA team (Luis or Juliana) from the app.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| Help page **Contact** card: Chat in Teams and Email us to Luis and Juliana, prefilled with a link to the page the person came from; a shortcut under the intro | In code | Branch `feat/help-contact`. Connected app only; contacts in [`contact.ts`](../../app/connected/src/contact.ts). No Dataverse table: links reach people at once, a form would need a table, Custom API and notifications ([design system](../design/design-system.md)). Next: publish the connected app, then check both links open from the hosted app |
 
 ## 2026-10-15 — Working session: librarian content editing and solution-level effort
 
