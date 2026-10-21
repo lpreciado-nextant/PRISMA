@@ -374,8 +374,8 @@ if (command == "inspect-librarian-edit")
     // Optional solution id: its contributors' stored hours and client fields, which decide whether the editor can continue.
     if (args.Length > 1 && Guid.TryParse(args[1], out var inspected))
     {
-        var record = client.Retrieve("nx_solution", inspected, new ColumnSet("nx_solutionname", "nx_clientcontext", "nx_clientcontextredacted", "nx_clientrole", "nx_librarianeditedon", "nx_librarianeditpending", "nx_reviewcomments"));
-        Console.WriteLine($"Solution '{record.GetAttributeValue<string>("nx_solutionname")}': client={(record.Contains("nx_clientcontext") ? "set" : "empty")}; redacted={(record.Contains("nx_clientcontextredacted") ? "set" : "empty")}; role={(record.Contains("nx_clientrole") ? "set" : "empty")}; librarian edited {(record.Contains("nx_librarianeditedon") ? record.GetAttributeValue<DateTime>("nx_librarianeditedon").ToString("u") : "never")}; pending={record.GetAttributeValue<bool>("nx_librarianeditpending")}");
+        var record = client.Retrieve("nx_solution", inspected, new ColumnSet("nx_solutionname", "nx_clientcontext", "nx_clientcontextredacted", "nx_librarianeditedon", "nx_librarianeditpending", "nx_reviewcomments"));
+        Console.WriteLine($"Solution '{record.GetAttributeValue<string>("nx_solutionname")}': client={(record.Contains("nx_clientcontext") ? "set" : "empty")}; redacted={(record.Contains("nx_clientcontextredacted") ? "set" : "empty")}; librarian edited {(record.Contains("nx_librarianeditedon") ? record.GetAttributeValue<DateTime>("nx_librarianeditedon").ToString("u") : "never")}; pending={record.GetAttributeValue<bool>("nx_librarianeditpending")}");
         var people = new QueryExpression("nx_solutioncontributor") { ColumnSet = new ColumnSet("nx_builtby", "nx_directhours") };
         people.Criteria.AddCondition("nx_solution", ConditionOperator.Equal, inspected);
         foreach (var person in client.RetrieveMultiple(people).Entities)
