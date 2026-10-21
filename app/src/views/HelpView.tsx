@@ -3,8 +3,8 @@ import { Icon, type IconName } from "../components/Icon";
 import { navigate } from "../lib/router";
 
 type Role = { id: string; icon: IconName; eyebrow: string; title: string; steps: ReactNode[] };
-/** Who to contact and the prefilled links to reach them. */
-export type HelpContact = { names: string[]; teams: string; email: string };
+/** Prefilled links to the PRISMA team. Who is on it is configured by the app, so the page never names people. */
+export type HelpContact = { teams: string; email: string };
 const contactButton = "inline-flex min-h-10 items-center gap-2 rounded-lg px-4 py-2 text-[14px] font-semibold outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)";
 
 /**
@@ -110,7 +110,7 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     {contact && <section id="help-contact" aria-labelledby="help-contact-title" className="glass glass-lite glass-sheen mt-8 scroll-mt-24 rounded-[24px] p-6 sm:p-8">
       <p className="eyebrow">Contact</p>
       <h2 id="help-contact-title" className="mt-1.5 text-[21px] font-bold">Questions or something looks wrong?</h2>
-      <p className="mt-2 max-w-[68ch] text-[15px] leading-relaxed text-(--ink-2)">If something in PRISMA seems inconsistent, a solution looks wrong, or you are not sure how something works, tell {contact.names.join(" or ")}. The message includes the page you were on, so add what you saw and what you expected.</p>
+      <p className="mt-2 max-w-[68ch] text-[15px] leading-relaxed text-(--ink-2)">If something in PRISMA seems inconsistent, a solution looks wrong, or you are not sure how something works, tell the PRISMA team. The message includes the page you were on, so add what you saw and what you expected.</p>
       <div className="mt-4 flex flex-wrap gap-3">
         <a href={contact.teams} target="_blank" rel="noopener noreferrer" className={contactButton} style={{ color: "var(--on-accent)", background: "var(--accent)" }}><Icon name="message" size={16} />Chat in Teams<span className="sr-only"> (opens in a new tab)</span></a>
         <a href={contact.email} target="_blank" rel="noopener noreferrer" className={`${contactButton} border border-(--glass-edge) text-(--ink)`}><Icon name="mail" size={16} />Email us</a>

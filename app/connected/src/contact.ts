@@ -1,4 +1,4 @@
-/** Who answers questions about PRISMA and reports of anything that looks wrong. Change the list here only. */
+/** The PRISMA team: who answers questions and reports of anything that looks wrong. Change the list here only; the help page never names them. */
 export const PRISMA_CONTACTS = [
   { name: "Luis", email: "lpreciado@nextant.com" },
   { name: "Juliana", email: "jcastelblanco@nextant.com" },

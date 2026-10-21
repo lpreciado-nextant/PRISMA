@@ -308,7 +308,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
         : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
         : !present && segments.length === 3 && segments[0] === "review" && segments[2] === "edit" ? <DraftsView key={route.path} draftId={segments[1]} owner={user.userPrincipalName} librarian />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} technologyUse={technologyUse} />
-        : !present && route.path === "/help" ? <HelpView connected librarian={librarian} contact={{ names: PRISMA_CONTACTS.map(person => person.name), ...contactLinks(PRISMA_CONTACTS, (appLocation && shareUrl(appLocation, beforeHelp)) || `#${beforeHelp}`) }} />
+        : !present && route.path === "/help" ? <HelpView connected librarian={librarian} contact={contactLinks(PRISMA_CONTACTS, (appLocation && shareUrl(appLocation, beforeHelp)) || `#${beforeHelp}`)} />
         : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
         : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} focused={focused} appLocation={appLocation}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id), saves: topSaves.get(solution.id.toLowerCase()) } : undefined} />

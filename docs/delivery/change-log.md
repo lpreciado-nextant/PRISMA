@@ -84,7 +84,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| Help page **Contact** card: Chat in Teams and Email us to Luis and Juliana, prefilled with a link to the page the person came from; a shortcut under the intro | In code | Branch `feat/help-contact`. Connected app only; contacts in [`contact.ts`](../../app/connected/src/contact.ts). No Dataverse table: links reach people at once, a form would need a table, Custom API and notifications ([design system](../design/design-system.md)). Next: publish the connected app, then check both links open from the hosted app |
+| Help page **Contact** card: Chat in Teams and Email us to the PRISMA team (today Luis and Juliana, listed only in `contact.ts`), prefilled with a link to the page the person came from; a shortcut under the intro | In code | Branch `feat/help-contact`. Connected app only; contacts in [`contact.ts`](../../app/connected/src/contact.ts). No Dataverse table: links reach people at once, a form would need a table, Custom API and notifications ([design system](../design/design-system.md)). Next: publish the connected app, then check both links open from the hosted app |
 
 ## 2026-10-15 — Working session: librarian content editing and solution-level effort
 
