@@ -38,7 +38,9 @@ export function submissionFacts(solution: Solution): ReviewFacts {
 }
 
 export function migrateSubmission(entry: SubmissionEntry & { changesRequested?: boolean }): SubmissionEntry {
-  const { solution } = entry;
+  // Submissions stored before client roles became N:N (PR-031) carry one optional `clientRole`.
+  const { clientRole, ...stored } = entry.solution as Solution & { clientRole?: string };
+  const solution: Solution = { ...stored, clientRoles: stored.clientRoles ?? (clientRole ? [clientRole] : []) };
   if (solution.reviewOutcome !== undefined) return { owner: entry.owner, solution };
   return {
     owner: entry.owner,

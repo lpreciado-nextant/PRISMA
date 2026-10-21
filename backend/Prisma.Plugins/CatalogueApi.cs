@@ -23,6 +23,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "areas")] public List<CatalogueArea> Areas { get; set; }
         [DataMember(Name = "technologies")] public List<string> Technologies { get; set; }
         [DataMember(Name = "industries")] public List<string> Industries { get; set; }
+        /// <summary>Target client roles (PR-031), by name. Client-safe, so present mode returns them too.</summary>
+        [DataMember(Name = "clientRoles")] public List<string> ClientRoles { get; set; }
         [DataMember(Name = "contributors", EmitDefaultValue = false)] public List<string> Contributors { get; set; }
         [DataMember(Name = "thumbnail", EmitDefaultValue = false)] public MediaSnapshot Thumbnail { get; set; }
         /// <summary>How many demo videos and interactive demos the solution has (ADR-0011); real whenever `purposes` is true.</summary>
@@ -55,7 +57,7 @@ namespace Prisma.Plugins
                 if (entries.ContainsKey(solution)) throw MediaPolicy.Invalid("The catalogue returned a solution twice. Retry the request.");
                 entries.Add(solution, new CatalogueEntry {
                     Id = solution.ToString("D"), Areas = new List<CatalogueArea>(), Technologies = new List<string>(), Industries = new List<string>(),
-                    Contributors = present ? null : new List<string>()
+                    ClientRoles = new List<string>(), Contributors = present ? null : new List<string>()
                 });
             }
         }
@@ -70,6 +72,7 @@ namespace Prisma.Plugins
 
         public void Technology(Guid solution, string name) { Add(solution, entry => entry.Technologies, name); }
         public void Industry(Guid solution, string name) { Add(solution, entry => entry.Industries, name); }
+        public void ClientRole(Guid solution, string name) { Add(solution, entry => entry.ClientRoles, name); }
 
         public void Contributor(Guid solution, string name)
         {
@@ -119,7 +122,7 @@ namespace Prisma.Plugins
     }
 
     /// <summary>
-    /// nx_GetCatalogueGraph: the areas, technologies, industries and (outside present mode) contributor names of every
+    /// nx_GetCatalogueGraph: the areas, technologies, industries, client roles and (outside present mode) contributor names of every
     /// published solution the caller can read, in a few paged queries instead of several requests per solution.
     /// Reads as the caller, so sharing and privileges decide what is returned, exactly like the per-solution reads.
     /// </summary>
@@ -150,6 +153,8 @@ namespace Prisma.Plugins
                 (solution, tag, row) => graph.Technology(solution, Aliased(row, "nx_technologyname") as string));
             Tags(caller, present, DraftGraph.Relationships[1], "nx_industry", new[] { "nx_industryname" },
                 (solution, tag, row) => graph.Industry(solution, Aliased(row, "nx_industryname") as string));
+            Tags(caller, present, DraftGraph.Relationships[4], "nx_clientrole", new[] { "nx_clientrolename" },
+                (solution, tag, row) => graph.ClientRole(solution, Aliased(row, "nx_clientrolename") as string));
             if (!present)
             {
                 var contributors = new QueryExpression("nx_solutioncontributor") { ColumnSet = new ColumnSet("nx_solution") };

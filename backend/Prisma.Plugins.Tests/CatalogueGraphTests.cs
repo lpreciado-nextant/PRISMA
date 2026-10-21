@@ -30,6 +30,20 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
+        public void ClientRolesAreReturnedInPresentModeToo()
+        {
+            var graph = new CatalogueGraph(new[] { Id(1), Id(2) }, true);
+            graph.ClientRole(Id(1), "Chief of Staff");
+            graph.ClientRole(Id(1), "Chief Financial Officer (CFO)");
+            graph.ClientRole(Id(9), "Late publication");
+            var result = graph.Build().Solutions;
+            Assert.Equal(new[] { "Chief of Staff", "Chief Financial Officer (CFO)" }, result[0].ClientRoles);
+            Assert.Empty(result[1].ClientRoles);
+            Assert.Null(result[0].Contributors);
+            Assert.Throws<InvalidPluginExecutionException>(() => graph.ClientRole(Id(1), " "));
+        }
+
+        [Fact]
         public void RowsForSolutionsOutsideTheReadAreIgnored()
         {
             var graph = new CatalogueGraph(new[] { Id(1) }, false);

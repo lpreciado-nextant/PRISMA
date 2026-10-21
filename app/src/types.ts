@@ -14,7 +14,7 @@ export type SolutionStatus =
   | "Live in production"
   | "Retired";
 
-/** `nx_solution.nx_clientrole` local choice labels (live 2026-09-23). Values are in CLIENT_ROLE_VALUES. */
+/** Names of the `nx_clientrole` reference rows (PR-031; were the `nx_solution.nx_clientrole` choice labels). The mock's list is CLIENT_ROLES. */
 export type ClientRole =
   | "Chief of Staff"
   | "Chief Executive Officer (CEO)"
@@ -96,8 +96,8 @@ export interface Solution {
   estimatedMinimumHours?: number;
   /** `nx_complexity`. Required at submission; internal only (never in present mode or the presentation download). */
   complexity?: Complexity;
-  /** `nx_clientrole` — the primary client role this solution supports. Optional, no default. Client-safe. */
-  clientRole?: ClientRole;
+  /** `nx_clientrole` names through the native N:N: every client role this solution supports. May be empty. Client-safe. */
+  clientRoles: string[];
   status: SolutionStatus;
   publicationStatus: PublicationStatus;
   reviewOutcome?: "None" | "Changes requested" | "Approved";

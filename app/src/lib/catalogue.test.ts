@@ -56,20 +56,23 @@ test("target client role filters any-of, survives the URL and is counted in the 
   const roles = ["Chief of Staff", "Business Unit Leader"];
   const matched = filterSolutions(SOLUTIONS, { ...EMPTY_FILTERS, roles });
   assert(matched.length > 0);
-  assert(matched.every((solution) => solution.clientRole && roles.includes(solution.clientRole)));
-  assert.equal(matched.length, SOLUTIONS.filter((solution) => solution.clientRole && roles.includes(solution.clientRole)).length);
+  assert(matched.every((solution) => solution.clientRoles.some((role) => roles.includes(role))));
+  assert.equal(matched.length, SOLUTIONS.filter((solution) => solution.clientRoles.some((role) => roles.includes(role))).length);
   const query = new URLSearchParams(Object.entries(filtersToQuery({ ...EMPTY_FILTERS, roles })).filter((entry): entry is [string, string] => entry[1] !== undefined));
   assert.deepEqual(filtersFromQuery(query).roles, roles);
-  assert.equal(facetCounts(SOLUTIONS, EMPTY_FILTERS, "roles").get("Chief of Staff"), SOLUTIONS.filter((solution) => solution.clientRole === "Chief of Staff").length);
+  assert.equal(facetCounts(SOLUTIONS, EMPTY_FILTERS, "roles").get("Chief of Staff"), SOLUTIONS.filter((solution) => solution.clientRoles.includes("Chief of Staff")).length);
+  // A solution with several roles shows under each of them.
+  const several = SOLUTIONS.find((solution) => solution.clientRoles.length > 1);
+  assert(several);
+  for (const role of several.clientRoles) assert(filterSolutions(SOLUTIONS, { ...EMPTY_FILTERS, roles: [role] }).includes(several));
 });
 
-test("client role choices mirror the live nx_clientrole values", async () => {
-  const { CLIENT_ROLE_VALUES, CLIENT_ROLES } = await import("../data/catalogueMetadata.ts");
+test("mock client roles mirror the live nx_clientrole rows", async () => {
+  const { CLIENT_ROLES } = await import("../data/catalogueMetadata.ts");
   assert.equal(CLIENT_ROLES.length, 14);
+  assert.equal(new Set(CLIENT_ROLES).size, 14);
   assert.equal(CLIENT_ROLES[0], "Chief of Staff");
-  assert.equal(CLIENT_ROLE_VALUES["Chief Financial Officer (CFO)"], 125060009);
-  assert.equal(new Set(Object.values(CLIENT_ROLE_VALUES)).size, 14);
-  assert(SOLUTIONS.every((solution) => !solution.clientRole || CLIENT_ROLES.includes(solution.clientRole)));
+  assert(SOLUTIONS.every((solution) => solution.clientRoles.every((role) => (CLIENT_ROLES as string[]).includes(role))));
 });
 
 test("the CSM is the contributor whose directory level names customer success", () => {

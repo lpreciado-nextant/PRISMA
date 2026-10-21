@@ -273,9 +273,11 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
               </dl>
             </SideSection>
 
-            {(solution.clientRole || solution.industries.length > 0 || clientLine) && <SideSection title="Business context">
+            {(solution.clientRoles.length > 0 || solution.industries.length > 0 || clientLine) && <SideSection title="Business context">
               <dl className="flex flex-col gap-3 text-[14px]">
-                {solution.clientRole && <Field label="Target role">{solution.clientRole}</Field>}
+                {solution.clientRoles.length > 0 && <Field label={solution.clientRoles.length > 1 ? "Target roles" : "Target role"}>
+                  <span className="flex flex-wrap gap-1.5">{solution.clientRoles.map((role) => <Chip key={role}>{role}</Chip>)}</span>
+                </Field>}
                 {solution.industries.length > 0 && <Field label={solution.industries.length > 1 ? "Industries" : "Industry"}>
                   <span className="flex flex-wrap gap-1.5">{solution.industries.map((industry) => <Chip key={industry}>{industry}</Chip>)}</span>
                 </Field>}

@@ -19,31 +19,13 @@ export const AREAS: Record<SpecializationArea, AreaMeta> = {
 };
 
 /**
- * `nx_clientrole` in live display order. Values are not ordinal (COO/CFO sit after CIO), so map by value, never
- * by position. The live "Director" label has a trailing space; compare values, not labels.
+ * The mock's `nx_clientrole` reference rows (PR-031), in the order the old choice showed them. The connected app reads
+ * the live table instead, where an administrator can add a role.
  */
-export const CLIENT_ROLE_VALUES: Record<ClientRole, number> = {
-  "Chief of Staff": 125060000,
-  "Chief Executive Officer (CEO)": 125060001,
-  "Chief Information Officer (CIO)": 125060002,
-  "Chief Operating Officer (COO)": 125060008,
-  "Chief Financial Officer (CFO)": 125060009,
-  "Enterprise Architect": 125060003,
-  "Solution Architect": 125060004,
-  "Product Owner": 125060005,
-  "Project Manager": 125060006,
-  "Business Unit Leader": 125060007,
-  "Operation Manager": 125060010,
-  "IT Manager": 125060011,
-  Director: 125060012,
-  Other: 125060013,
-};
-
-export const CLIENT_ROLES = Object.keys(CLIENT_ROLE_VALUES) as ClientRole[];
-
-/** Reverse of `CLIENT_ROLE_VALUES`, for a connected app that stores the numeric choice value. */
-export const CLIENT_ROLE_BY_VALUE: Record<number, ClientRole> = Object.fromEntries(
-  Object.entries(CLIENT_ROLE_VALUES).map(([label, value]) => [value, label]),
-) as Record<number, ClientRole>;
+export const CLIENT_ROLES: ClientRole[] = [
+  "Chief of Staff", "Chief Executive Officer (CEO)", "Chief Information Officer (CIO)", "Chief Operating Officer (COO)",
+  "Chief Financial Officer (CFO)", "Enterprise Architect", "Solution Architect", "Product Owner", "Project Manager",
+  "Business Unit Leader", "Operation Manager", "IT Manager", "Director", "Other",
+];
 
 export const AREA_ORDER: SpecializationArea[] = ["ai", "data", "ibo"];

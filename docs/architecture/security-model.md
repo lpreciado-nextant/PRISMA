@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Controlled lifecycle and approved code-app CSP configuration verified; effective non-admin acceptance pending · **Last updated:** 2026-10-15
+**Status:** Controlled lifecycle and approved code-app CSP configuration verified; effective non-admin acceptance pending · **Last updated:** 2026-10-21
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -26,7 +26,7 @@ See [code-app hosting policy](#code-app-hosting-policy) for browser execution re
 **Deployed ownership:** all 11 exported tables are UserOwned, including reference tables and Consultant. [Q8](../delivery/decision-log.md) retains these existing tables for the approved core-draft scope, with organization-level reference Read; do not recreate them. Solution child links use NoCascade for assign/share/unshare and RemoveLink for delete, so the parent-access contract requires explicit enforcement. Roles cannot grant 'published only' access as a row predicate: publication/unpublication must grant/revoke appropriate row and child access without exposing drafts through another API.
 
 - `nx_solution`, `nx_solutioncontributor`, `nx_demoasset`, `nx_solutionimage`, and `nx_demorequest` are **user/team-owned** (row-level security; contributor rows align with the Solution owner/team).
-- Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`) and `cr6b0_consultant` retain their live **user/team-owned** model; organization ownership was an earlier design assumption, not a migration instruction.
+- Reference tables (`nx_specializationarea`, `nx_capability`, `nx_technology`, `nx_industry`, and `nx_clientrole` since 2026-10-21) and `cr6b0_consultant` retain their live **user/team-owned** model; organization ownership was an earlier design assumption, not a migration instruction.
 - `cr6b0_project` retains its existing ownership/security model. Per [schema v2](../data_model/SchemaV2.md#security-model), the `Solution`↔`cr6b0_project` native N:N association is created/read/written by Contributors for Solutions they own, read by CSMs for detail context, and fully accessible to Librarians — there is no custom junction table, so this governs the relationship itself rather than a row on either side. Associating a Solution with a Project grants no access to the linked Project itself. Client engagement names are omitted in present mode.
 
 ## Field-level security

@@ -40,7 +40,7 @@ export function submissionSolution(record: Submission, names: Record<string, str
     challenges: core.challenges || undefined, lessonsLearned: core.lessonsLearned || undefined,
     ...(core.estimatedMinimumHours != null ? { estimatedMinimumHours: core.estimatedMinimumHours } : {}),
     ...(core.complexityValue != null ? { complexity: COMPLEXITY_BY_CHOICE[core.complexityValue] } : {}),
-    dateAdded: record.dateAdded ?? "", libraryNotes: record.libraryNotes, ...(record.librarianEditedOn ? { librarianEditedOn: record.librarianEditedOn } : {}), searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
+    dateAdded: record.dateAdded ?? "", libraryNotes: record.libraryNotes, ...(record.librarianEditedOn ? { librarianEditedOn: record.librarianEditedOn } : {}), searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], clientRoles: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
   };
 }
 export type WorkflowApi = {

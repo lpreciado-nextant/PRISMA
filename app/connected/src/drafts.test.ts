@@ -160,7 +160,7 @@ test("tab recovery is identity scoped, strips extras and requires renewed acknow
 });
 
 test("workflow rejects mismatched versions, unknown states and internal presentation projects", () => {
-  const graph = { id: draft.id, rowVersion: draft.rowVersion, graph: { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] } };
+  const graph = { id: draft.id, rowVersion: draft.rowVersion, graph: { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [] } };
   const detail = { record: { core: draft, areaIds: [], publication: 125060003, outcome: 125060000, comments: "", cleared: false }, graph, media: [], librarian: false };
   assert.deepEqual(parseSubmission(result(detail)), detail);
   assert.throws(() => parseSubmission(result({ ...detail, graph: { ...graph, rowVersion: "1" } })), /Mismatched/);
@@ -296,7 +296,7 @@ test("media upload advances exact versions and stops after cancellation", async 
 });
 
 test("graph response preserves nullable effort and string versions", () => {
-  const graph: DraftGraph = { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] };
+  const graph: DraftGraph = { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [spare] };
   const data = { id: "45dc1e23-1bb6-f111-aaac-6045bd049fba", rowVersion: "90071992547409932", graph };
   assert.deepEqual(parseGraph(result(data)), data);
   assert.equal(graphPayload(graph), JSON.stringify(graph));
@@ -304,6 +304,8 @@ test("graph response preserves nullable effort and string versions", () => {
   assert.throws(() => parseGraph(result({ ...data, graph: { ...graph, projectIds: ["bad"] } })), /identifiers/);
   assert.throws(() => parseGraph(result({ ...data, graph: { ...graph, areaIds: [spare, spare] } })), /identifiers/);
   assert.throws(() => parseGraph(result({ ...data, graph: { contributors: [], technologyIds: [], industryIds: [], projectIds: [] } })), /identifiers/);
+  assert.throws(() => parseGraph(result({ ...data, graph: { ...graph, clientRoleIds: undefined } })), /identifiers/);
+  assert.match(graphPayload(graph), new RegExp(`"clientRoleIds":\\["${spare}"\\]`));
 });
 
 const spare = "e7e7ffe9-ecb5-f111-aaac-6045bd049fba";
@@ -495,7 +497,7 @@ test("technology creation requires a matching identity and advanced exact versio
 });
 
 test("current contributor defaults only to one exact readable email match", () => {
-  const references = { people: [{ id: spare, name: "Consultant", email: "OWNER@example.com" }], technologies: [], industries: [], projects: [] };
+  const references = { people: [{ id: spare, name: "Consultant", email: "OWNER@example.com" }], technologies: [], industries: [], clientRoles: [], projects: [] };
   assert.equal(initialContributor(references, "owner@example.com").contributors[0].personId, spare);
   assert.equal(initialContributor(references, "unmapped@example.com").contributors.length, 0);
   assert.equal(initialContributor({ ...references, people: [...references.people, ...references.people] }, "owner@example.com").contributors.length, 0);

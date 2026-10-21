@@ -164,6 +164,13 @@ export const dataSourcesInfo = {
     "dataSourceType": "Dataverse",
     "apis": {}
   },
+  "nx_clientroles": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "nx_clientroleid",
+    "dataSourceType": "Dataverse",
+    "apis": {}
+  },
   "nx_demoassets": {
     "tableId": "",
     "version": "",

@@ -1,8 +1,5 @@
 import { readAll, type ReadRows } from "./catalogue.ts";
-import { CLIENT_ROLE_VALUES } from "../../src/data/catalogueMetadata.ts";
 import { COMPLEXITY_BY_CHOICE, MAX_ESTIMATED_HOURS } from "../../src/lib/effort.ts";
-
-const CLIENT_ROLE_VALUE_SET = new Set(Object.values(CLIENT_ROLE_VALUES));
 
 export const MATURITY_OPTIONS = [
   { value: 125060001, label: "Idea / concept" },
@@ -24,8 +21,6 @@ export interface CoreDraft {
   challenges: string;
   lessonsLearned: string;
   safetyAcknowledged: boolean;
-  /** `nx_solution.nx_clientrole` numeric choice value. Optional, no default. */
-  clientRoleValue?: number;
   /** `nx_estimatedminimumhours`: whole-hour estimate for the whole solution. Optional; internal only. */
   estimatedMinimumHours?: number;
   /** `nx_complexity` numeric choice value (Easy, Medium, Hard). Required at submission; internal only. */
@@ -68,7 +63,6 @@ export function snapshot(value: unknown): SavedDraft {
   if (TEXT_FIELDS.some(field => typeof row[field] !== "string") || typeof row.safetyAcknowledged !== "boolean"
     || !MATURITY_OPTIONS.some(option => option.value === row.maturity)
     || (row.capabilityId !== "" && !GUID.test(row.capabilityId as string))
-    || (row.clientRoleValue !== undefined && row.clientRoleValue !== null && !CLIENT_ROLE_VALUE_SET.has(row.clientRoleValue as number))
     || (row.estimatedMinimumHours !== undefined && row.estimatedMinimumHours !== null && (!Number.isInteger(row.estimatedMinimumHours) || (row.estimatedMinimumHours as number) < 0 || (row.estimatedMinimumHours as number) > MAX_ESTIMATED_HOURS))
     || (row.complexityValue !== undefined && row.complexityValue !== null && !COMPLEXITY_BY_CHOICE[row.complexityValue as number])) {
     throw new Error("Invalid core draft fields.");
@@ -83,7 +77,6 @@ export function coreFields(draft: CoreDraft): CoreDraft {
     clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
     challenges: draft.challenges, lessonsLearned: draft.lessonsLearned,
     safetyAcknowledged: draft.safetyAcknowledged,
-    ...(draft.clientRoleValue != null ? { clientRoleValue: draft.clientRoleValue } : {}),
     ...(draft.estimatedMinimumHours != null ? { estimatedMinimumHours: draft.estimatedMinimumHours } : {}),
     ...(draft.complexityValue != null ? { complexityValue: draft.complexityValue } : {}),
   };

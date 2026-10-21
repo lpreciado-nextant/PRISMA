@@ -8,7 +8,7 @@ import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, Submis
 import type { Solution, SpecializationArea } from "../../src/types";
 import { MAX_AREAS } from "../../src/lib/areas";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
-import { AREAS, CLIENT_ROLES, CLIENT_ROLE_VALUES, CLIENT_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata";
+import { AREAS } from "../../src/data/catalogueMetadata";
 import { DraftGraphEditor } from "./DraftGraphEditor";
 import { DraftMediaEditor } from "./DraftMediaEditor";
 import { draftApi, graphApi, mediaApi, readRows, workflowApi } from "./dataSource";
@@ -135,15 +135,17 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   // "Is this solution associated with a client?" Any client value already answers Yes. No clears the
   // client fields (so nothing hidden is saved); switching back to Yes restores them.
   const [clientChoice, setClientChoice] = useState<boolean | null>(null);
-  const clientStash = useRef<Pick<CoreDraft, "clientContext" | "clientContextRedacted" | "clientRoleValue"> | null>(null);
-  const clientAssociated = clientChoice ?? (draft.clientContext.trim() || draft.clientContextRedacted.trim() || draft.clientRoleValue != null ? true : undefined);
+  // Client roles live in the graph (nx_clientrole N:N), so the stash keeps them beside the two client texts.
+  const clientStash = useRef<{ text: Pick<CoreDraft, "clientContext" | "clientContextRedacted">; clientRoleIds: string[] } | null>(null);
+  const clientAssociated = clientChoice ?? (draft.clientContext.trim() || draft.clientContextRedacted.trim() || graph.clientRoleIds.length > 0 ? true : undefined);
   const setClientAssociated = (associated: boolean) => {
     setClientChoice(associated);
     const stash = associated ? clientStash.current : null;
-    if (!associated) clientStash.current = { clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted, clientRoleValue: draft.clientRoleValue };
+    if (!associated) clientStash.current = { text: { clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted }, clientRoleIds: graph.clientRoleIds };
     else clientStash.current = null;
     if (!associated || stash) {
-      setDraft(current => ({ ...current, safetyAcknowledged: false, ...(stash ?? { clientContext: "", clientContextRedacted: "", clientRoleValue: undefined }) }));
+      setDraft(current => ({ ...current, safetyAcknowledged: false, ...(stash?.text ?? { clientContext: "", clientContextRedacted: "" }) }));
+      setGraph(current => ({ ...current, clientRoleIds: stash?.clientRoleIds ?? [] }));
       if (status === "saved") setStatus("idle");
     }
   };
@@ -250,7 +252,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     id: saved?.id ?? "preview", name: draft.name, summary: draft.summary, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
     specializationArea: selectedAreas[0] ?? "ai", specializationAreas: selectedAreas, status: MATURITY_OPTIONS.find(option => option.value === draft.maturity)?.label as Solution["status"],
     publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted, challenges: draft.challenges, lessonsLearned: draft.lessonsLearned,
-    clientRole: draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : undefined,
+    clientRoles: (graphReferences.clientRoles ?? []).filter(option => graph.clientRoleIds.includes(option.id)).map(option => option.name),
     contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "", level: graphReferences.people?.find(option => option.id === person.personId)?.level } })),
     estimatedMinimumHours: draft.estimatedMinimumHours, complexity: draft.complexityValue != null ? COMPLEXITY_BY_CHOICE[draft.complexityValue] : undefined,
     dateAdded: "", searchKeywords: "", assets: [], capabilities: references.capabilities.filter(option => option.id === draft.capabilityId).map(option => option.name),
@@ -314,7 +316,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
               onComplexity={value => change("complexityValue", COMPLEXITIES.find(option => option.value === value)?.choice)} />
           </NamedSection>
           <ClientFields framed value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
-            role={draft.clientRoleValue != null ? CLIENT_ROLE_BY_VALUE[draft.clientRoleValue] : ""} roles={CLIENT_ROLES} onRole={value => change("clientRoleValue", value ? CLIENT_ROLE_VALUES[value] : undefined)}
+            selectedRoles={graph.clientRoleIds} roles={graphReferences.clientRoles?.map(option => option.id)} onRoles={clientRoleIds => changeGraph({ ...graph, clientRoleIds })}
+            getRoleLabel={id => graphReferences.clientRoles?.find(option => option.id === id)?.name ?? "Unavailable client role"}
             associated={clientAssociated} onAssociated={setClientAssociated} />
           <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={change} />
         </StepShell>}
