@@ -1,10 +1,9 @@
 import { DEMO_KINDS, type DemoKind } from "../../src/lib/assetPurpose.ts";
-import type { ClientRole, Solution, SolutionStatus, SpecializationArea } from "../../src/types.ts";
-import { CLIENT_ROLE_BY_VALUE } from "../../src/data/catalogueMetadata.ts";
+import type { Solution, SolutionStatus, SpecializationArea } from "../../src/types.ts";
 import type { IGetAllOptions } from "./generated/models/CommonModels.ts";
 import { parseMediaItem, type MediaItem } from "./media.ts";
 
-export type CatalogueTable = "solutions" | "areas" | "capabilities" | "technologies" | "industries" | "people" | "projects";
+export type CatalogueTable = "solutions" | "areas" | "capabilities" | "technologies" | "industries" | "clientRoles" | "people" | "projects";
 export type ReadRows = (table: CatalogueTable, options: IGetAllOptions) => Promise<{
   success: boolean;
   data: object[];
@@ -23,7 +22,7 @@ const SOLUTION_COLUMNS = [
   "nx_solutionid", "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes",
   "nx_businessvalue", "nx_status", "nx_publicationstatus",
   "nx_safetyacknowledged", "nx_clientsafereviewed", "nx_clientcontextredacted",
-  "nx_dateadded", "_nx_capability_value", "nx_clientrole", "createdon",
+  "nx_dateadded", "_nx_capability_value", "createdon",
 ];
 
 function value(row: object, key: string): unknown {
@@ -60,15 +59,6 @@ export function orderedAreas(rows: object[]): SpecializationArea[] {
   });
   if (new Set(areas.map(area => area.name)).size !== areas.length) throw new Error("A solution has a duplicate specialization area.");
   return areas.sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map(area => area.name);
-}
-
-/** `nx_clientrole` is optional; an unknown choice value means the app is out of date with Dataverse. */
-function clientRole(row: object): ClientRole | undefined {
-  const result = value(row, "nx_clientrole");
-  if (result === undefined || result === null) return undefined;
-  const role = typeof result === "number" ? CLIENT_ROLE_BY_VALUE[result] : undefined;
-  if (!role) throw new Error("A solution has an unsupported client role choice.");
-  return role;
 }
 
 function flag(row: object, key: string): boolean {
@@ -109,7 +99,7 @@ export async function readAll(read: ReadRows, table: CatalogueTable, options: IG
 
 /** `null`: the graph confirmed no thumbnail. Absent: unknown (older plug-in or per-solution read), so the card reads the detail. */
 /** `demoKinds` is present when the plug-in reports demo counts (ADR-0011); absent from an older plug-in. */
-export type CatalogueGraphEntry = { areas: SpecializationArea[]; technologies: string[]; industries: string[]; contributors?: string[]; thumbnail?: MediaItem | null; demoKinds?: DemoKind[] };
+export type CatalogueGraphEntry = { areas: SpecializationArea[]; technologies: string[]; industries: string[]; clientRoles: string[]; contributors?: string[]; thumbnail?: MediaItem | null; demoKinds?: DemoKind[] };
 export type CatalogueSolution = Solution & { cardThumbnail?: MediaItem | null };
 export type ReadCatalogueGraph = (present: boolean, signal: AbortSignal) => Promise<Map<string, CatalogueGraphEntry>>;
 
@@ -147,7 +137,7 @@ export function parseCatalogueGraph(result: { success: boolean; data: Record<str
     };
     const demoKinds = parsed.purposes === true ? DEMO_KINDS.filter(kind => count(kind === "Demo video" ? "demoVideos" : "interactiveDemos") > 0) : undefined;
     graph.set(solutionId, {
-      areas: orderedAreas(areas), technologies: names("technologies"), industries: names("industries"), ...(present ? {} : { contributors: names("contributors") }),
+      areas: orderedAreas(areas), technologies: names("technologies"), industries: names("industries"), clientRoles: names("clientRoles"), ...(present ? {} : { contributors: names("contributors") }),
       ...(parsed.thumbnails === true ? { thumbnail: thumbnail === undefined ? null : graphThumbnail(thumbnail) } : {}),
       ...(demoKinds ? { demoKinds } : {}),
     });
@@ -167,7 +157,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
   const controller = new AbortController();
   const activeSignal = AbortSignal.any([signal, controller.signal]);
   const readTags = async (solutionId: string): Promise<CatalogueGraphEntry> => {
-    const [areas, technologies, industries, contributors] = await Promise.all([
+    const [areas, technologies, industries, clientRoles, contributors] = await Promise.all([
       readAll(read, "areas", {
         select: ["nx_specializationareaid", "nx_specializationareaname", "nx_sortordernumber"],
         filter: `nx_Solution_nx_SpecializationArea_nx_SpecializationArea/any(solution:solution/nx_solutionid eq ${solutionId})`,
@@ -183,12 +173,18 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
         filter: `nx_Solution_nx_Industry_nx_Industry/any(solution:solution/nx_solutionid eq ${solutionId})`,
         orderBy: ["nx_industryid asc"],
       }, activeSignal),
+      readAll(read, "clientRoles", {
+        select: ["nx_clientroleid", "nx_clientrolename"],
+        filter: `nx_ClientRole_nx_Solution_nx_Solution/any(solution:solution/nx_solutionid eq ${solutionId})`,
+        orderBy: ["nx_clientroleid asc"],
+      }, activeSignal),
       readCredits?.(solutionId, present, activeSignal),
     ]);
     return {
       areas: orderedAreas(areas),
       technologies: technologies.map(tag => text(tag, "nx_technologyname", true)),
       industries: industries.map(tag => text(tag, "nx_industryname", true)),
+      clientRoles: clientRoles.map(tag => text(tag, "nx_clientrolename", true)),
       contributors,
     };
   };
@@ -208,7 +204,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
     const bulk = graph?.get(solutionId);
     const tags = bulk ? { ...bulk, contributors: present ? [] : bulk.contributors } : await readTags(solutionId);
     activeSignal.throwIfAborted();
-    const { areas: specializationAreas, technologies, industries, contributors: contributorNames, thumbnail } = tags;
+    const { areas: specializationAreas, technologies, industries, clientRoles, contributors: contributorNames, thumbnail } = tags;
     const demoKinds = "demoKinds" in tags ? tags.demoKinds : undefined;
     if (contributorNames && contributorNames.some(name => typeof name !== "string" || !name.trim())) throw new Error("Invalid contributor search projection.");
     return {
@@ -234,7 +230,7 @@ export async function loadCatalogue(read: ReadRows, present: boolean, signal: Ab
       capabilities: [capability],
       technologies,
       industries,
-      clientRole: clientRole(row),
+      clientRoles,
       contributors: [],
       ...(contributorNames ? { contributorNames } : {}),
       ...(thumbnail !== undefined ? { cardThumbnail: thumbnail } : {}),

@@ -148,6 +148,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       ["people", "cr6b0_consultantid", "cr6b0_consultantname"], ["projects", "cr6b0_projectid", "cr6b0_projecttitle"],
       ["technologies", "nx_technologyid", "nx_technologyname"], ["industries", "nx_industryid", "nx_industryname"],
       ["areas", "nx_specializationareaid", "nx_specializationareaname"], ["capabilities", "nx_capabilityid", "nx_capabilityname"],
+      ["clientRoles", "nx_clientroleid", "nx_clientrolename"],
     ] as const;
     void Promise.all(definitions.map(async ([table, primary, label]) => {
       try { return (await readAll(readRows, table, { select: [primary, label, ...(table === "people" ? ["cr6b0_email", "cr6b0_consultantlevel"] : [])], filter: "statecode eq 0" }, controller.signal)).flatMap(row => {
@@ -196,7 +197,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   if (preview) return <MediaPreview key={preview.id} item={preview} solutionId={core.id} mode="submission" viewerTitle={core.name} onClose={() => setPreview(null)} />;
   const graph = state.graph.graph;
   const thumbnail = state.media.find(item => item.kind === "thumbnail" && item.complete);
-  const solution: Solution = { ...submissionSolution(state.record, names), technologies: graph.technologyIds.map(id => names[id] ?? "Unavailable technology"), industries: graph.industryIds.map(id => names[id] ?? "Unavailable industry"), projects: graph.projectIds.map(id => ({ id, projectName: names[id] ?? `Untitled project (${id.slice(0, 8)})` })), assets: state.media.filter(item => item.kind === "attachment" && item.complete).map(mediaAsset) };
+  const solution: Solution = { ...submissionSolution(state.record, names), technologies: graph.technologyIds.map(id => names[id] ?? "Unavailable technology"), industries: graph.industryIds.map(id => names[id] ?? "Unavailable industry"), clientRoles: graph.clientRoleIds.map(id => names[id] ?? "Unavailable client role"), projects: graph.projectIds.map(id => ({ id, projectName: names[id] ?? `Untitled project (${id.slice(0, 8)})` })), assets: state.media.filter(item => item.kind === "attachment" && item.complete).map(mediaAsset) };
   const effort = { contributors: graph.contributors.map(person => ({ name: names[person.personId] ?? "Unavailable consultant", email: emails[person.personId], level: levels[person.personId] })) };
   // Shown when there is something to read, or on a published record (where "no suggestions yet" is meaningful).
   // Open feedback items (librarian comment, suggestions), each confirmed on its own; the heading shows a bubble while any is open.

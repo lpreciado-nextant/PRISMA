@@ -287,7 +287,8 @@ type IdentityProps<Area extends string, Status extends string, Role extends stri
   value: IdentityText; onText: (key: keyof IdentityText, value: string) => void;
   area?: Area; areas: { value: Area; label: string }[]; onArea?: (value: Area) => void;
   status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void;
-  role?: Role | ""; roles?: readonly Role[]; onRole?: (value: Role | "") => void;
+  /** Target client roles (native N:N, PR-031): any number of `roles`, labelled by `getRoleLabel`. */
+  selectedRoles?: Role[]; roles?: readonly Role[]; onRoles?: (value: Role[]) => void; getRoleLabel?: (value: Role) => string;
   /** Multi-valued mode (native N:N). When set, replaces the single-area picker. */
   selectedAreas?: Area[]; onAreas?: (value: Area[]) => void; maxAreas?: number;
 };
@@ -295,7 +296,7 @@ type IdentityProps<Area extends string, Status extends string, Role extends stri
 /** Name, summary, area and status. \`grouped\` splits them into labelled subsections inside a section card. */
 /** Pass `selectedAreas` + `onAreas` for N:N specialization areas (up to `maxAreas`); otherwise `area` + `onArea` pick one. */
 /** Omit `onStatus` to leave Status out (the guided flow asks it under Solution context, through `StatusField`). */
-export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "role" | "roles" | "onRole" | "status" | "statuses" | "onStatus"> & Partial<Pick<IdentityProps<Area, Status, string>, "status" | "statuses" | "onStatus">> & { grouped?: boolean }) {
+export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "selectedRoles" | "roles" | "onRoles" | "getRoleLabel" | "status" | "statuses" | "onStatus"> & Partial<Pick<IdentityProps<Area, Status, string>, "status" | "statuses" | "onStatus">> & { grouped?: boolean }) {
   const toggleArea = (option: Area) => {
     if (!selectedAreas || !onAreas) return;
     if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));
@@ -326,7 +327,7 @@ export function StatusField<Status extends string>({ status, statuses, onStatus 
  * Target role, internal client name and anonymous profile. Fields carry their own badges because their visibility differs.
  * Pass `associated` + `onAssociated` to ask "Is this solution associated with a client?" first and show the fields only on Yes.
  */
-export function ClientFields<Role extends string>({ value, onText, role, roles, onRole, framed = false, associated, onAssociated }: Pick<IdentityProps<string, string, Role>, "value" | "onText" | "role" | "roles" | "onRole"> & { framed?: boolean; associated?: boolean; onAssociated?: (associated: boolean) => void }) {
+export function ClientFields<Role extends string>({ value, onText, selectedRoles = [], roles, onRoles, getRoleLabel = role => role, framed = false, associated, onAssociated }: Pick<IdentityProps<string, string, Role>, "value" | "onText" | "selectedRoles" | "roles" | "onRoles" | "getRoleLabel"> & { framed?: boolean; associated?: boolean; onAssociated?: (associated: boolean) => void }) {
   const asked = onAssociated !== undefined;
   const question = asked && <fieldset className="min-w-0">
     <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Is this solution associated with a client?<RequiredMark /></legend>
@@ -335,8 +336,8 @@ export function ClientFields<Role extends string>({ value, onText, role, roles, 
     </label>)}</div>
   </fieldset>;
   const fields = (!asked || associated) && <>
-    {onRole && roles && <FormSubsection title="Audience">
-      <Field label="Target client role" optional badge={<VisibilityBadge visibility="client" />} hint="Select the primary client role this solution is designed to support."><SelectPicker label="Target client role" value={role ?? ""} options={role ? ["", ...roles] : roles} onChange={onRole} getLabel={option => option || "No specific role"} placeholder="e.g. Chief of Staff" /></Field>
+    {onRoles && roles && <FormSubsection title="Audience">
+      <Field label="Target client roles" optional badge={<VisibilityBadge visibility="client" />} hint="Select every client role this solution is designed to support."><div role="group" aria-label="Target client roles" className="flex flex-wrap gap-2">{roles.map(option => <Chip key={option} active={selectedRoles.includes(option)} pressed={selectedRoles.includes(option)} onClick={() => onRoles(selectedRoles.includes(option) ? selectedRoles.filter(entry => entry !== option) : [...selectedRoles, option])}>{getRoleLabel(option)}</Chip>)}</div></Field>
     </FormSubsection>}
     <FormSubsection title="Client details">
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
@@ -350,10 +351,10 @@ export function ClientFields<Role extends string>({ value, onText, role, roles, 
 }
 
 /** The single-page identity step used by the connected app: details followed by a framed Client card. */
-export function IdentityFields<Area extends string, Status extends string, Role extends string = string>({ role, roles, onRole, ...details }: IdentityProps<Area, Status, Role>) {
+export function IdentityFields<Area extends string, Status extends string, Role extends string = string>({ selectedRoles, roles, onRoles, getRoleLabel, ...details }: IdentityProps<Area, Status, Role>) {
   return <>
     <SolutionDetailsFields {...details} />
-    <ClientFields value={details.value} onText={details.onText} role={role} roles={roles} onRole={onRole} framed />
+    <ClientFields value={details.value} onText={details.onText} selectedRoles={selectedRoles} roles={roles} onRoles={onRoles} getRoleLabel={getRoleLabel} framed />
   </>;
 }
 

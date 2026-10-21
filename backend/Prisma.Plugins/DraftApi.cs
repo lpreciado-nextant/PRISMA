@@ -101,7 +101,6 @@ namespace Prisma.Plugins
                 Challenges = record.GetAttributeValue<string>("nx_challenges") ?? "",
                 LessonsLearned = record.GetAttributeValue<string>("nx_lessonslearned") ?? "",
                 SafetyAcknowledged = record.GetAttributeValue<bool>("nx_safetyacknowledged"),
-                ClientRoleValue = record.GetAttributeValue<OptionSetValue>("nx_clientrole")?.Value,
                 EstimatedMinimumHours = record.GetAttributeValue<int?>("nx_estimatedminimumhours"),
                 ComplexityValue = record.GetAttributeValue<OptionSetValue>("nx_complexity")?.Value
             };
@@ -132,7 +131,6 @@ namespace Prisma.Plugins
         [DataMember(Name = "challenges")] public string Challenges { get; set; }
         [DataMember(Name = "lessonsLearned")] public string LessonsLearned { get; set; }
         [DataMember(Name = "safetyAcknowledged")] public bool SafetyAcknowledged { get; set; }
-        [DataMember(Name = "clientRoleValue", EmitDefaultValue = false)] public int? ClientRoleValue { get; set; }
         /// <summary>`nx_estimatedminimumhours`: whole-hour estimate for the whole solution. Internal only.</summary>
         [DataMember(Name = "estimatedMinimumHours", EmitDefaultValue = false)] public int? EstimatedMinimumHours { get; set; }
         /// <summary>`nx_complexity`: Easy, Medium or Hard. Internal only.</summary>

@@ -69,7 +69,7 @@ function haystack(s: Solution): string {
     ...s.capabilities,
     ...s.technologies,
     ...s.industries,
-    s.clientRole ?? "",
+    ...s.clientRoles,
   ]
     .join(" ")
     .toLowerCase();
@@ -100,7 +100,8 @@ function matchesFacets(s: Solution, f: Filters): boolean {
     f.capabilities.every((c) => s.capabilities.includes(c)) &&
     f.technologies.every((t) => s.technologies.includes(t)) &&
     f.industries.every((i) => s.industries.includes(i)) &&
-    (f.roles.length === 0 || (s.clientRole !== undefined && f.roles.includes(s.clientRole))) &&
+    // Any of the chosen roles matches: a solution aimed at the CFO shows under "CFO or CIO".
+    (f.roles.length === 0 || s.clientRoles.some((r) => f.roles.includes(r))) &&
     f.demos.every((d) => (solutionDemos(s) as string[]).includes(d)) &&
     addedWithin(s, f.added)
   );
@@ -113,7 +114,7 @@ export function filterSolutions(all: Solution[], f: Filters): Solution[] {
 export type FacetKey = "demos" | "capabilities" | "technologies" | "industries" | "roles";
 
 function facetValues(s: Solution, key: FacetKey): string[] {
-  if (key === "roles") return s.clientRole ? [s.clientRole] : [];
+  if (key === "roles") return s.clientRoles;
   if (key === "demos") return solutionDemos(s);
   return s[key];
 }

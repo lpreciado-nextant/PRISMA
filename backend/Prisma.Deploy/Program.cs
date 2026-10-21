@@ -13,7 +13,7 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns", "inspect-plugin-traces" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns", "inspect-plugin-traces", "inspect-client-roles", "migrate-client-roles" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
@@ -395,6 +395,89 @@ if (command == "inspect-librarian-edit")
     Console.WriteLine("Read-only inspection. No changes made.");
     return;
 }
+if (command == "inspect-client-roles")
+{
+    // Read-only (PR-031): the client-role reference table, its N:N with nx_solution, PRISMA_Dev membership, rows and PRISMA role privileges.
+    var solutionId = Find(client, "solution", "uniquename", solutionName)?.Id ?? throw new InvalidOperationException("PRISMA_Dev is missing.");
+    bool InSolution(Guid? metadataId)
+    {
+        var component = new QueryExpression("solutioncomponent") { ColumnSet = new ColumnSet(false), TopCount = 1 };
+        component.Criteria.AddCondition("solutionid", ConditionOperator.Equal, solutionId);
+        component.Criteria.AddCondition("objectid", ConditionOperator.Equal, metadataId);
+        return client.RetrieveMultiple(component).Entities.Count == 1;
+    }
+    var parent = ((RetrieveEntityResponse)client.Execute(new RetrieveEntityRequest { LogicalName = "nx_solution", EntityFilters = EntityFilters.Relationships, RetrieveAsIfPublished = false })).EntityMetadata;
+    var candidates = new HashSet<string>();
+    foreach (var relationship in parent.ManyToManyRelationships.OrderBy(relationship => relationship.SchemaName))
+    {
+        var other = relationship.Entity1LogicalName == "nx_solution" ? relationship.Entity2LogicalName : relationship.Entity1LogicalName;
+        var candidate = other.Contains("role");
+        if (candidate) candidates.Add(other);
+        Console.WriteLine($"N:N {relationship.SchemaName}: nx_solution <-> {other}; intersect={relationship.IntersectEntityName}; inPRISMA_Dev={InSolution(relationship.MetadataId)}{(candidate ? "  <-- client role" : "")}");
+    }
+    if (candidates.Count == 0) Console.WriteLine("No N:N from nx_solution to a table whose name contains 'role'.");
+    var roles = new QueryExpression("role") { ColumnSet = new ColumnSet("name") };
+    roles.Criteria.AddCondition("name", ConditionOperator.In, "PRISMA Contributor", "PRISMA CSM", "PRISMA Librarian");
+    roles.Criteria.AddCondition("parentroleid", ConditionOperator.Null);
+    var prismaRoles = client.RetrieveMultiple(roles).Entities;
+    foreach (var name in candidates)
+    {
+        var table = Metadata(client, name);
+        Console.WriteLine($"Table {name}: schema={table.SchemaName}; primary name={table.PrimaryNameAttribute}; ownership={table.OwnershipType}; inPRISMA_Dev={InSolution(table.MetadataId)}");
+        var rows = new QueryExpression(name) { ColumnSet = new ColumnSet(table.PrimaryNameAttribute, "statecode") };
+        rows.Orders.Add(new OrderExpression(table.PrimaryNameAttribute, OrderType.Ascending));
+        foreach (var row in client.RetrieveMultiple(rows).Entities)
+            Console.WriteLine($"  row {row.Id}: {row.GetAttributeValue<string>(table.PrimaryNameAttribute)}{(row.GetAttributeValue<OptionSetValue>("statecode")?.Value == 1 ? " (inactive)" : "")}");
+        var privileges = table.Privileges.ToDictionary(privilege => privilege.PrivilegeId, privilege => privilege.PrivilegeType);
+        foreach (var role in prismaRoles)
+        {
+            var granted = new QueryExpression("roleprivileges") { ColumnSet = new ColumnSet("privilegeid", "privilegedepthmask") };
+            granted.Criteria.AddCondition("roleid", ConditionOperator.Equal, role.Id);
+            granted.Criteria.AddCondition("privilegeid", ConditionOperator.In, privileges.Keys.Cast<object>().ToArray());
+            static string Depth(int mask) => mask switch { 1 => "User", 2 => "Business unit", 4 => "Parent: child BU", 8 => "Organization", _ => mask.ToString() };
+            var list = client.RetrieveMultiple(granted).Entities.Select(grant => $"{privileges[grant.GetAttributeValue<Guid>("privilegeid")]}={Depth(grant.GetAttributeValue<int>("privilegedepthmask"))}").OrderBy(text => text);
+            Console.WriteLine($"  role '{role.GetAttributeValue<string>("name")}': {string.Join(", ", list.DefaultIfEmpty("none"))}");
+        }
+    }
+    Console.WriteLine("Read-only inspection. No changes made.");
+    return;
+}
+if (command == "migrate-client-roles")
+{
+    // PR-031: copies each solution's nx_clientrole choice into the nx_clientrole N:N, matching the choice label to the row name.
+    // Preview by default. Run --execute before deploying the plug-in that guards the relationship, then delete the column.
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "--execute")) throw new ArgumentException("Use migrate-client-roles [--execute]; preview is read-only.");
+    const string relationship = "nx_ClientRole_nx_Solution_nx_Solution";
+    PicklistAttributeMetadata column;
+    try { column = (PicklistAttributeMetadata)((RetrieveAttributeResponse)client.Execute(new RetrieveAttributeRequest { EntityLogicalName = "nx_solution", LogicalName = "nx_clientrole", RetrieveAsIfPublished = false })).AttributeMetadata; }
+    catch (Exception error) { Console.WriteLine($"nx_solution.nx_clientrole is gone ({error.Message}). Nothing to migrate."); return; }
+    var labels = column.OptionSet.Options.ToDictionary(option => option.Value!.Value, option => option.Label?.UserLocalizedLabel?.Label?.Trim() ?? "");
+    var roleRows = client.RetrieveMultiple(new QueryExpression("nx_clientrole") { ColumnSet = new ColumnSet("nx_clientrolename") }).Entities
+        .GroupBy(row => (row.GetAttributeValue<string>("nx_clientrolename") ?? "").Trim(), StringComparer.OrdinalIgnoreCase)
+        .ToDictionary(group => group.Key, group => group.Count() == 1 ? group.Single().Id : throw new InvalidOperationException($"Two nx_clientrole rows are named '{group.Key}'."), StringComparer.OrdinalIgnoreCase);
+    foreach (var label in labels.Values.Where(label => !roleRows.ContainsKey(label))) Console.WriteLine($"Choice '{label}' has no nx_clientrole row with that name; its solutions are skipped.");
+    var relation = (ManyToManyRelationshipMetadata)((RetrieveRelationshipResponse)client.Execute(new RetrieveRelationshipRequest { Name = relationship })).RelationshipMetadata;
+    var solutionSide = relation.Entity1LogicalName == "nx_solution" ? relation.Entity1IntersectAttribute : relation.Entity2IntersectAttribute;
+    var roleSide = relation.Entity1LogicalName == "nx_solution" ? relation.Entity2IntersectAttribute : relation.Entity1IntersectAttribute;
+    var linked = client.RetrieveMultiple(new QueryExpression(relation.IntersectEntityName) { ColumnSet = new ColumnSet(solutionSide, roleSide) }).Entities
+        .Select(row => (row.GetAttributeValue<Guid>(solutionSide), row.GetAttributeValue<Guid>(roleSide))).ToHashSet();
+    var tagged = new QueryExpression("nx_solution") { ColumnSet = new ColumnSet("nx_solutionname", "nx_clientrole", "nx_publicationstatus") };
+    tagged.Criteria.AddCondition("nx_clientrole", ConditionOperator.NotNull);
+    var plan = new List<(Guid Solution, Guid Role)>();
+    foreach (var row in client.RetrieveMultiple(tagged).Entities)
+    {
+        var label = labels.GetValueOrDefault(row.GetAttributeValue<OptionSetValue>("nx_clientrole").Value, "(unknown choice)");
+        var state = !roleRows.TryGetValue(label, out var role) ? "SKIPPED, no matching row" : linked.Contains((row.Id, role)) ? "already linked" : "to link";
+        if (state == "to link") plan.Add((row.Id, role));
+        Console.WriteLine($"  '{row.GetAttributeValue<string>("nx_solutionname")}' {row.Id} (publication {row.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value}): {label} — {state}");
+    }
+    Console.WriteLine($"{plan.Count} link(s) to create.");
+    if (args.Length == 1) { Console.WriteLine("Preview only. --execute requires explicit approval."); return; }
+    foreach (var (solution, role) in plan)
+        client.Associate("nx_solution", solution, new Relationship(relationship), new EntityReferenceCollection { new EntityReference("nx_clientrole", role) });
+    Console.WriteLine($"Created {plan.Count} link(s). nx_solution.nx_clientrole was not changed.");
+    return;
+}
 if (command == "inspect-asset-columns")
 {
     foreach (var name in new[] { "nx_demoassetid1", "nx_externalurl", "nx_embedhint", "nx_filemedia" })
@@ -668,7 +751,7 @@ foreach (var roleName in new[] { "PRISMA Contributor", "PRISMA CSM", "PRISMA Lib
             (roleName != "PRISMA CSM" && new[] { PrivilegeType.Create, PrivilegeType.Write, PrivilegeType.Append }.Contains(privilege.PrivilegeType));
         if (allowed) privileges.Add(new RolePrivilege((int)(roleName == "PRISMA Librarian" ? PrivilegeDepth.Global : PrivilegeDepth.Basic), privilege.PrivilegeId));
     }
-    foreach (var table in new[] { "nx_specializationarea", "nx_capability", "nx_technology", "nx_industry" })
+    foreach (var table in new[] { "nx_specializationarea", "nx_capability", "nx_technology", "nx_industry", "nx_clientrole" })
         foreach (var privilege in Metadata(client, table).Privileges)
             if (privilege.PrivilegeType == PrivilegeType.Read || (roleName != "PRISMA CSM" && privilege.PrivilegeType == PrivilegeType.AppendTo))
                 privileges.Add(new RolePrivilege((int)PrivilegeDepth.Global, privilege.PrivilegeId));

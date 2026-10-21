@@ -7,6 +7,7 @@ import { Nx_specializationareasService } from "./generated/services/Nx_specializ
 import { Nx_capabilitiesService } from "./generated/services/Nx_capabilitiesService";
 import { Nx_technologiesService } from "./generated/services/Nx_technologiesService";
 import { Nx_industriesService } from "./generated/services/Nx_industriesService";
+import { Nx_clientrolesService } from "./generated/services/Nx_clientrolesService";
 import { Nx_SaveCoreDraftService } from "./generated/services/Nx_SaveCoreDraftService";
 import { Nx_GetMyCoreDraftsService } from "./generated/services/Nx_GetMyCoreDraftsService";
 import type { DraftApi } from "./drafts";
@@ -153,6 +154,7 @@ export const readRows: ReadRows = (table, options) => {
     case "capabilities": return Nx_capabilitiesService.getAll(options);
     case "technologies": return Nx_technologiesService.getAll(options);
     case "industries": return Nx_industriesService.getAll(options);
+    case "clientRoles": return Nx_clientrolesService.getAll(options);
     case "people": return Cr6b0_consultantsService.getAll(options);
     case "projects": return Cr6b0_projectsService.getAll(options);
   }

@@ -22,6 +22,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "industryIds", IsRequired = true)] public List<string> IndustryIds { get; set; }
         [DataMember(Name = "projectIds", IsRequired = true)] public List<string> ProjectIds { get; set; }
         [DataMember(Name = "areaIds", IsRequired = true)] public List<string> AreaIds { get; set; }
+        /// <summary>Target client roles (PR-031). Optional on input: clients built before it omit the field, and their saves leave the stored roles alone.</summary>
+        [DataMember(Name = "clientRoleIds", EmitDefaultValue = false)] public List<string> ClientRoleIds { get; set; }
     }
 
     [DataContract]
@@ -38,7 +40,7 @@ namespace Prisma.Plugins
         public const string ReadMessage = "nx_GetDraftGraph";
         public static readonly string[] Relationships = {
             "nx_Solution_nx_Technology_nx_Technology", "nx_Solution_nx_Industry_nx_Industry", "nx_Solution_cr6b0_Project_cr6b0_Project",
-            "nx_Solution_nx_SpecializationArea_nx_SpecializationArea"
+            "nx_Solution_nx_SpecializationArea_nx_SpecializationArea", "nx_ClientRole_nx_Solution_nx_Solution"
         };
 
         public static DraftGraphInput Parse(string json)
@@ -51,7 +53,7 @@ namespace Prisma.Plugins
                 using (var reader = JsonReaderWriterFactory.CreateJsonReader(bytes, new XmlDictionaryReaderQuotas { MaxDepth = 12, MaxStringContentLength = 200000, MaxArrayLength = 200000 }))
                 {
                     var root = XElement.Load(reader);
-                    CheckFields(root, "contributors", "technologyIds", "industryIds", "projectIds", "areaIds");
+                    CheckFields(root, "contributors", "technologyIds", "industryIds", "projectIds", "areaIds", "clientRoleIds");
                     var contributors = root.Element("contributors");
                     if (contributors != null)
                         // startDate, endDate, allocation and roleValue are retired; clients built before that still send them, and they are ignored.
@@ -69,6 +71,7 @@ namespace Prisma.Plugins
             Identifiers(input.IndustryIds);
             Identifiers(input.ProjectIds);
             Identifiers(input.AreaIds);
+            if (input.ClientRoleIds != null) Identifiers(input.ClientRoleIds);
             return input;
         }
 
@@ -99,7 +102,8 @@ namespace Prisma.Plugins
                     TechnologyIds = Links(caller, parent.Id, Relationships[0]).Select(identifier => identifier.ToString()).ToList(),
                     IndustryIds = Links(caller, parent.Id, Relationships[1]).Select(identifier => identifier.ToString()).ToList(),
                     ProjectIds = Links(caller, parent.Id, Relationships[2]).Select(identifier => identifier.ToString()).ToList(),
-                    AreaIds = AreaIds(caller, parent.Id)
+                    AreaIds = AreaIds(caller, parent.Id),
+                    ClientRoleIds = Links(caller, parent.Id, Relationships[4]).Select(identifier => identifier.ToString()).ToList()
                 }
             };
         }
@@ -130,14 +134,16 @@ namespace Prisma.Plugins
             SyncLinks(caller, parent.Id, Relationships[1], "nx_industry", Identifiers(input.IndustryIds));
             SyncLinks(caller, parent.Id, Relationships[2], "cr6b0_project", Identifiers(input.ProjectIds));
             SyncLinks(caller, parent.Id, Relationships[3], "nx_specializationarea", Identifiers(input.AreaIds));
+            if (input.ClientRoleIds != null) SyncLinks(caller, parent.Id, Relationships[4], "nx_clientrole", Identifiers(input.ClientRoleIds));
         }
 
-        /// <summary>True when the tags, projects or areas differ from the stored graph. Contributors are not compared.</summary>
+        /// <summary>True when the tags, projects, areas or client roles differ from the stored graph. Contributors are not compared.</summary>
         public static bool LinksChanged(DraftGraphInput stored, DraftGraphInput input)
         {
             Func<List<string>, HashSet<Guid>> set = values => new HashSet<Guid>(values.Select(ContributorPolicy.Identifier));
             return !set(stored.TechnologyIds).SetEquals(set(input.TechnologyIds)) || !set(stored.IndustryIds).SetEquals(set(input.IndustryIds))
-                || !set(stored.ProjectIds).SetEquals(set(input.ProjectIds)) || !set(stored.AreaIds).SetEquals(set(input.AreaIds));
+                || !set(stored.ProjectIds).SetEquals(set(input.ProjectIds)) || !set(stored.AreaIds).SetEquals(set(input.AreaIds))
+                || (input.ClientRoleIds != null && !set(stored.ClientRoleIds).SetEquals(set(input.ClientRoleIds)));
         }
 
         private static List<Entity> Children(IOrganizationService caller, Guid parent)

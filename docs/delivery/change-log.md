@@ -1,24 +1,26 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-15
+**Status:** Living · **Last updated:** 2026-10-21
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
 Each session has one **Changes** table and one **Progress** percentage computed from it — see "Status values and progress weight" below. There is no separate table for "Proposed" vs. "built": a change stays in the same row and its Status (and the session's %) moves up as it ships.
 
+**Stakeholder feedback vs. own changes.** 💬 marks stakeholder feedback, 🛠️ marks own changes, in this index and in a shaded box under each entry's heading (green for feedback, grey for own changes). Only four entries record feedback from stakeholders: Patricia (2026-09-23), Sebastian (2026-09-30), Ximena and Ernesto (2026-09-30) and Natalia and Andrés (2026-10-01). Every other entry is a working session where the team changed the app on its own initiative; its "Feedback" section lists the reasons for the change, not stakeholder requests. To answer "what feedback is still pending", read only the four stakeholder entries.
+
 **Entries** (newest first — jump to a meeting)
-| Date | Session | Progress |
-|---|---|---|
-| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort; visual tweaks | 85% — 2 Live, 3 Pending review / 5 |
-| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 100% — 15 Live / 15 |
-| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 100% — 5 Live / 5 |
-| [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 100% — 5 Live / 5 |
-| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 67% — 7 Live, 4 Pending review / 15 (1 Dropped excluded) |
-| [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 100% — 7 Live / 7 |
-| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 100% — 15 Live / 15 |
-| [2026-09-30](#2026-09-30--working-session-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 85% — 11 Live / 13 (2 Dropped excluded) |
-| [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 100% — 6 Live / 6 |
-| [2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 100% — 6 Live / 6 (1 Dropped excluded) |
+| Date | Session | Source | Progress |
+|---|---|---|---|
+| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort; visual tweaks | 🛠️ Own changes | 85% — 2 Live, 3 Pending review / 5 |
+| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 🛠️ Own changes | 100% — 15 Live / 15 |
+| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 🛠️ Own changes | 100% — 5 Live / 5 |
+| [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 🛠️ Own changes | 100% — 5 Live / 5 |
+| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 💬 **Stakeholder feedback** | 67% — 7 Live, 4 Pending review / 15 (1 Dropped excluded) |
+| [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 🛠️ Own changes | 100% — 7 Live / 7 |
+| [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 💬 **Stakeholder feedback** | 100% — 15 Live / 15 |
+| [2026-09-30 (Ximena, Ernesto)](#2026-09-30--feedback-session-with-ximena-and-ernesto-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 💬 **Stakeholder feedback** | 82% — 11 Live, 1 In code, 1 Proposed, 1 Pending to do / 14 (2 Dropped excluded) |
+| [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 🛠️ Own changes | 100% — 6 Live / 6 |
+| [2026-09-23 (Patricia)](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 💬 **Stakeholder feedback** | 100% — 6 Live / 6 (1 Dropped excluded) |
 
 **Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; Capability Owners' editing scope (librarian editing is live since 2026-10-15; whether owners act only on their capabilities is [Q21](decision-log.md)) ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
@@ -69,6 +71,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-15 — Working session: librarian content editing and solution-level effort
 
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
 **Progress:** 85% — 2 Live, 3 Pending review / 5
 
 ### Feedback
@@ -89,6 +93,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Visual: light-theme Data area emerald teal `#0b604c` (was `#0b6157`, read like AI; a pure green tried first was rejected; dark keeps `#4fbfab`), also in the presentation download palettes; effort fields stacked in the sidebar's Field style, without the caption; librarian editor intro as an informational card (`LibrarianEditNotice`); "Estimated cost" removed (never in Dataverse) | 🟡 Pending review | `5c6ec35` ([design system](../design/design-system.md)). Connected app published 2026-10-15; the PoC app was not republished. Hosted UI not yet checked |
 
 ## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
 
 **Progress:** 100% — 15 Live / 15
 
@@ -120,6 +126,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Feedback addressed in Dataverse: `nx_solutionsuggestion.nx_addressedon` (created 2026-10-14), `nx_AddressSuggestion` and `nx_GetMyOpenFeedback` on `SuggestionApi`; returned drafts resolve by resubmitting | 🟢 Live | Signed plug-in deployed 2026-10-14 22:56 UTC and both APIs registered (Luis); clients generated and wired in `dataSource.ts`, app published 2026-10-14; `nx_GetMyOpenFeedback` checked live (3 open suggestions). Hosted UI not yet checked ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)) |
 ## 2026-10-08 — Working session: contributor effort as minimum hours required
 
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
 **Progress:** 100% — 5 Live / 5
 
 ### Feedback
@@ -146,6 +154,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-07 — Working session: presentation download refinements and new-technology review
 
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
 **Progress:** 100% — 5 Live / 5
 
 ### Feedback
@@ -171,6 +181,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 ---
 
 ## 2026-10-01 — Feedback session with Natalia and Andrés: governance, capabilities and review
+
+<div style="background:#e3f4e8;color:#14532d;border-left:4px solid #2e7d32;padding:8px 12px;border-radius:4px">💬 <b>Stakeholder feedback</b> from Natalia and Andrés.</div>
 
 **Attendees:** Natalia, Andrés
 **Progress:** 67% — 7 Live, 4 Pending review / 15 (1 Dropped excluded)
@@ -215,7 +227,9 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-10-01 — Working session: Top 3 save counts and card sizing
 
-**Progress:** 100% — 15 Live / 15
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 100% — 7 Live / 7
 
 ### Feedback
 
@@ -235,6 +249,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Library hero: the "All areas" note ("Everything Nextant has built and can show…") removed; a chosen area still shows its note | 🟢 Live | Published 2026-10-01 ([app README](../../app/README.md#all-areas-note-removed-2026-10-01)) |
 
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
+
+<div style="background:#e3f4e8;color:#14532d;border-left:4px solid #2e7d32;padding:8px 12px;border-radius:4px">💬 <b>Stakeholder feedback</b> from Sebastian.</div>
 
 **Attendees:** Sebastian, …
 **Progress:** 100% — 15 Live / 15
@@ -280,10 +296,12 @@ When a decision above gets resolved, delete its bullet here and update the match
 - One-Liner standardization (PR-023): resolved 2026-10-08 as a 200-character one-line summary in Dataverse, the form and the plug-ins.
 - Allocation (PR-029): resolved 2026-10-08 and live the same day. Calendar mode is retired as well; every maturity takes minimum hours required, and `nx_allocationpercent` was deleted ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)).
 
-## 2026-09-30 — Working session: external resource links, demo viewing experience, and effort communication
+## 2026-09-30 — Feedback session with Ximena and Ernesto: external resource links, demo viewing experience, and effort communication
+
+<div style="background:#e3f4e8;color:#14532d;border-left:4px solid #2e7d32;padding:8px 12px;border-radius:4px">💬 <b>Stakeholder feedback</b> from Ximena and Ernesto.</div>
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 85% — 11 Live, 1 Proposed, 1 Pending to do / 13 (2 Dropped excluded)
+**Progress:** 82% — 11 Live, 1 In code, 1 Proposed, 1 Pending to do / 14 (2 Dropped excluded)
 
 ### Feedback
 
@@ -318,7 +336,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-012 Time-tracking system integration | 🟢 Live | Resolved 2026-10-06 as a time filter in the library: an "Added: …" picker beside "Sort by" with Any time / Last 30 days / Last 3 months / Last 6 months / Last 12 months, each showing how many solutions it leaves. Filters on creation date (`createdon`), months counted as calendar months back from today; kept in the URL (`added=3m`). `6e0b314`, `8a7b544`, published 2026-10-06 ([design system](../design/design-system.md#library-page)). Integration with an external time-tracking system is not part of this |
 | PR-013 Solution-to-workstream/project mapping | 🟢 Live | Resolved 2026-10-14 with the existing projects table: a solution links to any number of `cr6b0_project` rows through the native N:N (PR-030, live), chosen in the form's Projects picker and shown as **Associated projects** on the solution page (internal; hidden in present mode). No separate workstream table |
 | PR-014 Media display standardization (video/image/HTML/demo) | 🟢 Live | 2026-10-14: video, uploaded HTML, embedded links and images play in one centred 16:9 stage, the same size and place for every type, with the same Full screen and Open in new tab (`1f6a01b`). Decided 2026-10-14 (user): demos open on request, never auto-shown on the solution page, for quality; the connected app keeps listing them as rows. Screenshots keep their own gallery and lightbox; PDF and PowerPoint download |
-| PR-031 More than one target client role per solution | 🔴 Pending to do | Added 2026-10-14 from Ximena's feedback. Today `nx_solution.nx_clientrole` is a single choice; allowing several means changing it to a multi-select choice (or an N:N), plus the form picker, the library's "Target client role" filter, the solution page and the plug-ins that read and write it. Not started: the logic is unchanged |
+| PR-031 More than one target client role per solution | In code | Added 2026-10-14 from Ximena's feedback. 2026-10-21: the user created the `nx_clientrole` table (14 roles), the N:N `nx_ClientRole_nx_Solution_nx_Solution` and the role privileges (read back with `inspect-client-roles`). On branch `feat/client-roles-nn`: plug-ins (graph `clientRoleIds`, catalogue `clientRoles`, guard), form chips in the same place (several at once), "Target client role" filter matching any chosen role, solution page, PoC mock ([SchemaV2](../data_model/SchemaV2.md#nx_clientrole)). `nx_clientrole` data source generated with `pa app add data-source` (PAC 2.12.2 fails on the Custom API schemas). No backfill: the 4 solutions with the old choice are dummy data (user, 2026-10-21). Next: deploy plug-in and app together, then delete `nx_solution.nx_clientrole` |
+| PR-032 More than one client per solution | 🔴 Pending to do | Added 2026-10-16 from Ximena's feedback (raised 2026-09-30, had no row). Today the client is one free-text pair on `nx_solution`, `nx_clientcontext` (internal) and `nx_clientcontextredacted` (the only one shown in present mode). Several clients means a child table or N:N with an internal name and a redacted label per client, plus the form, the solution page, present-mode filtering (ADR-0005) and the plug-ins. Not started |
 
 ### Open decisions
 
@@ -327,6 +346,8 @@ When a decision above gets resolved, delete its bullet here and update the match
 - ~~Workstream/project mapping (PR-013)~~ resolved 2026-10-14 through the projects table (N:N, PR-030).
 
 ## 2026-09-28 / 29 — Working sessions: integration, favorites ranking and library UX
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
 
 **Progress:** 100% — 6 Live / 6
 
@@ -355,6 +376,9 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ## 2026-09-23 — Data model update: Specialization Area, roles, client role, favorites
 
+<div style="background:#e3f4e8;color:#14532d;border-left:4px solid #2e7d32;padding:8px 12px;border-radius:4px">💬 <b>Stakeholder feedback</b> from Patricia.</div>
+
+**Attendees:** Patricia
 **Progress:** 100% — 6 Live / 6 (1 Dropped excluded)
 
 ### Feedback
@@ -369,10 +393,10 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| Specialization Area from 1:N lookup to native N:N (`nx_Solution_nx_SpecializationArea_nx_SpecializationArea`) | Done in Dataverse · 🟢 **Live** | The old lookup `nx_solution.nx_specializationarea` was **deleted**, which broke the published connected app. On 2026-09-24 the catalogue fix was merged to `main` (`04f76b2`, `7c0196a`) and the connected app was republished. On 2026-09-28 the updated plugins were deployed with the app, so drafts, My submissions and review use the N:N too. Specialization Area behaves like Industry: a solution without an area shows under "All" only. The N:N was added to `PRISMA_Dev` on 2026-09-28. Still to do: tag "Budget Management Solution" with an area |
-| New column `nx_solutioncontributor.nx_role` (CSM · Consultant) | Done in Dataverse · 🟢 **Live** | Contributor role selector, plugin read/write, and CSM listed apart from builders. Integrated from `juli` and deployed on 2026-09-28. Retired 2026-10-08 (the CSM is derived from `cr6b0_consultantlevel`) and deleted from Dataverse after that deploy ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)) |
-| New column `nx_solution.nx_clientrole` (Client Role, 14 values) | Done in Dataverse · 🟢 **Live** | Client role picker on connected drafts and plugin read/write, deployed on 2026-09-28. The PRISMA library filters by it ("Target client role"), in present mode too. Its exact meaning is still open |
-| New table `nx_solutionfavorite` (per-person favorites) | Done in Dataverse · 🟢 **Live** | Delete Cascade from Solution, RemoveLink from Consultant. `FavoriteApi` (`nx_SetFavorite`, `nx_GetMyFavorites`) sets `nx_user` server-side; roles get User-depth Read only. Hearts and "My favorites" in the connected app. Deployed and republished on 2026-09-28; the user verified save and remove in the hosted app |
+| Specialization Area from 1:N lookup to native N:N (`nx_Solution_nx_SpecializationArea_nx_SpecializationArea`) | 🟢 Live | The old lookup `nx_solution.nx_specializationarea` was **deleted**, which broke the published connected app. On 2026-09-24 the catalogue fix was merged to `main` (`04f76b2`, `7c0196a`) and the connected app was republished. On 2026-09-28 the updated plugins were deployed with the app, so drafts, My submissions and review use the N:N too. Specialization Area behaves like Industry: a solution without an area shows under "All" only. The N:N was added to `PRISMA_Dev` on 2026-09-28. Still to do: tag "Budget Management Solution" with an area |
+| New column `nx_solutioncontributor.nx_role` (CSM · Consultant) | 🟢 Live | Contributor role selector, plugin read/write, and CSM listed apart from builders. Integrated from `juli` and deployed on 2026-09-28. Retired 2026-10-08 (the CSM is derived from `cr6b0_consultantlevel`) and deleted from Dataverse after that deploy ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required)) |
+| New column `nx_solution.nx_clientrole` (Client Role, 14 values) | 🟢 Live | Client role picker on connected drafts and plugin read/write, deployed on 2026-09-28. The PRISMA library filters by it ("Target client role"), in present mode too. Its exact meaning is still open |
+| New table `nx_solutionfavorite` (per-person favorites) | 🟢 Live | Delete Cascade from Solution, RemoveLink from Consultant. `FavoriteApi` (`nx_SetFavorite`, `nx_GetMyFavorites`) sets `nx_user` server-side; roles get User-depth Read only. Hearts and "My favorites" in the connected app. Deployed and republished on 2026-09-28; the user verified save and remove in the hosted app |
 | Schema docs synced with Dataverse | 🟢 Live | Updated [SchemaV2](../data_model/SchemaV2.md), the example values, the legacy companion and reference-data governance (`23fe769`) |
 | Top ranking (favorites, unique views, demo requests) | 🟢 Live | Live as a favorites-only ranking: `nx_GetTopFavorites` and the Top 10 shelf with save counts ([2026-09-28/29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux), [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing)). Unique views and demo requests are not counted; views would need a private `nx_solutionview` table (open decision under 2026-09-28/29) |
 | Lead CSM as a lookup on `nx_solution` (`nx_leadcsm`) | Dropped | Replaced by `nx_solutioncontributor.nx_role`, itself retired and deleted 2026-10-08 for the consultant level |

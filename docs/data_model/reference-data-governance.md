@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse ; capabilities replaced by the organization framework with area and owner (2026-10-13) · **Last updated:** 2026-10-13
+**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse ; capabilities replaced by the organization framework with area and owner (2026-10-13); client roles became a reference table (2026-10-21) · **Last updated:** 2026-10-21
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -10,6 +10,7 @@
 | Specialization areas | `nx_specializationarea` | **Governed** | Librarian only |
 | Capabilities | `nx_capability` | **Governed** | Librarian only |
 | Industries | `nx_industry` | **Governed** | Librarian only |
+| Target client roles | `nx_clientrole` | **Governed** | An administrator, in Dataverse. PRISMA roles only read and link them; the app has no screen to add one (PR-031, 2026-10-21) |
 | Technologies | `nx_technology` | **Open** | Contributors, inline at submission; librarian periodically merges duplicates |
 
 The problem and benefits belong in the Business Value narrative, not a separate vocabulary ([schema spec (v2)](SchemaV2.md)).

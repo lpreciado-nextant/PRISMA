@@ -44,7 +44,7 @@ interface Draft {
   safetyAcknowledged: boolean;
   clientContext: string;
   redacted: string;
-  clientRole: ClientRole | "";
+  clientRoles: ClientRole[];
   contributors: SolutionContributor[];
   /** Raw whole-hour input for `estimatedMinimumHours`, so a partial entry is never coerced. Optional. */
   estimatedHours: string;
@@ -70,7 +70,7 @@ const EMPTY_DRAFT: Draft = {
   safetyAcknowledged: false,
   clientContext: "",
   redacted: "",
-  clientRole: "",
+  clientRoles: [],
   contributors: [],
   estimatedHours: "",
   complexity: "",
@@ -102,10 +102,13 @@ function loadDraft(draftKey: string): Draft {
     parsed.technologies ??= [];
     parsed.industries ??= [];
     parsed.contributors ??= [];
-    // Drafts saved before the nx_clientrole rename carry `targetRole`; drop values that are no longer live choices.
-    const legacyRole = (parsed as Partial<Draft> & { targetRole?: string }).targetRole;
-    if (!parsed.clientRole && legacyRole && (CLIENT_ROLES as string[]).includes(legacyRole)) parsed.clientRole = legacyRole as ClientRole;
-    if (parsed.clientRole && !CLIENT_ROLES.includes(parsed.clientRole)) parsed.clientRole = "";
+    // Drafts saved before client roles became N:N carry one `clientRole` (or the older `targetRole`); drop names that are no longer listed.
+    const legacy = parsed as Partial<Draft> & { clientRole?: string; targetRole?: string };
+    const legacyRole = legacy.clientRole || legacy.targetRole;
+    parsed.clientRoles ??= legacyRole ? [legacyRole as ClientRole] : [];
+    parsed.clientRoles = parsed.clientRoles.filter((role) => CLIENT_ROLES.includes(role));
+    delete legacy.clientRole;
+    delete legacy.targetRole;
     // Drafts saved before specialization areas became N:N carry a single `area`.
     const legacyArea = (parsed as Partial<Draft> & { area?: SpecializationArea }).area;
     if (!parsed.areas?.length) parsed.areas = legacyArea ? [legacyArea] : EMPTY_DRAFT.areas;
@@ -146,7 +149,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       industries: initialSolution.industries, contributors: initialSolution.contributors,
       thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
-      redacted: initialSolution.clientContextRedacted ?? "", clientRole: initialSolution.clientRole ?? "",
+      redacted: initialSolution.clientContextRedacted ?? "", clientRoles: initialSolution.clientRoles.filter((role): role is ClientRole => (CLIENT_ROLES as string[]).includes(role)),
       estimatedHours: initialSolution.estimatedMinimumHours === undefined ? "" : String(initialSolution.estimatedMinimumHours), complexity: initialSolution.complexity ?? "",
       challenges: initialSolution.challenges ?? "", lessonsLearned: initialSolution.lessonsLearned ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
     } : loadDraft(draftKey);
@@ -197,13 +200,13 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   // "Is this solution associated with a client?" Any client value already answers Yes. No clears the
   // client fields (so nothing hidden is saved); switching back to Yes restores them.
   const [clientChoice, setClientChoice] = useState<boolean | null>(null);
-  const clientStash = useRef<Pick<Draft, "clientContext" | "redacted" | "clientRole"> | null>(null);
-  const clientAssociated = clientChoice ?? (draft.clientContext.trim() || draft.redacted.trim() || draft.clientRole ? true : undefined);
+  const clientStash = useRef<Pick<Draft, "clientContext" | "redacted" | "clientRoles"> | null>(null);
+  const clientAssociated = clientChoice ?? (draft.clientContext.trim() || draft.redacted.trim() || draft.clientRoles.length > 0 ? true : undefined);
   const setClientAssociated = (associated: boolean) => {
     setClientChoice(associated);
     if (!associated) {
-      clientStash.current = { clientContext: draft.clientContext, redacted: draft.redacted, clientRole: draft.clientRole };
-      setDraft((d) => ({ ...d, clientContext: "", redacted: "", clientRole: "" }));
+      clientStash.current = { clientContext: draft.clientContext, redacted: draft.redacted, clientRoles: draft.clientRoles };
+      setDraft((d) => ({ ...d, clientContext: "", redacted: "", clientRoles: [] }));
     } else if (clientStash.current) {
       const stash = clientStash.current;
       clientStash.current = null;
@@ -256,7 +259,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       clientSafeReviewed: false,
       clientContext: draft.clientContext || undefined,
       clientContextRedacted: draft.redacted || undefined,
-      clientRole: draft.clientRole || undefined,
+      clientRoles: draft.clientRoles,
       challenges: draft.challenges.trim() || undefined,
       lessonsLearned: draft.lessonsLearned.trim() || undefined,
       thumbnail: draft.thumbnail || undefined,
@@ -381,7 +384,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             </ContributorEditor>
             <EffortFields hours={draft.estimatedHours} complexity={draft.complexity || undefined} onHours={value => set("estimatedHours", value)} onComplexity={value => set("complexity", value)} error={hoursError} />
             </NamedSection>
-            <ClientFields framed value={draft} onText={set} role={draft.clientRole} roles={CLIENT_ROLES} onRole={value => set("clientRole", value)} associated={clientAssociated} onAssociated={setClientAssociated} />
+            <ClientFields framed value={draft} onText={set} selectedRoles={draft.clientRoles} roles={CLIENT_ROLES} onRoles={(value) => set("clientRoles", value)} associated={clientAssociated} onAssociated={setClientAssociated} />
             <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={set} />
           </StepShell>
         )}
@@ -428,7 +431,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
         {step === 5 && safetyValid && (
           <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.builtBy.level ? `${contributor.builtBy.name} (${contributor.builtBy.level})` : contributor.builtBy.name).join(", ")} effort={effortSummary(hoursValue, draft.complexity || undefined)}
-            images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.clientRole} nextState="Pending review (local)">
+            images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.clientRoles.join(", ")} nextState="Pending review (local)">
             {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution, Solution context (status, contributors, complexity and the client question), select one capability and add at least one detail image before submitting.</p>}
           </SubmissionReview>
         )}

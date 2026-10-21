@@ -9,7 +9,7 @@ const solution: Solution = {
   id: "submission", name: "Test solution", summary: "Summary", whatItDoes: "Description", businessValue: "Value",
   specializationArea: "ai", contributors: [{ id: "contributor", builtBy: { id: "builder", name: "Builder", email: "builder@example.com" } }], complexity: "Medium", estimatedMinimumHours: 12, status: "Working prototype", publicationStatus: "Draft",
   safetyAcknowledged: true, clientSafeReviewed: false, dateAdded: "2026-09-21", searchKeywords: "",
-  capabilities: ["AI & agents"], technologies: [], industries: [], assets: [], images: [{ id: "image", src: "data:image/png;base64,test" }],
+  capabilities: ["AI & agents"], technologies: [], industries: [], clientRoles: [], assets: [], images: [{ id: "image", src: "data:image/png;base64,test" }],
 };
 
 test("draft, return, resubmit and publish preserve the record and media", () => {
@@ -76,6 +76,15 @@ test("legacy browser feedback migrates without deleting notes, media or identity
   assert.equal(ambiguous.solution.reviewOutcome, "None");
   assert.equal(ambiguous.solution.reviewComments, undefined);
   assert.equal(ambiguous.solution.libraryNotes, "Please revise.");
+});
+
+test("a submission stored with one client role migrates to the list", () => {
+  const older: Partial<Solution> = { ...solution };
+  delete older.clientRoles;
+  const migrated = migrateSubmission({ owner: "builder@example.com", solution: { ...older, clientRole: "Chief of Staff" } as unknown as typeof solution });
+  assert.deepEqual(migrated.solution.clientRoles, ["Chief of Staff"]);
+  assert.equal(Object.hasOwn(migrated.solution, "clientRole"), false);
+  assert.deepEqual(migrateSubmission({ owner: "builder@example.com", solution: older as unknown as typeof solution }).solution.clientRoles, []);
 });
 
 test("drafts require an authored name, including when editing an existing draft", () => {

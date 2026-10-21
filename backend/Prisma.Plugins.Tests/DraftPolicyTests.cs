@@ -647,6 +647,32 @@ namespace Prisma.Plugins.Tests
             var technology = Guid.NewGuid().ToString();
             Assert.False(DraftGraph.LinksChanged(graph(technology, Guid.NewGuid().ToString()), graph(technology.ToUpperInvariant(), Guid.NewGuid().ToString())));
             Assert.True(DraftGraph.LinksChanged(graph(technology, Area), graph(Guid.NewGuid().ToString(), Area)));
+            // Client roles count as a link change, unless an older client leaves them out.
+            var stored = graph(technology, Area);
+            stored.ClientRoleIds = new System.Collections.Generic.List<string> { Area };
+            Assert.False(DraftGraph.LinksChanged(stored, graph(technology, Area)));
+            var roles = graph(technology, Area);
+            roles.ClientRoleIds = new System.Collections.Generic.List<string>();
+            Assert.True(DraftGraph.LinksChanged(stored, roles));
+            roles.ClientRoleIds = new System.Collections.Generic.List<string> { Area.ToUpperInvariant() };
+            Assert.False(DraftGraph.LinksChanged(stored, roles));
+        }
+
+        [Fact]
+        public void ClientRolesAreGraphLinksAndTheRetiredChoiceIsIgnored()
+        {
+            var json = "{\"contributors\":[],\"technologyIds\":[],\"industryIds\":[],\"projectIds\":[],\"areaIds\":[]}";
+            Assert.Null(DraftGraph.Parse(json).ClientRoleIds);
+            var role = Guid.NewGuid().ToString();
+            var other = Guid.NewGuid().ToString();
+            Assert.Equal(new[] { role, other }, DraftGraph.Parse(json.Replace("\"areaIds\":[]", "\"areaIds\":[],\"clientRoleIds\":[\"" + role + "\",\"" + other + "\"]")).ClientRoleIds);
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"areaIds\":[]", "\"areaIds\":[],\"clientRoleIds\":[\"" + role + "\",\"" + role + "\"]")));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Parse(json.Replace("\"areaIds\":[]", "\"areaIds\":[],\"clientRoleIds\":[\"fake\"]")));
+            Assert.Equal("nx_ClientRole_nx_Solution_nx_Solution", DraftGraph.Relationships[4]);
+            // Clients built before PR-031 still send the nx_clientrole choice; it is accepted and never written.
+            var core = DraftPolicy.Parse("{\"name\":\"Forge\",\"clientRoleValue\":125060009}");
+            Assert.False(core.Contains("nx_clientrole"));
+            Assert.DoesNotContain("nx_clientrole", DraftPolicy.CoreColumns);
         }
 
         [Fact]

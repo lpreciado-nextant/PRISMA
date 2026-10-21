@@ -70,6 +70,11 @@
           "entitySetName": "Environment",
           "logicalName": "environment_39a902ba",
           "isHidden": false
+        },
+        "clientroles": {
+          "entitySetName": "nx_clientroles",
+          "logicalName": "nx_clientrole",
+          "isHidden": false
         }
       },
       "environmentVariableName": ""

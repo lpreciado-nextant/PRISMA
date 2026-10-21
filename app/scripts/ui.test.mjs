@@ -270,7 +270,7 @@ test("required and optional fields are marked the same way everywhere, with one 
 });
 
 test("the client question hides every client field until Yes", () => {
-  const props = { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, role: "", roles: ["Chief of Staff"], onRole: noop, framed: true, onAssociated: noop };
+  const props = { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, selectedRoles: ["Chief of Staff"], roles: ["Chief of Staff", "Director"], onRoles: noop, framed: true, onAssociated: noop };
   for (const associated of [undefined, false]) {
     const html = render(form.ClientFields, { ...props, associated });
     assert.match(html, /Is this solution associated with a client\?/);
@@ -278,7 +278,10 @@ test("the client question hides every client field until Yes", () => {
     assert.doesNotMatch(html, /Client name|Anonymous client profile|Target client role/);
   }
   const yes = render(form.ClientFields, { ...props, associated: true });
-  assert.match(yes, /Target client role/);
+  assert.match(yes, /Target client roles/);
+  // Every role is a toggle; several can be on at once.
+  assert.equal((yes.match(/aria-pressed="true"/g) ?? []).length, 1);
+  assert.equal((yes.match(/aria-pressed="false"/g) ?? []).length, 1);
   assert.match(yes, /Client name/);
   assert.match(yes, /Anonymous client profile/);
   // Without the question (no onAssociated) the fields show as before.
@@ -567,7 +570,7 @@ test("section cards carry one section-level visibility badge and mixed sections 
   assert.match(built, /<h3[^>]*>Built by &amp; effort<\/h3>/);
   assert.equal((built.match(/Internal only/g) ?? []).length, 1);
   assert.match(built, /used for internal tracking only/);
-  const client = render(form.ClientFields, { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, role: "", roles: ["Chief of Staff"], onRole: noop, framed: true });
+  const client = render(form.ClientFields, { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, selectedRoles: [], roles: ["Chief of Staff"], onRoles: noop, framed: true });
   assert.equal((client.match(/Internal only/g) ?? []).length, 1);
   assert.equal((client.match(/Shown to clients/g) ?? []).length, 2);
   // Multi-card steps stay unframed; single-section steps become cards.
@@ -704,11 +707,11 @@ test("suggestions: readers see a private list with author and date; others get a
 
 test("solution sidebar: overview, business context and technologies for everyone; internal sections never in present mode", async () => {
   const { DetailView } = await server.ssrLoadModule("/src/views/DetailView.tsx");
-  const solution = { id: "s", name: "S", summary: "Sum", whatItDoes: "Does", businessValue: "Value", specializationArea: "ai", specializationAreas: ["ai"], status: "Working prototype", publicationStatus: "Published", capabilities: ["Data Engineering"], technologies: ["Power Apps code app", "Microsoft Fabric"], industries: ["Education", "IT"], clientRole: "Chief of Staff", clientContext: "MICROSOFT", clientContextRedacted: "A global software company", clientSafeReviewed: true, contributors: [], assets: [], projects: [{ id: "p", projectName: "Project Atlas" }], dateAdded: "2026-10-01", estimatedMinimumHours: 230, complexity: "Medium" };
+  const solution = { id: "s", name: "S", summary: "Sum", whatItDoes: "Does", businessValue: "Value", specializationArea: "ai", specializationAreas: ["ai"], status: "Working prototype", publicationStatus: "Published", capabilities: ["Data Engineering"], technologies: ["Power Apps code app", "Microsoft Fabric"], industries: ["Education", "IT"], clientRoles: ["Chief of Staff", "Director"], clientContext: "MICROSOFT", clientContextRedacted: "A global software company", clientSafeReviewed: true, contributors: [], assets: [], projects: [{ id: "p", projectName: "Project Atlas" }], dateAdded: "2026-10-01", estimatedMinimumHours: 230, complexity: "Medium" };
   const effort = { contributors: [{ name: "Ana Gómez", level: "Senior Consultant" }, { name: "Luis Pérez", level: "Customer Success Manager" }] };
   const normal = render(DetailView, { solution, present: false, connected: true, effort, capabilityOwner: { name: "Marta Ruiz" }, aside: "SUGGEST" });
   assert.match(normal, /Solution overview.*Specialization area.*Capability.*Data Engineering.*Capability owner.*MR.*Marta Ruiz/s);
-  assert.match(normal, /Business context.*Target role.*Chief of Staff.*Industries.*Education.*IT.*Client \(internal\).*MICROSOFT.*Shown to clients as.*A global software company/s);
+  assert.match(normal, /Business context.*Target roles.*Chief of Staff.*Director.*Industries.*Education.*IT.*Client \(internal\).*MICROSOFT.*Shown to clients as.*A global software company/s);
   assert.match(normal, /Technologies used.*Power Apps code app.*Microsoft Fabric/s);
   assert.match(normal, /Contributors &amp; development effort.*Ana Gómez.*Senior Consultant.*Luis Pérez.*Complexity.*Medium.*Estimated minimum hours.*230 h/s);
   assert.doesNotMatch(normal, /~230|Estimated development effort/);
@@ -851,7 +854,7 @@ test("demo viewer: one 16:9 stage for every type, Open in new tab when offered, 
   assert.match(render(ViewerFrame, { name: "N", onClose: noop, focused: true, children: "D" }), /h-dvh/);
   // The solution page lists the same option beside each viewer demo; the main action stays the in-app viewer.
   const { DetailView } = await server.ssrLoadModule("/src/views/DetailView.tsx");
-  const solution = { id: "s", name: "S", summary: "Sum", whatItDoes: "Does", businessValue: "Value", specializationArea: "ai", specializationAreas: ["ai"], status: "Working prototype", publicationStatus: "Published", capabilities: [], technologies: [], industries: [], contributors: [], assets: [{ id: "v", name: "Walkthrough", assetType: "Video walkthrough only", sortOrder: 1 }] };
+  const solution = { id: "s", name: "S", summary: "Sum", whatItDoes: "Does", businessValue: "Value", specializationArea: "ai", specializationAreas: ["ai"], status: "Working prototype", publicationStatus: "Published", capabilities: [], technologies: [], industries: [], clientRoles: [], contributors: [], assets: [{ id: "v", name: "Walkthrough", assetType: "Video walkthrough only", sortOrder: 1 }] };
   const detail = render(DetailView, { solution, present: false, connected: true, onAssetOpen: noop, assetNewTabUrl: () => "https://example.test/tab" });
   assert.match(detail, /aria-label="Open Walkthrough in a new tab"[^>]*>.*Play walkthrough/s);
 });

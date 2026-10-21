@@ -22,6 +22,7 @@ function reader(overrides: object = {}): ReadRows {
     capabilities: [{ nx_capabilityid: capabilityId, nx_capabilityname: "Automation" }],
     technologies: [{ nx_technologyname: "Dataverse" }],
     industries: [{ nx_industryname: "Technology" }],
+    clientRoles: [{ nx_clientrolename: "Chief Financial Officer (CFO)" }, { nx_clientrolename: "Chief of Staff" }],
   } as Record<string, object[]>)[table] ?? [] });
 }
 
@@ -43,17 +44,20 @@ test("maps live names, numeric choices, lookups and N:N tag queries", async () =
   assert.match(calls.find(([table]) => table === "industries")![1].filter!, new RegExp(solutionId));
 });
 
-test("reads nx_clientrole so the Target client role facet can filter PRISMA", async () => {
+test("reads client roles through the nx_clientrole N:N so the Target client role facet can filter PRISMA", async () => {
   const { filterSolutions, EMPTY_FILTERS } = await import("../../src/lib/search.ts");
-  assert(catalogueQuery(false).select!.includes("nx_clientrole"));
-  assert(catalogueQuery(true).select!.includes("nx_clientrole"));
-  const [tagged] = await loadCatalogue(reader({ nx_clientrole: 125060009 }), false, signal());
-  assert.equal(tagged.clientRole, "Chief Financial Officer (CFO)");
-  assert.deepEqual(filterSolutions([tagged], { ...EMPTY_FILTERS, roles: ["Chief Financial Officer (CFO)"] }), [tagged]);
-  assert.deepEqual(filterSolutions([tagged], { ...EMPTY_FILTERS, roles: ["Chief of Staff"] }), []);
-  const [untagged] = await loadCatalogue(reader({ nx_clientrole: null }), false, signal());
-  assert.equal(untagged.clientRole, undefined);
-  await assert.rejects(loadCatalogue(reader({ nx_clientrole: 999 }), false, signal()), /client role/);
+  // The retired choice column is never selected, so deleting it cannot break the catalogue.
+  assert(!catalogueQuery(false).select!.includes("nx_clientrole"));
+  assert(!catalogueQuery(true).select!.includes("nx_clientrole"));
+  const base = reader();
+  const calls: Parameters<ReadRows>[] = [];
+  const [tagged] = await loadCatalogue(async (...args) => { calls.push(args); return base(...args); }, true, signal());
+  assert.deepEqual(tagged.clientRoles, ["Chief Financial Officer (CFO)", "Chief of Staff"]);
+  assert.match(calls.find(([table]) => table === "clientRoles")![1].filter!, new RegExp(`nx_ClientRole_nx_Solution_nx_Solution/any.*${solutionId}`));
+  for (const role of tagged.clientRoles) assert.deepEqual(filterSolutions([tagged], { ...EMPTY_FILTERS, roles: [role] }), [tagged]);
+  assert.deepEqual(filterSolutions([tagged], { ...EMPTY_FILTERS, roles: ["Director"] }), []);
+  const [untagged] = await loadCatalogue(async (table, options) => table === "clientRoles" ? { success: true, data: [] } : base(table, options), false, signal());
+  assert.deepEqual(untagged.clientRoles, []);
 });
 
 test("a published solution without areas still loads, like one without industries", async () => {
@@ -173,7 +177,7 @@ test("a failed hydration batch cancels siblings and never starts the next batch"
 });
 
 const graphResult = (solutions: object[]) => ({ success: true, data: { ResultJson: JSON.stringify({ solutions }) } });
-const graphEntry = { id: solutionId, areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "data", nx_sortordernumber: 1 }], technologies: ["Fabric"], industries: ["Retail"], contributors: ["Graph Builder"] };
+const graphEntry = { id: solutionId, areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "data", nx_sortordernumber: 1 }], technologies: ["Fabric"], industries: ["Retail"], clientRoles: ["Director"], contributors: ["Graph Builder"] };
 
 test("the bulk catalogue graph replaces every per-solution tag and credit request", async () => {
   const base = reader();
@@ -212,6 +216,11 @@ test("the catalogue graph never carries builder credits in present mode and fail
   assert.throws(() => parseCatalogueGraph(graphResult([clientSafe]), false), /contributors/);
   assert.throws(() => parseCatalogueGraph(graphResult([graphEntry, graphEntry]), false), /repeated/);
   assert.throws(() => parseCatalogueGraph(graphResult([{ ...graphEntry, technologies: [""] }]), false), /technologies/);
+  // An older plug-in without client roles fails the bulk read, so the per-solution reads take over.
+  const withoutRoles: Partial<typeof graphEntry> = { ...graphEntry };
+  delete withoutRoles.clientRoles;
+  assert.throws(() => parseCatalogueGraph(graphResult([withoutRoles]), false), /clientRoles/);
+  assert.deepEqual(parseCatalogueGraph(graphResult([graphEntry]), false).get(solutionId)?.clientRoles, ["Director"]);
   assert.throws(() => parseCatalogueGraph(graphResult([{ ...graphEntry, id: "not-a-guid" }]), false), /identifier/);
   assert.throws(() => parseCatalogueGraph(graphResult([{ ...graphEntry, areas: [{ nx_specializationareaid: areaId, nx_specializationareaname: "other" }] }]), false), /unmapped/);
   assert.throws(() => parseCatalogueGraph({ success: false, data: {} }, false), /did not return/);

@@ -22,17 +22,12 @@ namespace Prisma.Plugins
         public static readonly string[] CoreColumns = {
             "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes", "nx_businessvalue",
             "nx_capability", "nx_status", "nx_clientcontext", "nx_clientcontextredacted", "nx_safetyacknowledged",
-            "nx_clientrole", "nx_challenges", "nx_lessonslearned", "nx_estimatedminimumhours", "nx_complexity"
+            "nx_challenges", "nx_lessonslearned", "nx_estimatedminimumhours", "nx_complexity"
         };
         /// <summary>Live `nx_solution.nx_complexity` choice values: Easy, Medium, Hard. Required at submit/publication.</summary>
         public static readonly int[] ComplexityValues = { 125060000, 125060001, 125060002 };
         /// <summary>Upper bound for `nx_estimatedminimumhours`, a whole-number estimate for the whole solution.</summary>
         public const int MaxEstimatedHours = 100000;
-        /// <summary>Live `nx_solution.nx_clientrole` choice values (SchemaV2, 2026-09-23). Optional, no default.</summary>
-        public static readonly int[] ClientRoleValues = {
-            125060000, 125060001, 125060002, 125060008, 125060009, 125060003, 125060004, 125060005,
-            125060006, 125060007, 125060010, 125060011, 125060012, 125060013
-        };
         private static readonly Dictionary<string, string> TextColumns = new Dictionary<string, string> {
             { "name", "nx_solutionname" }, { "summary", "nx_onelinesummary" }, { "whatItDoes", "nx_whatitdoes" },
             { "businessValue", "nx_businessvalue" },
@@ -81,13 +76,7 @@ namespace Prisma.Plugins
             if (!values.TryGetValue("safetyAcknowledged", out acknowledgment)) acknowledgment = false;
             if (!(acknowledgment is bool)) throw Invalid("Safety acknowledgment must be true or false.");
             entity["nx_safetyacknowledged"] = acknowledgment;
-            object clientRole;
-            if (values.TryGetValue("clientRoleValue", out clientRole) && clientRole != null)
-            {
-                if (!(clientRole is int) || !ClientRoleValues.Contains((int)clientRole)) throw Invalid("Select a supported client role.");
-                entity["nx_clientrole"] = new OptionSetValue((int)clientRole);
-            }
-            else entity["nx_clientrole"] = null;
+            // clientRoleValue is retired (PR-031): client roles are the nx_clientrole N:N in the draft graph. Clients built before that still send it, and it is ignored.
             // Solution-level effort: an optional whole-hour estimate and a complexity, both internal only.
             object estimate;
             if (values.TryGetValue("estimatedMinimumHours", out estimate) && estimate != null)

@@ -1,10 +1,12 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29, per-solution save counts deployed 2026-10-01; Blob pilot session columns and environment variables specified, not deployed; `nx_solution.nx_reviewedon` created 2026-10-02 but unused; `nx_demoasset.nx_assetpurpose` created 2026-10-06 (ADR-0011); contributor effort as direct minimum hours and the CSM from the directory's `cr6b0_consultantlevel` deployed 2026-10-08; contributor `nx_role` and `nx_allocationpercent` deleted from Dataverse 2026-10-08; internal `nx_challenges` and `nx_lessonslearned` created and deployed 2026-10-13 (plug-in and connected app `5c6e00b`); `nx_solutionsuggestion` created and live 2026-10-13 (ADR-0012); `nx_capability` gained Specialization Area and Capability Owner lookups and the framework names 2026-10-13; `nx_startdate`/`nx_enddate` retired but still present (blocked by the unused "Information" form; deletion optional); Capability Owner shown (read-only) in the librarian review panel 2026-10-14; `nx_solutionsuggestion.nx_addressedon` created and live 2026-10-14; librarian content editing proposed 2026-10-15 (ADR-0013, deployed 2026-10-15); its three columns `nx_librarianeditedby`, `nx_librarianeditedon` and `nx_librarianeditpending` created 2026-10-15 and metadata verified; solution-level effort `nx_estimatedminimumhours` and `nx_complexity` created 2026-10-15 and `nx_solutioncontributor.nx_directhours` retired (ADR-0014, deployed 2026-10-15) · **Last updated:** 2026-10-15
+**Status:** Authoritative two-field story model with approved private upload-session and SHA-256 resume extension; story-column retirement deployed and metadata verified; annotated with live logical names and types from `PRISMA_Dev` (see [Live Dataverse reference](#live-dataverse-reference)); acceptance and remaining UI parity pending; client role, contributor role, favorites and N:N-area plugins deployed 2026-09-28; favorites ranking API deployed 2026-09-29, per-solution save counts deployed 2026-10-01; Blob pilot session columns and environment variables specified, not deployed; `nx_solution.nx_reviewedon` created 2026-10-02 but unused; `nx_demoasset.nx_assetpurpose` created 2026-10-06 (ADR-0011); contributor effort as direct minimum hours and the CSM from the directory's `cr6b0_consultantlevel` deployed 2026-10-08; contributor `nx_role` and `nx_allocationpercent` deleted from Dataverse 2026-10-08; internal `nx_challenges` and `nx_lessonslearned` created and deployed 2026-10-13 (plug-in and connected app `5c6e00b`); `nx_solutionsuggestion` created and live 2026-10-13 (ADR-0012); `nx_capability` gained Specialization Area and Capability Owner lookups and the framework names 2026-10-13; `nx_startdate`/`nx_enddate` retired but still present (blocked by the unused "Information" form; deletion optional); Capability Owner shown (read-only) in the librarian review panel 2026-10-14; `nx_solutionsuggestion.nx_addressedon` created and live 2026-10-14; librarian content editing proposed 2026-10-15 (ADR-0013, deployed 2026-10-15); its three columns `nx_librarianeditedby`, `nx_librarianeditedon` and `nx_librarianeditpending` created 2026-10-15 and metadata verified; solution-level effort `nx_estimatedminimumhours` and `nx_complexity` created 2026-10-15 and `nx_solutioncontributor.nx_directhours` retired (ADR-0014, deployed 2026-10-15); client roles moved to the `nx_clientrole` reference table and its N:N with `nx_solution` (created 2026-10-21, PR-031; plug-ins and connected app in code, not deployed), and `nx_solution.nx_clientrole` is retiring · **Last updated:** 2026-10-21
 
 This is the current, agreed model. It replaces [nextant-solution-library-dataverse-schema.md](nextant-solution-library-dataverse-schema.md) (v1). `SpecializationArea`, `Industry` and `Technology` are **native N:N**, while `Capability` is a single-valued lookup. Solution narratives use **What It Does** and **Business Value** only. The existing `cr6b0_project` table separates the reusable solution from evidence of delivery; its fixed columns are not modified. Solution-to-Project remains a **native N:N** relationship with no custom junction table.
 
 **Changed 2026-10-08 (deployed; two columns deleted):** contributor effort is directly entered minimum hours at every maturity ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md)), and the person's level comes from `cr6b0_consultant.cr6b0_consultantlevel`: a contributor whose level names customer success is shown as the solution's CSM ([ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level)). The plug-ins and connected app from `main` `1c89c2d` were deployed on 2026-10-08. After that deploy the user deleted `nx_solutioncontributor.nx_role` (redundant with the directory level; no blocking dependencies were reported) and `nx_allocationpercent` (allocation no longer asked) from Dataverse. `nx_startdate` and `nx_enddate` are retired but still present: PRISMA no longer reads or writes them, and each is still on the unused `nx_solutioncontributor` main form "Information", which blocks deletion. `nx_effortmode` stays and is written as Direct on every save. The code-based US holiday policy below is gone.
+
+**Changed 2026-10-21 (Dataverse done; code not deployed):** a solution can target several client roles (PR-031). The user created the reference table `nx_clientrole` (14 rows, the former choice labels) and the native N:N `nx_ClientRole_nx_Solution_nx_Solution`, added the table to `PRISMA_Dev` and gave the three PRISMA roles Organization Read, plus Organization Append To for Contributor and Librarian; `Prisma.Deploy inspect-client-roles` read all of it back. Client roles are part of the draft graph (`clientRoleIds`) and of `nx_GetCatalogueGraph` (`clientRoles`, in present mode too), like industries. The local choice `nx_solution.nx_clientrole` is retiring: the new plug-ins neither read nor write it, and a `clientRoleValue` from older clients is ignored. No backfill: the four solutions with a choice (Project Delivery Excellence Hub, Prisma APP, Budget Management Solution, Presentacion a Sebas) are dummy data, so the user decided on 2026-10-21 to let them lose it (`Prisma.Deploy migrate-client-roles` stays available as a preview). Order: deploy the plug-ins and the connected app together, then delete the column.
 
 **Changed in this round (2026-09-23), read back from Nextant Pulse:**
 1. `nx_specializationarea` moved from a 1:N lookup to a **native N:N** with `nx_solution` (`nx_Solution_nx_SpecializationArea_nx_SpecializationArea`). The `nx_solution.nx_specializationarea` lookup column has been **deleted**. See [Known divergences](#known-divergences-from-this-document): no values were carried over, and the plugins still reference the deleted column.
@@ -71,6 +73,7 @@ erDiagram
     cr6b0_consultant |o--o{ nx_capability : "Capability Owner"
     nx_industry }o--o{ nx_solution : "tag (N:N)"
     nx_technology }o--o{ nx_solution : "tag (N:N)"
+    nx_clientrole }o--o{ nx_solution : "target client role (N:N)"
     nx_solution ||--o{ nx_demoasset : "1:N"
     nx_solution ||--o{ nx_solutionimage : "1:N"
     nx_solution ||--o{ nx_demorequest : "1:N"
@@ -136,6 +139,10 @@ erDiagram
     nx_technology {
         guid nx_technologyid PK
         text Technology
+    }
+    nx_clientrole {
+        guid nx_clientroleid PK
+        text ClientRole
     }
     nx_demoasset {
         guid nx_demoassetid PK
@@ -266,6 +273,14 @@ Native N:N with `nx_solution` — a solution can carry several industries. Taggi
 
 Native N:N with `nx_solution` — a solution can carry several technologies.
 
+### `nx_clientrole`
+
+| Column | Logical name | Type | Required | Notes |
+|---|---|---|---|---|
+| Client Role *(primary name)* | `nx_clientrolename` | StringType | Yes | Created 2026-10-21 (schema `nx_ClientRole`, UserOwned) with 14 rows, the labels of the retired `nx_solution.nx_clientrole` choice: Chief of Staff, the five C-suite roles, Enterprise Architect, Solution Architect, Product Owner, Project Manager, Business Unit Leader, Operation Manager, IT Manager, Director, Other. An administrator adds roles in Dataverse; the app has no screen for it |
+
+Native N:N with `nx_solution` (`nx_ClientRole_nx_Solution_nx_Solution`) — a solution can target several client roles, or none. Client-safe: present mode shows and filters by them. Written only through `nx_SaveDraftGraph` (`clientRoleIds`); `DraftGraphGuard` blocks direct Associate/Disassociate.
+
 ### `cr6b0_consultant` — person reference
 
 Pre-existing table in the environment, adopted rather than designed here — earlier rounds called it "new", which it is not. It replaces the PRISMA-owned lookups that used to point at the platform `systemuser` table: `Built By` on `nx_solutioncontributor` and `Requested By` on `nx_demorequest`. On `cr6b0_project`, `cr6b0_customersuccessmanager` also points here.
@@ -303,7 +318,7 @@ The reusable offering — the unit of value shown to a CSM.
 | Client Context (Redacted) | `nx_clientcontextredacted` | StringType | Conditional | The only context shown in present mode; required at submission when Client / Context is populated. Never infer or scrub names automatically. |
 | Challenges | `nx_challenges` | StringType, Text area (max 2000) | No | Created 2026-10-13 (recreated the same day as Text area). Blockers, risks or difficulties met while building it. **Internal-only**: written through `nx_SaveCoreDraft` (`challenges`), read by drafts, submission review and the internal catalogue; the present catalogue never selects it, present detail never renders it and the presentation download never exports it. Readable by any internal user who can read the solution (no field-level security). Not searched |
 | Lessons Learned | `nx_lessonslearned` | StringType, Text area (max 2000) | No | Created 2026-10-13, same rules as Challenges (`lessonsLearned`). Recommendations and implementation notes for the next team |
-| Client Role | `nx_clientrole` | PicklistType (local) | No | Added 2026-09-23. Client stakeholder roles, from Chief of Staff and C-suite to Other; values under [Choice values](#choice-values). No default. Read and written by connected drafts (`clientRoleValue`, deployed 2026-09-28). The published catalogue reads it for the "Target client role" filter, in present mode too |
+| Client Role | `nx_clientrole` | PicklistType (local) | No | **Retiring** (PR-031, 2026-10-21): replaced by the [`nx_clientrole`](#nx_clientrole) N:N. Added 2026-09-23; values under [Choice values](#choice-values). The deployed plug-ins and app still read and write it (`clientRoleValue`); the code on `feat/client-roles-nn` does not. Delete it after that deploy; its four values are dummy data and are not carried over |
 | Status | `nx_status` | PicklistType (global) | Yes | Idea / concept · Working prototype · Client demo · Live in production · Retired |
 | Publication Status | `nx_publicationstatus` | PicklistType (global) | Yes | Default Draft. Draft · Pending review · Published · Retired. Protected; controlled transition handler writes after caller authorization; only Librarian may request publication |
 | Review Outcome | `nx_reviewoutcome` | PicklistType (local) | Yes | Default None. None · Changes requested · Approved. Latest librarian decision; preserved on contributor edits/resubmission, not proof of current approval. Protected write; readable by owner/authorized editors and Librarian, not CSM |
@@ -532,6 +547,7 @@ The per-column **Logical name** and **Type** cells in the tables above come from
 | `nx_capability` | `nx_Capability` | `nx_capabilities` | `nx_capabilityid` | `nx_capabilityname` | UserOwned |
 | `nx_industry` | `nx_Industry` | `nx_industries` | `nx_industryid` | `nx_industryname` | UserOwned |
 | `nx_technology` | `nx_Technology` | `nx_technologies` | `nx_technologyid` | `nx_technologyname` | UserOwned |
+| `nx_clientrole` | `nx_ClientRole` | `nx_clientroles` | `nx_clientroleid` | `nx_clientrolename` | UserOwned |
 | `cr6b0_consultant` | `cr6b0_Consultant` | `cr6b0_consultants` | `cr6b0_consultantid` | `cr6b0_consultantname` | UserOwned |
 | `cr6b0_project` | `cr6b0_Project` | `cr6b0_projects` | `cr6b0_projectid` | `cr6b0_projectidentifier` | UserOwned |
 | `nx_solutionfavorite` | `nx_solutionfavorite` | `nx_solutionfavorites` | `nx_solutionfavoriteid` | `nx_name` | UserOwned |
@@ -554,7 +570,7 @@ Integers, not labels, are what a write must send. Unknown values must fail expli
 | `nx_demoasset.nx_assettype` | Local | 125060000 Self-contained HTML file · 125060001 Video walkthrough only · 125060002 Client-ready one-pager / slide · 125060003 Power BI · 125060004 Desktop app or script · **125060007** Hosted web app (URL) · **125060008** Power Apps |
 | `nx_demorequest.nx_requeststatus` | Local | 125060000 New · 125060001 Acknowledged · 125060002 Scheduled · 125060003 Delivered · 125060004 Declined |
 
-`nx_assettype` is not contiguous: 125060005 and 125060006 are unused. `nx_clientrole` is listed in display order, and COO/CFO (125060008/125060009) sit between CIO and Enterprise Architect. Never derive a choice value from its ordinal position. The live `nx_clientrole` label for Director has a trailing space (`"Director "`), so compare labels trimmed, or better, compare values. The two effort-mode labels are lowercase (`direct`, `calendar`) in Dataverse. The local `nx_solutioncontributor.nx_role` choice (125060000 CSM · 125060001 Consultant) was deleted with its column on 2026-10-08.
+`nx_assettype` is not contiguous: 125060005 and 125060006 are unused. `nx_clientrole` (retiring, see PR-031) is listed in display order, and COO/CFO (125060008/125060009) sit between CIO and Enterprise Architect. Never derive a choice value from its ordinal position. The live `nx_clientrole` label for Director has a trailing space (`"Director "`), so compare labels trimmed, or better, compare values. The two effort-mode labels are lowercase (`direct`, `calendar`) in Dataverse. The local `nx_solutioncontributor.nx_role` choice (125060000 CSM · 125060001 Consultant) was deleted with its column on 2026-10-08.
 
 ### Relationship schema names
 
@@ -566,6 +582,7 @@ Native N:N relationships must be addressed by these exact names; the plugins alr
 | `nx_Solution_nx_Industry_nx_Industry` | `nx_solution` ↔ `nx_industry` | `nx_Solution_nx_Industry` |
 | `nx_Solution_nx_Technology_nx_Technology` | `nx_solution` ↔ `nx_technology` | `nx_Solution_nx_Technology` |
 | `nx_Solution_cr6b0_Project_cr6b0_Project` | `nx_solution` ↔ `cr6b0_project` | `nx_Solution_cr6b0_Project` |
+| `nx_ClientRole_nx_Solution_nx_Solution` | `nx_clientrole` ↔ `nx_solution` (client role is Entity 1) | `nx_clientrole_nx_solution` |
 
 ### Alternate keys
 
@@ -583,7 +600,7 @@ Reviewed and accepted, not defects:
 - Column lengths in Dataverse are largely 850 (text) and 4000 (multiline); the design lengths above were not applied and are not enforced at the column level.
 - Required levels do not match the Required column above — notably `nx_capability` is `ApplicationRequired` in Dataverse while drafts may leave it empty. `ApplicationRequired` is not enforced on SDK writes, so the draft plugin is unaffected; a model-driven form would be.
 - `cr6b0_consultant` and `cr6b0_project` carry many columns of their own beyond the ones documented above, and `cr6b0_consultant.cr6b0_specializationarea` points to a **different** table of that name, outside this solution. Both are treated as independent, pre-existing tables; the sections above list their identifiers, person links and the columns PRISMA reads, not their full column sets.
-- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` is read and written by connected drafts (deployed 2026-09-28). `nx_solutioncontributor.nx_role` was too until it was retired and deleted on 2026-10-08. The published catalogue also reads the system `createdon` for "Newest/Oldest first" (2026-09-29).
+- `nx_solution.nx_image`, `nx_sortordernumber` and all of `nx_demorequest` exist in Dataverse but are not read by the connected app yet. `nx_solution.nx_clientrole` is read and written by the deployed connected drafts (2026-09-28) until the PR-031 deploy replaces it with the N:N. `nx_solutioncontributor.nx_role` was too until it was retired and deleted on 2026-10-08. The published catalogue also reads the system `createdon` for "Newest/Oldest first" (2026-09-29).
 - `nx_solutioncontributor.nx_startdate` and `nx_enddate` exist in Dataverse but are retired (deployed 2026-10-08): PRISMA neither reads nor writes them, and existing values are left in place. They stay until someone removes them from the unused "Information" main form; deleting them is optional ([Q20](../delivery/decision-log.md)).
 - The generated connected-app model and schema for `nx_solutioncontributor` still list the deleted `nx_role` and `nx_allocationpercent`. The app never queries that table directly (contributors go through the plug-ins), so this is harmless; regenerate the data source with the Power Apps CLI on the next connected-app change.
 
@@ -611,6 +628,7 @@ Reviewed and accepted, not defects:
 | `cr6b0_consultant` | `nx_capability` | 1:N (Capability Owner) |
 | `nx_industry` | `nx_solution` | Native N:N |
 | `nx_technology` | `nx_solution` | Native N:N |
+| `nx_clientrole` | `nx_solution` | Native N:N (2026-10-21) |
 | `nx_solution` | `cr6b0_project` | Native N:N |
 | `nx_solution` | `nx_solutioncontributor` | 1:N |
 | `cr6b0_consultant` | `nx_solutioncontributor` | 1:N (Built By) |
@@ -624,7 +642,7 @@ Reviewed and accepted, not defects:
 | `nx_solution` | `nx_solutionfavorite` | 1:N (parental: Delete Cascade, no share/assign cascade) |
 | `cr6b0_consultant` | `nx_solutionfavorite` | 1:N (`nx_user`, Delete: RemoveLink) |
 
-**13 tables:** the 11 original business tables (`nx_solution`, `nx_solutioncontributor`, four governed/tag reference tables, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, existing `cr6b0_consultant` and `cr6b0_project`), private `nx_uploadsession`, and `nx_solutionfavorite` (2026-09-23). Platform-managed N:N intersect tables are excluded. Consultant/Project columns and security are unchanged. Connected owner edits currently require explicit withdrawal to Draft; librarian content editing (ADR-0013, deployed 2026-10-15), separate thumbnail/caption editing and solution deletion remain gaps against the target contract.
+**14 tables:** the 11 original business tables (`nx_solution`, `nx_solutioncontributor`, four governed/tag reference tables, `nx_demoasset`, `nx_solutionimage`, `nx_demorequest`, existing `cr6b0_consultant` and `cr6b0_project`), private `nx_uploadsession`, `nx_solutionfavorite` (2026-09-23) and the `nx_clientrole` reference table (2026-10-21). Platform-managed N:N intersect tables are excluded. Consultant/Project columns and security are unchanged. Connected owner edits currently require explicit withdrawal to Draft; librarian content editing (ADR-0013, deployed 2026-10-15), separate thumbnail/caption editing and solution deletion remain gaps against the target contract.
 
 
 **Dropped from the first v2 draft, then reintegrated, then flattened this round:** `nx_capability` — brought back as a reference table scoped to a single connection (`nx_solution` only, not `cr6b0_project`), and as of this round a 1:N single-valued lookup rather than N:N.
@@ -657,7 +675,7 @@ Unpublished `nx_solution` rows stay invisible to CSMs at the platform level. Pub
 
 - Who creates the `Solution`↔`Project` N:N association — the Librarian during triage, or the Contributor who owns the Solution?
 - Specialization areas per solution: is the minimum one at submit? Is there a maximum? Does the UI need a "primary" area for the card color and badge?
-- `nx_clientrole`: what does it represent (the client stakeholder the solution targets?), is it required at submit, and is it shown in present mode?
+- Client roles: what do they represent (the client stakeholders the solution targets?) and should at least one be required at submit? Several per solution and shown in present mode since PR-031.
 - `nx_solutionfavorite`: should the ranking count favorites, and who sees the ranking? Who cleans up favorites with an empty `nx_user` after a consultant is deleted?
 
 *(Resolved: `SpecializationArea` cardinality — changed to native N:N on 2026-09-23. `Industry` and `Technology` cardinality — settled as native N:N, multi-valued. `Capability` cardinality — settled as 1:N, single-valued. `cr6b0_project` + `Solution`↔`Project` link — confirmed in scope, native N:N, no junction table. `systemuser` lookups replaced by `cr6b0_consultant`. `nx_businesscalendar`/`nx_businesscalendarholiday` — removed from scope. `nx_role` CSM rows — retired and deleted 2026-10-08: the CSM is derived from `cr6b0_consultantlevel` and is an ordinary contributor. Contributor dates/allocation — retired 2026-10-08 for direct minimum hours; `nx_allocationpercent` deleted 2026-10-08, legacy rows are dummy data (no backfill), and optionally deleting `nx_startdate`/`nx_enddate` is tracked in the [decision log](../delivery/decision-log.md).)*

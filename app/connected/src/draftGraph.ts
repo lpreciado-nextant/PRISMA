@@ -1,7 +1,7 @@
 import { coreFields, saveDraft, type CoreDraft, type DraftApi, type DraftResult, type SavedDraft } from "./drafts.ts";
 import { readAll, type ReadRows } from "./catalogue.ts";
 
-export type GraphReferences = Record<"people" | "technologies" | "industries" | "projects", { id: string; name: string; email?: string; level?: string }[] | null>;
+export type GraphReferences = Record<"people" | "technologies" | "industries" | "clientRoles" | "projects", { id: string; name: string; email?: string; level?: string }[] | null>;
 export function initialContributor(references: GraphReferences, owner: string): DraftGraph {
   const people = references.people?.filter(person => person.email?.trim().toLowerCase() === owner.trim().toLowerCase()) ?? [];
   return { ...emptyGraph(), contributors: people.length === 1 ? [{ id: null, personId: people[0].id }] : [] };
@@ -11,6 +11,7 @@ export async function loadGraphReferences(read: ReadRows, signal: AbortSignal): 
     { table: "people", id: "cr6b0_consultantid", name: "cr6b0_consultantname" },
     { table: "technologies", id: "nx_technologyid", name: "nx_technologyname" },
     { table: "industries", id: "nx_industryid", name: "nx_industryname" },
+    { table: "clientRoles", id: "nx_clientroleid", name: "nx_clientrolename" },
     { table: "projects", id: "cr6b0_projectid", name: "cr6b0_projecttitle" },
   ] as const;
   const lists = await Promise.all(definitions.map(async definition => {
@@ -41,13 +42,15 @@ export interface DraftGraph {
   industryIds: string[];
   projectIds: string[];
   areaIds: string[];
+  /** Target client roles (`nx_clientrole` N:N, PR-031). */
+  clientRoleIds: string[];
 }
 export interface GraphSnapshot { id: string; rowVersion: string; graph: DraftGraph }
 export interface GraphApi {
   read: (id: string) => Promise<DraftResult>;
   save: (id: string, version: string, json: string) => Promise<DraftResult>;
 }
-export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [] });
+export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [] });
 
 export function isEmptyContributor(person: Contributor): boolean {
   return !person.id && !person.personId;
@@ -101,11 +104,11 @@ export function parseGraph(result: DraftResult): GraphSnapshot {
     return { id: person.id, personId: person.personId };
   });
   if (new Set(contributors.map(person => person.personId)).size !== contributors.length) throw new Error("Duplicate contributor.");
-  return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds) } };
+  return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds), clientRoleIds: ids(graph.clientRoleIds) } };
 }
 export function graphPayload(graph: DraftGraph): string {
   return JSON.stringify({
     contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId })),
-    technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds,
+    technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds, clientRoleIds: graph.clientRoleIds,
   });
 }
