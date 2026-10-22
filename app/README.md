@@ -1,7 +1,7 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API, plug-in tracing and on-demand contributor screens were deployed and published on 2026-09-30, followed the same day by graph card thumbnails, shared detail reads and blur-only glass. Contributor minimum hours and the consultant-level CSM were deployed on 2026-10-08. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
-**Last updated:** 2026-10-15
+**Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API, plug-in tracing and on-demand contributor screens were deployed and published on 2026-09-30, followed the same day by graph card thumbnails, shared detail reads and blur-only glass. Contributor minimum hours and the consultant-level CSM were deployed on 2026-10-08. Multiple client roles (PR-031) were deployed on 2026-10-21; deletion of the legacy choice column remains pending. Collapsible help guides and a bundled demo video were published on 2026-10-22; hosted UI verification awaits sign-in. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
+**Last updated:** 2026-10-22
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -468,6 +468,20 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+### Help guides and demo video (2026-10-22)
+
+Published connected PRISMA from `main` commit `e385f0d`, pushed to `origin/main` after a fetch and fast-forward check. The existing app, environment and solution IDs were verified and retained. `pa app push --solution-id adddc940-98ff-4b2f-9c8a-e89245c2fc33 --non-interactive` succeeded ([open this version](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898&sourcetime=1792681298446), bundle `index-CxbYMrgI.js`). No PoC publication, plug-in deployment, schema or permission changes were performed.
+
+The shared **How PRISMA works** page starts with all guides collapsed; selecting a guide opens only that guide, and selecting it again closes it. **Watch the demo**, above Guides, mounts the native video player only when expanded, does not autoplay, and stops playback when collapsed. Both builds import the original [demo MP4](../presentation/PRISMA%20Demo-web.mp4) as a relative Vite asset (74,108,073 bytes). Bundling was explicitly approved after the public-asset warning; this media must remain non-sensitive.
+
+Validation: both production builds, lint and all 50 UI tests passed. Local browser checks covered guide keyboard/pointer toggles, no video requests while collapsed, video playback/seeking, stop-on-close and desktop/mobile layout. Microsoft Edge decoded the stereo AAC audio; VS Code's embedded preview played video without decoding audio, leaving its audio control unavailable. GitHub accepted the MP4 with a large-file warning; no CI run was returned by the CLI after the push. The hosted page requires Microsoft sign-in, so hosted UI/media verification remains pending.
+
+### Multiple client roles (2026-10-21)
+
+[PR #3](https://github.com/lpreciado-nextant/PRISMA/pull/3), from `feat/client-roles-nn`, passed both CI jobs and was merged as `d630738`. Local `main` was fast-forwarded from `origin/main` before deployment. The Release plug-in was rebuilt, Authenticode-signed with the existing PRISMA certificate and deployed through `Prisma.Deploy blob-plugin --execute`; immediately afterward, `npm run build:connected` and `pa app push --solution-id adddc940-98ff-4b2f-9c8a-e89245c2fc33` published the connected app. No new Custom APIs, migration, permission changes or PoC publication were performed.
+
+The authenticated [hosted PRISMA app](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898) served `index-DIjoYbl9.js` from package `cffbecd7c927474eb6ed6c7957ec74cb20261021t200059zf1960a1854` and reached **Catalogue ready**. Full multi-role editing and least-privilege acceptance were not rerun. The existing table, 14 reference rows, N:N and PRISMA role privileges were verified read-only before deployment. **The old `nx_solution.nx_clientrole` column was not deleted**; its deletion is a separate owner follow-up. The four legacy dummy values were not migrated, as previously agreed in [SchemaV2](../docs/data_model/SchemaV2.md#nx_clientrole).
 
 ### Contributor hours and consultant level (2026-10-08)
 
