@@ -9,7 +9,8 @@ solution.json  = { "fields": { "solution_title": "...", ... },
 See PRISMA_Field_Map.md for every field. Requires: pip install python-pptx
 
 This is the kit's reference filler. The app's filler (app/src/lib/deckTemplate.ts) is the source of truth and adds
-the adaptive layout (cover stacking, sized cards, screenshot grid, sized chips) that this script does not do.
+the adaptive layout (cover stacking, text fitting, screenshot grid, technologies flowing, demo rows in one column or
+three) that this script does not do: here demo rows and technologies keep the template's default places.
 """
 import copy, io, json, re, sys, zipfile
 from pptx import Presentation
@@ -24,7 +25,7 @@ PALETTES = {  # same values as the PRISMA app tokens
 }
 AREA_KEY = {"ai & automation": "ai", "data solutions": "data", "intelligent business operations": "ibo"}
 MATURITY_KEY = {"live": "live", "working prototype": "proto", "idea / concept": "idea"}
-LINKS = {"prisma_link_chip": "prisma_href", "prisma_link": "prisma_href"}  # whole chip is clickable, text on top too
+LINKS = {"library_link": "library_href"}  # slide 6: "Explore the Library"
 TEXT_LINKS = {"csm_email": "csm_email"}  # text run becomes a link
 ROW_KINDS = {"video": 3, "interactive": 2, "supporting": 3}  # demo rows: video_N_title / video_N_url ...
 
@@ -114,28 +115,6 @@ def add_picture_cover(slide, frame, image_path):
     return pic
 
 
-def spread_cards(named):
-    """Cards without rows are gone; the remaining ones share the full width (buttons stay on the right edge)."""
-    kinds = [k for k in ROW_KINDS if f"card_{k}" in named]
-    present = [k for k in kinds if named[f"card_{k}"]._element.getparent() is not None]
-    if len(kinds) < 2 or len(present) == len(kinds) or not present:
-        return
-    cards = [named[f"card_{k}"] for k in kinds]
-    left, right = cards[0].left, cards[-1].left + cards[-1].width
-    gap = cards[1].left - (cards[0].left + cards[0].width)
-    width = int((right - left - gap * (len(present) - 1)) / len(present))
-    for i, k in enumerate(present):
-        card = named[f"card_{k}"]
-        dx, dw = left + i * (width + gap) - card.left, width - card.width
-        for nm, shp in named.items():
-            if shp._element.getparent() is None or not (nm in (f"card_{k}", f"{k}_label") or nm.startswith(f"row_{k}_")):
-                continue
-            right_anchored = nm.endswith("_btn") or nm.endswith("_btn_text")
-            shp.left = Emu(shp.left + dx + (dw if right_anchored else 0))
-            if not right_anchored and not nm.endswith(("_icon", "_play")):
-                shp.width = Emu(shp.width + dw)
-
-
 def main(template, data_json, out):
     prs, mode = open_template(template)
     data = json.load(open(data_json, encoding="utf8"))
@@ -148,12 +127,10 @@ def main(template, data_json, out):
         named = shapes_by_name(slide)
         # recolour badges by area / maturity
         if area:
-            for n in ("badge_area", "area_dot"):
-                if n in named: set_color(named[n]._element, area)
+            if "area_dot" in named: set_color(named["area_dot"]._element, area)
             if "badge_area_text" in named: set_color(named["badge_area_text"]._element, area, text=True, fills=False, lines=False)
         if mat:
-            for n in ("badge_maturity", "maturity_dot"):
-                if n in named: set_color(named[n]._element, mat)
+            if "maturity_dot" in named: set_color(named["maturity_dot"]._element, mat)
             if "badge_maturity_text" in named: set_color(named["badge_maturity_text"]._element, mat, text=True, fills=False, lines=False)
         # images
         for key, frame in [(n[4:], s) for n, s in named.items() if n.startswith("img_") and not n.endswith("_label")]:
@@ -171,44 +148,34 @@ def main(template, data_json, out):
         for shp in list(slide.shapes):
             if shp.has_text_frame:
                 fill_text_frame(shp.text_frame, fields)
-        # drop unused technology chips
+        # drop unused technologies, and an empty industry or client context with its label
         for i in range(1, 9):
-            t, c = named.get(f"tech_{i}"), named.get(f"tech_chip_{i}")
+            t, dot = named.get(f"tech_{i}"), named.get(f"tech_dot_{i}")
             if t is not None and not t.text_frame.text.strip():
                 t._element.getparent().remove(t._element)
-                if c is not None: c._element.getparent().remove(c._element)
-        # demo rows: drop unused rows, link the button of used ones
+                if dot is not None: dot._element.getparent().remove(dot._element)
+        for field, parts in (("industries", ("industry_label", "industry_value", "industry_dot")), ("client_context", ("client_label", "client_value", "client_dot"))):
+            if not fields.get(field):
+                for nm in parts:
+                    if nm in named: named[nm]._element.getparent().remove(named[nm]._element)
+        # demo rows: drop unused rows and empty sections; a used row links its title and button, which says what it does
         for kind, mx in ROW_KINDS.items():
+            used = 0
             for n in range(1, mx + 1):
-                if f"row_{kind}_{n}" not in named:
-                    continue
-                title, url = fields.get(f"{kind}_{n}_title", ""), fields.get(f"{kind}_{n}_url", "")
+                title, url, action = (fields.get(f"{kind}_{n}_{key}", "") for key in ("title", "url", "action"))
+                parts = [shp for nm, shp in named.items() if nm.startswith(f"row_{kind}_{n}_")]
                 if not title:
-                    for nm, shp in named.items():
-                        if nm.startswith(f"row_{kind}_{n}"):
-                            shp._element.getparent().remove(shp._element)
-                elif url:  # the label text box sits over the button and takes the click, so both carry the link
-                    for part in ("btn", "btn_text"):
-                        if f"row_{kind}_{n}_{part}" in named:
-                            named[f"row_{kind}_{n}_{part}"].click_action.hyperlink.address = url if url.startswith("http") else "https://" + url
-        # size demo cards to the rows in use; hide a card with no rows
-        if "demo_note" in named:
-            bottoms = []
-            for kind, mx in ROW_KINDS.items():
-                used = sum(1 for n in range(1, mx + 1) if fields.get(f"{kind}_{n}_title"))
-                card_shp = named.get(f"card_{kind}")
-                if card_shp is None: continue
-                if used == 0:
-                    for nm, shp in list(named.items()):
-                        if nm == f"card_{kind}" or nm == f"{kind}_label":
-                            shp._element.getparent().remove(shp._element)
-                else:
-                    card_shp.height = Emu(int((0.65 + used * 0.9 + 0.14) * 914400))  # first row, row pitch, padding
-                    bottoms.append(card_shp.top + card_shp.height)
-            if bottoms:
-                named["demo_note"].top = max(bottoms) + Emu(int(0.14 * 914400))
-            spread_cards(named)
-        # hyperlinks (chips are clickable shapes so text colour stays readable on the filled chip)
+                    for shp in parts: shp._element.getparent().remove(shp._element)
+                    continue
+                used += 1
+                for part in ("title", "btn_text"):
+                    if url and f"row_{kind}_{n}_{part}" in named:
+                        named[f"row_{kind}_{n}_{part}"].click_action.hyperlink.address = url if url.startswith("http") else "https://" + url
+                if action and f"row_{kind}_{n}_btn_text" in named:
+                    named[f"row_{kind}_{n}_btn_text"].text_frame.paragraphs[0].runs[0].text = f"{action.upper()}  {'↓' if action == 'Download' else '↗'}"
+            if not used and f"{kind}_label" in named:
+                named[f"{kind}_label"]._element.getparent().remove(named[f"{kind}_label"]._element)
+        # hyperlinks
         def to_url(val):
             return val if val.startswith(("http", "mailto:")) else ("mailto:" + val if "@" in val else "https://" + val)
         for shape_name, field in LINKS.items():

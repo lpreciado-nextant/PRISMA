@@ -62,6 +62,7 @@ export async function downloadSolutionDeck({ solution, media, presenter, csm, li
   const fields = buildDeckFields({
     solution, presenter, csm,
     prismaUrl: link(`/s/${solution.id}`) ?? "",
+    libraryUrl: link("/"),
     videos: demos("Demo video"),
     interactives: demos("Interactive demo"),
     supporting: demos("Supporting material"),
