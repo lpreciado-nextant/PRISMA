@@ -37,10 +37,23 @@ test("fields respect template limits and fall back by slot", () => {
   assert.equal(withSupporting.supporting_3_title, "FAQ");
   assert.equal(withSupporting.supporting_4_title, undefined);
   assert.equal(fields.presentation_date, "OCTOBER 2026");
-  assert.equal(fields.prisma_url, "", "the chip reads Explore it live in PRISMA");
+  assert.equal(fields.library_href, fields.prisma_href, "without a library link, slide 6 opens the solution");
+  assert.equal(fields.csm_initials, "AP");
   assert.equal(fields.csm_name, "Ana Pérez", "without a CSM the presenter is the contact");
   assert.equal(fields.prisma_href, "https://prisma.nextant.com/#/s/1", "the link is never truncated");
   assert.equal(fields.tech_list.split(", ").length, 12);
+});
+
+test("slide 4 lists every area, the capability and only the redacted client context", () => {
+  const solution: Solution = { ...base, specializationArea: "data", specializationAreas: ["data", "ai"], capabilities: ["Data Engineering"], clientContext: "ACME Corp", clientContextRedacted: "A national retailer", clientSafeReviewed: true, publicationStatus: "Published", status: "Working prototype" };
+  const fields = buildDeckFields({ ...input, solution, libraryUrl: "https://prisma.nextant.com/", csm: { name: "Juliana Castelblanco", email: "j@nextant.com" } });
+  assert.equal(fields.area_name, "Data Solutions");
+  assert.equal(fields.area_names, "Data Solutions · AI & Automation");
+  assert.equal(fields.capability, "Data Engineering");
+  assert.equal(fields.client_context, "A national retailer");
+  assert.equal(fields.library_href, "https://prisma.nextant.com/");
+  assert.equal(fields.csm_initials, "JC");
+  assert.equal(buildDeckFields({ ...input, solution: { ...solution, clientContextRedacted: undefined } }).client_context, "");
 });
 
 test("image keys and file names", () => {

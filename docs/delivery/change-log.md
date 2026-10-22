@@ -1,6 +1,6 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-21
+**Status:** Living · **Last updated:** 2026-10-22
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
@@ -11,6 +11,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Source | Progress |
 |---|---|---|---|
+| [2026-10-22](#2026-10-22--working-session-redesigned-presentation-download) | Redesigned presentation download (Dark and Light) | 🛠️ Own changes | 50% — 1 In code / 1 |
 | [2026-10-21](#2026-10-21--working-session-contact-from-the-help-page) | Contact from the help page | 🛠️ Own changes | 50% — 1 In code / 1 |
 | [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort; visual tweaks | 🛠️ Own changes | 85% — 2 Live, 3 Pending review / 5 |
 | [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 🛠️ Own changes | 100% — 15 Live / 15 |
@@ -69,6 +70,22 @@ When a decision above gets resolved, delete its bullet here and update the match
 ```
 
 ---
+
+## 2026-10-22 — Working session: redesigned presentation download
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 50% — 1 In code / 1
+
+### Feedback
+
+- Juliana reworked a downloaded deck in PowerPoint (larger, bolder titles; lists instead of cards) and wants it to be the download, with a Light version built from it.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| New Dark and Light templates from the redesign; slide 4 shows areas, capability, industries, redacted client context and technologies; slide 5 lists demo rows per kind; slide 6 links the library and shows the contact's initials | In code | Branch `feat/new-deck-template`. Field map in [`PRISMA_Field_Map.md`](../../tools/pptx-template/PRISMA_Field_Map.md) (v3). Checked by exporting filled samples with PowerPoint (few, many and no demos; long and short names) and with the Open XML validator. Also fixes two filler bugs the redesign exposed: positions read the shape's own `a:xfrm` (PowerPoint puts an `a:extLst/a:ext` in `cNvPr` first) and links replace an existing one in schema order; a notes text body keeps one paragraph. Next: publish the connected app, then download both themes from the hosted app |
 
 ## 2026-10-21 — Working session: contact from the help page
 
