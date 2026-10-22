@@ -29,7 +29,7 @@ export default defineConfig({
     watch: {
       ignored: [fileURLToPath(new URL("../public/sample-500mb.mp4", import.meta.url)).replaceAll("\\", "/")],
     },
-    fs: { allow: [fileURLToPath(new URL("..", import.meta.url))] },
+    fs: { allow: [fileURLToPath(new URL("..", import.meta.url)), fileURLToPath(new URL("../../presentation/PRISMA Demo-web.mp4", import.meta.url))] },
   },
   build: { outDir: "dist", emptyOutDir: true },
 });

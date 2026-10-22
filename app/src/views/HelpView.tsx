@@ -1,6 +1,8 @@
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Icon, type IconName } from "../components/Icon";
+import { VideoPlayer } from "../components/ViewerFrame";
 import { navigate } from "../lib/router";
+import demoVideoUrl from "../../../presentation/PRISMA Demo-web.mp4?url";
 
 type Role = { id: string; icon: IconName; eyebrow: string; title: string; steps: ReactNode[] };
 /** Prefilled links to the PRISMA team. Who is on it is configured by the app, so the page never names people. */
@@ -11,10 +13,12 @@ const contactButton = "inline-flex min-h-10 items-center gap-2 rounded-lg px-4 p
  * "How PRISMA works" (`#/help`): one short guide per role and common questions, reached from the masthead's help button.
  * It never sits in the hero flow (search → grid → detail → viewer) and is not offered in present mode. `connected` adds
  * what only the Dataverse app does (librarian editing, Dataverse permissions); the PoC shows the shared basics.
- * Section shortcuts scroll instead of linking to `#id`, because the hash belongs to the router.
+ * Guide buttons toggle their content without changing the hash, which belongs to the router.
  * `contact` (connected only) adds "Questions or something looks wrong?" with a Teams chat and an email to the PRISMA team.
  */
 export function HelpView({ connected = false, librarian = true, contact }: { connected?: boolean; librarian?: boolean; contact?: HelpContact }) {
+  const [activeGuide, setActiveGuide] = useState<string | null>(null);
+  const [demoOpen, setDemoOpen] = useState(false);
   const roles: Role[] = [
     { id: "help-find", icon: "search", eyebrow: "Everyone · CSMs", title: "Find and present a solution", steps: [
       <>Search the <b>Library</b> by name, problem or technology, and narrow it with <b>Refine</b> (area, capability, industry, demo type and more).</>,
@@ -76,15 +80,26 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
       </li>)}
     </ol>
 
+    <div className="mt-6">
+      <button type="button" aria-expanded={demoOpen} aria-controls="help-demo" onClick={() => setDemoOpen(open => !open)} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg text-[15px] font-semibold text-(--accent) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)">
+        <Icon name="play" size={18} />Watch the demo
+        <Icon name="chevronDown" size={16} className={`shrink-0 transition-transform motion-reduce:transition-none ${demoOpen ? "rotate-180" : ""}`} />
+      </button>
+      <div id="help-demo" hidden={!demoOpen} className="mt-3 aspect-video overflow-hidden rounded-lg bg-black">
+        {demoOpen && <VideoPlayer src={demoVideoUrl} name="PRISMA demo" className="h-full w-full object-contain" />}
+      </div>
+    </div>
+
     <h2 className="eyebrow mt-8">Guides</h2>
     <nav aria-label="Guides" className={`mt-3 grid gap-3 ${roles.length === 4 ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
-      {roles.map(role => <button key={role.id} type="button" onClick={() => jump(role.id)} className="glass glass-lite flex cursor-pointer items-start gap-3 rounded-[18px] p-4 text-left transition-[filter] hover:brightness-105">
+      {roles.map(role => <button key={role.id} type="button" aria-expanded={activeGuide === role.id} aria-controls={role.id} onClick={() => setActiveGuide(current => current === role.id ? null : role.id)} className="glass glass-lite flex cursor-pointer items-start gap-3 rounded-[18px] p-4 text-left transition-[filter] hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)">
         <span className="grid size-9 shrink-0 place-items-center rounded-full" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}><Icon name={role.icon} size={17} /></span>
         <span className="min-w-0"><span className="eyebrow block text-[10px]">{role.eyebrow}</span><span className="mt-1 block text-[15px] font-semibold">{role.title}</span></span>
+        <Icon name="chevronDown" size={16} className={`ml-auto shrink-0 self-center transition-transform motion-reduce:transition-none ${activeGuide === role.id ? "rotate-180" : ""}`} />
       </button>)}
     </nav>
 
-    {roles.map(role => <section key={role.id} id={role.id} aria-labelledby={`${role.id}-title`} className="glass glass-lite glass-sheen mt-6 scroll-mt-24 rounded-[24px] p-6 sm:p-8">
+    {roles.map(role => <section key={role.id} id={role.id} hidden={activeGuide !== role.id} aria-labelledby={`${role.id}-title`} className="glass glass-lite glass-sheen mt-6 scroll-mt-24 rounded-[24px] p-6 sm:p-8">
       <p className="eyebrow">{role.eyebrow}</p>
       <h2 id={`${role.id}-title`} className="mt-1.5 text-[21px] font-bold">{role.title}</h2>
       <ol className="mt-4 space-y-3">

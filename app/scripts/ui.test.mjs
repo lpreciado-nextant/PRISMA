@@ -32,6 +32,26 @@ before(async () => {
 });
 after(async () => { await server?.close(); if (cacheDirectory) await rm(cacheDirectory, { recursive: true, force: true }); });
 
+test("help guides start collapsed with accessible controls in both app targets", async () => {
+  const { HelpView } = await server.ssrLoadModule("/src/views/HelpView.tsx");
+  for (const connected of [false, true]) {
+    for (const librarian of [false, true]) {
+      const html = render(HelpView, { connected, librarian });
+      const guideIds = ["help-find", "help-share", ...(connected ? ["help-feedback"] : []), ...(librarian ? ["help-review"] : [])];
+      assert.equal((html.match(/aria-expanded="false" aria-controls="help-(?:find|share|feedback|review)"/g) ?? []).length, guideIds.length);
+      for (const id of guideIds) {
+        assert.match(html, new RegExp(`aria-expanded="false" aria-controls="${id}"`));
+        assert.match(html, new RegExp(`<section id="${id}" hidden="" aria-labelledby="${id}-title"`));
+      }
+      assert.doesNotMatch(html, /aria-expanded="true"/);
+      assert.match(html, /aria-expanded="false" aria-controls="help-demo"/);
+      assert.match(html, /id="help-demo" hidden=""/);
+      assert.doesNotMatch(html, /<video|<source/);
+      assert.ok(html.indexOf("Watch the demo") < html.indexOf('aria-label="Guides"'));
+    }
+  }
+});
+
 test("profile photo lookup uses the signed-in identity and tolerates missing, denied or invalid photos", async () => {
   const { getUserPhoto } = await server.ssrLoadModule("/connected/src/dataSource.ts");
   const { Office365UsersService } = await server.ssrLoadModule("/connected/src/generated/services/Office365UsersService.ts");
