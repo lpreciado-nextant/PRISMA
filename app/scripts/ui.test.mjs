@@ -975,10 +975,10 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   // Counted by solution: a returned draft and a solution with two suggestions make 2, not 3.
   seen.setFeedbackItems([seen.feedbackKeys(entries[0].solution), seen.feedbackKeys(entries[1].solution, ["a", "b"])]);
   // One of them was returned: the count takes the amber of Changes requested and explains the split.
-  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions need your attention: 1 changes requested, 1 with new suggestions">2<\/span>/);
+  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions need your attention: 1 Changes requested, 1 New suggestions">2<\/span>.*class="hover-hint-text">1 Changes requested, 1 New suggestions<\/span>/s);
   // Only suggestions: blue.
   seen.setFeedbackItems([seen.feedbackKeys(entries[1].solution, ["a", "b"])]);
-  assert.match(render(masthead.Masthead, mastheadProps), /section-nav-count section-nav-count--open" aria-label="1 solution needs your attention: 1 with new suggestions">1<\/span>/);
+  assert.match(render(masthead.Masthead, mastheadProps), /section-nav-count section-nav-count--open" aria-label="1 solution needs your attention: 1 New suggestions">1<\/span>.*class="hover-hint-text">1 New suggestions<\/span>/s);
   seen.setFeedbackItems([]);
   assert.doesNotMatch(render(masthead.Masthead, mastheadProps), /section-nav-count--open/);
   // The librarian's comment has no check: it stays open until the owner resubmits.
