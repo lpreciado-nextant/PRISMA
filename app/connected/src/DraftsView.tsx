@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
-import { TagPicker } from "../../src/components/TagPicker";
 import { SolutionCard } from "../../src/components/SolutionCard";
-import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, EffortFields, SolutionDetailsFields, ClientFields, StoryFields, LessonsFields, SubmissionReview, StatusField } from "../../src/components/SubmissionForm";
+import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, EffortFields, SolutionDetailsFields, ClientFields, StoryFields, LessonsFields, SubmissionReview, StatusField, CapabilityFields } from "../../src/components/SubmissionForm";
 import type { Solution, SpecializationArea } from "../../src/types";
-import { MAX_AREAS } from "../../src/lib/areas";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
 import { AREAS } from "../../src/data/catalogueMetadata";
 import { DraftGraphEditor } from "./DraftGraphEditor";
@@ -20,6 +18,7 @@ import { hasCaptionChanges, saveMediaCaptions, type MediaItem } from "./media";
 import { parseRecovery, recoveryKey, recoveryPayload } from "./draftRecovery";
 import { ProtectedImage } from "./ProtectedImage";
 import { LibrarianEditNotice } from "../../src/components/LibrarianEditNotice";
+import { loadCapabilityOwner } from "./capabilityOwner";
 
 type LoadState = { kind: "loading" } | { kind: "error" } | { kind: "ready"; revision: number; detail?: SubmissionDetail; references: DraftReferences; graphReferences: GraphReferences };
 const buttonClass = "inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-50";
@@ -267,12 +266,42 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     setHoursText(text);
     try { change("estimatedMinimumHours", estimatedHours(text.trim() === "" ? undefined : Number(text))); } catch { /* shown as hoursError; the draft keeps its last valid value */ }
   };
+  // Classify & tag: the main capability, by area; its area becomes the solution's only area (the draft graph's
+  // areaIds), so the existing graph API keeps it. Other capabilities wait for the secondary-capability plug-in.
+  const areaOrder = [...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name));
+  const capabilityArea = (id: string) => {
+    const areaId = references.capabilities.find(option => option.id === id)?.areaId;
+    return areaId ? references.areas.find(option => option.id.toLowerCase() === areaId) : undefined;
+  };
+  const unplaced = references.capabilities.filter(option => !capabilityArea(option.id));
+  const capabilityGroups = [
+    ...areaOrder.map(area => ({ label: areaName(area.name), accent: area.name === "ai" || area.name === "data" || area.name === "ibo" ? AREAS[area.name].cssVar : undefined,
+      options: references.capabilities.filter(option => capabilityArea(option.id)?.id === area.id).map(option => ({ value: option.id, label: option.name })) })),
+    ...(unplaced.length ? [{ label: "Other", options: unplaced.map(option => ({ value: option.id, label: option.name })) }] : []),
+  ];
+  const mainArea = draft.capabilityId ? capabilityArea(draft.capabilityId) : undefined;
+  const chooseCapability = (id: string) => {
+    change("capabilityId", id);
+    const area = capabilityArea(id);
+    if (area && (graph.areaIds.length !== 1 || graph.areaIds[0].toLowerCase() !== area.id.toLowerCase())) changeGraph({ ...graph, areaIds: [area.id] });
+  };
+  const capabilityName = references.capabilities.find(option => option.id === draft.capabilityId)?.name;
+  const [capabilityOwner, setCapabilityOwner] = useState<{ capability: string; name: string | null } | undefined>(undefined);
+  useEffect(() => {
+    if (!capabilityName) return;
+    const controller = new AbortController();
+    void loadCapabilityOwner(readRows, capabilityName, controller.signal)
+      .then(person => { if (!controller.signal.aborted && person !== undefined) setCapabilityOwner({ capability: capabilityName, name: person?.name ?? null }); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [capabilityName]);
+  const mainOwner = capabilityOwner && capabilityOwner.capability === capabilityName ? capabilityOwner.name : undefined;
   const canSave = !!draft.name.trim() && draft.name.trim().toLowerCase() !== "untitled solution" && !graph.contributors.some(person => !person.personId && !isEmptyContributor(person)) && !hoursError;
   // Contributors are credit only; effort is the solution's complexity (required) and optional hour estimate.
   const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !!person.personId) && draft.complexityValue != null;
   const storyComplete = !!draft.whatItDoes.trim() && !!draft.businessValue.trim();
   const complete = canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
-  const canContinue = step === 0 ? accepted : step === 1 ? canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && !!draft.capabilityId : step === 3 ? canSave && effortComplete && clientValid : step === 4 ? complete : canSave;
+  const canContinue = step === 0 ? accepted : step === 1 ? canSave && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && !!draft.capabilityId : step === 3 ? canSave && effortComplete && clientValid : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked && !(librarian && next === 0)) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;
@@ -300,8 +329,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
         {step === 0 && <SubmissionSafety accepted={accepted} onChange={setAccepted} />}
         {step === 1 && <StepShell title="Define the solution">
           <NamedSection title="Solution details">
-            <SolutionDetailsFields value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)}
-              selectedAreas={graph.areaIds} onAreas={areaIds => changeGraph({ ...graph, areaIds })} maxAreas={MAX_AREAS} areas={[...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name)).map(option => ({ value: option.id, label: areaName(option.name) }))} />
+            <SolutionDetailsFields grouped value={{ ...draft, redacted: draft.clientContextRedacted }} onText={(key, value) => change(key === "redacted" ? "clientContextRedacted" : key, value)} classification={false} />
           </NamedSection>
           <StoryFields nested whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={change} />
         </StepShell>}
@@ -321,7 +349,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
             associated={clientAssociated} onAssociated={setClientAssociated} />
           <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={change} />
         </StepShell>}
-        {step === 2 && <StepShell title="Classify & tag"><TagPicker label="Capability (choose one)" required governed hint="The kind of solution it is." options={references.capabilities.map(option => option.id)} selected={draft.capabilityId ? [draft.capabilityId] : []} getLabel={id => references.capabilities.find(option => option.id === id)?.name ?? "Unavailable capability"} onChange={selected => change("capabilityId", selected.at(-1) ?? "")} /><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
+        {step === 2 && <StepShell title="Classify & tag"><div className="flex min-w-0 flex-col gap-5"><CapabilityFields groups={capabilityGroups} main={draft.capabilityId || undefined} secondary={[]} maxSecondary={0}
+          mainArea={mainArea ? areaName(mainArea.name) : undefined} mainOwner={mainOwner} onMain={chooseCapability} onSecondary={() => undefined} /></div><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
       </fieldset>
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}
       {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}

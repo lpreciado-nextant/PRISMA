@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EMPTY_DRAFT, coreFields, snapshot, loadDrafts, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
+import { EMPTY_DRAFT, coreFields, snapshot, loadDrafts, loadDraftReferences, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
 import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
@@ -634,4 +634,24 @@ test("challenges and lessons learned round-trip; recoveries saved before they ex
   assert.equal(restored.lessonsLearned, "");
   stored.draft.lessonsLearned = "x".repeat(2001);
   assert.throws(() => parseRecovery(JSON.stringify(stored), "owner@example.com", draft.id), /recovery text/);
+});
+
+test("draft references give each capability its specialization area, in sort order", async () => {
+  const area = "11111111-1111-4111-8111-111111111111";
+  const calls: [string, { select?: string[]; orderBy?: string[] }][] = [];
+  const read = async (table: string, options: { select?: string[]; orderBy?: string[] }) => {
+    calls.push([table, options]);
+    return { success: true, data: table === "areas"
+      ? [{ nx_specializationareaid: area, nx_specializationareaname: "data" }]
+      : [{ nx_capabilityid: "22222222-2222-4222-8222-222222222222", nx_capabilityname: "Data Engineering", _nx_specializationarea_value: area.toUpperCase() },
+        { nx_capabilityid: "33333333-3333-4333-8333-333333333333", nx_capabilityname: "Unplaced", _nx_specializationarea_value: null }] };
+  };
+  const references = await loadDraftReferences(read as never, new AbortController().signal);
+  assert.deepEqual(references.capabilities, [
+    { id: "22222222-2222-4222-8222-222222222222", name: "Data Engineering", areaId: area },
+    { id: "33333333-3333-4333-8333-333333333333", name: "Unplaced" },
+  ]);
+  const capabilities = calls.find(([table]) => table === "capabilities")?.[1];
+  assert.ok(capabilities?.select?.includes("_nx_specializationarea_value"));
+  assert.equal(capabilities?.orderBy?.[0], "nx_sortordernumber asc");
 });

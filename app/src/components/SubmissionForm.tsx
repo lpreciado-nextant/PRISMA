@@ -327,7 +327,7 @@ type CapabilityGroup<Value extends string> = { label: string; accent?: string; o
 
 /**
  * Main capability (one, required) chosen in one column per area, and the other capabilities involved (optional, up to
- * `maxSecondary`, one for now, any area) added from the same columns. The solution's areas follow from these, so there is no area
+ * `maxSecondary`, one for now, any area; 0 leaves them out) added from the same columns. The solution's areas follow from these, so there is no area
  * picker: the chosen column lights in its area colour and the main area is shown beneath.
  */
 export function CapabilityFields<Value extends string>({ groups, main, secondary, onMain, onSecondary, mainArea, mainOwner, maxSecondary = 1 }: {
@@ -363,7 +363,7 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
       <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="size-2 rounded-full" style={{ background: mainGroup?.accent ?? "var(--accent)" }} />Main specialization area: <b className="font-semibold text-(--ink)">{mainArea}</b></span>
       {mainOwner !== undefined && <><span aria-hidden="true" className="text-(--ink-3)">·</span><span>Capability owner: {mainOwner ? <b className="font-semibold text-(--ink)">{mainOwner}</b> : <span className="text-(--ink-3)">Not assigned</span>}</span></>}
     </> : "Choose the main capability to set the main specialization area."}</p>
-    {main && <div role="group" aria-label={single ? "Other capability involved" : "Other capabilities involved"} className="min-w-0">
+    {main && maxSecondary > 0 && <div role="group" aria-label={single ? "Other capability involved" : "Other capabilities involved"} className="min-w-0">
       {heading(single ? "Other capability involved" : "Other capabilities involved", false)}
       <p className="mt-1 text-[12px] text-(--ink-3)">{`${single ? "Select one additional capability" : `Select up to ${maxSecondary} additional capabilities`} that played a significant role in the solution's development or delivery. Do not include capabilities that only provided minor support.`}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">

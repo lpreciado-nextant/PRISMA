@@ -28,7 +28,8 @@ export interface CoreDraft {
 }
 
 export interface SavedDraft extends CoreDraft { id: string; rowVersion: string }
-export interface DraftOption { id: string; name: string }
+/** A reference row. A capability also carries the specialization area it belongs to (`nx_capability.nx_specializationarea`). */
+export interface DraftOption { id: string; name: string; areaId?: string }
 export interface DraftReferences { areas: DraftOption[]; capabilities: DraftOption[] }
 export interface DraftResult { success: boolean; data: Record<string, unknown> }
 export interface DraftApi {
@@ -119,18 +120,20 @@ export async function saveDraft(api: DraftApi, draft: CoreDraft, saved: SavedDra
 export async function loadDraftReferences(read: ReadRows, signal: AbortSignal): Promise<DraftReferences> {
   const definitions = [
     { table: "areas", id: "nx_specializationareaid", name: "nx_specializationareaname", orderBy: ["nx_sortordernumber asc", "nx_specializationareaname asc"] },
-    { table: "capabilities", id: "nx_capabilityid", name: "nx_capabilityname", orderBy: ["nx_capabilityname asc"] },
+    { table: "capabilities", id: "nx_capabilityid", name: "nx_capabilityname", orderBy: ["nx_sortordernumber asc", "nx_capabilityname asc"], area: "_nx_specializationarea_value" },
   ] as const;
   const [areas, capabilities] = await Promise.all(definitions.map(async definition => {
+    const area = "area" in definition ? definition.area : undefined;
     const rows = await readAll(read, definition.table, {
-      select: [definition.id, definition.name], filter: "statecode eq 0", orderBy: [...definition.orderBy],
+      select: [definition.id, definition.name, ...(area ? [area] : [])], filter: "statecode eq 0", orderBy: [...definition.orderBy],
     }, signal);
     return rows.map(item => {
       const row = record(item);
       const identifier = row[definition.id];
       const name = row[definition.name];
       if (typeof identifier !== "string" || !GUID.test(identifier) || typeof name !== "string" || !name.trim()) throw new Error("Invalid draft reference data.");
-      return { id: identifier, name };
+      const areaId = area ? row[area] : undefined;
+      return { id: identifier, name, ...(typeof areaId === "string" && GUID.test(areaId) ? { areaId: areaId.toLowerCase() } : {}) };
     });
   }));
   if (!areas.length) throw new Error("No specialization areas are available.");
