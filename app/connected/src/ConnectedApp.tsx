@@ -201,15 +201,16 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     return () => controller.abort();
   }, [present, librarian, route.path]);
   useEffect(() => {
-    // Present mode never shows favorites (the masthead link and card hearts hide themselves).
-    if (present || !user.live) return;
+    // Loaded in present mode too, for "Selected for you" (the viewer's own saved IDs, crossed with the client-safe
+    // catalogue in the library). The masthead link, its count and the card hearts still hide themselves there.
+    if (!user.live) return;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 20_000);
     void loadFavorites(favoriteApi, controller.signal).then(ids => {
       if (!controller.signal.aborted) setFavorites(ids);
     }).catch(() => { if (!controller.signal.aborted) setFavorites(null); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
-  }, [present, user.live]);
+  }, [user.live]);
   useEffect(() => {
     // The Top 10 is internal team signal: never loaded in present mode. A failed read just hides the shelf.
     if (present || !user.live) return;
@@ -313,7 +314,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
         : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} focused={focused} appLocation={appLocation}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id), saves: topSaves.get(solution.id.toLowerCase()) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />
-        : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly
+        : <LibraryView catalogue={state.catalogue} filters={filters} onFilters={next => replaceQuery("/", filtersToQuery(next))} present={present} catalogueOnly selected={favorites ?? undefined}
             featured={topSolutions.length > 0 ? <TopTenRow solutions={topSolutions} saves={solution => topSaves.get(solution.id.toLowerCase())} renderPoster={solution => <PublishedThumbnail solution={solution} thumbnail={thumbnails.get(solution.id)} />}
               favorite={favorites ? solution => ({ saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id) }) : undefined} /> : undefined}
             renderRow={(entry, index) => <SolutionRow solution={entry} present={present} index={index} poster={<PublishedThumbnail solution={entry} thumbnail={thumbnails.get(entry.id)} />}

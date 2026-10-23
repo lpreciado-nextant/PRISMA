@@ -171,6 +171,7 @@ export default function App() {
             filters={filters}
             onFilters={setFilters}
             present={present}
+            selected={favoriteIds}
           />
         )}
       </main>

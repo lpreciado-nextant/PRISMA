@@ -2,6 +2,7 @@ import { Icon } from "../../src/components/Icon";
 import { navigate } from "../../src/lib/router";
 import { ConnectedSolutionCard } from "./ConnectedSolutionCard";
 import type { CatalogueSolution } from "./catalogue";
+import { presentable } from "../../src/lib/catalogue";
 
 /** "My favorites": saved solutions, newest first. Unavailable ones (withdrawn, retired) are simply not listed. */
 export function FavoritesView({ catalogue, ids, pending, onToggle }: {
@@ -14,6 +15,7 @@ export function FavoritesView({ catalogue, ids, pending, onToggle }: {
       {/* Same header position as the other sections: the tabs above already lead back to the library. */}
       <div className="border-b pb-5" style={{ borderColor: "var(--glass-edge)" }}>
         <h1 className="text-[26px]">My favorites</h1>
+        <p className="mt-2 text-[14px]" style={{ color: "var(--ink-2)" }}>In present mode, the ones cleared for clients show as <b className="font-semibold" style={{ color: "var(--ink)" }}>Selected for you</b>.</p>
       </div>
       {saved.length === 0 ? (
         <div className="py-20 text-center">
@@ -34,8 +36,11 @@ export function FavoritesView({ catalogue, ids, pending, onToggle }: {
       ) : (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
           {saved.map((solution, index) => (
-            <ConnectedSolutionCard key={solution.id} solution={solution} present={false} index={index} thumbnail={solution.cardThumbnail}
-              favorite={{ saved: true, pending: pending.has(solution.id), onToggle: () => onToggle(solution.id) }} />
+            <div key={solution.id} className="grid min-w-0 content-start gap-2">
+              <ConnectedSolutionCard solution={solution} present={false} index={index} thumbnail={solution.cardThumbnail}
+                favorite={{ saved: true, pending: pending.has(solution.id), onToggle: () => onToggle(solution.id) }} />
+              {!presentable(solution) && <p className="flex items-center gap-1.5 px-1 text-[12.5px]" style={{ color: "var(--ink-3)" }}><Icon name="eyeOff" size={13} />Not cleared for clients: hidden in present mode</p>}
+            </div>
           ))}
         </div>
       )}

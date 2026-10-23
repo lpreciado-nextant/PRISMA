@@ -24,6 +24,8 @@ function remembered<Value extends string>(key: string, allowed: readonly Value[]
     return allowed.includes(value as Value) ? value as Value : fallback;
   } catch { return fallback; }
 }
+const SELECTED_KEY = "prisma.present.selected";
+
 function remember(key: string, value: string) {
   try { sessionStorage.setItem(key, value); } catch { void 0; }
 }
@@ -37,6 +39,7 @@ export function LibraryView({
   renderCard,
   renderRow,
   featured,
+  selected,
 }: {
   catalogue: Solution[];
   filters: Filters;
@@ -48,6 +51,8 @@ export function LibraryView({
   renderRow?: (solution: Solution, index: number) => ReactNode;
   /** A shelf above the grid (the Top 10). Shown only on the unfiltered library, never in present mode. */
   featured?: ReactNode;
+  /** The viewer's saved solutions (favorites). Present mode offers the client-safe ones as "Selected for you". */
+  selected?: ReadonlySet<string> | readonly string[];
 }) {
   const [sort, setSort] = useState<SortOrder>(() => remembered(SORT_KEY, SORT_ORDERS, "newest"));
   const [layout, setLayout] = useState<LibraryLayout>(() => remembered(LAYOUT_KEY, ["grid", "list"] as const, "grid"));
@@ -70,11 +75,22 @@ export function LibraryView({
     }
     requestAnimationFrame(() => (next ? railCollapse : railExpand).current?.focus());
   };
+  // "Selected for you": the viewer's saved solutions among the client-safe catalogue present mode already passes in,
+  // so it only ever narrows what may be shown. Chosen by default when there are any; the choice lasts the session.
+  const [selectedOnly, setSelectedOnly] = useState(() => remembered(SELECTED_KEY, ["selected", "all"] as const, "selected") === "selected");
+  const picks = useMemo(() => {
+    if (!present || !selected) return [];
+    const ids = new Set(selected);
+    return catalogue.filter((solution) => ids.has(solution.id));
+  }, [present, selected, catalogue]);
+  const showingPicks = present && selectedOnly && picks.length > 0;
+  const pool = showingPicks ? picks : catalogue;
+  const choosePicks = (next: boolean) => { setSelectedOnly(next); remember(SELECTED_KEY, next ? "selected" : "all"); };
   const refineCount = activeFacetCount(filters);
   // Sorting and layout apply to the Solution Library grid only; the Top 3 keeps its own ranking.
-  const results = useMemo(() => sortSolutions(filterSolutions(catalogue, filters), sort), [catalogue, filters, sort]);
-  const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
-  const added = useMemo(() => addedCounts(catalogue, filters), [catalogue, filters]);
+  const results = useMemo(() => sortSolutions(filterSolutions(pool, filters), sort), [pool, filters, sort]);
+  const counts = useMemo(() => areaCounts(pool, filters), [pool, filters]);
+  const added = useMemo(() => addedCounts(pool, filters), [pool, filters]);
   const chips = activeChips(filters);
   // Everything "Clear all" resets, back to the clean library: search, area, the Refine selections and the added window.
   const query = filters.q.trim();
@@ -144,6 +160,15 @@ export function LibraryView({
           ))}
         </div>
 
+        {present && picks.length > 0 && (
+          <div role="group" aria-label="Solutions to show" className="mt-4 flex flex-wrap items-center gap-2">
+            <Chip active={!showingPicks} pressed={!showingPicks} onClick={() => choosePicks(false)}>All solutions</Chip>
+            <Chip active={showingPicks} pressed={showingPicks} onClick={() => choosePicks(true)}>
+              <Icon name="sparkle" size={13} />Selected for you<span className="font-mono text-[11px] opacity-80">{picks.length}</span>
+            </Chip>
+          </div>
+        )}
+
         {/* Only a chosen area carries a note; "All" needs no explanation. */}
         {filters.area !== "all" && (
           // Tied to the chosen area: a thin bar and faint wash in its colour, its name, then what it covers.
@@ -161,7 +186,7 @@ export function LibraryView({
 
       <div className={`mt-8 grid gap-6 ${rail ? "lg:grid-cols-[250px_minmax(0,1fr)]" : ""}`}>
         {/* Present mode starts with the rail closed (minimal chrome, design §3.4); its facets come from the client-safe catalogue only. Collapsing keeps every selection. */}
-        {rail && <FacetRail all={catalogue} filters={filters} onChange={onFilters} onCollapse={() => setRail(false)} collapseRef={railCollapse} />}
+        {rail && <FacetRail all={pool} filters={filters} onChange={onFilters} onCollapse={() => setRail(false)} collapseRef={railCollapse} />}
 
         <div className="min-w-0">
           {(
@@ -247,7 +272,7 @@ export function LibraryView({
             </div>
           )}
           {refineOpen && (
-            <FacetDrawer all={catalogue} filters={filters} onChange={onFilters} resultCount={results.length} onClose={() => setRefineOpen(false)} />
+            <FacetDrawer all={pool} filters={filters} onChange={onFilters} resultCount={results.length} onClose={() => setRefineOpen(false)} />
           )}
           {/* Active filters sit right above the cards: each removable, with the total and a single reset. */}
           {activeCount > 0 && (
