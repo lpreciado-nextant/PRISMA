@@ -29,3 +29,21 @@ export const CLIENT_ROLES: ClientRole[] = [
 ];
 
 export const AREA_ORDER: SpecializationArea[] = ["ai", "data", "ibo"];
+
+/**
+ * The mock's `nx_capability` rows: the organization framework (2026-10-13), each with the `nx_specializationarea` it
+ * belongs to. A solution's areas are derived from its capabilities, so an area with no capability here (IBO today)
+ * cannot be chosen through the form.
+ */
+export const CAPABILITIES: { name: string; area: SpecializationArea }[] = [
+  { name: "AI & Agent Engineering", area: "ai" },
+  { name: "AI Transformation", area: "ai" },
+  { name: "Business Aplication Engineering", area: "ai" },
+  { name: "Process Automation & Integration", area: "ai" },
+  { name: "Responsible AI & Platform Governance", area: "ai" },
+  { name: "AI-Enabled Data Solution", area: "data" },
+  { name: "Analytics Consulting", area: "data" },
+  { name: "Data Engineering", area: "data" },
+  { name: "Data Modeling & Architecture", area: "data" },
+  { name: "Governance & Security", area: "data" },
+];

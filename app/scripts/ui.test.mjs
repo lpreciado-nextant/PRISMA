@@ -238,6 +238,20 @@ test("both adapters consume the shared form and review surfaces", async () => {
   assert.doesNotMatch(media, /Save captions|Discard caption edits/);
 });
 
+test("capability fields pick one main capability, derive the main area and list other capabilities without it", () => {
+  const groups = [{ label: "AI & Automation", options: [{ value: "Agents", label: "Agents" }, { value: "Automation", label: "Automation" }] }, { label: "Data Solutions", options: [{ value: "Analytics", label: "Analytics" }] }];
+  const empty = render(form.CapabilityFields, { groups, secondary: [], onMain: noop, onSecondary: noop });
+  assert.match(empty, /Main capability.*AI &amp; Automation.*Agents.*Data Solutions.*Analytics/s);
+  assert.match(empty, /Choose the main capability to set the main area/);
+  assert.doesNotMatch(empty, /Other capabilities involved/);
+  const picked = render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", secondary: ["Analytics"], onMain: noop, onSecondary: noop });
+  assert.match(picked, /Main area: <b[^>]*>AI &amp; Automation<\/b>/);
+  const others = picked.slice(picked.indexOf("Other capabilities involved"));
+  assert.doesNotMatch(others, />Agents</);
+  assert.match(others, /1\/3 selected/);
+  assert.equal((picked.match(/aria-pressed="true"/g) ?? []).length, 2);
+});
+
 test("story section contains only the two narrative fields in both adapters", async () => {
   const html = render(form.StoryFields, { whatItDoes: "Actions and results", businessValue: "Business benefit", onChange: noop });
   assert.match(html, /What does it do, and why does it matter\?/);

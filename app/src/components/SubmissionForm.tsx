@@ -285,7 +285,9 @@ export function LinkedAssetEditor({ type, initial, disabled, onSave, onCancel, o
 
 type IdentityProps<Area extends string, Status extends string, Role extends string> = {
   value: IdentityText; onText: (key: keyof IdentityText, value: string) => void;
-  area?: Area; areas: { value: Area; label: string }[]; onArea?: (value: Area) => void;
+  area?: Area; areas?: { value: Area; label: string }[]; onArea?: (value: Area) => void;
+  /** Replaces the area picker, e.g. with `CapabilityFields` when areas are derived from capabilities. */
+  classification?: ReactNode;
   status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void;
   /** Target client roles (native N:N, PR-031): any number of `roles`, labelled by `getRoleLabel`. */
   selectedRoles?: Role[]; roles?: readonly Role[]; onRoles?: (value: Role[]) => void; getRoleLabel?: (value: Role) => string;
@@ -296,7 +298,7 @@ type IdentityProps<Area extends string, Status extends string, Role extends stri
 /** Name, summary, area and status. \`grouped\` splits them into labelled subsections inside a section card. */
 /** Pass `selectedAreas` + `onAreas` for N:N specialization areas (up to `maxAreas`); otherwise `area` + `onArea` pick one. */
 /** Omit `onStatus` to leave Status out (the guided flow asks it under Solution context, through `StatusField`). */
-export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas, onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3 }: Omit<IdentityProps<Area, Status, string>, "selectedRoles" | "roles" | "onRoles" | "getRoleLabel" | "status" | "statuses" | "onStatus"> & Partial<Pick<IdentityProps<Area, Status, string>, "status" | "statuses" | "onStatus">> & { grouped?: boolean }) {
+export function SolutionDetailsFields<Area extends string, Status extends string>({ value, onText, area, areas = [], onArea, status, statuses, onStatus, grouped = false, selectedAreas, onAreas, maxAreas = 3, classification: picker }: Omit<IdentityProps<Area, Status, string>, "selectedRoles" | "roles" | "onRoles" | "getRoleLabel" | "status" | "statuses" | "onStatus"> & Partial<Pick<IdentityProps<Area, Status, string>, "status" | "statuses" | "onStatus">> & { grouped?: boolean }) {
   const toggleArea = (option: Area) => {
     if (!selectedAreas || !onAreas) return;
     if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));
@@ -307,15 +309,50 @@ export function SolutionDetailsFields<Area extends string, Status extends string
     <Field label="One-line summary" required hint={`Who it's for and what it does for them, in one sentence. ${value.summary.length}/200 characters.`}><input className={submissionInputClass} value={value.summary} onChange={event => onText("summary", event.target.value)} placeholder="e.g. Helps finance teams match invoices to payments." maxLength={200} /></Field>
   </>;
   const classification = <>
-    {selectedAreas && onAreas
+    {picker ?? (selectedAreas && onAreas
       ? <Field label="Specialization areas" required hint={`Choose up to ${maxAreas}. The first one you pick sets the card colour.`}><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={selectedAreas.includes(option.value)} onClick={() => toggleArea(option.value)}>{option.label}</Chip>)}</div></Field>
-      : <Field label="Specialization area" required><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>}
+      : <Field label="Specialization area" required><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>)}
     {onStatus && status !== undefined && statuses && <StatusField status={status} statuses={statuses} onStatus={onStatus} />}
   </>;
   if (!grouped) return <>{naming}{classification}</>;
   return <>
     <FormSubsection title="Name & summary"><div className="flex min-w-0 flex-col gap-5">{naming}</div></FormSubsection>
     <FormSubsection title="Classification"><div className="flex min-w-0 flex-col gap-5">{classification}</div></FormSubsection>
+  </>;
+}
+
+type CapabilityGroup<Value extends string> = { label: string; options: { value: Value; label: string }[] };
+
+/**
+ * Main capability (one, required) and the other capabilities involved (optional, up to `maxSecondary`, any area), each
+ * listed under the area it belongs to. The solution's areas follow from these, so there is no area picker: the main
+ * capability's area is shown as the main area.
+ */
+export function CapabilityFields<Value extends string>({ groups, main, secondary, onMain, onSecondary, mainArea, maxSecondary = 3 }: {
+  groups: CapabilityGroup<Value>[]; main?: Value; secondary: Value[]; onMain: (value: Value) => void; onSecondary: (value: Value[]) => void;
+  mainArea?: string; maxSecondary?: number;
+}) {
+  // A group, not a `Field`: a <label> would name the first chip with the whole label and hint.
+  const grouped = (label: string, hint: string, required: boolean, active: (value: Value) => boolean, pick: (value: Value) => void, skip?: Value) => <div role="group" aria-label={label} className="flex min-w-0 flex-col gap-3">
+    <span className="block"><span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required ? <RequiredMark /> : <OptionalMark />}</span><span className="mt-1 block text-[12px] text-(--ink-3)">{hint}</span></span>
+    {groups.map(group => {
+      const options = group.options.filter(option => option.value !== skip);
+      return options.length > 0 && <div key={group.label} className="min-w-0">
+        <p className="mb-1.5 font-mono text-[10.5px] tracking-[0.08em] text-(--ink-3) uppercase">{group.label}</p>
+        <div className="flex flex-wrap gap-2">{options.map(option => <Chip key={option.value} active={active(option.value)} pressed={active(option.value)} onClick={() => pick(option.value)}>{option.label}</Chip>)}</div>
+      </div>;
+    })}
+  </div>;
+  const toggleSecondary = (value: Value) => {
+    if (secondary.includes(value)) onSecondary(secondary.filter(entry => entry !== value));
+    else if (secondary.length < maxSecondary) onSecondary([...secondary, value]);
+  };
+  return <>
+    {grouped("Main capability", "The capability whose owner you would ask about this solution. Its area becomes the solution's main area and sets the card colour.", true,
+      value => value === main, value => { onMain(value); if (secondary.includes(value)) onSecondary(secondary.filter(entry => entry !== value)); })}
+    <p className="text-[13px] text-(--ink-2)">{main && mainArea ? <>Main area: <b className="font-semibold text-(--ink)">{mainArea}</b></> : "Choose the main capability to set the main area."}</p>
+    {main && grouped("Other capabilities involved", `Up to ${maxSecondary}, from any area. They credit the collaboration and add their areas; the main capability stays first. ${secondary.length}/${maxSecondary} selected.`, false,
+      value => secondary.includes(value), toggleSecondary, main)}
   </>;
 }
 
