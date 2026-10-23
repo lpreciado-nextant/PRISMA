@@ -580,6 +580,8 @@ test("review queue classifies by the main capability: its area, then the capabil
   const row = html.slice(html.indexOf("<ul"));
   assert.match(row, /Data Solutions.*>Data Engineering</s);
   assert.doesNotMatch(row, /AI &amp; Automation|Intelligent Business Operations|Analytics Consulting/);
+  // Nothing narrowed yet: no Clear all.
+  assert.doesNotMatch(html, />Clear all</);
   // Without a known capability area, the first area stands in.
   assert.match(render(review.ReviewQueue, { entries, connected: true }).slice(html.indexOf("<ul")), /AI &amp; Automation/);
 });
@@ -981,9 +983,12 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   assert.match(html, /class="attention-panel[^"]*">.*2 solutions need your attention.*1 changes requested.*2 new suggestions/s);
   assert.match(html, /attention-row attention-row--changes.*Returned one.*Changes requested by the librarian.*View feedback for Returned one.*attention-row ".*Live one.*2 new suggestions from colleagues.*Open suggestions for Live one.*All my solutions/s);
   assert.equal((html.match(/<li /g) ?? []).length, 2);
-  // "New suggestions" filters the blue cards, with a blue dot like Changes requested's amber one; no suggestions, no chip.
-  assert.match(html, /aria-pressed="false"[^>]*><span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var\(--accent\)"><\/span>New suggestions<span[^>]*>1<\/span>/);
-  assert.doesNotMatch(render(MySubmissionsView, { entries, connected: true }), /New suggestions/);
+  // "Suggestions" keeps every solution that ever had one, with a blue dot while any is new; no suggestions, no chip.
+  assert.match(html, /aria-pressed="false"[^>]*><span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var\(--accent\)"><\/span>Suggestions<span[^>]*>1<\/span>/);
+  assert.doesNotMatch(render(MySubmissionsView, { entries, connected: true }), />Suggestions</);
+  // All addressed: still counted (history), but no dot.
+  const addressed = render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions: { live: { count: 2, authors: [], ids: [] } } });
+  assert.match(addressed, /aria-pressed="false"[^>]*>Suggestions<span[^>]*>1<\/span>/);
   assert.equal((html.match(/card-unread/g) ?? []).length, 2);
   // The cards say the same: an amber "Action needed" for the returned draft, "N new suggestions" for the other.
   assert.equal((html.match(/card-action/g) ?? []).length, 1);

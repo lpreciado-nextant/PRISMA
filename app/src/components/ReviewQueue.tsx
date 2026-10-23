@@ -341,6 +341,9 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {} }
       return a.solution.name.localeCompare(b.solution.name);
     });
   const narrowed = !!(terms || area || chosenCapability);
+  // Clear all: back to the whole tab (search, area and capability); the sort order stays.
+  const clearAll = () => { setQuery(""); setArea(""); setCapability(""); };
+  const clearButton = <button type="button" onClick={clearAll} className="cursor-pointer text-[13px] font-semibold" style={{ color: "var(--accent)" }}>Clear all</button>;
   return <section className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
     <p className="eyebrow">Librarian{!connected && " · local preview"}</p><h1 className="mt-2 text-[28px]">Review queue</h1>
     {!connected && <p className="mt-2 text-[14px] text-(--ink-2)">Browser-local records. Review access is simulated; no production permissions or notifications.</p>}
@@ -369,8 +372,8 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {} }
       <SelectPicker compact label="Sort" value={sort} options={["newest", "oldest"] as const} onChange={setSort} getLabel={value => value === "newest" ? "Newest first" : "Oldest first"} getButtonLabel={value => `Sort: ${value === "newest" ? "Newest" : "Oldest"}`} />
     </div>
 
-    <p className="mt-4 text-[13px] text-(--ink-2)" role="status">{plural(visible.length, "submission")}</p>
-    {!visible.length ? <div className="py-16 text-center"><Icon name="check" size={26} className="mx-auto" /><h2 className="mt-4 text-[20px]">{narrowed ? "No matching submissions" : filter === "Pending review" ? "Nothing awaiting review" : "No submissions in this status"}</h2></div> : <ul className="mt-3 space-y-2.5">
+    <div className="mt-4 flex flex-wrap items-center gap-3"><p className="text-[13px] text-(--ink-2)" role="status">{plural(visible.length, "submission")}</p>{narrowed && visible.length > 0 && clearButton}</div>
+    {!visible.length ? <div className="py-16 text-center"><Icon name="check" size={26} className="mx-auto" /><h2 className="mt-4 text-[20px]">{narrowed ? "No matching submissions" : filter === "Pending review" ? "Nothing awaiting review" : "No submissions in this status"}</h2>{narrowed && <div className="mt-3">{clearButton}</div>}</div> : <ul className="mt-3 space-y-2.5">
       {visible.map(({ solution, owner, imageCount, attachmentCount }) => {
         // The main area and the main capability, as the form classifies them.
         const primary = mainArea(solution);

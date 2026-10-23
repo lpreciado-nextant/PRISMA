@@ -11,8 +11,11 @@ import { navigate } from "../lib/router";
 import { submissionState } from "../lib/submissionState";
 import { feedbackKeys, openFeedback, setFeedbackItems, suggestionFeedbackKey, useFeedbackSeen } from "../lib/feedbackSeen";
 
-/** Status filters, plus "New suggestions": the cards with open suggestions (the blue ones), which is no status. */
-const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published", "New suggestions"] as const;
+/**
+ * Status filters, plus "Suggestions": every solution that ever received one, which is no status. New ones already lead
+ * the attention list, so here the filter keeps the history too, with the ones still open first.
+ */
+const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published", "Suggestions"] as const;
 type Filter = typeof FILTERS[number];
 /** Suggestions on a published solution: the count, the distinct authors (newest first) and their ids. */
 export type SuggestionSummary = { count: number; authors: string[]; ids: string[] };
@@ -92,9 +95,11 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     };
   };
   const openSuggestionsOn = (solution: Solution) => openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length;
-  const matches = (solution: Solution, option: Filter) => option === "All" || (option === "New suggestions" ? openSuggestionsOn(solution) > 0 : submissionState(solution) === option);
+  const matches = (solution: Solution, option: Filter) => option === "All" || (option === "Suggestions" ? (suggestions?.[solution.id]?.count ?? 0) > 0 : submissionState(solution) === option);
   const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
-  const visible = entries.filter(({ solution }) => matches(solution, filter));
+  const filtered = entries.filter(({ solution }) => matches(solution, filter));
+  // Under Suggestions, the solutions with new ones come first, most first; the rest keep their order.
+  const visible = filter === "Suggestions" ? [...filtered].sort((left, right) => openSuggestionsOn(right.solution) - openSuggestionsOn(left.solution)) : filtered;
   // One card everywhere: status, Edit, •••, and opening the solution (where its suggestions are read).
   const open = (solution: Solution) => onOpen ? onOpen(solution) : solution.publicationStatus === "Draft" ? navigate(`/submit/${solution.id}`) : navigate(`/s/${solution.id}`);
   const card = (solution: Solution, index: number) => renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />;
@@ -157,10 +162,11 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>No saved drafts or submitted solutions.</p>
     </div> : <>
       <div role="group" aria-label="Filter by status" className="mt-4 flex flex-wrap items-center gap-2">
-        {FILTERS.filter(option => option !== "New suggestions" || suggestions).map(option => {
+        {FILTERS.filter(option => option !== "Suggestions" || suggestions).map(option => {
           const total = count(option);
           return <Chip key={option} active={filter === option} pressed={filter === option} onClick={() => setFilter(option)}>
-            {(option === "Changes requested" || option === "New suggestions") && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: option === "Changes requested" ? "var(--proto)" : "var(--accent)" }} />}
+            {/* A dot while something is open: any returned draft, or any new suggestion. */}
+            {filter !== option && (option === "Changes requested" ? total > 0 : option === "Suggestions" && entries.some(({ solution }) => openSuggestionsOn(solution) > 0)) && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: option === "Changes requested" ? "var(--proto)" : "var(--accent)" }} />}
             {option}
             <span className="font-mono text-[11px] opacity-75">{total}</span>
           </Chip>;
