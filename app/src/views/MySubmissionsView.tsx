@@ -151,7 +151,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       <h2 className="text-[20px]">No suggestions yet</h2>
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>When colleagues suggest improvements to your published solutions, they appear here.</p>
     </div> : <>
-      <div role="group" aria-label="Filter suggestions" className="mt-5 flex flex-wrap items-center gap-2">
+      <p className="mt-5 max-w-[72ch] text-[14px]" style={{ color: "var(--ink-2)" }}>Suggestions are improvements colleagues propose for your published solutions. They don't change anything on their own: read each one on the solution's page and mark it addressed once you've handled it.</p>
+      <div role="group" aria-label="Filter suggestions" className="mt-4 flex flex-wrap items-center gap-2">
         {([["new", "New", withNew.length], ["all", "All", suggested.length]] as const).map(([value, label, total]) => <Chip key={value} active={suggestionView === value} pressed={suggestionView === value} onClick={() => setSuggestionView(value)}>
           {value === "new" && total > 0 && suggestionView !== value && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />}
           {label}

@@ -958,7 +958,7 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   assert.equal((html.match(/card-unread/g) ?? []).length, 2);
   // A returned draft outranks suggestions: an amber "Action needed" card, and a banner at the top naming it.
   assert.equal((html.match(/card-action/g) ?? []).length, 1);
-  assert.match(html, /class="action-needed">.*Action needed.*new-feedback.*2 new/s);
+  assert.match(html, /class="action-needed">.*Action needed.*new-feedback.*2 new suggestions/s);
   assert.match(html, /aria-label="Action needed" class="action-banner[^"]*">.*1 submission needs your changes.*Returned one.*View feedback.*role="tablist"/s);
   assert.doesNotMatch(html, /Show only these/);
   assert.doesNotMatch(render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions, suggestionsTab: { count: 2 } }), /Action needed|needs your changes/);

@@ -131,7 +131,7 @@ export function SolutionCard({
           <span className="flex flex-wrap items-center justify-between gap-2">
             <SubmissionStatus state={publicationStatus} />
             {managed && manage?.actionNeeded ? <span className="action-needed"><Icon name="alert" size={12} />Action needed</span>
-              : managed && !!manage?.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new</span>}
+              : managed && !!manage?.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
           </span>
           {managed && manage?.onFeedback && (publicationStatus === "Changes requested" || publicationStatus === "Retired") && (
             <button
