@@ -83,19 +83,25 @@ export function setAddressed(key: string, addressed = true) {
 }
 
 /**
- * The owner's feedback items for the session, so the masthead can flag open feedback without reading anything itself.
- * Set once on entry and again whenever My submissions has fresh data.
+ * The owner's feedback items for the session, one group per solution, so the masthead can flag open feedback without
+ * reading anything itself. Set once on entry and again whenever My submissions has fresh data.
  */
-let items: string[] = [];
-export function setFeedbackItems(next: readonly string[]) {
-  if (next.length === items.length && next.every((key, index) => key === items[index])) return;
-  items = [...next];
+let groups: string[][] = [];
+export function setFeedbackItems(next: readonly (readonly string[])[]) {
+  const flat = (list: readonly (readonly string[])[]) => JSON.stringify(list);
+  if (flat(next) === flat(groups)) return;
+  groups = next.map(group => [...group]);
   notify();
 }
 
 /** How many feedback items, across the owner's solutions, are still open. */
 export function openFeedbackCount(): number {
-  return openFeedback(items).length;
+  return openFeedback(groups.flat()).length;
+}
+
+/** How many of the owner's solutions still have open feedback: what the masthead and My submissions count. */
+export function openFeedbackSolutions(): number {
+  return groups.filter(group => openFeedback(group).length > 0).length;
 }
 
 /** Re-renders the caller whenever an item is confirmed (in this tab or another) or the session items change. */

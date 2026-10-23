@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Icon, type IconName } from "./Icon";
 import { OverflowMenu } from "./OverflowMenu";
-import { openFeedbackCount, useFeedbackSeen } from "../lib/feedbackSeen";
+import { openFeedbackSolutions, useFeedbackSeen } from "../lib/feedbackSeen";
 import { initials, type AppUser } from "../lib/powerContext";
 import type { Theme } from "../lib/theme";
 import { navigate, useRoute } from "../lib/router";
@@ -161,9 +161,9 @@ type NavItem = { path: string; label: string; icon: IconName; active: boolean; c
  * and the rest move into a "More" menu.
  */
 function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailable }: { path: string; favoriteCount?: number; reviewCount?: number; draftOnly: boolean; reviewAvailable: boolean }) {
-  // My submissions counts its open feedback items, in the same badge format as Saved solutions and Review queue.
+  // My submissions counts its solutions with open feedback (returned drafts, new suggestions), like its attention list.
   useFeedbackSeen();
-  const openFeedbackItems = openFeedbackCount();
+  const openFeedbackItems = openFeedbackSolutions();
   const items: NavItem[] = [
     { path: "/", label: "Library", icon: "grid", active: path === "/" || path.startsWith("/s/") },
     ...(favoriteCount !== undefined ? [{ path: "/favorites", label: "Saved solutions", icon: "heart" as const, active: path === "/favorites", count: favoriteCount }] : []),
@@ -194,7 +194,7 @@ function NavLink({ item, className }: { item: NavItem; className: string }) {
     >
       <Icon name={item.icon} size={18} filled={item.icon === "heart" && !!item.count} className={item.icon === "heart" && item.count ? "nav-heart-saved" : undefined} />
       {item.label}
-      {item.open !== undefined && <span className="section-nav-count section-nav-count--open" aria-label={`${item.open} feedback to address`}>{item.open}</span>}
+      {item.open !== undefined && <span className="section-nav-count section-nav-count--open" aria-label={`${item.open} ${item.open === 1 ? "solution needs" : "solutions need"} your attention`}>{item.open}</span>}
       {/* What a lit number means, on hover or keyboard focus (screen readers already get it from the badge). */}
       {item.open !== undefined && <span aria-hidden="true" className="hover-hint-text">{item.open === 1 ? "1 feedback item to address" : `${item.open} feedback items to address`}</span>}
       {item.pending !== undefined && <span className="section-nav-count section-nav-count--pending" aria-label={`${item.pending} awaiting review`}>{item.pending}</span>}

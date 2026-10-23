@@ -95,7 +95,6 @@ export function SubmissionsView({ review }: { review: boolean }) {
   if (!review) {
     // The Suggestions tab lists the cards with suggestions; each solution shows them inside. Review queue lives in the masthead.
     return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onDelete={remove}
-      suggestionsTab={rows && { count: Object.values(rows).reduce((total, list) => total + list.length, 0) }}
       renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />}
       actions={<button type="button" title="Refresh submissions" aria-label="Refresh submissions" className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold hover:bg-(--glass-edge)" style={{ color: "var(--ink-2)" }} onClick={() => { setState(null); setSuggestionRows(undefined); setAttempt(current => current + 1); }}><Icon name="refresh" size={15} />Refresh</button>} />;
   }

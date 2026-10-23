@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { feedbackKeys, isAddressed, openFeedback, openFeedbackCount, recordServerAddressed, reviewFeedbackKey, setAddressWriter, setAddressed, setFeedbackItems, suggestionFeedbackKey } from "./feedbackSeen.ts";
+import { feedbackKeys, isAddressed, openFeedback, openFeedbackCount, openFeedbackSolutions, recordServerAddressed, reviewFeedbackKey, setAddressWriter, setAddressed, setFeedbackItems, suggestionFeedbackKey } from "./feedbackSeen.ts";
 
 const store = new Map<string, string>();
 Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
@@ -22,8 +22,10 @@ test("without a writer, suggestions are addressed in this browser; the librarian
   store.clear();
   setAddressWriter(undefined);
   const keys = feedbackKeys(returned, ["a", "b"]);
-  setFeedbackItems(keys);
+  setFeedbackItems([keys]);
   assert.equal(openFeedbackCount(), 3);
+  // One solution with three open items counts once where solutions are counted.
+  assert.equal(openFeedbackSolutions(), 1);
   setAddressed(keys[1]);
   assert.equal(isAddressed(keys[1]), true);
   assert.equal(openFeedbackCount(), 2);

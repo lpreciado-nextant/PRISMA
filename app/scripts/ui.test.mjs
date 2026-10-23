@@ -665,10 +665,11 @@ test("my submissions filters by review state and keeps card controls outside the
   for (const [label, total] of [["All", 4], ["Draft", 1], ["Pending review", 1], ["Changes requested", 1], ["Published", 1]]) {
     assert.match(html, new RegExp(`aria-pressed="${label === "All"}"[^>]*>(<span[^>]*></span>)?${label}<span[^>]*>${total}</span>`));
   }
-  // Without a Suggestions tab there is no tablist; status chips stay as they were and suggestions are no status.
-  assert.doesNotMatch(html, /role="tablist"|Filter by feedback/);
-  const suggested = render(MySubmissionsView, { entries, connected: true, suggestions: { live: { count: 3, authors: ["Ana", "Luis", "Marta"] } }, suggestionsTab: { count: 3 } });
-  assert.match(suggested, /role="tablist".*role="tab" aria-selected="true"[^>]*>My solutions<span[^>]*>4<\/span>.*role="tab" aria-selected="false"[^>]*>Suggestions<span[^>]*>3<\/span>.*role="tabpanel".*Filter by status/s);
+  // One level of navigation: no tabs, only the status chips under "All my solutions"; suggestions are no status.
+  assert.doesNotMatch(html, /role="tablist"|role="tab"|Filter by feedback/);
+  assert.match(html, />All my solutions<.*Filter by status/s);
+  const suggested = render(MySubmissionsView, { entries, connected: true, suggestions: { live: { count: 3, authors: ["Ana", "Luis", "Marta"], ids: [] } } });
+  assert.doesNotMatch(suggested, /role="tablist"/);
   assert.doesNotMatch(suggested, /Filter by feedback|Librarian comments|Review queue/);
   // A compact footer indicator (icon and count, no names) that opens the published page.
   assert.match(suggested, /title="View suggestions" aria-label="View 3 suggestions for Live one"[^>]*>.*?<svg.*?<\/svg>3<\/button>/s);
@@ -676,7 +677,8 @@ test("my submissions filters by review state and keeps card controls outside the
   // A managed card is not itself a button: its title opens it and the controls sit beside that button.
   assert.doesNotMatch(html, /role="button"/);
   assert.equal((html.match(/class="card-open/g) ?? []).length, 4);
-  assert.equal((html.match(/aria-label="View feedback for /g) ?? []).length, 1);
+  // The returned draft offers its feedback twice: in the attention list and on its card.
+  assert.equal((html.match(/aria-label="View feedback for /g) ?? []).length, 2);
   assert.match(html, /aria-label="View feedback for Returned one"/);
   assert.doesNotMatch(html, /Please anonymize|View submission/);
   // Connected Pending review and Published records are withdrawn on their page, not edited from the card.
@@ -951,23 +953,25 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
     { solution: { ...base, id: "live", name: "Live one", publicationStatus: "Published", reviewOutcome: "Approved" } },
   ];
   const suggestions = { live: { count: 2, authors: ["Ana"], ids: ["a", "b"] } };
-  const html = render(MySubmissionsView, { entries, connected: true, suggestions, suggestionsTab: { count: 2 } });
-  // No sentence-long notice: tabs count open items ("1 new" librarian comment, "2 new" suggestions), cards say "N new".
-  assert.doesNotMatch(html, /solutions? ha(s|ve) new feedback/);
-  assert.match(html, /My solutions<span[^>]*>2<\/span><span class="tab-new">1 new<\/span>.*Suggestions<span[^>]*>2<\/span><span class="tab-new">2 new<\/span>/s);
+  const html = render(MySubmissionsView, { entries, connected: true, suggestions });
+  // "Needs your attention" counts solutions, with the items as a breakdown, then one row per solution:
+  // the returned draft first (amber, View feedback), then the suggestions (Open), all above "All my solutions".
+  assert.match(html, /class="attention-panel[^"]*">.*2 solutions need your attention.*1 changes requested.*2 new suggestions/s);
+  assert.match(html, /attention-row attention-row--changes.*Returned one.*Changes requested by the librarian.*View feedback for Returned one.*attention-row ".*Live one.*2 new suggestions from colleagues.*Open suggestions for Live one.*All my solutions/s);
+  assert.equal((html.match(/<li /g) ?? []).length, 2);
   assert.equal((html.match(/card-unread/g) ?? []).length, 2);
-  // A returned draft outranks suggestions: an amber "Action needed" card, and a banner at the top naming it.
+  // The cards say the same: an amber "Action needed" for the returned draft, "N new suggestions" for the other.
   assert.equal((html.match(/card-action/g) ?? []).length, 1);
   assert.match(html, /class="action-needed">.*Action needed.*new-feedback.*2 new suggestions/s);
-  assert.match(html, /aria-label="Action needed" class="action-banner[^"]*">.*1 submission needs your changes.*Returned one.*View feedback.*role="tablist"/s);
-  assert.doesNotMatch(html, /Show only these/);
-  assert.doesNotMatch(render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions, suggestionsTab: { count: 2 } }), /Action needed|needs your changes/);
+  // Nothing open: no attention list at all.
+  assert.doesNotMatch(render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions: { live: { count: 0, authors: [], ids: [] } } }), /attention-panel|Action needed/);
   // The masthead counts open items on My submissions, like Saved solutions and Review queue.
   const seen = await server.ssrLoadModule("/src/lib/feedbackSeen.ts");
   const user = { fullName: "Ana Gómez", userPrincipalName: "ana@nextant.com", live: true };
   const mastheadProps = { user, theme: "dark", onToggleTheme: noop, present: false, onTogglePresent: noop, favoriteCount: 0, reviewAvailable: false };
-  seen.setFeedbackItems(seen.feedbackKeys(entries[0].solution));
-  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="section-nav-count section-nav-count--open" aria-label="1 feedback to address">1<\/span>/);
+  // Counted by solution: a returned draft and a solution with two suggestions make 2, not 3.
+  seen.setFeedbackItems([seen.feedbackKeys(entries[0].solution), seen.feedbackKeys(entries[1].solution, ["a", "b"])]);
+  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="section-nav-count section-nav-count--open" aria-label="2 solutions need your attention">2<\/span>/);
   seen.setFeedbackItems([]);
   assert.doesNotMatch(render(masthead.Masthead, mastheadProps), /section-nav-count--open/);
   // The librarian's comment has no check: it stays open until the owner resubmits.

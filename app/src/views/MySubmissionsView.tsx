@@ -8,7 +8,7 @@ import { OverflowMenu } from "../components/OverflowMenu";
 import { FeedbackPanel } from "../components/FeedbackPanel";
 import { navigate } from "../lib/router";
 import { submissionState } from "../lib/submissionState";
-import { feedbackKeys, isAddressed, openFeedback, reviewFeedbackKey, setFeedbackItems, suggestionFeedbackKey, useFeedbackSeen } from "../lib/feedbackSeen";
+import { feedbackKeys, openFeedback, setFeedbackItems, suggestionFeedbackKey, useFeedbackSeen } from "../lib/feedbackSeen";
 
 const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published"] as const;
 type Filter = typeof FILTERS[number];
@@ -17,18 +17,18 @@ const matches = (solution: Solution, filter: Filter) => filter === "All" || subm
 export type SuggestionSummary = { count: number; authors: string[]; ids: string[] };
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "" : "s"}`;
 
-type Tab = "solutions" | "suggestions";
+/** Rows the attention list shows before "Show all". */
+const ATTENTION_ROWS = 4;
 
 /**
- * Two levels: primary tabs (My solutions, and Suggestions when the caller supplies `suggestionsTab`), then, under My
- * solutions only, the publication status chips. Suggestions are not a status. `suggestions` (connected only) puts a
- * compact count on each card's footer. Librarian comments need no filter: Changes requested has them.
+ * Two parts. "Needs your attention", only when something is open: one row per solution, returned drafts (Changes
+ * requested, which block publication) first, then solutions with new suggestions; its title counts solutions, not
+ * items. Below, every solution as cards with one row of status filters. `suggestions` (connected only) also puts a
+ * compact count on each card's footer.
  */
-export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, suggestions, suggestionsTab }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>>; suggestionsTab?: { count: number } }) {
+export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, suggestions }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>> }) {
   const [filter, setFilter] = useState<Filter>("All");
-  const [tab, setTab] = useState<Tab>("solutions");
-  // Under Suggestions: only the solutions with suggestions still to address, or all that have any.
-  const [suggestionView, setSuggestionView] = useState<"new" | "all">("new");
+  const [attentionAll, setAttentionAll] = useState(false);
   useFeedbackSeen();
   // Open feedback items: a draft returned with Changes requested (until resubmitted) and each unaddressed suggestion.
   // Counts are items, so they fall as suggestions are addressed and returned drafts are resubmitted.
@@ -36,9 +36,9 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const openOn = (solution: Solution) => openFeedback(keys(solution));
   // Share this page's fresh data with the masthead's dot (no extra reads). Connected waits for the suggestions.
   const ready = !connected || suggestions !== undefined;
-  const allKeys = ready ? entries.flatMap(({ solution }) => keys(solution)).join("|") : "";
-  useEffect(() => { if (allKeys) setFeedbackItems(allKeys.split("|")); }, [allKeys]);
-  const tabsId = useId();
+  const allKeys = ready ? JSON.stringify(entries.map(({ solution }) => keys(solution))) : "";
+  useEffect(() => { if (allKeys) setFeedbackItems(JSON.parse(allKeys) as string[][]); }, [allKeys]);
+  const attentionId = useId();
   const [feedbackTarget, setFeedbackTarget] = useState<Solution | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Solution | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -84,31 +84,25 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     };
   };
   const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
-  // Returned by the librarian: the owner must act before it can be published, so it leads the page.
-  const returned = entries.filter(({ solution }) => submissionState(solution) === "Changes requested").map(({ solution }) => solution);
   const visible = entries.filter(({ solution }) => matches(solution, filter));
-  // "N new" on each tab: unconfirmed librarian comments under My solutions, unconfirmed suggestions under Suggestions.
-  const newOnSolutions = entries.filter(({ solution }) => { const key = reviewFeedbackKey(solution); return !!key && !isAddressed(key); }).length;
-  const newOnSuggestions = entries.reduce((total, { solution }) => total + openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length, 0);
   // One card everywhere: status, Edit, •••, and opening the solution (where its suggestions are read).
   const open = (solution: Solution) => onOpen ? onOpen(solution) : solution.publicationStatus === "Draft" ? navigate(`/submit/${solution.id}`) : navigate(`/s/${solution.id}`);
   const card = (solution: Solution, index: number) => renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />;
-  const suggested = entries.filter(({ solution }) => (suggestions?.[solution.id]?.count ?? 0) > 0);
   const openSuggestionsOn = (solution: Solution) => openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length;
-  const withNew = suggested.filter(({ solution }) => openSuggestionsOn(solution) > 0);
-  const listed = suggestionView === "new" ? withNew : suggested;
-  const showing: Tab = suggestionsTab ? tab : "solutions";
-  const tabs: { value: Tab; label: string; count: number; fresh: number }[] = [{ value: "solutions", label: "My solutions", count: entries.length, fresh: newOnSolutions }, ...(suggestionsTab ? [{ value: "suggestions" as const, label: "Suggestions", count: suggestionsTab.count, fresh: newOnSuggestions }] : [])];
-  // Arrow keys move between the primary tabs, as in a standard tablist.
-  const onTabKey = (event: React.KeyboardEvent, index: number) => {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-    event.preventDefault();
-    const next = tabs[(index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length];
-    setTab(next.value);
-    document.getElementById(`${tabsId}-${next.value}`)?.focus();
-  };
+  // Needs your attention: returned drafts first (the librarian is waiting on the owner), then new suggestions, most first.
+  const returned = entries.map(({ solution }) => solution).filter(solution => submissionState(solution) === "Changes requested");
+  const suggested = entries.map(({ solution }) => ({ solution, fresh: openSuggestionsOn(solution) }))
+    .filter(entry => entry.fresh > 0 && submissionState(entry.solution) !== "Changes requested")
+    .sort((left, right) => right.fresh - left.fresh);
+  const attention = [...returned.map(solution => ({ solution, fresh: 0 })), ...suggested];
+  const newSuggestions = suggested.reduce((total, entry) => total + entry.fresh, 0);
+  const shownAttention = attentionAll ? attention : attention.slice(0, ATTENTION_ROWS);
+  const breakdown = [
+    ...(returned.length ? [<span key="returned" className="font-semibold" style={{ color: "var(--proto)" }}>{returned.length} changes requested</span>] : []),
+    ...(newSuggestions ? [<span key="suggestions" className="font-semibold" style={{ color: "var(--accent)" }}>{plural(newSuggestions, "new suggestion")}</span>] : []),
+  ];
   return <div className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
-    <div className={`flex flex-wrap items-center justify-between gap-4 ${suggestionsTab ? "" : "border-b pb-5"}`} style={{ borderColor: "var(--glass-edge)" }}>
+    <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <p className="eyebrow">Contributor workspace</p>
         <h1 className="mt-2 text-[26px]">My submissions</h1>
@@ -119,60 +113,36 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
         <button ref={newSubmissionRef} className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold" style={{ background: "var(--accent)", color: "var(--on-accent)" }} onClick={() => navigate("/submit")}><Icon name="plus" />New submission</button>
       </div>
     </div>
-    {returned.length > 0 && <section aria-label="Action needed" className="action-banner mt-5">
-      <span className="mt-0.5 shrink-0" style={{ color: "var(--proto)" }}><Icon name="alert" size={20} /></span>
-      <div className="min-w-0 flex-1">
-        <h2 className="text-[15.5px] font-semibold">{returned.length === 1 ? "1 submission needs your changes" : `${returned.length} submissions need your changes`}</h2>
-        <p className="mt-0.5 text-[13.5px]" style={{ color: "var(--ink-2)" }}>The librarian returned {returned.length === 1 ? "it" : "them"} with feedback. Make the changes and resubmit to get {returned.length === 1 ? "it" : "them"} published.</p>
-        <div className="mt-2.5 flex flex-wrap gap-2">
-          {returned.map(solution => <button key={solution.id} type="button" className="action-banner-link"
-            onClick={() => solution.reviewComments ? setFeedbackTarget(solution) : edit(solution)}>
-            {solution.name || "Untitled solution"}<span style={{ color: "var(--ink-3)" }}>·</span><span style={{ color: "var(--proto)" }}>{solution.reviewComments ? "View feedback" : "Edit"}</span>
-          </button>)}
-        </div>
+    {attention.length > 0 && <section aria-labelledby={`${attentionId}-title`} className="attention-panel mt-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pt-3.5 pb-2.5 sm:px-5">
+        <h2 id={`${attentionId}-title`} className="text-[16px] font-semibold">{plural(attention.length, "solution")} {attention.length === 1 ? "needs" : "need"} your attention</h2>
+        <p className="text-[13px]">{breakdown.flatMap((part, index) => index ? [<span key={`dot-${index}`} aria-hidden="true" style={{ color: "var(--ink-3)" }}> · </span>, part] : [part])}</p>
       </div>
-      {returned.length > 1 && <button type="button" className="shrink-0 cursor-pointer text-[13.5px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => { setTab("solutions"); setFilter("Changes requested"); }}>Show only these</button>}
+      <ul className="attention-list">
+        {shownAttention.map(({ solution, fresh }) => {
+          const name = solution.name || "Untitled solution";
+          const changes = !fresh;
+          return <li key={solution.id} className={`attention-row ${changes ? "attention-row--changes" : ""}`}>
+            <span aria-hidden="true" className="attention-icon"><Icon name={changes ? "alert" : "message"} size={16} /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold" style={{ color: "var(--ink)" }}>{name}</span>
+              <span className="block text-[12.5px]" style={{ color: "var(--ink-2)" }}>{changes ? "Changes requested by the librarian. Update it and resubmit to publish it." : `${plural(fresh, "new suggestion")} from colleagues. Read and address them on the solution page.`}</span>
+            </span>
+            {changes
+              ? <button type="button" className="attention-action attention-action--changes" onClick={() => solution.reviewComments ? setFeedbackTarget(solution) : edit(solution)} aria-label={`${solution.reviewComments ? "View feedback" : "Edit"} for ${name}`}>{solution.reviewComments ? "View feedback" : "Edit"}</button>
+              : <button type="button" className="attention-action" onClick={() => open(solution)} aria-label={`Open suggestions for ${name}`}>Open</button>}
+          </li>;
+        })}
+      </ul>
+      {attention.length > ATTENTION_ROWS && <button type="button" className="mx-4 mb-3 cursor-pointer text-[13px] font-semibold sm:mx-5" style={{ color: "var(--accent)" }} onClick={() => setAttentionAll(!attentionAll)}>{attentionAll ? "Show fewer" : `Show all ${attention.length}`}</button>}
     </section>}
-    {/* Primary tabs, underlined like the review queue's; status chips belong to My solutions only. */}
-    {suggestionsTab && <div role="tablist" aria-label="My submissions" className="mt-5 flex flex-wrap gap-1 border-b border-(--glass-edge)">
-      {tabs.map((option, index) => {
-        const active = showing === option.value;
-        return <button key={option.value} id={`${tabsId}-${option.value}`} type="button" role="tab" aria-selected={active} aria-controls={`${tabsId}-panel`} tabIndex={active ? 0 : -1}
-          onClick={() => setTab(option.value)} onKeyDown={event => onTabKey(event, index)}
-          className="-mb-px cursor-pointer border-b-[3px] px-3 py-3 text-[14px] font-semibold transition-colors" style={{ borderColor: active ? "var(--accent)" : "transparent", color: active ? "var(--accent)" : "var(--ink-2)" }}>
-          {option.label}
-          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={{ background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{option.count}</span>
-          {option.fresh > 0 && <span className="tab-new">{option.fresh} new</span>}
-        </button>;
-      })}
-    </div>}
-    <div id={`${tabsId}-panel`} role={suggestionsTab ? "tabpanel" : undefined} aria-labelledby={suggestionsTab ? `${tabsId}-${showing}` : undefined}>
-    {showing === "suggestions" ? !suggested.length ? <div className="py-16 text-center">
-      <h2 className="text-[20px]">No suggestions yet</h2>
-      <p className="mt-2" style={{ color: "var(--ink-2)" }}>When colleagues suggest improvements to your published solutions, they appear here.</p>
-    </div> : <>
-      <p className="mt-5 max-w-[72ch] text-[14px]" style={{ color: "var(--ink-2)" }}>Suggestions are improvements colleagues propose for your published solutions. They don't change anything on their own: read each one on the solution's page and mark it addressed once you've handled it.</p>
-      <div role="group" aria-label="Filter suggestions" className="mt-4 flex flex-wrap items-center gap-2">
-        {([["new", "New", withNew.length], ["all", "All", suggested.length]] as const).map(([value, label, total]) => <Chip key={value} active={suggestionView === value} pressed={suggestionView === value} onClick={() => setSuggestionView(value)}>
-          {value === "new" && total > 0 && suggestionView !== value && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />}
-          {label}
-          <span className="font-mono text-[11px] opacity-75">{total}</span>
-        </Chip>)}
-      </div>
-      {!listed.length ? <div className="py-16 text-center">
-        <h2 className="text-[20px]">Nothing new</h2>
-        <p className="mt-2" style={{ color: "var(--ink-2)" }}>Every suggestion on your solutions has been addressed.</p>
-        <button type="button" className="mt-3 cursor-pointer text-[14px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => setSuggestionView("all")}>Show all</button>
-      </div> : <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-        {/* Only the cards: each opens its solution, where the suggestions are read below the details. */}
-        {listed.map(({ solution }, index) => <article key={solution.id} className="min-w-0">{card(solution, index)}</article>)}
-      </div>}
-    </> : <>
+    <section aria-labelledby={`${attentionId}-all`} className="mt-8">
+      <h2 id={`${attentionId}-all`} className="section-title">All my solutions</h2>
     {!entries.length ? <div className="py-20 text-center">
       <h2 className="text-[20px]">No submissions yet</h2>
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>No saved drafts or submitted solutions.</p>
     </div> : <>
-      <div role="group" aria-label="Filter by status" className="mt-5 flex flex-wrap items-center gap-2">
+      <div role="group" aria-label="Filter by status" className="mt-4 flex flex-wrap items-center gap-2">
         {FILTERS.map(option => {
           const total = count(option);
           return <Chip key={option} active={filter === option} pressed={filter === option} onClick={() => setFilter(option)}>
@@ -189,8 +159,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
         {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0">{card(solution, index)}</article>)}
       </div>}
     </>}
-    </>}
-    </div>
+    </section>
     {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} retired={feedbackTarget.publicationStatus === "Retired"} onClose={() => setFeedbackTarget(null)} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
     {deleteTarget && <ConfirmDialog title="Delete submission?" confirmLabel={deleting ? "Deleting..." : "Delete submission"} busy={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete}>
       <p className="break-words text-[14px]">Permanently delete "{deleteTarget.name}" and its attached media from {connected ? "Dataverse" : "this browser"}? This cannot be undone.{deleteTarget.publicationStatus === "Published" ? " It will also be removed from the library and published access revoked." : ""}</p>

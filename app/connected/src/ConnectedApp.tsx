@@ -185,12 +185,15 @@ function CatalogueSession({ present, onTogglePresent, onPresentSaved, appLocatio
     const single = api?.openFeedback ? loadOpenFeedback(api, controller.signal).then(open => {
       const suggestionKeys = open.suggestions.map(item => suggestionFeedbackKey(item.id));
       recordServerAddressed(suggestionKeys.map(key => ({ key, addressed: false })));
-      return [...open.changesRequested.map(id => `review:${id}`), ...suggestionKeys];
+      // One group per solution, so the masthead counts solutions rather than items.
+      const bySolution = new Map<string, string[]>(open.changesRequested.map(id => [id, [`review:${id}`]]));
+      for (const item of open.suggestions) bySolution.set(item.solutionId, [...(bySolution.get(item.solutionId) ?? []), suggestionFeedbackKey(item.id)]);
+      return [...bySolution.values()];
     }) : undefined;
     void (single ?? loadSubmissions(workflowApi, false, controller.signal).then(async result => (await Promise.all(result.records.map(async record => {
       const ids = record.publication === 125060000 && api ? await loadSuggestions(api, record.core.id, controller.signal).then(list => list.suggestions.map(item => item.id)).catch(() => []) : [];
       return feedbackKeys(submissionFeedbackFields(record), ids);
-    }))).flat())).then(keys => { if (!controller.signal.aborted) setFeedbackItems(keys); }).catch(() => undefined);
+    }))))).then(groups => { if (!controller.signal.aborted) setFeedbackItems(groups); }).catch(() => undefined);
     return () => controller.abort();
   }, [present, user.live]);  // Librarians see how many submissions await review on the Review queue tab. Re-read on each navigation, so it
   // follows their own approvals and returns; a failed read just hides the count.

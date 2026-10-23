@@ -1229,36 +1229,71 @@
     color: var(--proto);
     background: color-mix(in srgb, var(--proto) 15%, transparent);
   }
-  .action-banner {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.85rem;
-    padding: 0.9rem 1.1rem;
-    border: 1px solid color-mix(in srgb, var(--proto) 40%, transparent);
-    border-left-width: 4px;
-    border-left-color: var(--proto);
-    border-radius: 14px;
-    color: var(--ink);
-    background: color-mix(in srgb, var(--proto) 10%, transparent);
+  /* My submissions, "Needs your attention": one compact row per solution, returned drafts first in amber (they block
+     publication), then new suggestions in the accent. A glass sheet like the cards, so it reads as part of the page. */
+  .attention-panel {
+    border: 1px solid var(--glass-edge);
+    border-radius: 18px;
+    background: var(--glass-bg);
+    overflow: hidden;
   }
-  .action-banner-link {
-    display: inline-flex;
+  .attention-list {
+    margin: 0;
+    padding: 0 0.5rem 0.5rem;
+    list-style: none;
+  }
+  .attention-row {
+    --tone: var(--accent);
+    display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.75rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+  .attention-row + .attention-row {
+    margin-top: 0.25rem;
+  }
+  .attention-row--changes {
+    --tone: var(--proto);
+    background: color-mix(in srgb, var(--proto) 9%, transparent);
+    box-shadow: inset 3px 0 0 var(--proto);
+  }
+  .attention-icon {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--tone);
+    background: color-mix(in srgb, var(--tone) 14%, transparent);
+  }
+  .attention-action {
+    flex-shrink: 0;
     min-height: 2rem;
-    padding: 0.2rem 0.75rem;
-    border: 1px solid color-mix(in srgb, var(--proto) 45%, transparent);
+    padding: 0.25rem 0.85rem;
+    border: 1px solid color-mix(in srgb, var(--tone) 40%, transparent);
     border-radius: 999px;
     font-size: 13px;
     font-weight: 600;
-    color: var(--ink);
-    background: color-mix(in srgb, var(--ground) 70%, transparent);
+    color: var(--tone);
+    background: transparent;
     cursor: pointer;
+    transition: background 0.2s var(--ease-sheet);
   }
-  .action-banner-link:hover {
-    background: color-mix(in srgb, var(--proto) 16%, transparent);
+  .attention-action:hover {
+    background: color-mix(in srgb, var(--tone) 12%, transparent);
   }
-  .action-banner-link:focus-visible {
+  .attention-action--changes {
+    border-color: var(--proto);
+    color: var(--on-accent);
+    background: var(--proto);
+  }
+  .attention-action--changes:hover {
+    background: color-mix(in srgb, var(--proto) 85%, black);
+  }
+  .attention-action:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
