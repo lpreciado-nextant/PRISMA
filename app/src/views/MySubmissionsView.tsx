@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { Solution } from "../types";
 import { SolutionCard, type CardManagement } from "../components/SolutionCard";
+import { SubmissionRow } from "../components/SubmissionRow";
 import { Chip } from "../components/Badges";
 import { Icon } from "../components/Icon";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -19,6 +20,11 @@ const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "
 
 /** Rows the attention list shows before "Show all". */
 const ATTENTION_ROWS = 4;
+/** Grid or list for All my solutions, remembered for the session like the library's. */
+const LAYOUT_KEY = "prisma.submissions.layout";
+function rememberedLayout(): "grid" | "list" {
+  try { return sessionStorage.getItem(LAYOUT_KEY) === "list" ? "list" : "grid"; } catch { return "grid"; }
+}
 
 /**
  * Two parts. "Needs your attention", only when something is open: one row per solution, returned drafts (Changes
@@ -29,6 +35,8 @@ const ATTENTION_ROWS = 4;
 export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, suggestions }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>> }) {
   const [filter, setFilter] = useState<Filter>("All");
   const [attentionAll, setAttentionAll] = useState(false);
+  const [layout, setLayout] = useState<"grid" | "list">(rememberedLayout);
+  const chooseLayout = (next: "grid" | "list") => { setLayout(next); try { sessionStorage.setItem(LAYOUT_KEY, next); } catch { void 0; } };
   useFeedbackSeen();
   // Open feedback items: a draft returned with Changes requested (until resubmitted) and each unaddressed suggestion.
   // Counts are items, so they fall as suggestions are addressed and returned drafts are resubmitted.
@@ -138,7 +146,12 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       {attention.length > ATTENTION_ROWS && <button type="button" className="mx-4 mb-3 cursor-pointer text-[13px] font-semibold sm:mx-5" style={{ color: "var(--accent)" }} onClick={() => setAttentionAll(!attentionAll)}>{attentionAll ? "Show fewer" : `Show all ${attention.length}`}</button>}
     </section>}
     <section aria-labelledby={`${attentionId}-all`} className="mt-8">
-      <h2 id={`${attentionId}-all`} className="section-title">All my solutions</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 id={`${attentionId}-all`} className="section-title">All my solutions</h2>
+        {entries.length > 0 && <div className="view-toggle" role="group" aria-label="Layout">
+          {(["grid", "list"] as const).map(option => <button key={option} type="button" aria-pressed={layout === option} aria-label={option === "grid" ? "Grid view" : "List view"} title={option === "grid" ? "Grid view" : "List view"} onClick={() => chooseLayout(option)}><Icon name={option} size={15} /></button>)}
+        </div>}
+      </div>
     {!entries.length ? <div className="py-20 text-center">
       <h2 className="text-[20px]">No submissions yet</h2>
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>No saved drafts or submitted solutions.</p>
@@ -156,7 +169,9 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       {!visible.length ? <div className="py-16 text-center">
         <h2 className="text-[20px]">No submissions in this status</h2>
         <button type="button" className="mt-3 cursor-pointer text-[14px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => setFilter("All")}>Show all submissions</button>
-      </div> : <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      </div> : layout === "list" ? <div className="mt-6 flex flex-col gap-2.5">
+        {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0"><SubmissionRow solution={solution} index={index} manage={manage(solution)} onOpen={() => open(solution)} /></article>)}
+      </div> : <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0">{card(solution, index)}</article>)}
       </div>}
     </>}

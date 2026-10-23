@@ -572,6 +572,28 @@ test("librarian edit notice: an informational note, with the present-mode rule o
   assert.match(published, /color:var\(--proto\)/);
 });
 
+test("review queue classifies by the main capability: its area, then the capability, one tag each", () => {
+  const base = { summary: "Summary", status: "Working prototype", publicationStatus: "Pending review", reviewOutcome: "None", contributors: [], technologies: [], assets: [], dateAdded: "2026-10-01" };
+  // Areas picked by hand before 2026-10-23 can disagree with the capability: the capability's area wins.
+  const entries = [{ owner: "Ana", solution: { ...base, id: "mixed", name: "Mixed one", specializationArea: "ai", specializationAreas: ["ai", "ibo"], capabilities: ["Data Engineering", "Analytics Consulting"] } }];
+  const html = render(review.ReviewQueue, { entries, connected: true, capabilityAreas: { "Data Engineering": "data", "Analytics Consulting": "data" } });
+  const row = html.slice(html.indexOf("<ul"));
+  assert.match(row, /Data Solutions.*>Data Engineering</s);
+  assert.doesNotMatch(row, /AI &amp; Automation|Intelligent Business Operations|Analytics Consulting/);
+  // Without a known capability area, the first area stands in.
+  assert.match(render(review.ReviewQueue, { entries, connected: true }).slice(html.indexOf("<ul")), /AI &amp; Automation/);
+});
+
+test("my submissions list rows keep the card's management on one line", async () => {
+  const { SubmissionRow } = await server.ssrLoadModule("/src/components/SubmissionRow.tsx");
+  const solution = { id: "r", name: "Returned one", summary: "Summary", specializationArea: "ai", status: "Working prototype", publicationStatus: "Draft", reviewOutcome: "Changes requested", reviewComments: "Blur it.", contributors: [], capabilities: [], technologies: [], assets: [] };
+  const html = render(SubmissionRow, { solution, index: 0, onOpen: noop, manage: { actions: "MENU", corner: "EDIT", onFeedback: noop, unread: 1, actionNeeded: true } });
+  assert.match(html, /submission-row[^"]*submission-row--changes.*class="card-open[^"]*"[^>]*aria-label="Returned one — Changes requested">Returned one<.*Changes requested.*Action needed.*View feedback for Returned one.*EDIT.*MENU/s);
+  const suggested = render(SubmissionRow, { solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved", reviewComments: undefined }, index: 0, onOpen: noop, manage: { actions: null, unread: 2 } });
+  assert.match(suggested, /submission-row--new.*2 new suggestions/s);
+  assert.doesNotMatch(suggested, /Action needed|View feedback/);
+});
+
 test("review queue rows show area, capability, submitter and a friendly date, newest first", () => {
   const base = { summary: "Summary", status: "Working prototype", publicationStatus: "Pending review", reviewOutcome: "None", contributors: [], technologies: [], assets: [{ id: "a" }], images: [{ id: "i", src: "x" }, { id: "j", src: "y" }] };
   const entries = [

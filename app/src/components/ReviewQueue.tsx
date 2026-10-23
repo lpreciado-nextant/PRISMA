@@ -309,19 +309,30 @@ function submittedOn(value?: string) {
   return { short, full: date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), iso: match[0] };
 }
 
-export function ReviewQueue({ entries, connected = false }: { entries: Entry[]; connected?: boolean }) {
+/**
+ * `capabilityAreas` maps a capability's name to the specialization area it belongs to. A solution's area here is its
+ * main capability's area (its first area when the capability has none), and the capability filter lists only the
+ * chosen area's capabilities; choosing a capability chooses its area.
+ */
+export function ReviewQueue({ entries, connected = false, capabilityAreas = {} }: { entries: Entry[]; connected?: boolean; capabilityAreas?: Readonly<Record<string, SpecializationArea>> }) {
   const [filter, setFilter] = useState<typeof filters[number]>("Pending review");
   const [query, setQuery] = useState("");
   const [area, setArea] = useState<SpecializationArea | "">("");
   const [capability, setCapability] = useState("");
   const [sort, setSort] = useState<Sort>("newest");
-  const inArea = entries.filter(entry => matches(entry, filter)).filter(({ solution }) => !area || solutionAreas(solution).includes(area));
-  // Capabilities narrow with the chosen area: only those present among the records the area leaves.
-  const capabilities = ["", ...[...new Set(inArea.flatMap(({ solution }) => solution.capabilities))].sort((a, b) => a.localeCompare(b))];
+  const mainArea = (solution: Solution): SpecializationArea | undefined => capabilityAreas[solution.capabilities[0] ?? ""] ?? solutionAreas(solution)[0];
+  const inArea = entries.filter(entry => matches(entry, filter)).filter(({ solution }) => !area || mainArea(solution) === area);
+  // Capabilities narrow with the chosen area: the main capabilities among the records it leaves, A–Z.
+  const capabilities = ["", ...[...new Set(inArea.flatMap(({ solution }) => solution.capabilities.slice(0, 1)))].sort((a, b) => a.localeCompare(b))];
   const chosenCapability = capabilities.includes(capability) ? capability : "";
+  const chooseCapability = (value: string) => {
+    setCapability(value);
+    const owner = capabilityAreas[value];
+    if (value && owner) setArea(owner);
+  };
   const terms = query.trim().toLowerCase();
   const visible = inArea
-    .filter(({ solution }) => !chosenCapability || solution.capabilities.includes(chosenCapability))
+    .filter(({ solution }) => !chosenCapability || solution.capabilities[0] === chosenCapability)
     .filter(({ solution, owner }) => `${solution.name} ${solution.summary} ${solution.capabilities.join(" ")} ${owner ?? ""}`.toLowerCase().includes(terms))
     // Undated records sort last either way; ties keep a stable alphabetical order.
     .sort((a, b) => {
@@ -350,18 +361,20 @@ export function ReviewQueue({ entries, connected = false }: { entries: Entry[]; 
 
     <div className="mt-4"><Notice icon={TAB_NOTICE[filter].icon} tone={TAB_NOTICE[filter].tone} title={TAB_NOTICE[filter].title}>{TAB_NOTICE[filter].text(connected)}</Notice></div>
 
-    {/* Search & filters: search stays the widest control; area narrows capability. */}
+    {/* Search & filters: search stays the widest control; area narrows capability, and a capability sets its area. */}
     <div className="mt-5 flex flex-wrap items-center gap-2.5">
       <label className="flex h-9 min-w-0 flex-1 basis-72 items-center gap-2 rounded-[10px] border border-(--glass-edge) px-3" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}><Icon name="search" /><input type="search" aria-label="Search review queue" placeholder={connected ? "Search submissions" : "Search submissions or owners"} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px]" /></label>
       <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={setArea} getLabel={value => value ? AREAS[value].name : "All areas"} buttonClassName={`${filterButton} min-w-[200px]`} />
-      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={setCapability} getLabel={value => value || "All capabilities"} buttonClassName={`${filterButton} min-w-[240px]`} />
+      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={chooseCapability} getLabel={value => value || "All capabilities"} getHint={value => { const owner = capabilityAreas[value]; return value && owner && !area ? AREAS[owner].short : ""; }} buttonClassName={`${filterButton} min-w-[240px]`} />
       <SelectPicker compact label="Sort" value={sort} options={["newest", "oldest"] as const} onChange={setSort} getLabel={value => value === "newest" ? "Newest first" : "Oldest first"} getButtonLabel={value => `Sort: ${value === "newest" ? "Newest" : "Oldest"}`} />
     </div>
 
     <p className="mt-4 text-[13px] text-(--ink-2)" role="status">{plural(visible.length, "submission")}</p>
     {!visible.length ? <div className="py-16 text-center"><Icon name="check" size={26} className="mx-auto" /><h2 className="mt-4 text-[20px]">{narrowed ? "No matching submissions" : filter === "Pending review" ? "Nothing awaiting review" : "No submissions in this status"}</h2></div> : <ul className="mt-3 space-y-2.5">
       {visible.map(({ solution, owner, imageCount, attachmentCount }) => {
-        const areas = solutionAreas(solution);
+        // The main area and the main capability, as the form classifies them.
+        const primary = mainArea(solution);
+        const areas = primary ? [primary] : [];
         // The review state tints the row's edge only; the area keeps its own chip colour and the card stays neutral.
         const tint = STATE_COLOR[filter];
         const date = submittedOn(solution.dateAdded);
@@ -373,7 +386,7 @@ export function ReviewQueue({ entries, connected = false }: { entries: Entry[]; 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5 pr-20 sm:pr-0">
               {areas.map(value => <AreaTag key={value} area={value} size="xs" />)}
-              {solution.capabilities.map(value => <span key={value} className="inline-flex items-center rounded-full border border-(--glass-edge) px-2 py-0.5 text-[10.5px] font-semibold text-(--ink-2)">{value}</span>)}
+              {solution.capabilities.slice(0, 1).map(value => <span key={value} className="inline-flex items-center rounded-full border border-(--glass-edge) px-2 py-0.5 text-[10.5px] font-semibold text-(--ink-2)">{value}</span>)}
             </div>
             <h2 className="mt-2 break-words text-[17px] leading-snug font-semibold">{solution.name || "Untitled solution"}</h2>
             {solution.summary && <p className="mt-0.5 line-clamp-2 break-words text-[14px] text-(--ink-2)">{solution.summary}</p>}

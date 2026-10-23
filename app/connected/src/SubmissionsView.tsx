@@ -9,7 +9,7 @@ import { outlinedStatusButton, statusButton, subtleStatusButton, SubmissionStatu
 import { submissionState } from "../../src/lib/submissionState";
 import { reviewChecklist } from "../../src/lib/reviewChecklist";
 import { newTechnologies, type NewTechnology } from "../../src/lib/technologyName";
-import type { Solution } from "../../src/types";
+import type { Solution, SpecializationArea } from "../../src/types";
 import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
 import { workflowApi, readRows, suggestionApi } from "./dataSource";
@@ -36,7 +36,7 @@ const CONFIRMATIONS = {
 const UNPUBLISH = { title: "Unpublish to edit?", label: "Unpublish & edit", body: "It leaves the Solution Library and returns to Draft so you can edit it. It is published again once a librarian approves it." };
 
 export function SubmissionsView({ review }: { review: boolean }) {
-  const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number }[]; librarian: boolean } | null>(null);
+  const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number }[]; librarian: boolean; capabilityAreas: Record<string, SpecializationArea> } | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const uncertainDeletes = useRef(new Set<string>());
@@ -48,8 +48,14 @@ export function SubmissionsView({ review }: { review: boolean }) {
     void Promise.all([loadSubmissions(workflowApi, review, controller.signal), loadDraftReferences(readRows, controller.signal)]).then(([result, references]) => {
       controller.signal.throwIfAborted();
       const names = Object.fromEntries([...references.areas, ...references.capabilities].map(option => [option.id, option.name]));
+      // Capability name → the area it belongs to (nx_capability.nx_specializationarea), for the review queue's filters.
+      const areaNames = new Map(references.areas.map(option => [option.id.toLowerCase(), option.name]));
+      const capabilityAreas = Object.fromEntries(references.capabilities.flatMap(option => {
+        const area = option.areaId ? areaNames.get(option.areaId) : undefined;
+        return area === "ai" || area === "data" || area === "ibo" ? [[option.name, area as SpecializationArea]] : [];
+      }));
       uncertainDeletes.current.clear();
-      setState({ entries: result.records.map(record => ({ solution: submissionSolution(record, names), rowVersion: record.core.rowVersion, owner: record.owner, imageCount: record.imageCount, attachmentCount: record.attachmentCount })), librarian: result.librarian });
+      setState({ entries: result.records.map(record => ({ solution: submissionSolution(record, names), rowVersion: record.core.rowVersion, owner: record.owner, imageCount: record.imageCount, attachmentCount: record.attachmentCount })), librarian: result.librarian, capabilityAreas });
     }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [review, attempt]);
@@ -93,12 +99,12 @@ export function SubmissionsView({ review }: { review: boolean }) {
     finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", abort); }
   };
   if (!review) {
-    // The Suggestions tab lists the cards with suggestions; each solution shows them inside. Review queue lives in the masthead.
+    // Needs your attention lists returned drafts and new suggestions; each solution shows its suggestions inside.
     return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onDelete={remove}
       renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />}
       actions={<button type="button" title="Refresh submissions" aria-label="Refresh submissions" className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold hover:bg-(--glass-edge)" style={{ color: "var(--ink-2)" }} onClick={() => { setState(null); setSuggestionRows(undefined); setAttempt(current => current + 1); }}><Icon name="refresh" size={15} />Refresh</button>} />;
   }
-  return <ReviewQueue entries={state.entries} connected />;
+  return <ReviewQueue entries={state.entries} connected capabilityAreas={state.capabilityAreas} />;
 }
 
 export function SubmissionView({ id, review, technologyUse }: { id: string; review: boolean; technologyUse?: ReadonlyMap<string, string[]> }) {

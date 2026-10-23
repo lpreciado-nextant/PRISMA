@@ -5,6 +5,7 @@ import { submissionFacts, type SubmissionEntry } from "../lib/submissions";
 import { reviewChecklist } from "../lib/reviewChecklist";
 import { navigate } from "../lib/router";
 import { DetailView } from "./DetailView";
+import { CAPABILITIES } from "../data/catalogueMetadata";
 
 export function ReviewView({ entries, selectedId, onDecision }: {
   entries: SubmissionEntry[];
@@ -46,5 +47,5 @@ export function ReviewView({ entries, selectedId, onDecision }: {
     } />;
   }
 
-  return <ReviewQueue entries={entries} />;
+  return <ReviewQueue entries={entries} capabilityAreas={Object.fromEntries(CAPABILITIES.map(({ name, area }) => [name, area]))} />;
 }

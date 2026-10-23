@@ -1313,6 +1313,19 @@
         0 0 24px 0 color-mix(in srgb, var(--proto) 45%, transparent);
     }
   }
+  /* My submissions list view: a quiet glass row; a returned one keeps the amber edge, new suggestions the accent. */
+  .submission-row {
+    border: 1px solid var(--glass-edge);
+    background: var(--glass-bg);
+  }
+  .submission-row--changes {
+    border-color: color-mix(in srgb, var(--proto) 55%, transparent);
+    box-shadow: inset 4px 0 0 var(--proto), 0 0 18px -6px color-mix(in srgb, var(--proto) 45%, transparent);
+  }
+  .submission-row--new {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow: inset 4px 0 0 var(--accent);
+  }
   /* "N new" beside a My submissions tab: open feedback items, in the accent like the masthead dot. */
   .tab-new {
     margin-left: 0.4rem;
