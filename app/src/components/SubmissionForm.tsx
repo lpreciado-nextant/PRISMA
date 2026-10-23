@@ -1,4 +1,4 @@
-import { useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 import { SectionCardsContext } from "./sectionCards";
 import { OptionalMark, RequiredLegend, RequiredMark } from "./RequiredMark";
@@ -321,38 +321,54 @@ export function SolutionDetailsFields<Area extends string, Status extends string
   </>;
 }
 
-type CapabilityGroup<Value extends string> = { label: string; options: { value: Value; label: string }[] };
+type CapabilityGroup<Value extends string> = { label: string; accent?: string; options: { value: Value; label: string }[] };
 
 /**
- * Main capability (one, required) and the other capabilities involved (optional, up to `maxSecondary`, any area), each
- * listed under the area it belongs to. The solution's areas follow from these, so there is no area picker: the main
- * capability's area is shown as the main area.
+ * Main capability (one, required) chosen in one column per area, and the other capabilities involved (optional, up to
+ * `maxSecondary`, any area) added from a compact menu. The solution's areas follow from these, so there is no area
+ * picker: the chosen column lights in its area colour and the main area is shown beneath.
  */
-export function CapabilityFields<Value extends string>({ groups, main, secondary, onMain, onSecondary, mainArea, maxSecondary = 3 }: {
+export function CapabilityFields<Value extends string>({ groups, main, secondary, onMain, onSecondary, mainArea, mainOwner, maxSecondary = 3 }: {
   groups: CapabilityGroup<Value>[]; main?: Value; secondary: Value[]; onMain: (value: Value) => void; onSecondary: (value: Value[]) => void;
-  mainArea?: string; maxSecondary?: number;
+  mainArea?: string;
+  /** The main capability's owner: a name, `null` when none is assigned; omit to leave the owner out. */
+  mainOwner?: string | null; maxSecondary?: number;
 }) {
-  // A group, not a `Field`: a <label> would name the first chip with the whole label and hint.
-  const grouped = (label: string, hint: string, required: boolean, active: (value: Value) => boolean, pick: (value: Value) => void, skip?: Value) => <div role="group" aria-label={label} className="flex min-w-0 flex-col gap-3">
-    <span className="block"><span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required ? <RequiredMark /> : <OptionalMark />}</span><span className="mt-1 block text-[12px] text-(--ink-3)">{hint}</span></span>
-    {groups.map(group => {
-      const options = group.options.filter(option => option.value !== skip);
-      return options.length > 0 && <div key={group.label} className="min-w-0">
-        <p className="mb-1.5 font-mono text-[10.5px] tracking-[0.08em] text-(--ink-3) uppercase">{group.label}</p>
-        <div className="flex flex-wrap gap-2">{options.map(option => <Chip key={option.value} active={active(option.value)} pressed={active(option.value)} onClick={() => pick(option.value)}>{option.label}</Chip>)}</div>
-      </div>;
-    })}
-  </div>;
-  const toggleSecondary = (value: Value) => {
-    if (secondary.includes(value)) onSecondary(secondary.filter(entry => entry !== value));
-    else if (secondary.length < maxSecondary) onSecondary([...secondary, value]);
-  };
+  const name = useId();
+  const all = groups.flatMap(group => group.options.map(option => ({ ...option, group })));
+  const labelOf = (value: Value) => all.find(option => option.value === value)?.label ?? value;
+  const remaining = all.filter(option => option.value !== main && !secondary.includes(option.value)).map(option => option.value);
+  const mainGroup = all.find(option => option.value === main)?.group;
+  const heading = (label: string, required: boolean) => <span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required ? <RequiredMark /> : <OptionalMark />}</span>;
   return <>
-    {grouped("Main capability", "The capability whose owner you would ask about this solution. Its area becomes the solution's main area and sets the card colour.", true,
-      value => value === main, value => { onMain(value); if (secondary.includes(value)) onSecondary(secondary.filter(entry => entry !== value)); })}
-    <p className="text-[13px] text-(--ink-2)">{main && mainArea ? <>Main area: <b className="font-semibold text-(--ink)">{mainArea}</b></> : "Choose the main capability to set the main area."}</p>
-    {main && grouped("Other capabilities involved", `Up to ${maxSecondary}, from any area. They credit the collaboration and add their areas; the main capability stays first. ${secondary.length}/${maxSecondary} selected.`, false,
-      value => secondary.includes(value), toggleSecondary, main)}
+    <fieldset className="min-w-0">
+      <legend className="float-left w-full">{heading("Main capability", true)}</legend>
+      <p className="clear-left mt-1 text-[12px] text-(--ink-3)">Select the capability that played the primary role in this solution. Its area will automatically become the solution's Main Area.</p>
+      <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-3">
+        {groups.filter(group => group.options.length > 0).map(group => <div key={group.label} className="capability-column min-w-0" data-chosen={group === mainGroup || undefined} style={{ "--area": group.accent ?? "var(--accent)" } as CSSProperties}>
+          <p className="mb-2 flex items-center gap-2 px-1 text-[12.5px] font-semibold text-(--ink)"><span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: "var(--area)" }} />{group.label}</p>
+          <div className="flex flex-col gap-0.5">{group.options.map(option => <label key={option.value} className="capability-option">
+            <input type="radio" name={name} value={option.value} checked={option.value === main} onChange={() => { onMain(option.value); if (secondary.includes(option.value)) onSecondary(secondary.filter(entry => entry !== option.value)); }} />
+            <span className="min-w-0">{option.label}</span>
+          </label>)}</div>
+        </div>)}
+      </div>
+    </fieldset>
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-(--ink-2)">{main && mainArea ? <>
+      <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="size-2 rounded-full" style={{ background: mainGroup?.accent ?? "var(--accent)" }} />Main area: <b className="font-semibold text-(--ink)">{mainArea}</b></span>
+      {mainOwner !== undefined && <><span aria-hidden="true" className="text-(--ink-3)">·</span><span>Capability owner: {mainOwner ? <b className="font-semibold text-(--ink)">{mainOwner}</b> : <span className="text-(--ink-3)">Not assigned</span>}</span></>}
+    </> : "Choose the main capability to set the main area."}</p>
+    {main && <div role="group" aria-label="Other capabilities involved" className="min-w-0">
+      {heading("Other capabilities involved", false)}
+      <p className="mt-1 text-[12px] text-(--ink-3)">{`Select up to ${maxSecondary} additional capabilities that played a significant role in the solution's development or delivery. Do not include capabilities that only provided minor support.`}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {secondary.map(value => <Chip key={value} active onClick={() => onSecondary(secondary.filter(entry => entry !== value))} title={`Remove ${labelOf(value)}`}><span className="sr-only">Remove </span>{labelOf(value)}<Icon name="close" size={12} /></Chip>)}
+        {secondary.length < maxSecondary && remaining.length > 0 && <SelectPicker compact label="Add another capability" value={"" as Value | ""} placeholder="Add a capability" options={remaining}
+          getLabel={value => value ? labelOf(value) : "Add a capability"} getHint={value => value ? all.find(option => option.value === value)?.group.label ?? "" : ""} getButtonLabel={() => "Add a capability"} buttonIcon="plus"
+          buttonClassName="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-(--glass-edge) px-3 py-1 text-[12.5px] font-medium text-(--ink-2) outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)"
+          onChange={value => { if (value) onSecondary([...secondary, value]); }} />}
+      </div>
+    </div>}
   </>;
 }
 

@@ -1076,6 +1076,58 @@
         0 0 24px 0 color-mix(in srgb, var(--accent) 45%, transparent);
     }
   }
+  /* ---- Main capability: one column per area ------------------------- */
+  /* `--area` is the column's area colour. The chosen column lights in it, like the card it will produce. */
+  .capability-column {
+    padding: 0.75rem 0.5rem 0.6rem;
+    border: 1px solid var(--glass-edge);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+    transition: border-color 0.3s var(--ease-sheet), background 0.3s var(--ease-sheet), box-shadow 0.3s var(--ease-sheet);
+  }
+  .capability-column[data-chosen] {
+    border-color: color-mix(in srgb, var(--area) 65%, transparent);
+    background: color-mix(in srgb, var(--area) 9%, transparent);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--area) 30%, transparent),
+      0 0 22px -4px color-mix(in srgb, var(--area) 45%, transparent);
+  }
+  .capability-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--ink-2);
+    cursor: pointer;
+    transition: background 0.2s var(--ease-sheet), color 0.2s var(--ease-sheet);
+  }
+  .capability-option:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  .capability-option:has(:checked) {
+    color: var(--ink);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--area) 16%, transparent);
+  }
+  .capability-option input {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    accent-color: var(--area);
+  }
+  .capability-option input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .capability-column,
+    .capability-option {
+      transition: none;
+    }
+  }
   /* "N new" beside a My submissions tab: open feedback items, in the accent like the masthead dot. */
   .tab-new {
     margin-left: 0.4rem;

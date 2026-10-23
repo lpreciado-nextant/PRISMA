@@ -360,8 +360,9 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           <StepShell title="Define the solution">
             <NamedSection title="Solution details">
             <SolutionDetailsFields grouped value={draft} onText={set} classification={<CapabilityFields
-              groups={AREA_ORDER.map(area => ({ label: AREAS[area].name, options: CAPABILITIES.filter(capability => capability.area === area).map(({ name }) => ({ value: name, label: name })) }))}
+              groups={AREA_ORDER.map(area => ({ label: AREAS[area].name, accent: AREAS[area].cssVar, options: CAPABILITIES.filter(capability => capability.area === area).map(({ name }) => ({ value: name, label: name })) }))}
               main={draft.capabilities[0]} secondary={draft.secondaryCapabilities} mainArea={areas[0] && AREAS[areas[0]].name}
+              mainOwner={draft.capabilities[0] ? CAPABILITIES.find(capability => capability.name === draft.capabilities[0])?.owner ?? null : undefined}
               onMain={value => set("capabilities", [value])} onSecondary={value => set("secondaryCapabilities", value)} />} />
             </NamedSection>
             <StoryFields nested whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={set}>

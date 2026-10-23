@@ -246,10 +246,19 @@ test("capability fields pick one main capability, derive the main area and list 
   assert.doesNotMatch(empty, /Other capabilities involved/);
   const picked = render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", secondary: ["Analytics"], onMain: noop, onSecondary: noop });
   assert.match(picked, /Main area: <b[^>]*>AI &amp; Automation<\/b>/);
+  assert.doesNotMatch(picked, /Capability owner/);
+  assert.match(render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", mainOwner: "Marta Ruiz", secondary: [], onMain: noop, onSecondary: noop }), /Capability owner: <b[^>]*>Marta Ruiz<\/b>/);
+  assert.match(render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", mainOwner: null, secondary: [], onMain: noop, onSecondary: noop }), /Capability owner: <span[^>]*>Not assigned/);
+  // One radio per capability; only the main one is checked, and only its column is lit.
+  assert.equal((picked.match(/type="radio"/g) ?? []).length, 3);
+  assert.equal((picked.match(/checked=""/g) ?? []).length, 1);
+  assert.equal((picked.match(/data-chosen="true"/g) ?? []).length, 1);
   const others = picked.slice(picked.indexOf("Other capabilities involved"));
+  assert.match(others, /Select up to 3 additional capabilities that played a significant role.*only provided minor support\./);
+  assert.match(picked, /Select the capability that played the primary role in this solution\. Its area will automatically become the solution&#x27;s Main Area\./);
+  assert.match(others, /Remove <\/span>Analytics/);
+  assert.match(others, /Add a capability/);
   assert.doesNotMatch(others, />Agents</);
-  assert.match(others, /1\/3 selected/);
-  assert.equal((picked.match(/aria-pressed="true"/g) ?? []).length, 2);
 });
 
 test("story section contains only the two narrative fields in both adapters", async () => {
