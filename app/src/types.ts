@@ -121,8 +121,10 @@ export interface Solution {
   createdOn?: string;
   libraryNotes?: string;
   searchKeywords: string;
-  /** Native N:N tags — `nx_capability` / `nx_technology` / `nx_industry`. */
+  /** Native N:N tags — `nx_capability` / `nx_technology` / `nx_industry`. A submission carries one capability: the main one (`nx_solution.nx_capability`). */
   capabilities: string[];
+  /** Other capabilities involved (`nx_Solution_nx_SecondaryCapability`, N:N; one for now). Credit only; they never set the primary area. */
+  secondaryCapabilities?: string[];
   technologies: string[];
   industries: string[];
   /** Delivery evidence via `nx_solutionproject` — client names, never rendered in present mode. */

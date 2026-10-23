@@ -248,6 +248,32 @@ test("status field explains the chosen maturity beneath the choices", () => {
   assert.match(render(form.StatusField, { status: "125060000", statuses: [{ value: "125060000", label: "Live in production" }], onStatus: noop }), /Running for at least one client, with real users and data\./);
 });
 
+test("capability fields pick one main capability, derive the main area and list other capabilities without it", () => {
+  const groups = [{ label: "AI & Automation", options: [{ value: "Agents", label: "Agents" }, { value: "Automation", label: "Automation" }] }, { label: "Data Solutions", options: [{ value: "Analytics", label: "Analytics" }] }];
+  const empty = render(form.CapabilityFields, { groups, secondary: [], onMain: noop, onSecondary: noop });
+  assert.match(empty, /Main capability.*AI &amp; Automation.*Agents.*Data Solutions.*Analytics/s);
+  assert.match(empty, /Choose the main capability to set the main specialization area/);
+  assert.doesNotMatch(empty, /Other capabilities involved/);
+  const picked = render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", secondary: ["Analytics"], onMain: noop, onSecondary: noop });
+  assert.match(picked, /Main specialization area: <b[^>]*>AI &amp; Automation<\/b>/);
+  assert.doesNotMatch(picked, /Capability owner/);
+  assert.match(render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", mainOwner: "Marta Ruiz", secondary: [], onMain: noop, onSecondary: noop }), /Capability owner: <b[^>]*>Marta Ruiz<\/b>/);
+  assert.match(render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", mainOwner: null, secondary: [], onMain: noop, onSecondary: noop }), /Capability owner: <span[^>]*>Not assigned/);
+  // One radio per capability; only the main one is checked, and only its column is lit.
+  assert.equal((picked.match(/type="radio"/g) ?? []).length, 3);
+  assert.equal((picked.match(/checked=""/g) ?? []).length, 1);
+  assert.equal((picked.match(/data-chosen="true"/g) ?? []).length, 1);
+  // One other capability for now: singular wording, and no way to add a second once it is chosen.
+  const others = picked.slice(picked.indexOf("Other capability involved"));
+  assert.match(others, /Select one additional capability that played a significant role.*only provided minor support\./);
+  assert.doesNotMatch(others, /Add a capability/);
+  const room = render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", secondary: ["Analytics"], maxSecondary: 3, onMain: noop, onSecondary: noop });
+  assert.match(room, /Other capabilities involved.*Select up to 3 additional capabilities.*Add a capability/s);
+  assert.match(picked, /Select the capability that played the primary role in this solution\. Its area will automatically become the solution&#x27;s Main Specialization Area\./);
+  assert.match(others, /Remove <\/span>Analytics/);
+  assert.doesNotMatch(others, />Agents</);
+});
+
 test("story section contains only the two narrative fields in both adapters", async () => {
   const html = render(form.StoryFields, { whatItDoes: "Actions and results", businessValue: "Business benefit", onChange: noop });
   assert.match(html, /What does it do, and why does it matter\?/);
@@ -291,7 +317,7 @@ test("required and optional fields are marked the same way everywhere, with one 
   assert.match(render(form.Field, { label: "What it does", optional: true, children: createElement("input") }), /What it does<span[^>]*>\(optional\)<\/span>/);
   assert.doesNotMatch(render(form.Field, { label: "Plain", children: createElement("input") }), /required|optional/);
   // The legend explains the asterisk on steps with fields, not on the safety gate or the final review.
-  const legend = render(form.StepShell, { title: "Tag it" });
+  const legend = render(form.StepShell, { title: "Classify & tag" });
   assert.match(legend, /\*<\/span> Required for review/);
   assert.match(legend, /Only the solution name is needed to save a draft\./);
   for (const title of ["Before you start", "Review & submit"]) assert.doesNotMatch(render(form.StepShell, { title }), /Required for review|save a draft/);
@@ -614,8 +640,8 @@ test("section cards carry one section-level visibility badge and mixed sections 
   assert.equal((client.match(/Shown to clients/g) ?? []).length, 2);
   // Multi-card steps stay unframed; single-section steps become cards.
   for (const title of ["Define the solution", "Solution context"]) assert.doesNotMatch(inCards(createElement(form.StepShell, { title })), /rounded-\[20px\] border/);
-  assert.match(inCards(createElement(form.StepShell, { title: "Tag it" })), /<h2[^>]*>Tag it<\/h2>.*Shown to clients/);
-  assert.doesNotMatch(render(form.StepShell, { title: "Tag it" }), /Shown to clients/);
+  assert.match(inCards(createElement(form.StepShell, { title: "Classify & tag" })), /<h2[^>]*>Classify &amp; tag<\/h2>.*Shown to clients/);
+  assert.doesNotMatch(render(form.StepShell, { title: "Classify & tag" }), /Shown to clients/);
 });
 
 test("my submissions filters by review state and keeps card controls outside the open button", async () => {
@@ -705,7 +731,7 @@ test("challenges and lessons learned are optional, internal and limited to the D
 });
 
 test("tagging comes right after defining the solution; internal context follows it", () => {
-  assert.deepEqual([...form.SUBMISSION_STEPS], ["Before you start", "Define the solution", "Tag it", "Solution context", "Media", "Review & submit"]);
+  assert.deepEqual([...form.SUBMISSION_STEPS], ["Before you start", "Define the solution", "Classify & tag", "Solution context", "Media", "Review & submit"]);
 });
 
 test("tag pickers show chosen tags first, list only what is left and search only long lists", async () => {

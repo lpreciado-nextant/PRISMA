@@ -10,7 +10,7 @@ import type {
   SpecializationArea,
 } from "../types";
 import { AREA_ORDER, AREAS, BUILDERS, CSMS, SOLUTIONS } from "../data/solutions";
-import { CLIENT_ROLES } from "../data/catalogueMetadata";
+import { CAPABILITIES, CLIENT_ROLES } from "../data/catalogueMetadata";
 import { Icon } from "../components/Icon";
 import { LoadingState } from "../components/LoadingState";
 import { SectionCardsContext } from "../components/sectionCards";
@@ -19,10 +19,10 @@ import { SolutionCard } from "../components/SolutionCard";
 import { navigate } from "../lib/router";
 import type { AppUser } from "../lib/powerContext";
 import { effortSummary, estimatedHours } from "../lib/effort";
-import { MAX_AREAS, solutionAreas } from "../lib/areas";
+import { capabilityAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
 import { assetPurpose, purposeAllows } from "../lib/assetPurpose";
-import { NamedSection, SolutionDetailsFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, LessonsFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, EffortFields, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
+import { NamedSection, SolutionDetailsFields, CapabilityFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, LessonsFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, EffortFields, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
 import { ImageFramer } from "../components/ImageFramer";
 
 const MAX_GALLERY = 6;
@@ -30,12 +30,12 @@ const MAX_GALLERY = 6;
 interface Draft {
   name: string;
   summary: string;
-  /** N:N specialization areas in pick order; the first is the primary area. */
-  areas: SpecializationArea[];
   status: SolutionStatus;
   whatItDoes: string;
   businessValue: string;
+  /** The main capability, alone; the solution's areas are derived from it and `secondaryCapabilities`. */
   capabilities: string[];
+  secondaryCapabilities: string[];
   technologies: string[];
   industries: string[];
   assets: DemoAsset[];
@@ -57,11 +57,11 @@ interface Draft {
 const EMPTY_DRAFT: Draft = {
   name: "",
   summary: "",
-  areas: ["ai"],
   status: "Working prototype",
   whatItDoes: "",
   businessValue: "",
   capabilities: [],
+  secondaryCapabilities: [],
   technologies: [],
   industries: [],
   assets: [],
@@ -87,7 +87,7 @@ const STATUS_OPTIONS: SolutionStatus[] = [
   "Live in production",
 ];
 
-function optionsFrom(key: "capabilities" | "industries" | "technologies"): string[] {
+function optionsFrom(key: "industries" | "technologies"): string[] {
   return [...new Set(SOLUTIONS.flatMap((s) => s[key]))].sort();
 }
 
@@ -98,7 +98,8 @@ function loadDraft(draftKey: string): Draft {
     const parsed = { ...EMPTY_DRAFT, ...(JSON.parse(raw) as Partial<Draft>) };
     // Drafts persisted before a schema change may miss array fields.
     parsed.images ??= [];
-    parsed.capabilities ??= [];
+    parsed.capabilities = (parsed.capabilities ?? []).slice(0, 1);
+    parsed.secondaryCapabilities = (parsed.secondaryCapabilities ?? []).slice(0, 1);
     parsed.technologies ??= [];
     parsed.industries ??= [];
     parsed.contributors ??= [];
@@ -109,9 +110,10 @@ function loadDraft(draftKey: string): Draft {
     parsed.clientRoles = parsed.clientRoles.filter((role) => CLIENT_ROLES.includes(role));
     delete legacy.clientRole;
     delete legacy.targetRole;
-    // Drafts saved before specialization areas became N:N carry a single `area`.
-    const legacyArea = (parsed as Partial<Draft> & { area?: SpecializationArea }).area;
-    if (!parsed.areas?.length) parsed.areas = legacyArea ? [legacyArea] : EMPTY_DRAFT.areas;
+    // Drafts saved before areas were derived from capabilities carry picked `areas` (or an older single `area`); they are dropped.
+    const legacyAreas = parsed as Partial<Draft> & { areas?: SpecializationArea[]; area?: SpecializationArea };
+    delete legacyAreas.areas;
+    delete legacyAreas.area;
     // Drafts saved before effort moved to the solution carry per-person hours (and older ones dates, allocation and a
     // contributor role); only the person remains. Effort is re-entered as the solution's estimate and complexity.
     parsed.contributors = parsed.contributors.map(({ id, builtBy }) => ({ id, builtBy }));
@@ -143,9 +145,9 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const [draft, setDraft] = useState<Draft>(() => {
     const saved: Draft = initialSolution ? {
       ...EMPTY_DRAFT, name: initialSolution.name === UNTITLED_SOLUTION ? "" : initialSolution.name, summary: initialSolution.summary,
-      areas: solutionAreas(initialSolution), status: initialSolution.status,
+      status: initialSolution.status,
       whatItDoes: initialSolution.whatItDoes, businessValue: initialSolution.businessValue,
-      capabilities: initialSolution.capabilities, technologies: initialSolution.technologies,
+      capabilities: initialSolution.capabilities.slice(0, 1), secondaryCapabilities: initialSolution.secondaryCapabilities ?? initialSolution.capabilities.slice(1, 2), technologies: initialSolution.technologies,
       industries: initialSolution.industries, contributors: initialSolution.contributors,
       thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
@@ -230,12 +232,13 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   catch (error) { hoursError = error instanceof Error ? error.message : "Check the estimated hours."; }
   const effortValid = !!draft.complexity && !hoursError;
   const nameValid = Boolean(draft.name.trim()) && draft.name.trim() !== UNTITLED_SOLUTION && draft.name.length <= 100;
-  const detailsValid = nameValid && Boolean(draft.summary.trim()) && Boolean(draft.whatItDoes.trim()) && Boolean(draft.businessValue.trim()) && draft.areas.length > 0;
+  const detailsValid = nameValid && Boolean(draft.summary.trim()) && Boolean(draft.whatItDoes.trim()) && Boolean(draft.businessValue.trim());
   const clientValid = clientAssociated === false || (clientAssociated === true && Boolean(draft.clientContext.trim()) && Boolean(draft.redacted.trim()));
   const basicsValid = detailsValid && clientValid && contributorsValid && effortValid;
   const safetyValid = draft.safetyAcknowledged;
   const mediaValid = draft.images.length > 0 && !mediaBusy;
   const capabilityValid = draft.capabilities.length === 1;
+  const areas = useMemo(() => capabilityAreas(draft.capabilities[0], draft.secondaryCapabilities), [draft.capabilities, draft.secondaryCapabilities]);
   const stepValid = safetyValid && (step === 1 ? detailsValid : step === 2 ? capabilityValid : step === 3 ? clientValid && contributorsValid && effortValid : step === 4 ? mediaValid : true);
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
     set("contributors", draft.contributors.map((contributor) => contributor.id === id ? { ...contributor, ...patch } : contributor));
@@ -248,8 +251,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       summary: draft.summary || "The one-line summary appears here.",
       whatItDoes: draft.whatItDoes,
       businessValue: draft.businessValue,
-      specializationArea: draft.areas[0] ?? "ai",
-      specializationAreas: draft.areas,
+      specializationArea: areas[0] ?? "ai",
+      specializationAreas: areas,
       contributors: draft.contributors,
       estimatedMinimumHours: hoursValue,
       complexity: draft.complexity || undefined,
@@ -267,11 +270,12 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       dateAdded: initialSolution?.dateAdded ?? new Date().toISOString().slice(0, 10),
       searchKeywords: initialSolution?.searchKeywords ?? "",
       capabilities: draft.capabilities,
+      secondaryCapabilities: draft.secondaryCapabilities,
       technologies: draft.technologies,
       industries: draft.industries,
       assets: draft.assets,
     }),
-    [draft, initialSolution, hoursValue],
+    [draft, initialSolution, hoursValue, areas],
   );
 
   const persist = async (asDraft: boolean) => {
@@ -355,7 +359,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         {step === 1 && safetyValid && (
           <StepShell title="Define the solution">
             <NamedSection title="Solution details">
-            <SolutionDetailsFields grouped value={draft} onText={set} area={draft.areas[0] ?? "ai"} areas={AREA_ORDER.map(value => ({ value, label: AREAS[value].name }))} onArea={value => set("areas", [value])} selectedAreas={draft.areas} onAreas={value => set("areas", value)} maxAreas={MAX_AREAS} />
+            <SolutionDetailsFields grouped value={draft} onText={set} classification={false} />
             </NamedSection>
             <StoryFields nested whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={set}>
               <p className="flex items-center gap-2 text-[13px]" style={{ color: "var(--ink-3)" }}>
@@ -390,16 +394,21 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         )}
 
         {step === 2 && safetyValid && (
-          <StepShell title="Tag it">
-            <TagPicker label="Capability (choose one)" required governed hint="The kind of solution it is." options={optionsFrom("capabilities")} selected={draft.capabilities} onChange={(value) => set("capabilities", value.slice(-1))} />
-            {!capabilityValid && <p className="text-[13px]" style={{ color: "var(--proto)" }}>Select exactly one capability before submitting.</p>}
+          <StepShell title="Classify & tag">
+            <div className="flex min-w-0 flex-col gap-5">
+            <CapabilityFields
+              groups={AREA_ORDER.map(area => ({ label: AREAS[area].name, accent: AREAS[area].cssVar, options: CAPABILITIES.filter(capability => capability.area === area).map(({ name }) => ({ value: name, label: name })) }))}
+              main={draft.capabilities[0]} secondary={draft.secondaryCapabilities} mainArea={areas[0] && AREAS[areas[0]].name}
+              mainOwner={draft.capabilities[0] ? CAPABILITIES.find(capability => capability.name === draft.capabilities[0])?.owner ?? null : undefined}
+              onMain={value => set("capabilities", [value])} onSecondary={value => set("secondaryCapabilities", value)} />
+            </div>
             <TagPicker label="Technologies" optional options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
             <TagPicker label="Industries" optional governed hint="Industries where it applies." options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
           </StepShell>
         )}
 
         {step === 4 && safetyValid && (
-          <SubmissionMedia capabilities={draft.capabilities} local disabled={mediaBusy} onPreparationBusy={setPreparingVideo}
+          <SubmissionMedia capabilities={[...draft.capabilities, ...draft.secondaryCapabilities]} local disabled={mediaBusy} onPreparationBusy={setPreparingVideo}
             onReorderImages={ids => set("images", ids.map(id => draft.images.find(image => image.id === id)!))}
             onReorderAttachments={ids => set("assets", ids.map((id, sortOrder) => ({ ...draft.assets.find(asset => asset.id === id)!, sortOrder })))}
             thumbnail={draft.thumbnail ? <img src={draft.thumbnail} alt="Thumbnail preview" className="h-full w-full object-cover" /> : undefined} onRemoveThumbnail={() => set("thumbnail", "")}
@@ -432,7 +441,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         {step === 5 && safetyValid && (
           <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.builtBy.level ? `${contributor.builtBy.name} (${contributor.builtBy.level})` : contributor.builtBy.name).join(", ")} effort={effortSummary(hoursValue, draft.complexity || undefined)}
             images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.clientRoles.join(", ")} nextState="Pending review (local)">
-            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution, Solution context (status, contributors, complexity and the client question), select one capability and add at least one detail image before submitting.</p>}
+            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution, the main capability in Classify & tag, Solution context (status, contributors, complexity and the client question) and add at least one detail image before submitting.</p>}
           </SubmissionReview>
         )}
 
