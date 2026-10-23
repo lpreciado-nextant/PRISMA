@@ -145,7 +145,9 @@ export function LibraryView({
 
         {/* Editorial area filter: text options with their colour dots; only the chosen one gets a light tint. It must not
             look like the section tabs above (no icons, no underline). */}
-        <div role="group" aria-label="Filter by specialization area" className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-2">
+        {/* The area filter, with present mode's saved-solutions switch at the right end of the same line. */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div role="group" aria-label="Filter by specialization area" className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
           <AreaTab
             label="All areas"
             count={counts.get("all") ?? 0}
@@ -163,13 +165,13 @@ export function LibraryView({
             />
           ))}
         </div>
-
         {present && picks.length > 0 && (
-          <button type="button" role="switch" aria-checked={showingPicks} onClick={toggleSaved} className="saved-switch mt-4">
+          <button type="button" role="switch" aria-checked={showingPicks} onClick={toggleSaved} className="saved-switch">
             <Icon name="heart" size={14} />Show my saved solutions<span className="font-mono text-[11.5px] opacity-80">{picks.length}</span>
             <span aria-hidden="true" className="saved-switch-track"><span className="saved-switch-thumb" /></span>
           </button>
         )}
+        </div>
 
         {/* Only a chosen area carries a note; "All" needs no explanation. */}
         {filters.area !== "all" && (
