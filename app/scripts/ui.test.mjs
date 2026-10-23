@@ -338,6 +338,9 @@ test("the client question hides every client field until Yes", () => {
   // Every role is a toggle; several can be on at once.
   assert.equal((yes.match(/aria-pressed="true"/g) ?? []).length, 1);
   assert.equal((yes.match(/aria-pressed="false"/g) ?? []).length, 1);
+  // Roles read A–Z by label, with Other last, whatever order the reference rows arrive in.
+  const sorted = render(form.ClientFields, { ...props, associated: true, roles: ["Other", "Product Owner", "CIO", "Director"] });
+  assert.match(sorted, />CIO<.*>Director<.*>Product Owner<.*>Other</s);
   assert.match(yes, /Client name/);
   assert.match(yes, /Anonymous client profile/);
   // Without the question (no onAssociated) the fields show as before.
@@ -367,6 +370,8 @@ test("safety and contributor rows preserve baseline copy and accessible field st
 
 test("effort fields: required complexity as a radio group, optional whole-hour estimate", () => {
   const empty = render(form.EffortFields, { hours: "", onHours: noop, onComplexity: noop });
+  // Complexity and the hour estimate share one line from small screens up.
+  assert.match(empty, /sm:grid-cols-\[minmax\(0,1fr\)_minmax\(0,240px\)\]/);
   assert.match(empty, /<fieldset[^>]*>.*<legend[^>]*>How complex was it to build\?.*<\/legend>/s);
   assert.equal((empty.match(/type="radio"/g) ?? []).length, 3);
   assert.match(empty, />Easy<.*>Medium<.*>Hard</s);

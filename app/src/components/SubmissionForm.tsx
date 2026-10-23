@@ -390,19 +390,18 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
   </>;
 }
 
-/** A chosen option's meaning, in the style of the library's area note: a thin accent bar, its name, then the text. */
+/** A chosen option's meaning: one quiet line under the choices, like the form's other hints, with the option named. */
 export function ChoiceNote({ title, children }: { title: string; children: ReactNode }) {
-  return <p aria-live="polite" className="w-fit max-w-full rounded-r-[10px] border-l-[3px] py-2 pr-4 pl-3.5 text-[13.5px] leading-relaxed"
-    style={{ borderColor: "var(--accent)", background: "color-mix(in srgb, var(--accent) 7%, transparent)", color: "var(--ink-2)" }}>
-    <span className="font-semibold" style={{ color: "var(--ink)" }}>{title}</span><span aria-hidden="true"> · </span>{children}
+  return <p aria-live="polite" className="text-[12px] leading-snug text-(--ink-3)">
+    <span className="font-semibold text-(--ink-2)">{title}:</span> {children}
   </p>;
 }
 
-/** Maturity chips; the chosen one's meaning shows beneath, like a chosen area's note in the library. */
+/** Maturity chips; the chosen one's meaning shows beneath in one quiet line. */
 export function StatusField<Status extends string>({ status, statuses, onStatus }: { status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void }) {
   const chosen = statuses.find(option => option.value === status)?.label;
   const note = chosen ? (STATUS_NOTES as Record<string, string | undefined>)[chosen] : undefined;
-  return <div className="flex min-w-0 flex-col gap-3">
+  return <div className="flex min-w-0 flex-col gap-1.5">
     <Field label="Status" required hint="The label clients see on the card, in present mode too."><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
     {note && chosen && <ChoiceNote title={chosen}>{note}</ChoiceNote>}
   </div>;
@@ -413,6 +412,11 @@ export function StatusField<Status extends string>({ status, statuses, onStatus 
  * Pass `associated` + `onAssociated` to ask "Is this solution associated with a client?" first and show the fields only on Yes.
  */
 export function ClientFields<Role extends string>({ value, onText, selectedRoles = [], roles, onRoles, getRoleLabel = role => role, framed = false, associated, onAssociated }: Pick<IdentityProps<string, string, Role>, "value" | "onText" | "selectedRoles" | "roles" | "onRoles" | "getRoleLabel"> & { framed?: boolean; associated?: boolean; onAssociated?: (associated: boolean) => void }) {
+  // Roles read A–Z by their label; "Other" stays last.
+  const sortedRoles = roles && [...roles].sort((left, right) => {
+    const [a, b] = [getRoleLabel(left), getRoleLabel(right)];
+    return a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b);
+  });
   const asked = onAssociated !== undefined;
   const question = asked && <fieldset className="min-w-0">
     <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Is this solution associated with a client?<RequiredMark /></legend>
@@ -422,7 +426,7 @@ export function ClientFields<Role extends string>({ value, onText, selectedRoles
   </fieldset>;
   const fields = (!asked || associated) && <>
     {onRoles && roles && <FormSubsection title="Audience">
-      <Field label="Target client roles" optional badge={<VisibilityBadge visibility="client" />} hint="Select every client role this solution is designed to support."><div role="group" aria-label="Target client roles" className="flex flex-wrap gap-2">{roles.map(option => <Chip key={option} active={selectedRoles.includes(option)} pressed={selectedRoles.includes(option)} onClick={() => onRoles(selectedRoles.includes(option) ? selectedRoles.filter(entry => entry !== option) : [...selectedRoles, option])}>{getRoleLabel(option)}</Chip>)}</div></Field>
+      <Field label="Target client roles" optional badge={<VisibilityBadge visibility="client" />} hint="Select every client role this solution is designed to support."><div role="group" aria-label="Target client roles" className="flex flex-wrap gap-2">{(sortedRoles ?? roles).map(option => <Chip key={option} active={selectedRoles.includes(option)} pressed={selectedRoles.includes(option)} onClick={() => onRoles(selectedRoles.includes(option) ? selectedRoles.filter(entry => entry !== option) : [...selectedRoles, option])}>{getRoleLabel(option)}</Chip>)}</div></Field>
     </FormSubsection>}
     <FormSubsection title="Client details">
       <div className="grid min-w-0 gap-4 sm:grid-cols-2">
@@ -544,16 +548,17 @@ export function ContributorRow({ index, person, level, onRemove, name }: { index
  */
 export function EffortFields({ hours, complexity, onHours, onComplexity, error }: { hours: string; complexity?: Complexity; onHours: (value: string) => void; onComplexity: (value: Complexity) => void; error?: string }) {
   const id = useId();
-  return <div className="mt-5 grid min-w-0 gap-5">
+  // Both are short, so they share a line from small screens up: complexity, then the hour estimate.
+  return <div className="mt-5 grid min-w-0 items-start gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)] sm:gap-8">
     <fieldset className="min-w-0">
       <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>How complex was it to build?<RequiredMark /></legend>
       <div className="flex flex-wrap gap-2">{COMPLEXITIES.map(option => <label key={option.value} title={option.hint} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${complexity === option.value ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
         <input type="radio" className="sr-only" name={`${id}-complexity`} checked={complexity === option.value} onChange={() => onComplexity(option.value)} />{option.value}
       </label>)}</div>
-      {complexity ? <div className="mt-3"><ChoiceNote title={complexity}>{COMPLEXITIES.find(option => option.value === complexity)?.hint}</ChoiceNote></div>
+      {complexity ? <div className="mt-1.5"><ChoiceNote title={complexity}>{COMPLEXITIES.find(option => option.value === complexity)?.hint}</ChoiceNote></div>
         : <p className="mt-1.5 text-[12px] text-(--ink-3)">Easy: familiar work. Medium: some new ground. Hard: new territory, many moving parts.</p>}
     </fieldset>
-    <div className="max-w-[260px]"><Field label="Estimated minimum hours" optional hint="For the whole solution, including preparation and discovery."><input type="number" inputMode="numeric" className={submissionInputClass} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={error ? `${id}-error` : undefined} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} /></Field>
+    <div className="min-w-0"><Field label="Estimated minimum hours" optional hint="For the whole solution, including preparation and discovery."><input type="number" inputMode="numeric" className={submissionInputClass} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={error ? `${id}-error` : undefined} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} /></Field>
       {error && <p id={`${id}-error`} role="alert" className="mt-1.5 text-[13px] text-(--proto)">{error}</p>}</div>
   </div>;
 }

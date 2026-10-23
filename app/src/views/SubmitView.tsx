@@ -381,7 +381,11 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             }])}>
               {draft.contributors.map((contributor, index) => {
                 return <ContributorRow key={contributor.id} index={index} name={contributor.builtBy.id ? contributor.builtBy.name : undefined}
-                  onRemove={index > 0 ? () => set("contributors", draft.contributors.filter(entry => entry.id !== contributor.id)) : undefined}
+                  // Anyone can be removed, the first person too; removing the only one leaves a picker to choose again.
+                  onRemove={contributor.builtBy.id || draft.contributors.length > 1 ? () => {
+                    const rest = draft.contributors.filter(entry => entry.id !== contributor.id);
+                    set("contributors", rest.length ? rest : [{ id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" } }]);
+                  } : undefined}
                   level={contributor.builtBy.id ? contributor.builtBy.level ?? null : undefined}
                   person={<PersonPicker value={contributor.builtBy} options={builders.filter(builder => !draft.contributors.some(entry => entry.id !== contributor.id && entry.builtBy.id === builder.id))} onChange={builtBy => updateContributor(contributor.id, { builtBy })} />} />;
               })}

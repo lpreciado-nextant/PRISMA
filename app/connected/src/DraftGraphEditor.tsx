@@ -13,7 +13,11 @@ export function DraftGraphEditor({ graph, references, section, onChange, onCreat
         // A chosen, active consultant is a bubble; an empty or unavailable one keeps the picker so it can be replaced.
         const chosen = people.find(option => option.id === person.personId);
         return <ContributorRow key={person.id ?? `new-${index}`} index={index} name={chosen?.name}
-          onRemove={index > 0 ? () => onChange({ ...graph, contributors: graph.contributors.filter((_, position) => position !== index) }) : undefined}
+          // Anyone can be removed, the first person too; removing the only one leaves a picker to choose again.
+          onRemove={person.personId || graph.contributors.length > 1 ? () => {
+            const rest = graph.contributors.filter((_, position) => position !== index);
+            onChange({ ...graph, contributors: rest.length ? rest : [{ id: null, personId: "" }] });
+          } : undefined}
           level={person.personId ? references.people?.find(option => option.id === person.personId)?.level ?? null : undefined}
           person={<><PersonPicker value={people.find(option => option.id === person.personId) ?? { id: person.personId, name: person.personId ? "Existing consultant (inactive or unavailable)" : "" }} options={people} onChange={value => update(index, { personId: value.id })} />{references.people !== null && person.personId && !people.some(option => option.id === person.personId) && <p role="status" className="mt-2 text-[13px] text-(--proto)">This saved consultant is no longer active or available. Select an active consultant to replace them.</p>}</>} />;
       })}
