@@ -16,7 +16,8 @@ import { FavoriteButton } from "./FavoriteButton";
  * (e.g. Edit on a draft); `onFeedback` adds "View feedback" to a returned card; `unread` (open feedback items) lights
  * the card's edge and shows "N new" until the owner addresses them.
  */
-export type CardManagement = { actions: ReactNode; corner?: ReactNode; onFeedback?: () => void; unread?: number };
+/** `actionNeeded`: the librarian returned it (Changes requested); it outranks `unread` with an amber edge and "Action needed". */
+export type CardManagement = { actions: ReactNode; corner?: ReactNode; onFeedback?: () => void; unread?: number; actionNeeded?: boolean };
 
 export function SolutionCard({
   solution,
@@ -58,7 +59,7 @@ export function SolutionCard({
   // The heart is a sibling of the card, not a child: the card itself is a button. A managed card is not a button;
   // its title's stretched button covers the card and the management controls sit above it.
   return (
-    <div className={`card-shell animate-rise relative grid min-w-0 ${managed && manage?.unread ? "card-unread" : ""}`} style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}>
+    <div className={`card-shell animate-rise relative grid min-w-0 ${managed && manage?.actionNeeded ? "card-unread card-action" : managed && manage?.unread ? "card-unread" : ""}`} style={{ animationDelay: `${Math.min(index, 9) * 45}ms` }}>
     <div
       className="solution-card glass glass-lite glass-sheen lift group flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-[22px] [overflow-wrap:anywhere]"
       {...(managed ? {} : {
@@ -129,7 +130,8 @@ export function SolutionCard({
         >
           <span className="flex flex-wrap items-center justify-between gap-2">
             <SubmissionStatus state={publicationStatus} />
-            {managed && !!manage?.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new</span>}
+            {managed && manage?.actionNeeded ? <span className="action-needed"><Icon name="alert" size={12} />Action needed</span>
+              : managed && !!manage?.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new</span>}
           </span>
           {managed && manage?.onFeedback && (publicationStatus === "Changes requested" || publicationStatus === "Retired") && (
             <button

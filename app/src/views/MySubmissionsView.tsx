@@ -68,6 +68,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       // Returned and retired records both carry the librarian's words the owner needs to act on.
       onFeedback: ["Changes requested", "Retired"].includes(submissionState(solution)) && solution.reviewComments ? () => setFeedbackTarget(solution) : undefined,
       unread: openOn(solution).length,
+      actionNeeded: submissionState(solution) === "Changes requested",
       // Edit sits on the image's top-right corner, readable over any thumbnail; the footer keeps the count and •••.
       corner: editable(solution) ? <button type="button" aria-label={`Edit ${name}`} onClick={() => edit(solution)} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold shadow-sm backdrop-blur-sm transition-colors hover:brightness-110" style={{ color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)", background: "color-mix(in srgb, var(--ground) 88%, transparent)" }}><Icon name="edit" size={14} />Edit</button> : undefined,
       actions: <>
@@ -83,6 +84,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     };
   };
   const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
+  // Returned by the librarian: the owner must act before it can be published, so it leads the page.
+  const returned = entries.filter(({ solution }) => submissionState(solution) === "Changes requested").map(({ solution }) => solution);
   const visible = entries.filter(({ solution }) => matches(solution, filter));
   // "N new" on each tab: unconfirmed librarian comments under My solutions, unconfirmed suggestions under Suggestions.
   const newOnSolutions = entries.filter(({ solution }) => { const key = reviewFeedbackKey(solution); return !!key && !isAddressed(key); }).length;
@@ -116,6 +119,20 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
         <button ref={newSubmissionRef} className="inline-flex cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold" style={{ background: "var(--accent)", color: "var(--on-accent)" }} onClick={() => navigate("/submit")}><Icon name="plus" />New submission</button>
       </div>
     </div>
+    {returned.length > 0 && <section aria-label="Action needed" className="action-banner mt-5">
+      <span className="mt-0.5 shrink-0" style={{ color: "var(--proto)" }}><Icon name="alert" size={20} /></span>
+      <div className="min-w-0 flex-1">
+        <h2 className="text-[15.5px] font-semibold">{returned.length === 1 ? "1 submission needs your changes" : `${returned.length} submissions need your changes`}</h2>
+        <p className="mt-0.5 text-[13.5px]" style={{ color: "var(--ink-2)" }}>The librarian returned {returned.length === 1 ? "it" : "them"} with feedback. Make the changes and resubmit to get {returned.length === 1 ? "it" : "them"} published.</p>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {returned.map(solution => <button key={solution.id} type="button" className="action-banner-link"
+            onClick={() => solution.reviewComments ? setFeedbackTarget(solution) : edit(solution)}>
+            {solution.name || "Untitled solution"}<span style={{ color: "var(--ink-3)" }}>·</span><span style={{ color: "var(--proto)" }}>{solution.reviewComments ? "View feedback" : "Edit"}</span>
+          </button>)}
+        </div>
+      </div>
+      {returned.length > 1 && <button type="button" className="shrink-0 cursor-pointer text-[13.5px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => { setTab("solutions"); setFilter("Changes requested"); }}>Show only these</button>}
+    </section>}
     {/* Primary tabs, underlined like the review queue's; status chips belong to My solutions only. */}
     {suggestionsTab && <div role="tablist" aria-label="My submissions" className="mt-5 flex flex-wrap gap-1 border-b border-(--glass-edge)">
       {tabs.map((option, index) => {
