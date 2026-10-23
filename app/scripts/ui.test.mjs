@@ -772,6 +772,15 @@ test("library shows active filters above the cards with a total, result count an
   assert.match(html, /aria-label="Refine solutions".*aria-label="Hide filters"/s);
   assert.doesNotMatch(render(LibraryView, { catalogue: SOLUTIONS, filters: EMPTY_FILTERS, onFilters: noop, present: false }), /Active filters/);
 });
+test("library Clear all resets search and area too, shown as removable chips", async () => {
+  const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");
+  const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");
+  const { EMPTY_FILTERS } = await server.ssrLoadModule("/src/lib/search.ts");
+  for (const present of [false, true]) {
+    const html = render(LibraryView, { catalogue: SOLUTIONS, filters: { ...EMPTY_FILTERS, q: "ledger", area: "data" }, onFilters: noop, present });
+    assert.match(html, /aria-label="Active filters".*2 filters.*“ledger”.*Data Solutions.*Clear all/s);
+  }
+});
 test("download presentation opens a theme menu instead of expanding the action row", async () => {
   const { DownloadDeckButton } = await server.ssrLoadModule("/connected/src/DownloadDeckButton.tsx");
   const html = render(DownloadDeckButton, { solution: { id: "s", name: "S" }, media: [] });

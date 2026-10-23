@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type ReactNode } from "react";
 import type { Solution } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
-import { activeChips, activeFacetCount, ADDED_LABELS, ADDED_WINDOWS, addedCounts, areaCounts, clearFacets, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
+import { activeChips, activeFacetCount, ADDED_LABELS, ADDED_WINDOWS, addedCounts, areaCounts, EMPTY_FILTERS, filterSolutions, type Filters } from "../lib/search";
 import { Chip } from "../components/Badges";
 import { FacetDrawer, FacetRail } from "../components/FacetRail";
 import { Icon } from "../components/Icon";
@@ -76,8 +76,9 @@ export function LibraryView({
   const counts = useMemo(() => areaCounts(catalogue, filters), [catalogue, filters]);
   const added = useMemo(() => addedCounts(catalogue, filters), [catalogue, filters]);
   const chips = activeChips(filters);
-  // Everything "Clear all" resets: the Refine selections plus the added window.
-  const activeCount = chips.length + (filters.added === "any" ? 0 : 1);
+  // Everything "Clear all" resets, back to the clean library: search, area, the Refine selections and the added window.
+  const query = filters.q.trim();
+  const activeCount = chips.length + (filters.added === "any" ? 0 : 1) + (query ? 1 : 0) + (filters.area === "all" ? 0 : 1);
   // Searching or filtering goes straight to results: the shelf must not push the grid down.
   const showFeatured = !!featured && !present && !filters.q.trim() && filters.area === "all" && filters.added === "any" && chips.length === 0;
 
@@ -258,6 +259,18 @@ export function LibraryView({
               <span className="text-[13px]" style={{ color: "var(--ink-2)" }} role="status">
                 {results.length} {results.length === 1 ? "result" : "results"}
               </span>
+              {query && (
+                <Chip active onClick={() => onFilters({ ...filters, q: "" })} title="Clear the search">
+                  “{query}”
+                  <Icon name="close" size={12} />
+                </Chip>
+              )}
+              {filters.area !== "all" && (
+                <Chip active onClick={() => onFilters({ ...filters, area: "all" })} title="Show all areas">
+                  {AREAS[filters.area].name}
+                  <Icon name="close" size={12} />
+                </Chip>
+              )}
               {chips.map(({ key, value }) => (
                 <Chip key={`${key}-${value}`} active onClick={() => onFilters({ ...filters, [key]: filters[key].filter((v) => v !== value) })} title={`Remove ${value}`}>
                   {value}
@@ -270,7 +283,7 @@ export function LibraryView({
                   <Icon name="close" size={12} />
                 </Chip>
               )}
-              <button type="button" onClick={() => onFilters({ ...clearFacets(filters), added: "any" })} className="ml-1 cursor-pointer text-[13px] font-semibold" style={{ color: "var(--accent)" }}>
+              <button type="button" onClick={() => onFilters({ ...EMPTY_FILTERS })} className="ml-1 cursor-pointer text-[13px] font-semibold" style={{ color: "var(--accent)" }}>
                 Clear all
               </button>
             </div>
