@@ -1,6 +1,6 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-22
+**Status:** Living · **Last updated:** 2026-10-23
 
 One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
@@ -11,6 +11,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Source | Progress |
 |---|---|---|---|
+| [2026-10-23](#2026-10-23--working-session-main-capability-present-mode-selection-and-form-polish) | Main capability by area, present-mode filters and selection, form polish | 🛠️ Own changes | 69% — 7 Pending review, 1 Done in Dataverse / 8 |
 | [2026-10-22](#2026-10-22--working-session-redesigned-presentation-download) | Redesigned presentation download (Dark and Light) | 🛠️ Own changes | 50% — 1 In code / 1 |
 | [2026-10-21](#2026-10-21--working-session-contact-from-the-help-page) | Contact from the help page | 🛠️ Own changes | 50% — 1 In code / 1 |
 | [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort; visual tweaks | 🛠️ Own changes | 85% — 2 Live, 3 Pending review / 5 |
@@ -70,6 +71,32 @@ When a decision above gets resolved, delete its bullet here and update the match
 ```
 
 ---
+
+## 2026-10-23 — Working session: main capability, present-mode selection and form polish
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 69% — 7 Pending review, 1 Done in Dataverse / 8
+
+### Feedback
+
+- Cards with new suggestions barely stood out.
+- Areas and capability were picked separately and could contradict each other; the connected app's "first area" was really GUID order, so the card colour was arbitrary.
+- Present mode had only search and areas; CSMs want to filter, reset in one click and show a list they prepared before the call.
+- The status labels clients see had no definition; the contributor and effort rows took too much space; the first contributor could not be removed.
+
+### Changes
+
+| Change | Status | Notes / next step |
+|---|---|---|
+| Lit, rotating aurora edge and breathing halo on My submissions cards with new feedback (static under reduced motion) | 🟡 Pending review | `18f9fa5`, published 2026-10-23; hosted check pending |
+| Classify & tag (renamed from Tag it): one main capability from columns by area, with its main specialization area and capability owner; the solution's area is derived from it and Define the solution has no area picker | 🟡 Pending review | Connected app sends the capability's area as `areaIds` through the existing `nx_SaveDraftGraph`; capability references now read `nx_specializationarea`. Published 2026-10-23 from `main` `2f69863`; check the three columns in the hosted form |
+| One other capability involved (`nx_Solution_nx_SecondaryCapability`, N:N) | Done in Dataverse | Relationship created and read back 2026-10-23 (not in `PRISMA_Dev`). Live in the PoC; hidden in the connected app until the plug-ins save and read it, derive areas server-side and guard it (handed to Luis) |
+| Present mode: the Refine filters behind a Filters button, closed by default; facets from the client-safe catalogue only | 🟡 Pending review | [Present mode](../workflows/present-mode.md). Published 2026-10-23 |
+| General Clear all: search and area shown as removable chips and reset with the facets and the added window | 🟡 Pending review | Both modes. Published 2026-10-23 |
+| Present mode: **Selected for you**, the viewer's saved solutions among the client-safe catalogue, chosen by default; Saved solutions marks those hidden in present mode | 🟡 Pending review | Connected app now loads favorite IDs in present mode. Published 2026-10-23 |
+| Status meanings under the Status field; complexity meaning as the same quiet hint line | 🟡 Pending review | Published 2026-10-23 |
+| Contributors as removable bubbles (the first one too), half-width person picker, complexity and hour estimate on one aligned line, target client roles A–Z with Other last | 🟡 Pending review | Both apps. Published 2026-10-23 |
 
 ## 2026-10-22 — Working session: redesigned presentation download
 
