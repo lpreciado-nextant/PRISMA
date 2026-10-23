@@ -371,7 +371,7 @@ test("safety and contributor rows preserve baseline copy and accessible field st
 test("effort fields: required complexity as a radio group, optional whole-hour estimate", () => {
   const empty = render(form.EffortFields, { hours: "", onHours: noop, onComplexity: noop });
   // Complexity and the hour estimate share one line from small screens up.
-  assert.match(empty, /sm:grid-cols-\[minmax\(0,1fr\)_minmax\(0,240px\)\]/);
+  assert.match(empty, /sm:grid-cols-2/);
   assert.match(empty, /<fieldset[^>]*>.*<legend[^>]*>How complex was it to build\?.*<\/legend>/s);
   assert.equal((empty.match(/type="radio"/g) ?? []).length, 3);
   assert.match(empty, />Easy<.*>Medium<.*>Hard</s);

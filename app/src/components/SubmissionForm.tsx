@@ -532,7 +532,8 @@ export function ContributorRow({ index, person, level, onRemove, name }: { index
   </span>;
   return <fieldset className="min-w-0 basis-full pb-1">
     <legend className="sr-only">Contributor {index + 1}</legend>
-    <div className="flex min-w-0 max-w-xl items-start gap-3">
+    {/* Half the width from small screens up, so the card stays compact; the hour estimate starts on the same half line. */}
+    <div className="flex min-w-0 items-start gap-3 sm:w-1/2">
       <div className="min-w-0 flex-1">
         {person}
         {level !== undefined && <p className="mt-1 truncate text-[12px] text-(--ink-3)" title={level || undefined}>{level || "Level not recorded in the consultant directory"}</p>}
@@ -548,8 +549,9 @@ export function ContributorRow({ index, person, level, onRemove, name }: { index
  */
 export function EffortFields({ hours, complexity, onHours, onComplexity, error }: { hours: string; complexity?: Complexity; onHours: (value: string) => void; onComplexity: (value: Complexity) => void; error?: string }) {
   const id = useId();
-  // Both are short, so they share a line from small screens up: complexity, then the hour estimate.
-  return <div className="mt-5 grid min-w-0 items-start gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,240px)] sm:gap-8">
+  // Both are short, so they share a line from small screens up: complexity on the left half, the hour estimate on the
+  // right half, lined up with the edge of the contributor picker above.
+  return <div className="mt-5 grid min-w-0 items-start gap-5 sm:grid-cols-2 sm:gap-6">
     <fieldset className="min-w-0">
       <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>How complex was it to build?<RequiredMark /></legend>
       <div className="flex flex-wrap gap-2">{COMPLEXITIES.map(option => <label key={option.value} title={option.hint} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${complexity === option.value ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
@@ -558,7 +560,7 @@ export function EffortFields({ hours, complexity, onHours, onComplexity, error }
       {complexity ? <div className="mt-1.5"><ChoiceNote title={complexity}>{COMPLEXITIES.find(option => option.value === complexity)?.hint}</ChoiceNote></div>
         : <p className="mt-1.5 text-[12px] text-(--ink-3)">Easy: familiar work. Medium: some new ground. Hard: new territory, many moving parts.</p>}
     </fieldset>
-    <div className="min-w-0"><Field label="Estimated minimum hours" optional hint="For the whole solution, including preparation and discovery."><input type="number" inputMode="numeric" className={submissionInputClass} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={error ? `${id}-error` : undefined} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} /></Field>
+    <div className="min-w-0 sm:max-w-[260px]"><Field label="Estimated minimum hours" optional hint="For the whole solution, including preparation and discovery."><input type="number" inputMode="numeric" className={submissionInputClass} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={error ? `${id}-error` : undefined} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} /></Field>
       {error && <p id={`${id}-error`} role="alert" className="mt-1.5 text-[13px] text-(--proto)">{error}</p>}</div>
   </div>;
 }
