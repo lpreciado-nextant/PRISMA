@@ -253,11 +253,14 @@ test("capability fields pick one main capability, derive the main area and list 
   assert.equal((picked.match(/type="radio"/g) ?? []).length, 3);
   assert.equal((picked.match(/checked=""/g) ?? []).length, 1);
   assert.equal((picked.match(/data-chosen="true"/g) ?? []).length, 1);
-  const others = picked.slice(picked.indexOf("Other capabilities involved"));
-  assert.match(others, /Select up to 3 additional capabilities that played a significant role.*only provided minor support\./);
+  // One other capability for now: singular wording, and no way to add a second once it is chosen.
+  const others = picked.slice(picked.indexOf("Other capability involved"));
+  assert.match(others, /Select one additional capability that played a significant role.*only provided minor support\./);
+  assert.doesNotMatch(others, /Add a capability/);
+  const room = render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", secondary: ["Analytics"], maxSecondary: 3, onMain: noop, onSecondary: noop });
+  assert.match(room, /Other capabilities involved.*Select up to 3 additional capabilities.*Add a capability/s);
   assert.match(picked, /Select the capability that played the primary role in this solution\. Its area will automatically become the solution&#x27;s Main Specialization Area\./);
   assert.match(others, /Remove <\/span>Analytics/);
-  assert.match(others, /Add a capability/);
   assert.doesNotMatch(others, />Agents</);
 });
 

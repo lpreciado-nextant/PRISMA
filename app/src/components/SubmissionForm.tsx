@@ -326,10 +326,10 @@ type CapabilityGroup<Value extends string> = { label: string; accent?: string; o
 
 /**
  * Main capability (one, required) chosen in one column per area, and the other capabilities involved (optional, up to
- * `maxSecondary`, any area) added from a compact menu. The solution's areas follow from these, so there is no area
+ * `maxSecondary`, one for now, any area) added from the same columns. The solution's areas follow from these, so there is no area
  * picker: the chosen column lights in its area colour and the main area is shown beneath.
  */
-export function CapabilityFields<Value extends string>({ groups, main, secondary, onMain, onSecondary, mainArea, mainOwner, maxSecondary = 3 }: {
+export function CapabilityFields<Value extends string>({ groups, main, secondary, onMain, onSecondary, mainArea, mainOwner, maxSecondary = 1 }: {
   groups: CapabilityGroup<Value>[]; main?: Value; secondary: Value[]; onMain: (value: Value) => void; onSecondary: (value: Value[]) => void;
   mainArea?: string;
   /** The main capability's owner: a name, `null` when none is assigned; omit to leave the owner out. */
@@ -342,6 +342,7 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
   const labelOf = (value: Value) => all.find(option => option.value === value)?.label ?? value;
   const remaining = all.filter(option => option.value !== main && !secondary.includes(option.value)).map(option => option.value);
   const mainGroup = all.find(option => option.value === main)?.group;
+  const single = maxSecondary === 1;
   const heading = (label: string, required: boolean) => <span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required ? <RequiredMark /> : <OptionalMark />}</span>;
   return <>
     <fieldset className="min-w-0">
@@ -361,9 +362,9 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
       <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="size-2 rounded-full" style={{ background: mainGroup?.accent ?? "var(--accent)" }} />Main specialization area: <b className="font-semibold text-(--ink)">{mainArea}</b></span>
       {mainOwner !== undefined && <><span aria-hidden="true" className="text-(--ink-3)">·</span><span>Capability owner: {mainOwner ? <b className="font-semibold text-(--ink)">{mainOwner}</b> : <span className="text-(--ink-3)">Not assigned</span>}</span></>}
     </> : "Choose the main capability to set the main specialization area."}</p>
-    {main && <div role="group" aria-label="Other capabilities involved" className="min-w-0">
-      {heading("Other capabilities involved", false)}
-      <p className="mt-1 text-[12px] text-(--ink-3)">{`Select up to ${maxSecondary} additional capabilities that played a significant role in the solution's development or delivery. Do not include capabilities that only provided minor support.`}</p>
+    {main && <div role="group" aria-label={single ? "Other capability involved" : "Other capabilities involved"} className="min-w-0">
+      {heading(single ? "Other capability involved" : "Other capabilities involved", false)}
+      <p className="mt-1 text-[12px] text-(--ink-3)">{`${single ? "Select one additional capability" : `Select up to ${maxSecondary} additional capabilities`} that played a significant role in the solution's development or delivery. Do not include capabilities that only provided minor support.`}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {secondary.map(value => <Chip key={value} active onClick={() => onSecondary(secondary.filter(entry => entry !== value))} title={`Remove ${labelOf(value)}`}><span className="sr-only">Remove </span>{labelOf(value)}<Icon name="close" size={12} /></Chip>)}
         {secondary.length < maxSecondary && remaining.length > 0 && <button type="button" aria-expanded={adding} aria-controls={panel} onClick={() => setAdding(!adding)}

@@ -99,7 +99,7 @@ function loadDraft(draftKey: string): Draft {
     // Drafts persisted before a schema change may miss array fields.
     parsed.images ??= [];
     parsed.capabilities = (parsed.capabilities ?? []).slice(0, 1);
-    parsed.secondaryCapabilities ??= [];
+    parsed.secondaryCapabilities = (parsed.secondaryCapabilities ?? []).slice(0, 1);
     parsed.technologies ??= [];
     parsed.industries ??= [];
     parsed.contributors ??= [];
@@ -147,7 +147,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       ...EMPTY_DRAFT, name: initialSolution.name === UNTITLED_SOLUTION ? "" : initialSolution.name, summary: initialSolution.summary,
       status: initialSolution.status,
       whatItDoes: initialSolution.whatItDoes, businessValue: initialSolution.businessValue,
-      capabilities: initialSolution.capabilities.slice(0, 1), secondaryCapabilities: initialSolution.secondaryCapabilities ?? initialSolution.capabilities.slice(1, 4), technologies: initialSolution.technologies,
+      capabilities: initialSolution.capabilities.slice(0, 1), secondaryCapabilities: initialSolution.secondaryCapabilities ?? initialSolution.capabilities.slice(1, 2), technologies: initialSolution.technologies,
       industries: initialSolution.industries, contributors: initialSolution.contributors,
       thumbnail: initialSolution.thumbnail ?? "", images: (initialSolution.images ?? []).map((image) => ({ ...image, caption: image.caption ?? "" })),
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
