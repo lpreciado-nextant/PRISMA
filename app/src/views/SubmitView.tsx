@@ -232,14 +232,14 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   catch (error) { hoursError = error instanceof Error ? error.message : "Check the estimated hours."; }
   const effortValid = !!draft.complexity && !hoursError;
   const nameValid = Boolean(draft.name.trim()) && draft.name.trim() !== UNTITLED_SOLUTION && draft.name.length <= 100;
-  const detailsValid = nameValid && Boolean(draft.summary.trim()) && Boolean(draft.whatItDoes.trim()) && Boolean(draft.businessValue.trim()) && draft.capabilities.length === 1;
+  const detailsValid = nameValid && Boolean(draft.summary.trim()) && Boolean(draft.whatItDoes.trim()) && Boolean(draft.businessValue.trim());
   const clientValid = clientAssociated === false || (clientAssociated === true && Boolean(draft.clientContext.trim()) && Boolean(draft.redacted.trim()));
   const basicsValid = detailsValid && clientValid && contributorsValid && effortValid;
   const safetyValid = draft.safetyAcknowledged;
   const mediaValid = draft.images.length > 0 && !mediaBusy;
   const capabilityValid = draft.capabilities.length === 1;
   const areas = useMemo(() => capabilityAreas(draft.capabilities[0], draft.secondaryCapabilities), [draft.capabilities, draft.secondaryCapabilities]);
-  const stepValid = safetyValid && (step === 1 ? detailsValid : step === 3 ? clientValid && contributorsValid && effortValid : step === 4 ? mediaValid : true);
+  const stepValid = safetyValid && (step === 1 ? detailsValid : step === 2 ? capabilityValid : step === 3 ? clientValid && contributorsValid && effortValid : step === 4 ? mediaValid : true);
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
     set("contributors", draft.contributors.map((contributor) => contributor.id === id ? { ...contributor, ...patch } : contributor));
 
@@ -359,11 +359,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         {step === 1 && safetyValid && (
           <StepShell title="Define the solution">
             <NamedSection title="Solution details">
-            <SolutionDetailsFields grouped value={draft} onText={set} classification={<CapabilityFields
-              groups={AREA_ORDER.map(area => ({ label: AREAS[area].name, accent: AREAS[area].cssVar, options: CAPABILITIES.filter(capability => capability.area === area).map(({ name }) => ({ value: name, label: name })) }))}
-              main={draft.capabilities[0]} secondary={draft.secondaryCapabilities} mainArea={areas[0] && AREAS[areas[0]].name}
-              mainOwner={draft.capabilities[0] ? CAPABILITIES.find(capability => capability.name === draft.capabilities[0])?.owner ?? null : undefined}
-              onMain={value => set("capabilities", [value])} onSecondary={value => set("secondaryCapabilities", value)} />} />
+            <SolutionDetailsFields grouped value={draft} onText={set} classification={false} />
             </NamedSection>
             <StoryFields nested whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={set}>
               <p className="flex items-center gap-2 text-[13px]" style={{ color: "var(--ink-3)" }}>
@@ -398,7 +394,14 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         )}
 
         {step === 2 && safetyValid && (
-          <StepShell title="Tag it">
+          <StepShell title="Classify & tag">
+            <div className="flex min-w-0 flex-col gap-5">
+            <CapabilityFields
+              groups={AREA_ORDER.map(area => ({ label: AREAS[area].name, accent: AREAS[area].cssVar, options: CAPABILITIES.filter(capability => capability.area === area).map(({ name }) => ({ value: name, label: name })) }))}
+              main={draft.capabilities[0]} secondary={draft.secondaryCapabilities} mainArea={areas[0] && AREAS[areas[0]].name}
+              mainOwner={draft.capabilities[0] ? CAPABILITIES.find(capability => capability.name === draft.capabilities[0])?.owner ?? null : undefined}
+              onMain={value => set("capabilities", [value])} onSecondary={value => set("secondaryCapabilities", value)} />
+            </div>
             <TagPicker label="Technologies" optional options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
             <TagPicker label="Industries" optional governed hint="Industries where it applies." options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
           </StepShell>
@@ -438,7 +441,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
         {step === 5 && safetyValid && (
           <SubmissionReview card={<SolutionCard solution={preview} present index={0} />} attachments={draft.assets.length} contributors={draft.contributors.map(contributor => contributor.builtBy.level ? `${contributor.builtBy.name} (${contributor.builtBy.level})` : contributor.builtBy.name).join(", ")} effort={effortSummary(hoursValue, draft.complexity || undefined)}
             images={`${draft.thumbnail ? "Thumbnail" : "Generated poster"} · ${draft.images.length} ${draft.images.length === 1 ? "screenshot" : "screenshots"}`} safety={safetyValid ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.redacted} role={draft.clientRoles.join(", ")} nextState="Pending review (local)">
-            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution (including the main capability), Solution context (status, contributors, complexity and the client question) and add at least one detail image before submitting.</p>}
+            {(!basicsValid || !mediaValid || !capabilityValid) && <p role="alert">Complete Define the solution, the main capability in Classify & tag, Solution context (status, contributors, complexity and the client question) and add at least one detail image before submitting.</p>}
           </SubmissionReview>
         )}
 

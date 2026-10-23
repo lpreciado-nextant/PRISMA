@@ -13,7 +13,7 @@ import { LocalVideoPreview } from "./ViewerFrame";
 import { COMPLEXITIES, MAX_ESTIMATED_HOURS } from "../lib/effort";
 import type { Complexity } from "../types";
 
-export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Tag it", "Solution context", "Media", "Review & submit"] as const;
+export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Classify & tag", "Solution context", "Media", "Review & submit"] as const;
 
 const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> = {
   "Before you start": { icon: "shield" },
@@ -23,7 +23,7 @@ const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> 
   "Built by & effort": { icon: "users", visibility: "internal" },
   "Challenges & lessons learned": { icon: "edit", visibility: "internal" },
   "What does it do, and why does it matter?": { icon: "sparkle", visibility: "client" },
-  "Tag it": { icon: "tag", visibility: "client" },
+  "Classify & tag": { icon: "tag", visibility: "client" },
   Media: { icon: "image", visibility: "client" },
   "Review & submit": { icon: "check" },
 };
@@ -38,7 +38,7 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
   "Challenges & lessons learned": "What made it hard and what you would tell the next team. Internal only: never shown in presentation mode.",
   "Built by & effort": "Add the contributors who worked on this solution and estimate the effort it took to build. This information is used for internal tracking only.",
   "What does it do, and why does it matter?": "CSMs rely on this step most. Write it for someone who wasn't on the project.",
-  "Tag it": "Tags help CSMs find this later. Capabilities and industries come from a fixed list; technologies are free text.",
+  "Classify & tag": "Classify it by capability, then tag it so CSMs find it later. Capabilities and industries come from a fixed list; technologies are free text.",
   Media: "Add at least one screenshot. A thumbnail, video, slides or HTML demo are optional.",
   "Review & submit": "This is how the card will look in the library once it's approved.",
 };
@@ -286,8 +286,8 @@ export function LinkedAssetEditor({ type, initial, disabled, onSave, onCancel, o
 type IdentityProps<Area extends string, Status extends string, Role extends string> = {
   value: IdentityText; onText: (key: keyof IdentityText, value: string) => void;
   area?: Area; areas?: { value: Area; label: string }[]; onArea?: (value: Area) => void;
-  /** Replaces the area picker, e.g. with `CapabilityFields` when areas are derived from capabilities. */
-  classification?: ReactNode;
+  /** Replaces the area picker; `false` leaves Classification out (the PoC asks for capabilities under Classify & tag). */
+  classification?: ReactNode | false;
   status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void;
   /** Target client roles (native N:N, PR-031): any number of `roles`, labelled by `getRoleLabel`. */
   selectedRoles?: Role[]; roles?: readonly Role[]; onRoles?: (value: Role[]) => void; getRoleLabel?: (value: Role) => string;
@@ -314,6 +314,7 @@ export function SolutionDetailsFields<Area extends string, Status extends string
       : <Field label="Specialization area" required><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>)}
     {onStatus && status !== undefined && statuses && <StatusField status={status} statuses={statuses} onStatus={onStatus} />}
   </>;
+  if (picker === false) return grouped ? <FormSubsection title="Name & summary"><div className="flex min-w-0 flex-col gap-5">{naming}</div></FormSubsection> : naming;
   if (!grouped) return <>{naming}{classification}</>;
   return <>
     <FormSubsection title="Name & summary"><div className="flex min-w-0 flex-col gap-5">{naming}</div></FormSubsection>
@@ -345,7 +346,7 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
   return <>
     <fieldset className="min-w-0">
       <legend className="float-left w-full">{heading("Main capability", true)}</legend>
-      <p className="clear-left mt-1 text-[12px] text-(--ink-3)">Select the capability that played the primary role in this solution. Its area will automatically become the solution's Main Area.</p>
+      <p className="clear-left mt-1 text-[12px] text-(--ink-3)">Select the capability that played the primary role in this solution. Its area will automatically become the solution's Main Specialization Area.</p>
       <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-3">
         {groups.filter(group => group.options.length > 0).map(group => <div key={group.label} className="capability-column min-w-0" data-chosen={group === mainGroup || undefined} style={{ "--area": group.accent ?? "var(--accent)" } as CSSProperties}>
           <p className="mb-2 flex items-center gap-2 px-1 text-[12.5px] font-semibold text-(--ink)"><span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: "var(--area)" }} />{group.label}</p>
@@ -357,9 +358,9 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
       </div>
     </fieldset>
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-(--ink-2)">{main && mainArea ? <>
-      <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="size-2 rounded-full" style={{ background: mainGroup?.accent ?? "var(--accent)" }} />Main area: <b className="font-semibold text-(--ink)">{mainArea}</b></span>
+      <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="size-2 rounded-full" style={{ background: mainGroup?.accent ?? "var(--accent)" }} />Main specialization area: <b className="font-semibold text-(--ink)">{mainArea}</b></span>
       {mainOwner !== undefined && <><span aria-hidden="true" className="text-(--ink-3)">·</span><span>Capability owner: {mainOwner ? <b className="font-semibold text-(--ink)">{mainOwner}</b> : <span className="text-(--ink-3)">Not assigned</span>}</span></>}
-    </> : "Choose the main capability to set the main area."}</p>
+    </> : "Choose the main capability to set the main specialization area."}</p>
     {main && <div role="group" aria-label="Other capabilities involved" className="min-w-0">
       {heading("Other capabilities involved", false)}
       <p className="mt-1 text-[12px] text-(--ink-3)">{`Select up to ${maxSecondary} additional capabilities that played a significant role in the solution's development or delivery. Do not include capabilities that only provided minor support.`}</p>
