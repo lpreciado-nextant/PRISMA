@@ -13,8 +13,8 @@ import { FavoriteButton } from "./FavoriteButton";
 
 /**
  * Submission workspace controls. `actions` replace "Open" in the footer; `corner` sits on the image's top-right corner
- * (e.g. Edit on a draft); `onFeedback` adds "View feedback" to a returned card; `unread` (open feedback items) outlines
- * the card and shows "N new" until the owner addresses them.
+ * (e.g. Edit on a draft); `onFeedback` adds "View feedback" to a returned card; `unread` (open feedback items) lights
+ * the card's edge and shows "N new" until the owner addresses them.
  */
 export type CardManagement = { actions: ReactNode; corner?: ReactNode; onFeedback?: () => void; unread?: number };
 

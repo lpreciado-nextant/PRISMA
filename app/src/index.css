@@ -12,6 +12,8 @@
 /* Non-inherited so a pointer move restyles only the lit card, not its whole subtree. */
 @property --mx { syntax: "*"; inherits: false; }
 @property --my { syntax: "*"; inherits: false; }
+/* Typed so the unread-card ring's conic gradient can rotate smoothly. */
+@property --unread-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 
 .loading-state {
   display: flex;
@@ -1007,11 +1009,72 @@
     transform: none;
   }
   /* ---- Unread feedback on My submissions cards ------------------------ */
-  /* Until opened: an accent outline and a soft accent shadow, plus a small "New feedback" pill in the status band. */
+  /* Until opened: a lit edge (accent, Data and IBO light sweeping round the card) over a breathing accent halo,
+     plus the "N new" pill in the status band. The ring sits on the shell because the card clips its overflow;
+     it rides the card's hover lift. Reduced motion keeps the ring and halo, still. */
+  .card-unread {
+    isolation: isolate;
+  }
+  .card-unread::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    padding: 2px;
+    border-radius: 22px;
+    pointer-events: none;
+    background: conic-gradient(
+      from var(--unread-angle),
+      color-mix(in srgb, var(--accent) 45%, transparent),
+      var(--accent) 12%,
+      var(--sa-data) 22%,
+      color-mix(in srgb, var(--accent) 45%, transparent) 34%,
+      color-mix(in srgb, var(--accent) 45%, transparent) 55%,
+      var(--sa-ibo) 66%,
+      var(--accent) 76%,
+      color-mix(in srgb, var(--accent) 45%, transparent) 88%
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    animation: unread-sweep 6s linear infinite;
+    transition: translate 0.55s var(--ease-spring);
+  }
+  .card-unread:hover::before {
+    translate: 0 -5px;
+  }
   .card-unread > .solution-card {
-    outline: 1.5px solid color-mix(in srgb, var(--accent) 60%, transparent);
-    outline-offset: 0;
-    box-shadow: 0 10px 28px -14px color-mix(in srgb, var(--accent) 55%, transparent);
+    border-color: transparent;
+    animation: unread-halo 3.2s ease-in-out infinite;
+  }
+  @keyframes unread-sweep {
+    to { --unread-angle: 360deg; }
+  }
+  @keyframes unread-halo {
+    0%, 100% {
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
+        0 0 18px -2px color-mix(in srgb, var(--accent) 40%, transparent),
+        0 14px 32px -16px color-mix(in srgb, var(--accent) 60%, transparent);
+    }
+    50% {
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
+        0 0 30px 2px color-mix(in srgb, var(--accent) 55%, transparent),
+        0 14px 36px -14px color-mix(in srgb, var(--sa-data) 55%, transparent);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card-unread::before,
+    .card-unread > .solution-card {
+      animation: none;
+      transition: none;
+    }
+    .card-unread > .solution-card {
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
+        0 0 24px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+    }
   }
   /* "N new" beside a My submissions tab: open feedback items, in the accent like the masthead dot. */
   .tab-new {
