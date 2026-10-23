@@ -11,6 +11,7 @@ import { LINK_ASSET_TYPES, assetTypeLabel, validateLinkedAsset, type LinkedAsset
 import { useVideoPreparation } from "../lib/useVideoPreparation";
 import { LocalVideoPreview } from "./ViewerFrame";
 import { COMPLEXITIES, MAX_ESTIMATED_HOURS } from "../lib/effort";
+import { STATUS_NOTES } from "../data/catalogueMetadata";
 import type { Complexity } from "../types";
 
 export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Tag it", "Solution context", "Media", "Review & submit"] as const;
@@ -319,8 +320,17 @@ export function SolutionDetailsFields<Area extends string, Status extends string
   </>;
 }
 
+/** Maturity chips; the chosen one's meaning shows beneath, like a chosen area's note in the library. */
 export function StatusField<Status extends string>({ status, statuses, onStatus }: { status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void }) {
-  return <Field label="Status" required><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>;
+  const chosen = statuses.find(option => option.value === status)?.label;
+  const note = chosen ? (STATUS_NOTES as Record<string, string | undefined>)[chosen] : undefined;
+  return <div className="flex min-w-0 flex-col gap-3">
+    <Field label="Status" required hint="The label clients see on the card, in present mode too."><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
+    {note && <p aria-live="polite" className="w-fit max-w-full rounded-r-[10px] border-l-[3px] py-2 pr-4 pl-3.5 text-[13.5px] leading-relaxed"
+      style={{ borderColor: "var(--accent)", background: "color-mix(in srgb, var(--accent) 7%, transparent)", color: "var(--ink-2)" }}>
+      <span className="font-semibold" style={{ color: "var(--ink)" }}>{chosen}</span><span aria-hidden="true"> · </span>{note}
+    </p>}
+  </div>;
 }
 
 /**

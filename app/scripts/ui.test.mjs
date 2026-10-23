@@ -238,6 +238,16 @@ test("both adapters consume the shared form and review surfaces", async () => {
   assert.doesNotMatch(media, /Save captions|Discard caption edits/);
 });
 
+test("status field explains the chosen maturity beneath the choices", () => {
+  const statuses = ["Idea / concept", "Working prototype", "Client demo", "Live in production"].map(label => ({ value: label, label }));
+  const html = render(form.StatusField, { status: "Client demo", statuses, onStatus: noop });
+  assert.match(html, /The label clients see on the card, in present mode too\./);
+  assert.match(html, /aria-live="polite"[^>]*>.*Client demo.*Polished and reliable enough to show clients/s);
+  assert.doesNotMatch(html, /Built and working end to end|Running for at least one client/);
+  // The connected app's values are Dataverse numbers: the note follows the label.
+  assert.match(render(form.StatusField, { status: "125060000", statuses: [{ value: "125060000", label: "Live in production" }], onStatus: noop }), /Running for at least one client, with real users and data\./);
+});
+
 test("story section contains only the two narrative fields in both adapters", async () => {
   const html = render(form.StoryFields, { whatItDoes: "Actions and results", businessValue: "Business benefit", onChange: noop });
   assert.match(html, /What does it do, and why does it matter\?/);

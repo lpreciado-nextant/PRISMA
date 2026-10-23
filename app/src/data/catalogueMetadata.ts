@@ -1,4 +1,4 @@
-import type { AreaMeta, ClientRole, SpecializationArea } from "../types";
+import type { AreaMeta, ClientRole, SolutionStatus, SpecializationArea } from "../types";
 
 export const AREAS: Record<SpecializationArea, AreaMeta> = {
   ai: {
@@ -29,3 +29,11 @@ export const CLIENT_ROLES: ClientRole[] = [
 ];
 
 export const AREA_ORDER: SpecializationArea[] = ["ai", "data", "ibo"];
+
+/** What each maturity (`nx_status`) means, shown under the form's Status choice. The label is client-facing on cards. */
+export const STATUS_NOTES: Partial<Record<SolutionStatus, string>> = {
+  "Idea / concept": "Designed and scoped, not built yet. Ready to discuss, not to demonstrate.",
+  "Working prototype": "Built and working end to end on sample or internal data. Not yet hardened for production.",
+  "Client demo": "Polished and reliable enough to show clients. Not yet running in a client's environment.",
+  "Live in production": "Running for at least one client, with real users and data.",
+};
