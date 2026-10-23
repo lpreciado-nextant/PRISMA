@@ -5,17 +5,25 @@ import type { CatalogueSolution } from "./catalogue";
 import { presentable } from "../../src/lib/catalogue";
 
 /** "My favorites": saved solutions, newest first. Unavailable ones (withdrawn, retired) are simply not listed. */
-export function FavoritesView({ catalogue, ids, pending, onToggle }: {
-  catalogue: CatalogueSolution[]; ids: Set<string>; pending: Set<string>; onToggle: (id: string) => void;
+export function FavoritesView({ catalogue, ids, pending, onToggle, onPresent }: {
+  catalogue: CatalogueSolution[]; ids: Set<string>; pending: Set<string>; onToggle: (id: string) => void; onPresent?: () => void;
 }) {
   const saved = [...ids].map(id => catalogue.find(solution => solution.id === id)).filter((solution): solution is CatalogueSolution => Boolean(solution));
+  const ready = saved.filter(presentable).length;
 
   return (
     <div className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
       {/* Same header position as the other sections: the tabs above already lead back to the library. */}
       <div className="border-b pb-5" style={{ borderColor: "var(--glass-edge)" }}>
         <h1 className="text-[26px]">My favorites</h1>
-        <p className="mt-2 text-[14px]" style={{ color: "var(--ink-2)" }}>In present mode, the ones cleared for clients show as <b className="font-semibold" style={{ color: "var(--ink)" }}>Selected for you</b>.</p>
+        {/* Prepare a client meeting: present only the saved solutions that are cleared for clients. */}
+        {saved.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <button type="button" disabled={!ready || !onPresent} onClick={onPresent} className="inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-[14px] font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ fontFamily: "var(--font-display)", background: "var(--accent)", color: "var(--on-accent)" }}>
+            <Icon name="present" size={16} />Present these solutions{ready > 0 && ` (${ready})`}
+          </button>
+          <p className="text-[13.5px]" style={{ color: "var(--ink-2)" }}>{ready ? `Opens present mode with only the ${ready === 1 ? "one" : ready} cleared for clients.` : "None of these is cleared for clients yet."}</p>
+        </div>}
       </div>
       {saved.length === 0 ? (
         <div className="py-20 text-center">

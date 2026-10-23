@@ -18,6 +18,7 @@ import { filtersFromQuery, filtersToQuery, type Filters } from "./lib/search";
 import { presentCatalogue } from "./lib/catalogue";
 import { useFavorites } from "./lib/favorites";
 import { FavoritesView } from "./views/FavoritesView";
+import { setPresentingSelection } from "./lib/presentSelection";
 import { HelpView } from "./views/HelpView";
 import { deleteSubmission, loadSubmissions, reviewContribution, saveContribution, storeSubmission, type SubmissionEntry } from "./lib/submissions";
 
@@ -65,9 +66,17 @@ export default function App() {
     sessionStorage.setItem(PRESENT_KEY, present ? "1" : "0");
   }, [present]);
 
+  // The masthead switch always presents the whole client-safe catalogue; "Present these solutions" presents the saved ones.
   const togglePresent = () => {
+    setPresentingSelection(false);
     setPresent((p) => !p);
     setBannerHidden(false);
+  };
+  const presentSaved = () => {
+    setPresentingSelection(true);
+    setPresent(true);
+    setBannerHidden(false);
+    navigate("/");
   };
 
   /**
@@ -162,7 +171,7 @@ export default function App() {
         ) : route.path === "/help" && !present ? (
           <HelpView />
         ) : route.path === "/favorites" && !present ? (
-          <FavoritesView catalogue={catalogue} />
+          <FavoritesView catalogue={catalogue} onPresent={presentSaved} />
         ) : route.path === "/my-submissions" && !present ? (
           <MySubmissionsView entries={ownedEntries} onDelete={removeSubmission} />
         ) : (

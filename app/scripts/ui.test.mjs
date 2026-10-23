@@ -825,20 +825,24 @@ test("library shows active filters above the cards with a total, result count an
   assert.match(html, /aria-label="Refine solutions".*aria-label="Hide filters"/s);
   assert.doesNotMatch(render(LibraryView, { catalogue: SOLUTIONS, filters: EMPTY_FILTERS, onFilters: noop, present: false }), /Active filters/);
 });
-test("present mode offers saved client-safe solutions as Selected for you, chosen by default", async () => {
+test("present mode shows only saved client-safe solutions when opened from Saved solutions", async () => {
   const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");
   const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");
   const { EMPTY_FILTERS } = await server.ssrLoadModule("/src/lib/search.ts");
   const [first, second, third] = SOLUTIONS;
   // Only the catalogue present mode passes in counts: a saved ID outside it never shows or counts.
   const catalogue = [first, second];
-  const html = render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [first.id, third.id] });
-  assert.match(html, /aria-label="Solutions to show".*All solutions.*aria-pressed="true"[^>]*>.*Selected for you.*>1<\/span>/s);
+  const html = render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [first.id, third.id], selectionStart: true });
+  assert.match(html, /role="status"[^>]*>.*Selected for you.*1 solution<.*Show all solutions/s);
   assert.match(html, new RegExp(first.name));
   assert.doesNotMatch(html, new RegExp(second.name));
-  // Outside present mode, or with nothing saved, there is no choice to make.
-  assert.doesNotMatch(render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: false, selected: [first.id] }), /Selected for you/);
-  assert.doesNotMatch(render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [third.id] }), /Selected for you/);
+  // The masthead switch presents everything, with no selection controls; outside present mode there is none either.
+  const all = render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [first.id], selectionStart: false });
+  assert.match(all, new RegExp(second.name));
+  assert.doesNotMatch(all, /Selected for you|Show all solutions/);
+  assert.doesNotMatch(render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: false, selected: [first.id], selectionStart: true }), /Selected for you/);
+  // Nothing saved is client-safe: the whole catalogue shows.
+  assert.doesNotMatch(render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [third.id], selectionStart: true }), /Selected for you/);
 });
 
 test("library Clear all resets search and area too, shown as removable chips", async () => {
@@ -910,7 +914,7 @@ test("present mode offers the same Refine filters behind a Filters button, witho
   const { EMPTY_FILTERS } = await server.ssrLoadModule("/src/lib/search.ts");
   const html = render(LibraryView, { catalogue: SOLUTIONS, filters: EMPTY_FILTERS, onFilters: noop, present: true });
   // Closed by default (minimal chrome): a Filters control opens the rail, which is not rendered yet.
-  assert.match(html, /aria-label="Show filters"/);
+  assert.match(html, /aria-label="Filter by capability, technology &amp; more"[^>]*>.*Filter by capability, technology &amp; more/s);
   assert.doesNotMatch(html, /aria-label="Refine solutions"/);
   // Sort, the added window, the layout toggle and the library heading stay out of present mode.
   assert.doesNotMatch(html, /Sort solutions|Added within|aria-label="Layout"|Nextant · Solution Library/);

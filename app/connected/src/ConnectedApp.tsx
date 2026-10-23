@@ -21,6 +21,7 @@ import { loadFavorites, loadTopFavorites, setFavorite, type TopFavorite } from "
 import { PublishedView } from "./PublishedView";
 import { ConnectedSolutionCard, PublishedThumbnail } from "./ConnectedSolutionCard";
 import { FavoritesView } from "./FavoritesView";
+import { setPresentingSelection } from "../../src/lib/presentSelection";
 import { clearRecoveries } from "./draftRecovery";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { HelpView } from "../../src/views/HelpView";
@@ -79,15 +80,17 @@ export default function ConnectedApp() {
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
-  const togglePresent = () => {
-    const next = !present;
+  // The masthead switch always presents the whole client-safe catalogue; "Present these solutions" presents the saved ones.
+  const startPresent = (next: boolean) => {
     if (next) { try { clearRecoveries(sessionStorage); } catch { void 0; } }
     setPresent(next);
     try { sessionStorage.setItem(PRESENT_KEY, next ? "1" : "0"); } catch { return; }
   };
+  const togglePresent = () => { setPresentingSelection(false); startPresent(!present); };
+  const presentSaved = () => { setPresentingSelection(true); navigate("/"); startPresent(true); };
   return <>
     <div inert={entry === "illuminating" || entry === "revealing"}>
-      <CatalogueSession key={`${present}:${attempt}`} present={present} onTogglePresent={togglePresent} appLocation={appLocation}
+      <CatalogueSession key={`${present}:${attempt}`} present={present} onTogglePresent={togglePresent} onPresentSaved={presentSaved} appLocation={appLocation}
         theme={theme} onToggleTheme={toggleTheme} onRetry={() => setAttempt(current => current + 1)}
         entered={entry === "revealing" || entry === "entered"} entering={entry === "illuminating"} onBegin={begin} transitionComplete={entry === "entered"} />
     </div>
@@ -97,8 +100,8 @@ export default function ConnectedApp() {
 
 const TOP_RETRY_DELAYS = [2_000, 5_000, 10_000];
 
-function CatalogueSession({ present, onTogglePresent, appLocation, theme, onToggleTheme, onRetry, entered, entering, onBegin, transitionComplete }: {
-  present: boolean; onTogglePresent: () => void; appLocation?: AppLocation; theme: "light" | "dark";
+function CatalogueSession({ present, onTogglePresent, onPresentSaved, appLocation, theme, onToggleTheme, onRetry, entered, entering, onBegin, transitionComplete }: {
+  present: boolean; onTogglePresent: () => void; onPresentSaved: () => void; appLocation?: AppLocation; theme: "light" | "dark";
   onToggleTheme: () => void; onRetry: () => void;
   entered: boolean; entering: boolean; onBegin: () => void; transitionComplete: boolean;
 }) {
@@ -310,7 +313,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
         : !present && segments.length === 3 && segments[0] === "review" && segments[2] === "edit" ? <DraftsView key={route.path} draftId={segments[1]} owner={user.userPrincipalName} librarian />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} technologyUse={technologyUse} />
         : !present && route.path === "/help" ? <HelpView connected librarian={librarian} contact={contactLinks(PRISMA_CONTACTS, (appLocation && shareUrl(appLocation, beforeHelp)) || `#${beforeHelp}`)} />
-        : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} />
+        : !present && route.path === "/favorites" ? <FavoritesView catalogue={state.catalogue} ids={favorites ?? new Set()} pending={pendingFavorites} onToggle={toggleFavorite} onPresent={onPresentSaved} />
         : solution ? <PublishedView key={`${solution.id}:${present}:${segments[3] ?? ""}`} solution={solution} present={present} assetId={segments[3]} autoDownload={route.query.get("download") === "1"} focused={focused} appLocation={appLocation}
             favorite={favorites ? { saved: favorites.has(solution.id), pending: pendingFavorites.has(solution.id), onToggle: () => toggleFavorite(solution.id), saves: topSaves.get(solution.id.toLowerCase()) } : undefined} />
         : route.path !== "/" ? <Message title="Page unavailable" message="This page is not available in the current catalogue." onBack={() => navigate("/")} />

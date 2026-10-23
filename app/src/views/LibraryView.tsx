@@ -9,6 +9,7 @@ import { SolutionCard } from "../components/SolutionCard";
 import { SolutionRow } from "../components/SolutionRow";
 import { SelectPicker } from "../components/SelectPicker";
 import { SORT_LABELS, SORT_ORDERS, sortSolutions, type SortOrder } from "../lib/sort";
+import { presentingSelection, setPresentingSelection } from "../lib/presentSelection";
 
 type LibraryLayout = "grid" | "list";
 const SORT_KEY = "prisma.library.sort";
@@ -24,8 +25,6 @@ function remembered<Value extends string>(key: string, allowed: readonly Value[]
     return allowed.includes(value as Value) ? value as Value : fallback;
   } catch { return fallback; }
 }
-const SELECTED_KEY = "prisma.present.selected";
-
 function remember(key: string, value: string) {
   try { sessionStorage.setItem(key, value); } catch { void 0; }
 }
@@ -40,6 +39,7 @@ export function LibraryView({
   renderRow,
   featured,
   selected,
+  selectionStart,
 }: {
   catalogue: Solution[];
   filters: Filters;
@@ -53,6 +53,8 @@ export function LibraryView({
   featured?: ReactNode;
   /** The viewer's saved solutions (favorites). Present mode offers the client-safe ones as "Selected for you". */
   selected?: ReadonlySet<string> | readonly string[];
+  /** Open on the selection (tests); by default, whether "Present these solutions" started present mode. */
+  selectionStart?: boolean;
 }) {
   const [sort, setSort] = useState<SortOrder>(() => remembered(SORT_KEY, SORT_ORDERS, "newest"));
   const [layout, setLayout] = useState<LibraryLayout>(() => remembered(LAYOUT_KEY, ["grid", "list"] as const, "grid"));
@@ -75,9 +77,9 @@ export function LibraryView({
     }
     requestAnimationFrame(() => (next ? railCollapse : railExpand).current?.focus());
   };
-  // "Selected for you": the viewer's saved solutions among the client-safe catalogue present mode already passes in,
-  // so it only ever narrows what may be shown. Chosen by default when there are any; the choice lasts the session.
-  const [selectedOnly, setSelectedOnly] = useState(() => remembered(SELECTED_KEY, ["selected", "all"] as const, "selected") === "selected");
+  // "Selected for you": opened from Saved solutions ("Present these solutions"), present mode shows only the viewer's
+  // saved solutions among the client-safe catalogue it already passes in, so it only ever narrows what may be shown.
+  const [selectedOnly, setSelectedOnly] = useState(() => selectionStart ?? presentingSelection());
   const picks = useMemo(() => {
     if (!present || !selected) return [];
     const ids = new Set(selected);
@@ -85,8 +87,10 @@ export function LibraryView({
   }, [present, selected, catalogue]);
   const showingPicks = present && selectedOnly && picks.length > 0;
   const pool = showingPicks ? picks : catalogue;
-  const choosePicks = (next: boolean) => { setSelectedOnly(next); remember(SELECTED_KEY, next ? "selected" : "all"); };
+  const showAll = () => { setSelectedOnly(false); setPresentingSelection(false); };
   const refineCount = activeFacetCount(filters);
+  // Present mode has no heading or toolbar around it, so the button says what it filters by.
+  const filterLabel = present ? "Filter by capability, technology & more" : "Filters";
   // Sorting and layout apply to the Solution Library grid only; the Top 3 keeps its own ranking.
   const results = useMemo(() => sortSolutions(filterSolutions(pool, filters), sort), [pool, filters, sort]);
   const counts = useMemo(() => areaCounts(pool, filters), [pool, filters]);
@@ -160,12 +164,11 @@ export function LibraryView({
           ))}
         </div>
 
-        {present && picks.length > 0 && (
-          <div role="group" aria-label="Solutions to show" className="mt-4 flex flex-wrap items-center gap-2">
-            <Chip active={!showingPicks} pressed={!showingPicks} onClick={() => choosePicks(false)}>All solutions</Chip>
-            <Chip active={showingPicks} pressed={showingPicks} onClick={() => choosePicks(true)}>
-              <Icon name="sparkle" size={13} />Selected for you<span className="font-mono text-[11px] opacity-80">{picks.length}</span>
-            </Chip>
+        {showingPicks && (
+          <div role="status" className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px]">
+            <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: "var(--ink)" }}><Icon name="sparkle" size={14} />Selected for you</span>
+            <span style={{ color: "var(--ink-2)" }}>{picks.length} {picks.length === 1 ? "solution" : "solutions"}</span>
+            <button type="button" onClick={showAll} className="cursor-pointer font-semibold" style={{ color: "var(--accent)" }}>Show all solutions</button>
           </div>
         )}
 
@@ -207,11 +210,11 @@ export function LibraryView({
                     type="button"
                     onClick={() => setRefineOpen(true)}
                     aria-haspopup="dialog"
-                    aria-label={refineCount ? `Filters, ${refineCount} active` : "Filters"}
+                    aria-label={refineCount ? `${filterLabel}, ${refineCount} active` : filterLabel}
                     className="toolbar-filter flex h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] lg:hidden"
                   >
                     <Icon name="sliders" size={14} />
-                    Filters
+                    {filterLabel}
                     {refineCount > 0 && <RefineCount count={refineCount} />}
                   </button>
                   {/* Desktop, rail collapsed: reopens it. A soft fill sets it apart from Sort by and Added. */}
@@ -220,12 +223,12 @@ export function LibraryView({
                       ref={railExpand}
                       type="button"
                       onClick={() => setRail(true)}
-                      aria-label={refineCount ? `Show filters, ${refineCount} active` : "Show filters"}
-                      title="Show filters"
+                      aria-label={present ? (refineCount ? `${filterLabel}, ${refineCount} active` : filterLabel) : refineCount ? `Show filters, ${refineCount} active` : "Show filters"}
+                      title={present ? filterLabel : "Show filters"}
                       className="toolbar-filter hidden h-8 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] lg:flex"
                     >
                       <Icon name="sliders" size={14} />
-                      Filters
+                      {filterLabel}
                       {refineCount > 0 && <RefineCount count={refineCount} />}
                     </button>
                   )}
