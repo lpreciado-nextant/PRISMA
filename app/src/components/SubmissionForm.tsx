@@ -39,7 +39,7 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
   "Challenges & lessons learned": "What made it hard and what you would tell the next team. Internal only: never shown in presentation mode.",
   "Built by & effort": "Add the contributors who worked on this solution and estimate the effort it took to build. This information is used for internal tracking only.",
   "What does it do, and why does it matter?": "CSMs rely on this step most. Write it for someone who wasn't on the project.",
-  "Classify & tag": "Classify it by capability, then tag it so CSMs find it later. Capabilities and industries come from a fixed list; technologies are free text.",
+  "Classify & tag": "Classify your solution by selecting its main capability and area, then add relevant technologies, industries, and linked projects to help CSMs find it later.",
   Media: "Add at least one screenshot. A thumbnail, video, slides or HTML demo are optional.",
   "Review & submit": "This is how the card will look in the library once it's approved.",
 };
@@ -338,6 +338,8 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
 }) {
   const name = useId();
   const panel = useId();
+  // Each area's capabilities read A–Z, in the main columns and the add panel alike.
+  groups = groups.map(group => ({ ...group, options: [...group.options].sort((left, right) => left.label.localeCompare(right.label)) }));
   const [adding, setAdding] = useState(false);
   const all = groups.flatMap(group => group.options.map(option => ({ ...option, group })));
   const labelOf = (value: Value) => all.find(option => option.value === value)?.label ?? value;
@@ -512,7 +514,7 @@ export function SubmissionReview({ card, attachments, contributors, effort, imag
 export function ContributorEditor({ children, onAdd, addDisabled = false, bare = false }: { children: ReactNode; onAdd: () => void; addDisabled?: boolean; bare?: boolean }) {
   return <section aria-labelledby={bare ? undefined : "contributors-heading"} aria-label={bare ? "Contributors" : undefined} className={bare ? "min-w-0" : "mt-2 min-w-0 border-t border-(--glass-edge) pt-5"}>
     {!bare && <h3 id="contributors-heading" className="text-[17px] font-semibold">Built by &amp; effort</h3>}
-    <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>Add everyone who worked on this solution.</p>
+    <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>Add everyone who worked on this solution, including the CSM.</p>
     <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
       {children}
       <button type="button" disabled={addDisabled} className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-(--glass-edge) px-3 py-1 text-[12.5px] font-medium text-(--ink-2) outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40" onClick={onAdd}><Icon name="plus" size={13} />Add contributor</button>

@@ -253,6 +253,9 @@ test("capability fields pick one main capability, derive the main area and list 
   const empty = render(form.CapabilityFields, { groups, secondary: [], onMain: noop, onSecondary: noop });
   assert.match(empty, /Main capability.*AI &amp; Automation.*Agents.*Data Solutions.*Analytics/s);
   assert.match(empty, /Choose the main capability to set the main specialization area/);
+  // Options read A–Z within each area, whatever order they arrive in.
+  const unsorted = render(form.CapabilityFields, { groups: [{ label: "Area", options: [{ value: "z", label: "Zeta" }, { value: "a", label: "Alpha" }] }], secondary: [], onMain: noop, onSecondary: noop });
+  assert.match(unsorted, /Alpha.*Zeta/s);
   assert.doesNotMatch(empty, /Other capabilities involved/);
   const picked = render(form.CapabilityFields, { groups, main: "Agents", mainArea: "AI & Automation", secondary: ["Analytics"], onMain: noop, onSecondary: noop });
   assert.match(picked, /Main specialization area: <b[^>]*>AI &amp; Automation<\/b>/);
