@@ -1092,6 +1092,23 @@
       0 0 0 1px color-mix(in srgb, var(--area) 30%, transparent),
       0 0 22px -4px color-mix(in srgb, var(--area) 45%, transparent);
   }
+  /* The "Add a capability" panel: the same columns, dashed and quieter, so it never reads as the main choice. */
+  .capability-column--add {
+    padding: 0.6rem 0.4rem 0.45rem;
+    border-style: dashed;
+    background: transparent;
+  }
+  .capability-column--add .capability-option {
+    padding-block: 0.3rem;
+    font-size: 12.5px;
+  }
+  .capability-column--add .capability-option:hover {
+    background: color-mix(in srgb, var(--area) 12%, transparent);
+  }
+  .capability-option:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
   .capability-option {
     display: flex;
     align-items: flex-start;

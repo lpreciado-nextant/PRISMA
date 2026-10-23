@@ -335,6 +335,8 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
   mainOwner?: string | null; maxSecondary?: number;
 }) {
   const name = useId();
+  const panel = useId();
+  const [adding, setAdding] = useState(false);
   const all = groups.flatMap(group => group.options.map(option => ({ ...option, group })));
   const labelOf = (value: Value) => all.find(option => option.value === value)?.label ?? value;
   const remaining = all.filter(option => option.value !== main && !secondary.includes(option.value)).map(option => option.value);
@@ -363,11 +365,24 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
       <p className="mt-1 text-[12px] text-(--ink-3)">{`Select up to ${maxSecondary} additional capabilities that played a significant role in the solution's development or delivery. Do not include capabilities that only provided minor support.`}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {secondary.map(value => <Chip key={value} active onClick={() => onSecondary(secondary.filter(entry => entry !== value))} title={`Remove ${labelOf(value)}`}><span className="sr-only">Remove </span>{labelOf(value)}<Icon name="close" size={12} /></Chip>)}
-        {secondary.length < maxSecondary && remaining.length > 0 && <SelectPicker compact label="Add another capability" value={"" as Value | ""} placeholder="Add a capability" options={remaining}
-          getLabel={value => value ? labelOf(value) : "Add a capability"} getHint={value => value ? all.find(option => option.value === value)?.group.label ?? "" : ""} getButtonLabel={() => "Add a capability"} buttonIcon="plus"
-          buttonClassName="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-(--glass-edge) px-3 py-1 text-[12.5px] font-medium text-(--ink-2) outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)"
-          onChange={value => { if (value) onSecondary([...secondary, value]); }} />}
+        {secondary.length < maxSecondary && remaining.length > 0 && <button type="button" aria-expanded={adding} aria-controls={panel} onClick={() => setAdding(!adding)}
+          className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-(--glass-edge) px-3 py-1 text-[12.5px] font-medium text-(--ink-2) outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)">
+          <Icon name={adding ? "check" : "plus"} size={13} />{adding ? "Done" : "Add a capability"}
+        </button>}
       </div>
+      {/* The same area columns as the main capability, lighter: one click adds a capability; the panel closes at the limit. */}
+      {adding && secondary.length < maxSecondary && <div id={panel} role="group" aria-label="Add another capability" className="mt-3 grid min-w-0 gap-3 sm:grid-cols-3">
+        {groups.map(group => {
+          const options = group.options.filter(option => remaining.includes(option.value));
+          return options.length > 0 && <div key={group.label} className="capability-column capability-column--add min-w-0" style={{ "--area": group.accent ?? "var(--accent)" } as CSSProperties}>
+            <p className="mb-1.5 flex items-center gap-2 px-1 text-[12px] font-semibold text-(--ink-2)"><span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: "var(--area)" }} />{group.label}</p>
+            <div className="flex flex-col gap-0.5">{options.map(option => <button key={option.value} type="button" className="capability-option w-full text-left"
+              onClick={() => { onSecondary([...secondary, option.value]); if (secondary.length + 1 >= maxSecondary) setAdding(false); }}>
+              <span aria-hidden="true" className="mt-0.5 shrink-0 text-(--ink-3)"><Icon name="plus" size={13} /></span><span className="min-w-0"><span className="sr-only">Add </span>{option.label}</span>
+            </button>)}</div>
+          </div>;
+        })}
+      </div>}
     </div>}
   </>;
 }
