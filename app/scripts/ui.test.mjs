@@ -331,6 +331,12 @@ test("safety and contributor rows preserve baseline copy and accessible field st
   assert.doesNotMatch(html, /Remove contributor/);
   assert.match(render(form.ContributorRow, { index: 1, person: "P", onRemove: noop }), /Remove contributor 2/);
   assert.doesNotMatch(render(form.ContributorEditor, { onAdd: noop, children: null }), /Total effort|hours/i);
+  // A chosen person is a bubble: name and level on one line, remove only when allowed, no picker.
+  const bubble = render(form.ContributorRow, { index: 1, person: createElement("input", { "aria-label": "Person" }), name: "Ana Ruiz", level: "Consultant II", onRemove: noop });
+  assert.match(bubble, /class="contributor-chip".*>Ana Ruiz<.*· Consultant II.*aria-label="Remove contributor 2, Ana Ruiz"/s);
+  assert.doesNotMatch(bubble, /<input|<fieldset/);
+  assert.doesNotMatch(render(form.ContributorRow, { index: 0, person: "P", name: "Ana Ruiz" }), /Remove contributor/);
+  assert.match(render(form.ContributorEditor, { onAdd: noop, children: null }), /flex-wrap.*Add contributor/s);
 });
 
 test("effort fields: required complexity as a radio group, optional whole-hour estimate", () => {
@@ -343,7 +349,10 @@ test("effort fields: required complexity as a radio group, optional whole-hour e
   assert.doesNotMatch(empty, /role="alert"/);
   const chosen = render(form.EffortFields, { hours: "12.5", complexity: "Hard", onHours: noop, onComplexity: noop, error: "Enter whole hours of zero or more." });
   assert.match(chosen, /checked=""[^>]*\/?>Hard/);
-  assert.match(chosen, /New territory, many moving parts\./);
+  // The chosen complexity's meaning shows in the app's note style, not as a plain hint.
+  assert.match(chosen, /aria-live="polite"[^>]*>.*Hard.*New territory, many moving parts\./s);
+  assert.doesNotMatch(chosen, /Easy: familiar work/);
+  assert.match(empty, /Easy: familiar work\. Medium: some new ground\./);
   assert.match(chosen, /aria-invalid="true"/);
   assert.match(chosen, /role="alert"[^>]*>Enter whole hours of zero or more\./);
 });

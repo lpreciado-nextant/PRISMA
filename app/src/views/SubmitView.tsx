@@ -372,11 +372,11 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
               <StatusField status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
             </NamedSection>
             <NamedSection title="Built by & effort">
-            <ContributorEditor bare onAdd={() => set("contributors", [...draft.contributors, {
+            <ContributorEditor bare addDisabled={draft.contributors.some(contributor => !contributor.builtBy.id)} onAdd={() => set("contributors", [...draft.contributors, {
               id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" },
             }])}>
               {draft.contributors.map((contributor, index) => {
-                return <ContributorRow key={contributor.id} index={index}
+                return <ContributorRow key={contributor.id} index={index} name={contributor.builtBy.id ? contributor.builtBy.name : undefined}
                   onRemove={index > 0 ? () => set("contributors", draft.contributors.filter(entry => entry.id !== contributor.id)) : undefined}
                   level={contributor.builtBy.id ? contributor.builtBy.level ?? null : undefined}
                   person={<PersonPicker value={contributor.builtBy} options={builders.filter(builder => !draft.contributors.some(entry => entry.id !== contributor.id && entry.builtBy.id === builder.id))} onChange={builtBy => updateContributor(contributor.id, { builtBy })} />} />;

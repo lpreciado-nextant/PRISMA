@@ -320,16 +320,21 @@ export function SolutionDetailsFields<Area extends string, Status extends string
   </>;
 }
 
+/** A chosen option's meaning, in the style of the library's area note: a thin accent bar, its name, then the text. */
+export function ChoiceNote({ title, children }: { title: string; children: ReactNode }) {
+  return <p aria-live="polite" className="w-fit max-w-full rounded-r-[10px] border-l-[3px] py-2 pr-4 pl-3.5 text-[13.5px] leading-relaxed"
+    style={{ borderColor: "var(--accent)", background: "color-mix(in srgb, var(--accent) 7%, transparent)", color: "var(--ink-2)" }}>
+    <span className="font-semibold" style={{ color: "var(--ink)" }}>{title}</span><span aria-hidden="true"> · </span>{children}
+  </p>;
+}
+
 /** Maturity chips; the chosen one's meaning shows beneath, like a chosen area's note in the library. */
 export function StatusField<Status extends string>({ status, statuses, onStatus }: { status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void }) {
   const chosen = statuses.find(option => option.value === status)?.label;
   const note = chosen ? (STATUS_NOTES as Record<string, string | undefined>)[chosen] : undefined;
   return <div className="flex min-w-0 flex-col gap-3">
     <Field label="Status" required hint="The label clients see on the card, in present mode too."><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
-    {note && <p aria-live="polite" className="w-fit max-w-full rounded-r-[10px] border-l-[3px] py-2 pr-4 pl-3.5 text-[13.5px] leading-relaxed"
-      style={{ borderColor: "var(--accent)", background: "color-mix(in srgb, var(--accent) 7%, transparent)", color: "var(--ink-2)" }}>
-      <span className="font-semibold" style={{ color: "var(--ink)" }}>{chosen}</span><span aria-hidden="true"> · </span>{note}
-    </p>}
+    {note && chosen && <ChoiceNote title={chosen}>{note}</ChoiceNote>}
   </div>;
 }
 
@@ -429,21 +434,31 @@ export function SubmissionReview({ card, attachments, contributors, effort, imag
   </StepShell>;
 }
 
+/** People as bubbles on one wrapping line, with "Add contributor" as the last bubble; a new person's picker takes a line. */
 export function ContributorEditor({ children, onAdd, addDisabled = false, bare = false }: { children: ReactNode; onAdd: () => void; addDisabled?: boolean; bare?: boolean }) {
   return <section aria-labelledby={bare ? undefined : "contributors-heading"} aria-label={bare ? "Contributors" : undefined} className={bare ? "min-w-0" : "mt-2 min-w-0 border-t border-(--glass-edge) pt-5"}>
     {!bare && <h3 id="contributors-heading" className="text-[17px] font-semibold">Built by &amp; effort</h3>}
     <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>Add everyone who worked on this solution.</p>
-    {children}
-    <div className="mt-4"><button type="button" disabled={addDisabled} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[13px] font-semibold disabled:opacity-40" onClick={onAdd}><Icon name="plus" size={14} />Add contributor</button></div>
+    <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+      {children}
+      <button type="button" disabled={addDisabled} className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-(--glass-edge) px-3 py-1 text-[12.5px] font-medium text-(--ink-2) outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40" onClick={onAdd}><Icon name="plus" size={13} />Add contributor</button>
+    </div>
   </section>;
 }
 
-/** `level` is the selected consultant's directory level; leave it undefined until a person is selected. */
-export function ContributorRow({ index, person, level, onRemove }: { index: number; person: ReactNode; level?: string | null; onRemove?: () => void }) {
-  // One compact line per person: who, with their directory level underneath.
-  return <fieldset className="mt-4 min-w-0 border-b border-(--glass-edge) pb-4">
+/**
+ * One contributor. With `name` (a person is chosen) it is a bubble: name, directory level, and remove when allowed.
+ * Without it, the `person` picker on its own line. `level` is the directory level; undefined until a person is chosen.
+ */
+export function ContributorRow({ index, person, level, onRemove, name }: { index: number; person: ReactNode; level?: string | null; onRemove?: () => void; name?: string }) {
+  if (name) return <span role="group" aria-label={`Contributor ${index + 1}: ${name}`} className="contributor-chip">
+    <span className="font-semibold text-(--ink)">{name}</span>
+    {level !== undefined && <span className="text-(--ink-3)" title={level || undefined}>· {level || "Level not recorded"}</span>}
+    {onRemove && <button type="button" onClick={onRemove} className="contributor-chip-remove" title={`Remove ${name}`} aria-label={`Remove contributor ${index + 1}, ${name}`}><Icon name="close" size={12} /></button>}
+  </span>;
+  return <fieldset className="min-w-0 basis-full pb-1">
     <legend className="sr-only">Contributor {index + 1}</legend>
-    <div className="flex min-w-0 items-start gap-3">
+    <div className="flex min-w-0 max-w-xl items-start gap-3">
       <div className="min-w-0 flex-1">
         {person}
         {level !== undefined && <p className="mt-1 truncate text-[12px] text-(--ink-3)" title={level || undefined}>{level || "Level not recorded in the consultant directory"}</p>}
@@ -465,7 +480,8 @@ export function EffortFields({ hours, complexity, onHours, onComplexity, error }
       <div className="flex flex-wrap gap-2">{COMPLEXITIES.map(option => <label key={option.value} title={option.hint} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${complexity === option.value ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
         <input type="radio" className="sr-only" name={`${id}-complexity`} checked={complexity === option.value} onChange={() => onComplexity(option.value)} />{option.value}
       </label>)}</div>
-      <p className="mt-1.5 text-[12px] text-(--ink-3)">{COMPLEXITIES.find(option => option.value === complexity)?.hint ?? "Easy: familiar work. Medium: some new ground. Hard: new territory, many moving parts."}</p>
+      {complexity ? <div className="mt-3"><ChoiceNote title={complexity}>{COMPLEXITIES.find(option => option.value === complexity)?.hint}</ChoiceNote></div>
+        : <p className="mt-1.5 text-[12px] text-(--ink-3)">Easy: familiar work. Medium: some new ground. Hard: new territory, many moving parts.</p>}
     </fieldset>
     <div className="max-w-[260px]"><Field label="Estimated minimum hours" optional hint="For the whole solution, including preparation and discovery."><input type="number" inputMode="numeric" className={submissionInputClass} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={error ? `${id}-error` : undefined} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} /></Field>
       {error && <p id={`${id}-error`} role="alert" className="mt-1.5 text-[13px] text-(--proto)">{error}</p>}</div>

@@ -5,12 +5,14 @@ import type { Contributor, DraftGraph, GraphReferences } from "./draftGraph";
 export function DraftGraphEditor({ graph, references, section, onChange, onCreateTechnology }: { graph: DraftGraph; references: GraphReferences; section: "contributors" | "tags"; onChange: (graph: DraftGraph) => void; onCreateTechnology?: (name: string) => Promise<void> }) {
   const update = (index: number, fields: Partial<Contributor>) => onChange({ ...graph, contributors: graph.contributors.map((person, position) => position === index ? { ...person, ...fields } : person) });
   return <div className="min-w-0 space-y-5">
-    {section === "contributors" ? <ContributorEditor addDisabled={!references.people?.length || graph.contributors.length >= 100}
+    {section === "contributors" ? <ContributorEditor addDisabled={!references.people?.length || graph.contributors.length >= 100 || graph.contributors.some(person => !person.personId)}
       onAdd={() => onChange({ ...graph, contributors: [...graph.contributors, { id: null, personId: "" }] })}>
       {references.people === null && <p role="alert">Consultant directory unavailable. Existing contributor selections are retained.</p>}
       {graph.contributors.map((person, index) => {
         const people = (references.people ?? []).filter(option => option.id === person.personId || !graph.contributors.some(other => other.personId === option.id));
-        return <ContributorRow key={person.id ?? `new-${index}`} index={index}
+        // A chosen, active consultant is a bubble; an empty or unavailable one keeps the picker so it can be replaced.
+        const chosen = people.find(option => option.id === person.personId);
+        return <ContributorRow key={person.id ?? `new-${index}`} index={index} name={chosen?.name}
           onRemove={index > 0 ? () => onChange({ ...graph, contributors: graph.contributors.filter((_, position) => position !== index) }) : undefined}
           level={person.personId ? references.people?.find(option => option.id === person.personId)?.level ?? null : undefined}
           person={<><PersonPicker value={people.find(option => option.id === person.personId) ?? { id: person.personId, name: person.personId ? "Existing consultant (inactive or unavailable)" : "" }} options={people} onChange={value => update(index, { personId: value.id })} />{references.people !== null && person.personId && !people.some(option => option.id === person.personId) && <p role="status" className="mt-2 text-[13px] text-(--proto)">This saved consultant is no longer active or available. Select an active consultant to replace them.</p>}</>} />;

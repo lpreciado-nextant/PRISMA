@@ -1076,6 +1076,46 @@
         0 0 24px 0 color-mix(in srgb, var(--accent) 45%, transparent);
     }
   }
+  /* ---- Contributor bubbles (Built by & effort) ------------------------ */
+  .contributor-chip {
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 2rem;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0.35rem 0.25rem 0.85rem;
+    border: 1px solid var(--glass-edge);
+    border-radius: 999px;
+    font-size: 12.5px;
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  .contributor-chip > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .contributor-chip:not(:has(.contributor-chip-remove)) {
+    padding-right: 0.85rem;
+  }
+  .contributor-chip-remove {
+    display: grid;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .contributor-chip-remove:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+  }
+  .contributor-chip-remove:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
   /* "N new" beside a My submissions tab: open feedback items, in the accent like the masthead dot. */
   .tab-new {
     margin-left: 0.4rem;
