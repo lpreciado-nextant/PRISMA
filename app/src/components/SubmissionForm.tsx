@@ -560,7 +560,12 @@ export function EffortFields({ hours, complexity, onHours, onComplexity, error }
       {complexity ? <div className="mt-1.5"><ChoiceNote title={complexity}>{COMPLEXITIES.find(option => option.value === complexity)?.hint}</ChoiceNote></div>
         : <p className="mt-1.5 text-[12px] text-(--ink-3)">Easy: familiar work. Medium: some new ground. Hard: new territory, many moving parts.</p>}
     </fieldset>
-    <div className="min-w-0 sm:max-w-[260px]"><Field label="Estimated minimum hours" optional hint="For the whole solution, including preparation and discovery."><input type="number" inputMode="numeric" className={submissionInputClass} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={error ? `${id}-error` : undefined} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} /></Field>
+    {/* Same shape as complexity beside it: title, control, then the hint beneath, so both rows line up. */}
+    <div className="min-w-0 sm:max-w-[260px]"><label className="block min-w-0">
+      <span className="mb-2 block text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Estimated minimum hours<OptionalMark /></span>
+      <input type="number" inputMode="numeric" className={submissionInputClass.replace("py-2.5", "py-1.5")} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={`${id}-hours-hint${error ? ` ${id}-error` : ""}`} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} />
+    </label>
+      <p id={`${id}-hours-hint`} className="mt-1.5 text-[12px] leading-snug text-(--ink-3)">For the whole solution, including preparation and discovery.</p>
       {error && <p id={`${id}-error`} role="alert" className="mt-1.5 text-[13px] text-(--proto)">{error}</p>}</div>
   </div>;
 }
