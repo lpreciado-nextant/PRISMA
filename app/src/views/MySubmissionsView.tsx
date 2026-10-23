@@ -10,9 +10,9 @@ import { navigate } from "../lib/router";
 import { submissionState } from "../lib/submissionState";
 import { feedbackKeys, openFeedback, setFeedbackItems, suggestionFeedbackKey, useFeedbackSeen } from "../lib/feedbackSeen";
 
-const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published"] as const;
+/** Status filters, plus "New suggestions": the cards with open suggestions (the blue ones), which is no status. */
+const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published", "New suggestions"] as const;
 type Filter = typeof FILTERS[number];
-const matches = (solution: Solution, filter: Filter) => filter === "All" || submissionState(solution) === filter;
 /** Suggestions on a published solution: the count, the distinct authors (newest first) and their ids. */
 export type SuggestionSummary = { count: number; authors: string[]; ids: string[] };
 const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "" : "s"}`;
@@ -83,12 +83,13 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       </>,
     };
   };
+  const openSuggestionsOn = (solution: Solution) => openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length;
+  const matches = (solution: Solution, option: Filter) => option === "All" || (option === "New suggestions" ? openSuggestionsOn(solution) > 0 : submissionState(solution) === option);
   const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
   const visible = entries.filter(({ solution }) => matches(solution, filter));
   // One card everywhere: status, Edit, •••, and opening the solution (where its suggestions are read).
   const open = (solution: Solution) => onOpen ? onOpen(solution) : solution.publicationStatus === "Draft" ? navigate(`/submit/${solution.id}`) : navigate(`/s/${solution.id}`);
   const card = (solution: Solution, index: number) => renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />;
-  const openSuggestionsOn = (solution: Solution) => openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length;
   // Needs your attention: returned drafts first (the librarian is waiting on the owner), then new suggestions, most first.
   const returned = entries.map(({ solution }) => solution).filter(solution => submissionState(solution) === "Changes requested");
   const suggested = entries.map(({ solution }) => ({ solution, fresh: openSuggestionsOn(solution) }))
@@ -143,10 +144,10 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>No saved drafts or submitted solutions.</p>
     </div> : <>
       <div role="group" aria-label="Filter by status" className="mt-4 flex flex-wrap items-center gap-2">
-        {FILTERS.map(option => {
+        {FILTERS.filter(option => option !== "New suggestions" || suggestions).map(option => {
           const total = count(option);
           return <Chip key={option} active={filter === option} pressed={filter === option} onClick={() => setFilter(option)}>
-            {option === "Changes requested" && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--proto)" }} />}
+            {(option === "Changes requested" || option === "New suggestions") && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: option === "Changes requested" ? "var(--proto)" : "var(--accent)" }} />}
             {option}
             <span className="font-mono text-[11px] opacity-75">{total}</span>
           </Chip>;
