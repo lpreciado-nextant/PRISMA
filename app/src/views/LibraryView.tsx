@@ -54,15 +54,21 @@ export function LibraryView({
   const [refineOpen, setRefineOpen] = useState(false);
   // Desktop only: the Refine rail can be hidden so the cards take the full width.
   const [railShown, setRailShown] = useState(() => remembered(RAIL_KEY, ["shown", "hidden"] as const, "shown") === "shown");
-  const rail = !present && railShown;
+  // Present mode keeps its own, unremembered choice and starts closed (minimal chrome); Filters opens the same rail.
+  const [presentRail, setPresentRail] = useState(false);
+  const shown = present ? presentRail : railShown;
+  const rail = shown;
   const refineToggle = useRef<HTMLButtonElement>(null);
   // The control that toggled the rail disappears with it, so focus moves to the one that takes its place.
   const railCollapse = useRef<HTMLButtonElement>(null);
   const railExpand = useRef<HTMLButtonElement>(null);
-  const setRail = (shown: boolean) => {
-    setRailShown(shown);
-    remember(RAIL_KEY, shown ? "shown" : "hidden");
-    requestAnimationFrame(() => (shown ? railCollapse : railExpand).current?.focus());
+  const setRail = (next: boolean) => {
+    if (present) setPresentRail(next);
+    else {
+      setRailShown(next);
+      remember(RAIL_KEY, next ? "shown" : "hidden");
+    }
+    requestAnimationFrame(() => (next ? railCollapse : railExpand).current?.focus());
   };
   const refineCount = activeFacetCount(filters);
   // Sorting and layout apply to the Solution Library grid only; the Top 3 keeps its own ranking.
@@ -153,22 +159,23 @@ export function LibraryView({
       {showFeatured && <div className="mt-10">{featured}</div>}
 
       <div className={`mt-8 grid gap-6 ${rail ? "lg:grid-cols-[250px_minmax(0,1fr)]" : ""}`}>
-        {/* Present mode drops the filter rail — minimal chrome per design §3.4. Collapsing keeps every selection. */}
+        {/* Present mode starts with the rail closed (minimal chrome, design §3.4); its facets come from the client-safe catalogue only. Collapsing keeps every selection. */}
         {rail && <FacetRail all={catalogue} filters={filters} onChange={onFilters} onCollapse={() => setRail(false)} collapseRef={railCollapse} />}
 
         <div className="min-w-0">
-          {!present && (
+          {(
             // Desktop with the rail open: the rail is the filter control, so the toolbar drops Filters and joins the
             // heading's row. Otherwise (rail collapsed, or below lg): heading row, then Filters left and the rest right.
-            <div className={`mb-5 ${railShown ? "lg:flex lg:items-center lg:justify-between lg:gap-4" : ""}`}>
+            // Present mode keeps only Filters: no heading, sort, added window or layout toggle.
+            <div className={`mb-5 ${shown ? (present ? "lg:hidden" : "lg:flex lg:items-center lg:justify-between lg:gap-4") : ""}`}>
               {/* Same heading style as the Top 3 title. */}
-              <h2 className="section-title flex items-center gap-2.5">Nextant · Solution Library
+              {!present && <h2 className="section-title flex items-center gap-2.5">Nextant · Solution Library
                 {/* How many solutions the library holds; the hero no longer repeats it. */}
                 {catalogue.length > 0 && <span className="rounded-full px-2 py-0.5 font-mono text-[12px] font-medium" style={{ color: "var(--ink-2)", background: "color-mix(in srgb, var(--ink) 7%, transparent)" }} aria-label={`${catalogue.length} ${catalogue.length === 1 ? "solution" : "solutions"}`}>{catalogue.length}</span>}
-              </h2>
+              </h2>}
               {/* The right group wraps within itself on narrow screens, so Filters keeps its place. */}
-              <div className={`mt-4 flex items-center justify-between gap-3 ${railShown ? "lg:mt-0" : ""}`}>
-                <div className={`flex shrink-0 items-center ${railShown ? "lg:hidden" : ""}`}>
+              <div className={`flex items-center justify-between gap-3 ${present ? "" : "mt-4"} ${shown ? "lg:mt-0" : ""}`}>
+                <div className={`flex shrink-0 items-center ${shown ? "lg:hidden" : ""}`}>
                   <button
                     ref={refineToggle}
                     type="button"
@@ -182,7 +189,7 @@ export function LibraryView({
                     {refineCount > 0 && <RefineCount count={refineCount} />}
                   </button>
                   {/* Desktop, rail collapsed: reopens it. A soft fill sets it apart from Sort by and Added. */}
-                  {!railShown && (
+                  {!shown && (
                     <button
                       ref={railExpand}
                       type="button"
@@ -197,7 +204,7 @@ export function LibraryView({
                     </button>
                   )}
                 </div>
-                <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-1 gap-y-2">
+                {!present && <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-1 gap-y-2">
                   <SelectPicker
                     compact
                     label="Sort solutions"
@@ -234,11 +241,11 @@ export function LibraryView({
                       </button>
                     ))}
                   </div>
-                </div>
+                </div>}
               </div>
             </div>
           )}
-          {!present && refineOpen && (
+          {refineOpen && (
             <FacetDrawer all={catalogue} filters={filters} onChange={onFilters} resultCount={results.length} onClose={() => setRefineOpen(false)} />
           )}
           {/* Active filters sit right above the cards: each removable, with the total and a single reset. */}

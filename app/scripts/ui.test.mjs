@@ -826,6 +826,22 @@ test("help page: one guide per role and common questions, tailored to the app, w
   assert.match(contact, /href="https:\/\/teams\.microsoft\.com\/l\/chat\/0\/0\?users=a" target="_blank" rel="noopener noreferrer"[^>]*>.*Chat in Teams/s);
   assert.match(contact, /href="mailto:a@example\.com\?subject=PRISMA"[^>]*>.*Email us/s);
 });
+test("present mode offers the same Refine filters behind a Filters button, without the library toolbar", async () => {
+  const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");
+  const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");
+  const { EMPTY_FILTERS } = await server.ssrLoadModule("/src/lib/search.ts");
+  const html = render(LibraryView, { catalogue: SOLUTIONS, filters: EMPTY_FILTERS, onFilters: noop, present: true });
+  // Closed by default (minimal chrome): a Filters control opens the rail, which is not rendered yet.
+  assert.match(html, /aria-label="Show filters"/);
+  assert.doesNotMatch(html, /aria-label="Refine solutions"/);
+  // Sort, the added window, the layout toggle and the library heading stay out of present mode.
+  assert.doesNotMatch(html, /Sort solutions|Added within|aria-label="Layout"|Nextant · Solution Library/);
+  assert.match(html, /aria-label="Filter by specialization area"/);
+  // Active filters still show as removable chips.
+  const capability = SOLUTIONS[0].capabilities[0];
+  assert.match(render(LibraryView, { catalogue: SOLUTIONS, filters: { ...EMPTY_FILTERS, capabilities: [capability] }, onFilters: noop, present: true }), /aria-label="Active filters"/);
+});
+
 test("library area filter is editorial text: plain options with colour dots, a tint only on the chosen one", async () => {
   const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");
   const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");

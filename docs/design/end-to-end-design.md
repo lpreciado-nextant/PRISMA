@@ -193,7 +193,7 @@ Present mode:
 - **Suppresses internal-only content** — library notes, publication status, review history, builder-facing metadata.
 - **Restricts the catalogue** before search/render to Published records with Safety Acknowledged and librarian-controlled Client Safe Reviewed both true. Unreviewed and pending records are never included.
 - **Always excludes client identity** and project names. Present mode uses only the dedicated anonymous context field, never the internal client field. Body text and media must already be anonymized; no runtime string-scrubbing or automatic media redaction is implied.
-- **Changes the visual treatment** — larger type, minimal chrome, no filter rail by default, full-bleed demo viewer.
+- **Changes the visual treatment** — larger type, minimal chrome, the filter rail closed by default behind a Filters button (client-safe facets only), full-bleed demo viewer.
 
 Present mode state is obvious and persistent (a clear banner, dismissible without leaving the mode — the masthead toggle stays lit) so a CSM is never unsure which mode they're in. Exiting requires a deliberate action.
 
