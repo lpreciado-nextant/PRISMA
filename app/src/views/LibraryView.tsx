@@ -53,7 +53,7 @@ export function LibraryView({
   featured?: ReactNode;
   /** The viewer's saved solutions (favorites). Present mode offers the client-safe ones as "Selected for you". */
   selected?: ReadonlySet<string> | readonly string[];
-  /** Open on the selection (tests); by default, whether "Present these solutions" started present mode. */
+  /** Start with "Show my saved solutions" on (tests); by default, the choice made earlier in this session. */
   selectionStart?: boolean;
 }) {
   const [sort, setSort] = useState<SortOrder>(() => remembered(SORT_KEY, SORT_ORDERS, "newest"));
@@ -77,8 +77,8 @@ export function LibraryView({
     }
     requestAnimationFrame(() => (next ? railCollapse : railExpand).current?.focus());
   };
-  // "Selected for you": opened from Saved solutions ("Present these solutions"), present mode shows only the viewer's
-  // saved solutions among the client-safe catalogue it already passes in, so it only ever narrows what may be shown.
+  // "Show my saved solutions": a present-mode switch that shows only the viewer's saved solutions among the client-safe
+  // catalogue present mode already passes in, so it only ever narrows what may be shown. Off by default.
   const [selectedOnly, setSelectedOnly] = useState(() => selectionStart ?? presentingSelection());
   const picks = useMemo(() => {
     if (!present || !selected) return [];
@@ -87,7 +87,7 @@ export function LibraryView({
   }, [present, selected, catalogue]);
   const showingPicks = present && selectedOnly && picks.length > 0;
   const pool = showingPicks ? picks : catalogue;
-  const showAll = () => { setSelectedOnly(false); setPresentingSelection(false); };
+  const toggleSaved = () => { setSelectedOnly(!showingPicks); setPresentingSelection(!showingPicks); };
   const refineCount = activeFacetCount(filters);
   // Present mode has no heading or toolbar around it, so the button says what it filters by.
   const filterLabel = present ? "Filter by capability, technology & more" : "Filters";
@@ -164,12 +164,11 @@ export function LibraryView({
           ))}
         </div>
 
-        {showingPicks && (
-          <div role="status" className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-[14px]">
-            <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: "var(--ink)" }}><Icon name="sparkle" size={14} />Selected for you</span>
-            <span style={{ color: "var(--ink-2)" }}>{picks.length} {picks.length === 1 ? "solution" : "solutions"}</span>
-            <button type="button" onClick={showAll} className="cursor-pointer font-semibold" style={{ color: "var(--accent)" }}>Show all solutions</button>
-          </div>
+        {present && picks.length > 0 && (
+          <button type="button" role="switch" aria-checked={showingPicks} onClick={toggleSaved} className="saved-switch mt-4">
+            <Icon name="heart" size={14} />Show my saved solutions<span className="font-mono text-[11.5px] opacity-80">{picks.length}</span>
+            <span aria-hidden="true" className="saved-switch-track"><span className="saved-switch-thumb" /></span>
+          </button>
         )}
 
         {/* Only a chosen area carries a note; "All" needs no explanation. */}

@@ -66,17 +66,11 @@ export default function App() {
     sessionStorage.setItem(PRESENT_KEY, present ? "1" : "0");
   }, [present]);
 
-  // The masthead switch always presents the whole client-safe catalogue; "Present these solutions" presents the saved ones.
+  // Present mode always starts on the whole client-safe catalogue; "Show my saved solutions" narrows it from there.
   const togglePresent = () => {
     setPresentingSelection(false);
     setPresent((p) => !p);
     setBannerHidden(false);
-  };
-  const presentSaved = () => {
-    setPresentingSelection(true);
-    setPresent(true);
-    setBannerHidden(false);
-    navigate("/");
   };
 
   /**
@@ -171,7 +165,7 @@ export default function App() {
         ) : route.path === "/help" && !present ? (
           <HelpView />
         ) : route.path === "/favorites" && !present ? (
-          <FavoritesView catalogue={catalogue} onPresent={presentSaved} />
+          <FavoritesView catalogue={catalogue} />
         ) : route.path === "/my-submissions" && !present ? (
           <MySubmissionsView entries={ownedEntries} onDelete={removeSubmission} />
         ) : (

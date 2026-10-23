@@ -851,24 +851,23 @@ test("library shows active filters above the cards with a total, result count an
   assert.match(html, /aria-label="Refine solutions".*aria-label="Hide filters"/s);
   assert.doesNotMatch(render(LibraryView, { catalogue: SOLUTIONS, filters: EMPTY_FILTERS, onFilters: noop, present: false }), /Active filters/);
 });
-test("present mode shows only saved client-safe solutions when opened from Saved solutions", async () => {
+test("present mode offers a Show my saved solutions switch over the client-safe catalogue", async () => {
   const { LibraryView } = await server.ssrLoadModule("/src/views/LibraryView.tsx");
   const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");
   const { EMPTY_FILTERS } = await server.ssrLoadModule("/src/lib/search.ts");
   const [first, second, third] = SOLUTIONS;
   // Only the catalogue present mode passes in counts: a saved ID outside it never shows or counts.
   const catalogue = [first, second];
-  const html = render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [first.id, third.id], selectionStart: true });
-  assert.match(html, /role="status"[^>]*>.*Selected for you.*1 solution<.*Show all solutions/s);
-  assert.match(html, new RegExp(first.name));
-  assert.doesNotMatch(html, new RegExp(second.name));
-  // The masthead switch presents everything, with no selection controls; outside present mode there is none either.
-  const all = render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [first.id], selectionStart: false });
-  assert.match(all, new RegExp(second.name));
-  assert.doesNotMatch(all, /Selected for you|Show all solutions/);
-  assert.doesNotMatch(render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: false, selected: [first.id], selectionStart: true }), /Selected for you/);
-  // Nothing saved is client-safe: the whole catalogue shows.
-  assert.doesNotMatch(render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [third.id], selectionStart: true }), /Selected for you/);
+  const off = render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [first.id, third.id], selectionStart: false });
+  assert.match(off, /role="switch" aria-checked="false"[^>]*>.*Show my saved solutions<span[^>]*>1<\/span>/s);
+  assert.match(off, new RegExp(second.name));
+  const on = render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [first.id, third.id], selectionStart: true });
+  assert.match(on, /role="switch" aria-checked="true"/);
+  assert.match(on, new RegExp(first.name));
+  assert.doesNotMatch(on, new RegExp(second.name));
+  // Outside present mode, or with nothing saved that is client-safe, there is no switch.
+  assert.doesNotMatch(render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: false, selected: [first.id] }), /Show my saved solutions/);
+  assert.doesNotMatch(render(LibraryView, { catalogue, filters: EMPTY_FILTERS, onFilters: noop, present: true, selected: [third.id] }), /Show my saved solutions/);
 });
 
 test("library Clear all resets search and area too, shown as removable chips", async () => {
