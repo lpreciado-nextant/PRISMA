@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Icon, type IconName } from "./Icon";
 import { OverflowMenu } from "./OverflowMenu";
-import { openFeedbackSolutions, useFeedbackSeen } from "../lib/feedbackSeen";
+import { openFeedbackBreakdown, useFeedbackSeen } from "../lib/feedbackSeen";
 import { initials, type AppUser } from "../lib/powerContext";
 import type { Theme } from "../lib/theme";
 import { navigate, useRoute } from "../lib/router";
@@ -151,7 +151,8 @@ export function Masthead({
   );
 }
 
-type NavItem = { path: string; label: string; icon: IconName; active: boolean; count?: number; pending?: number; open?: number };
+/** `urgent`: an open item is a returned draft, so the open count takes the amber of Changes requested. */
+type NavItem = { path: string; label: string; icon: IconName; active: boolean; count?: number; pending?: number; open?: number; urgent?: boolean; openHint?: string };
 
 /**
  * Section tabs under the header bar, on the page itself (they scroll with it): Library, Saved solutions, My
@@ -162,12 +163,18 @@ type NavItem = { path: string; label: string; icon: IconName; active: boolean; c
  */
 function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailable }: { path: string; favoriteCount?: number; reviewCount?: number; draftOnly: boolean; reviewAvailable: boolean }) {
   // My submissions counts its solutions with open feedback (returned drafts, new suggestions), like its attention list.
+  // Amber when one was returned with Changes requested (it blocks publication), blue when all are suggestions.
   useFeedbackSeen();
-  const openFeedbackItems = openFeedbackSolutions();
+  const feedback = openFeedbackBreakdown();
+  const openFeedbackItems = feedback.solutions;
+  const openHint = `${openFeedbackItems} ${openFeedbackItems === 1 ? "solution needs" : "solutions need"} your attention: ${[
+    ...(feedback.changes ? [`${feedback.changes} changes requested`] : []),
+    ...(feedback.suggestions ? [`${feedback.suggestions} with new suggestions`] : []),
+  ].join(", ")}`;
   const items: NavItem[] = [
     { path: "/", label: "Library", icon: "grid", active: path === "/" || path.startsWith("/s/") },
     ...(favoriteCount !== undefined ? [{ path: "/favorites", label: "Saved solutions", icon: "heart" as const, active: path === "/favorites", count: favoriteCount }] : []),
-    { path: "/my-submissions", label: draftOnly ? "My drafts" : "My submissions", icon: "folderOpen", active: path === "/my-submissions" || path.startsWith("/submission/") || path.startsWith("/submit"), open: openFeedbackItems || undefined },
+    { path: "/my-submissions", label: draftOnly ? "My drafts" : "My submissions", icon: "folderOpen", active: path === "/my-submissions" || path.startsWith("/submission/") || path.startsWith("/submit"), open: openFeedbackItems || undefined, urgent: feedback.changes > 0, openHint },
     ...(reviewAvailable ? [{ path: "/review", label: "Review queue", icon: "clipboardCheck" as const, active: path === "/review" || path.startsWith("/review/"), pending: reviewCount || undefined }] : []),
   ];
   const primary = items.slice(0, favoriteCount !== undefined ? 2 : 1);
@@ -194,9 +201,9 @@ function NavLink({ item, className }: { item: NavItem; className: string }) {
     >
       <Icon name={item.icon} size={18} filled={item.icon === "heart" && !!item.count} className={item.icon === "heart" && item.count ? "nav-heart-saved" : undefined} />
       {item.label}
-      {item.open !== undefined && <span className="section-nav-count section-nav-count--open" aria-label={`${item.open} ${item.open === 1 ? "solution needs" : "solutions need"} your attention`}>{item.open}</span>}
+      {item.open !== undefined && <span className={`section-nav-count ${item.urgent ? "section-nav-count--changes" : "section-nav-count--open"}`} aria-label={item.openHint}>{item.open}</span>}
       {/* What a lit number means, on hover or keyboard focus (screen readers already get it from the badge). */}
-      {item.open !== undefined && <span aria-hidden="true" className="hover-hint-text">{item.open === 1 ? "1 feedback item to address" : `${item.open} feedback items to address`}</span>}
+      {item.open !== undefined && <span aria-hidden="true" className="hover-hint-text">{item.openHint}</span>}
       {item.pending !== undefined && <span className="section-nav-count section-nav-count--pending" aria-label={`${item.pending} awaiting review`}>{item.pending}</span>}
       {item.pending !== undefined && <span aria-hidden="true" className="hover-hint-text">{item.pending === 1 ? "1 submission awaiting review" : `${item.pending} submissions awaiting review`}</span>}
     </a>

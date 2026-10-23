@@ -919,6 +919,11 @@
     color: var(--accent);
     background: color-mix(in srgb, var(--accent) 15%, transparent);
   }
+  /* My submissions with a returned draft among them: the amber of Changes requested, which blocks publication. */
+  .section-nav-count--changes {
+    color: color-mix(in srgb, var(--proto) 85%, var(--ink));
+    background: color-mix(in srgb, var(--proto) 20%, transparent);
+  }
   /* Review queue: submissions awaiting review, in the amber of pending work. */
   .section-nav-count--pending {
     color: color-mix(in srgb, var(--proto) 85%, var(--ink));

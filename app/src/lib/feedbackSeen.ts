@@ -104,6 +104,16 @@ export function openFeedbackSolutions(): number {
   return groups.filter(group => openFeedback(group).length > 0).length;
 }
 
+/** The same solutions split by what is open: returned drafts (Changes requested) and solutions with new suggestions. */
+export function openFeedbackBreakdown(): { solutions: number; changes: number; suggestions: number } {
+  const open = groups.map(group => openFeedback(group)).filter(group => group.length > 0);
+  return {
+    solutions: open.length,
+    changes: open.filter(group => group.some(key => key.startsWith("review:"))).length,
+    suggestions: open.filter(group => group.some(key => key.startsWith("suggestion:"))).length,
+  };
+}
+
 /** Re-renders the caller whenever an item is confirmed (in this tab or another) or the session items change. */
 export function useFeedbackSeen(): number {
   return useSyncExternalStore(listener => {
