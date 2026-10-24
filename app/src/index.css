@@ -1360,10 +1360,59 @@
         0 0 24px 0 color-mix(in srgb, var(--proto) 45%, transparent);
     }
   }
-  /* My submissions list view: a quiet glass row; a returned one keeps the amber edge, new suggestions the accent. */
+  /* My submissions list view: a quiet glass row; a returned one keeps the amber edge, new suggestions the accent.
+     Fixed columns (image, name and summary, state, signal, actions) from small screens up; stacked below. */
   .submission-row {
+    grid-template-columns: 104px minmax(0, 1fr);
     border: 1px solid var(--glass-edge);
     background: var(--glass-bg);
+  }
+  .submission-row-state,
+  .submission-row-signal,
+  .submission-row-actions {
+    grid-column: 2;
+  }
+  @media (min-width: 768px) {
+    .submission-row {
+      grid-template-columns: 104px minmax(0, 1fr) 10.5rem 11rem 8.5rem;
+    }
+    .submission-row-state,
+    .submission-row-signal,
+    .submission-row-actions {
+      grid-column: auto;
+    }
+  }
+  /* Card tags: one non-wrapping line; each truncates, "+N" for the rest. */
+  .card-tag {
+    display: inline-block;
+    min-width: 0;
+    max-width: 100%;
+    flex-shrink: 1;
+    overflow: hidden;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--glass-edge);
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-2);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  /* Two tags share the line evenly; a single one may take it all, leaving room for "+N". */
+  .card-tag:not(.card-tag--more) {
+    max-width: calc(50% - 1.75rem);
+  }
+  .card-tags--single > .card-tag:not(.card-tag--more) {
+    max-width: calc(100% - 3.5rem);
+  }
+  .card-tag--more {
+    flex-shrink: 0;
+  }
+  /* Title and summary keep two lines of room each, together, so short ones never pull the rest of the card up. */
+  .card-copy {
+    min-height: calc(2 * 1.375 * 18px + 0.5rem + 2 * 1.375 * 14px);
   }
   .submission-row--changes {
     border-color: color-mix(in srgb, var(--proto) 55%, transparent);

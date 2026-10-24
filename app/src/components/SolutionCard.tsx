@@ -1,6 +1,6 @@
 import type { Solution } from "../types";
 import type { KeyboardEvent, ReactNode } from "react";
-import { AreaTag, Chip, StatusPill, SubmissionStatus } from "./Badges";
+import { AreaTag, StatusPill, SubmissionStatus } from "./Badges";
 import { Icon } from "./Icon";
 import { Poster, PosterTint } from "./Poster";
 import { navigate } from "../lib/router";
@@ -18,6 +18,14 @@ import { FavoriteButton } from "./FavoriteButton";
  */
 /** `actionNeeded`: the librarian returned it (Changes requested); it outranks `unread` with an amber edge (the band already says so). */
 export type CardManagement = { actions: ReactNode; corner?: ReactNode; onFeedback?: () => void; unread?: number; actionNeeded?: boolean };
+
+/** One line of tags that never wraps: each truncates with an ellipsis, then "+N" for the rest. */
+function CardTags({ tags, more }: { tags: string[]; more: number }) {
+  return <div className={`mt-auto flex h-[30px] min-w-0 flex-nowrap items-center gap-1.5 overflow-hidden pt-1.5 ${tags.length === 1 ? "card-tags--single" : ""}`} style={{ boxSizing: "content-box" }}>
+    {tags.map(tag => <span key={tag} title={tag} className="card-tag">{tag}</span>)}
+    {more > 0 && <span className="card-tag card-tag--more" title={`${more} more`}>+{more}</span>}
+  </div>;
+}
 
 export function SolutionCard({
   solution,
@@ -94,56 +102,53 @@ export function SolutionCard({
       </div>
 
       <div className="flex flex-1 flex-col gap-2 px-5 pt-4 pb-4">
-        <div className="flex flex-wrap gap-1.5">{solutionAreas(solution).map((area) => <AreaTag key={area} area={area} size="xs" />)}</div>
+        {/* Fixed slots: one line of areas, two of title, two of summary, one of tags, so every card lines up. */}
+        {/* Several areas use their initials (AI, DS, IBO) so they always fit one line; the full name is in the tooltip. */}
+        <div className="flex h-[22px] flex-nowrap gap-1.5 overflow-hidden">{solutionAreas(solution).map((area, _, all) => <AreaTag key={area} area={area} size="xs" short={all.length > 1} />)}</div>
 
-        <h3 className="text-[18px] leading-snug font-semibold" style={{ color: "var(--ink)" }}>
-          {managed ? (
-            <button type="button" className="card-open cursor-pointer text-left" onClick={open} aria-label={`${solution.name}${publicationStatus ? ` — ${publicationStatus}` : ""}`}>
-              {solution.name}
-            </button>
-          ) : solution.name}
-        </h3>
-
-        <p className="line-clamp-2 text-[14px] leading-snug" style={{ color: "var(--ink-2)" }}>
-          {solution.summary}
-        </p>
-
-        <div className="mt-auto flex flex-wrap gap-1.5 pt-1.5">
-          {solution.capabilities.slice(0, 2).map((c) => (
-            <Chip key={c}>{c}</Chip>
-          ))}
-          {solution.technologies.slice(0, 1).map((t) => (
-            <Chip key={t}>{t}</Chip>
-          ))}
+        {/* Title and summary share a fixed block (two lines each), so the summary follows a short title closely. */}
+        <div className="card-copy flex flex-col gap-2">
+          <h3 className="card-title line-clamp-2 text-[18px] leading-snug font-semibold" style={{ color: "var(--ink)" }}>
+            {managed ? (
+              <button type="button" className="card-open line-clamp-2 cursor-pointer text-left" onClick={open} aria-label={`${solution.name}${publicationStatus ? ` — ${publicationStatus}` : ""}`}>
+                {solution.name}
+              </button>
+            ) : solution.name}
+          </h3>
+          <p className="card-summary line-clamp-2 text-[14px] leading-snug" style={{ color: "var(--ink-2)" }}>
+            {solution.summary}
+          </p>
         </div>
+
+        <CardTags tags={[...solution.capabilities.slice(0, 1), ...solution.technologies.slice(0, 1)]} more={Math.max(0, solution.capabilities.length - 1) + Math.max(0, solution.technologies.length - 1)} />
       </div>
 
       {publicationStatus && (
         // Only the state that asks the contributor to act takes a tint, so it stands out when scanning the grid.
         <div
-          className="flex min-h-[52px] flex-col justify-center gap-1 px-5 py-2.5"
+          className="flex h-[52px] items-center px-5"
           style={publicationStatus === "Changes requested" ? {
             borderTop: "1px solid color-mix(in srgb, var(--proto) 30%, transparent)",
             boxShadow: "inset 3px 0 0 var(--proto)",
             background: "color-mix(in srgb, var(--proto) 9%, transparent)",
           } : { borderTop: "1px solid var(--glass-edge)" }}
         >
-          <span className="flex flex-wrap items-center justify-between gap-2">
+          {/* One line: the state on the left, its one signal on the right (View feedback or new suggestions). */}
+          <span className="flex w-full min-w-0 items-center justify-between gap-2">
             <SubmissionStatus state={publicationStatus} />
-            {managed && !manage?.actionNeeded && !!manage?.unread && <span className="new-feedback"><Icon name="message" size={12} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
+            {managed && manage?.onFeedback && (publicationStatus === "Changes requested" || publicationStatus === "Retired") ? (
+              <button
+                type="button"
+                onClick={manage.onFeedback}
+                aria-label={`View feedback for ${solution.name}`}
+                className="card-control inline-flex shrink-0 cursor-pointer items-center gap-1 text-[13px] font-semibold hover:underline"
+                style={{ color: "var(--accent)" }}
+              >
+                View feedback
+                <Icon name="arrowRight" size={13} />
+              </button>
+            ) : managed && !manage?.actionNeeded && !!manage?.unread && <span className="new-feedback shrink-0"><Icon name="message" size={12} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
           </span>
-          {managed && manage?.onFeedback && (publicationStatus === "Changes requested" || publicationStatus === "Retired") && (
-            <button
-              type="button"
-              onClick={manage.onFeedback}
-              aria-label={`View feedback for ${solution.name}`}
-              className="card-control inline-flex w-fit cursor-pointer items-center gap-1 text-[13px] font-semibold hover:underline"
-              style={{ color: "var(--accent)" }}
-            >
-              View feedback
-              <Icon name="arrowRight" size={13} />
-            </button>
-          )}
         </div>
       )}
 

@@ -194,7 +194,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       </div> : layout === "list" ? <div className="mt-6 flex flex-col gap-2.5">
         {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0"><SubmissionRow solution={solution} index={index} manage={manage(solution)} onOpen={() => open(solution)} /></article>)}
       </div> : <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0">{card(solution, index)}</article>)}
+        {visible.map(({ solution }, index) => <article key={solution.id} className="grid min-w-0">{card(solution, index)}</article>)}
       </div>}
     </>}
     </section>
