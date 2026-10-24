@@ -124,14 +124,19 @@ export function SolutionCard({
       </div>
 
       {publicationStatus && (
-        // Only the state that asks the contributor to act takes a tint, so it stands out when scanning the grid.
+        // Only what asks the owner to act takes a tint, so it stands out when scanning the grid: amber for Changes
+        // requested, blue for pending suggestions.
         <div
           className="flex h-[52px] items-center px-5"
-          style={publicationStatus === "Changes requested" ? {
-            borderTop: "1px solid color-mix(in srgb, var(--proto) 30%, transparent)",
-            boxShadow: "inset 3px 0 0 var(--proto)",
-            background: "color-mix(in srgb, var(--proto) 9%, transparent)",
-          } : { borderTop: "1px solid var(--glass-edge)" }}
+          style={(() => {
+            const tone = publicationStatus === "Changes requested" ? "var(--proto)" : managed && !!manage?.unread ? "var(--accent)" : undefined;
+            return tone ? {
+              borderTop: `1px solid color-mix(in srgb, ${tone} 30%, transparent)`,
+              boxShadow: `inset 3px 0 0 ${tone}`,
+              // The accent is paler than the amber on the dark theme, so it takes a little more tint.
+              background: `color-mix(in srgb, ${tone} ${tone === "var(--accent)" ? 15 : 10}%, transparent)`,
+            } : { borderTop: "1px solid var(--glass-edge)" };
+          })()}
         >
           {/* One line: the state on the left, its one signal on the right (View feedback or new suggestions). */}
           <span className="flex w-full min-w-0 items-center justify-between gap-2">
