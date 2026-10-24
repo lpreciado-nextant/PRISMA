@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
 import type { Solution } from "../types";
 import { SolutionCard, type CardManagement } from "../components/SolutionCard";
 import { SubmissionRow } from "../components/SubmissionRow";
@@ -30,6 +30,11 @@ const plural = (count: number, one: string) => `${count} ${one}${count === 1 ? "
 
 /** Rows the attention list shows before "Show all". */
 const ATTENTION_ROWS = 4;
+/** Whether Needs your attention is folded to its summary line, remembered for the session. */
+const ATTENTION_KEY = "prisma.submissions.attention";
+function rememberedAttentionHidden(): boolean {
+  try { return sessionStorage.getItem(ATTENTION_KEY) === "hidden"; } catch { return false; }
+}
 /** Grid or list for All my solutions, remembered for the session like the library's. */
 const LAYOUT_KEY = "prisma.submissions.layout";
 function rememberedLayout(): "grid" | "list" {
@@ -45,6 +50,14 @@ function rememberedLayout(): "grid" | "list" {
 export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, suggestions }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>> }) {
   const [filter, setFilter] = useState<Filter>("All");
   const [attentionAll, setAttentionAll] = useState(false);
+  const [attentionHidden, setAttentionHidden] = useState(rememberedAttentionHidden);
+  // The breakdown also filters the attention rows (only them, never All my solutions): changes or suggestions.
+  const [attentionKind, setAttentionKind] = useState<"changes" | "suggestions" | null>(null);
+  const toggleAttention = () => {
+    const next = !attentionHidden;
+    setAttentionHidden(next);
+    try { sessionStorage.setItem(ATTENTION_KEY, next ? "hidden" : "shown"); } catch { void 0; }
+  };
   const [layout, setLayout] = useState<"grid" | "list">(rememberedLayout);
   const [sort, setSort] = useState<Sort>("updated");
   const chooseLayout = (next: "grid" | "list") => { setLayout(next); try { sessionStorage.setItem(LAYOUT_KEY, next); } catch { void 0; } };
@@ -121,10 +134,20 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     .sort((left, right) => right.fresh - left.fresh);
   const attention = [...returned.map(solution => ({ solution, fresh: 0 })), ...suggested];
   const newSuggestions = suggested.reduce((total, entry) => total + entry.fresh, 0);
-  const shownAttention = attentionAll ? attention : attention.slice(0, ATTENTION_ROWS);
+  // A kind that no longer has rows (all addressed or resubmitted) stops filtering.
+  const kind = attentionKind === "changes" && !returned.length || attentionKind === "suggestions" && !suggested.length ? null : attentionKind;
+  const ofKind = kind === "changes" ? attention.filter(entry => !entry.fresh) : kind === "suggestions" ? attention.filter(entry => entry.fresh) : attention;
+  const shownAttention = attentionAll ? ofKind : ofKind.slice(0, ATTENTION_ROWS);
+  const chooseKind = (next: "changes" | "suggestions") => {
+    setAttentionKind(kind === next ? null : next);
+    if (attentionHidden) toggleAttention();
+  };
+  const breakdownButton = (value: "changes" | "suggestions", label: string, color: string) =>
+    <button key={value} type="button" aria-pressed={kind === value} onClick={() => chooseKind(value)} title={kind === value ? "Show everything" : `Show only ${value === "changes" ? "changes requested" : "pending suggestions"}`}
+      className="attention-kind" style={{ "--tone": color } as CSSProperties}>{label}</button>;
   const breakdown = [
-    ...(returned.length ? [<span key="returned" className="font-semibold" style={{ color: "var(--proto)" }}>{returned.length} changes requested</span>] : []),
-    ...(newSuggestions ? [<span key="suggestions" className="font-semibold" style={{ color: "var(--accent)" }}>{plural(newSuggestions, "pending suggestion")}</span>] : []),
+    ...(returned.length ? [breakdownButton("changes", `${returned.length} changes requested`, "var(--proto)")] : []),
+    ...(newSuggestions ? [breakdownButton("suggestions", plural(newSuggestions, "pending suggestion"), "var(--accent)")] : []),
   ];
   return <div className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -139,12 +162,21 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       </div>
     </div>
     {attention.length > 0 && <section aria-labelledby={`${attentionId}-title`} className="attention-panel mt-6">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pt-3.5 pb-2.5 sm:px-5">
+      {/* The summary line stays when the list is hidden: the count and "1 changes requested · 3 pending suggestions". */}
+      <div className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 sm:px-5 ${attentionHidden ? "py-3" : "pt-3.5 pb-2.5"}`}>
         <h2 id={`${attentionId}-title`} className="flex items-center gap-2 text-[16px] font-semibold">Needs your attention
           <span className={`section-nav-count ${returned.length ? "section-nav-count--changes" : "section-nav-count--open"}`} aria-label={plural(attention.length, "solution")}>{attention.length}</span></h2>
-        <p className="text-[13px]">{breakdown.flatMap((part, index) => index ? [<span key={`dot-${index}`} aria-hidden="true" style={{ color: "var(--ink-3)" }}> · </span>, part] : [part])}</p>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p role="group" aria-label="Show in Needs your attention" className="flex flex-wrap items-center text-[13px]">{breakdown.flatMap((part, index) => index ? [<span key={`dot-${index}`} aria-hidden="true" style={{ color: "var(--ink-3)" }}> · </span>, part] : [part])}</p>
+          <button type="button" onClick={toggleAttention} aria-expanded={!attentionHidden} aria-controls={`${attentionId}-list`}
+            className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-[13px] font-semibold hover:bg-(--glass-edge)" style={{ color: "var(--ink-2)" }}>
+            {attentionHidden ? "Show" : "Hide"}
+            <span aria-hidden="true" className="inline-flex transition-transform duration-200" style={{ transform: attentionHidden ? "none" : "rotate(180deg)" }}><Icon name="chevronDown" size={14} /></span>
+          </button>
+        </div>
       </div>
-      <ul className="attention-list">
+      {!attentionHidden && <>
+      <ul id={`${attentionId}-list`} className="attention-list">
         {shownAttention.map(({ solution, fresh }) => {
           const name = solution.name || "Untitled solution";
           const changes = !fresh;
@@ -160,7 +192,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
           </li>;
         })}
       </ul>
-      {attention.length > ATTENTION_ROWS && <button type="button" className="mx-4 mb-3 cursor-pointer text-[13px] font-semibold sm:mx-5" style={{ color: "var(--accent)" }} onClick={() => setAttentionAll(!attentionAll)}>{attentionAll ? "Show fewer" : `Show all ${attention.length}`}</button>}
+      {ofKind.length > ATTENTION_ROWS && <button type="button" className="mx-4 mb-3 cursor-pointer text-[13px] font-semibold sm:mx-5" style={{ color: "var(--accent)" }} onClick={() => setAttentionAll(!attentionAll)}>{attentionAll ? "Show fewer" : `Show all ${ofKind.length}`}</button>}
+      </>}
     </section>}
     <section aria-labelledby={`${attentionId}-all`} className="mt-8">
       <div className="flex flex-wrap items-center justify-between gap-3">

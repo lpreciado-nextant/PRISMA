@@ -1289,6 +1289,26 @@
     background: var(--glass-bg);
     overflow: hidden;
   }
+  /* The breakdown's two counts double as filters of the attention rows: quiet text, a tinted pill when chosen. */
+  .attention-kind {
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--tone);
+    cursor: pointer;
+    transition: background 0.2s var(--ease-sheet);
+  }
+  .attention-kind:hover {
+    background: color-mix(in srgb, var(--tone) 12%, transparent);
+  }
+  .attention-kind[aria-pressed="true"] {
+    background: color-mix(in srgb, var(--tone) 18%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 45%, transparent);
+  }
+  .attention-kind:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
   .attention-list {
     margin: 0;
     padding: 0 0.5rem 0.5rem;

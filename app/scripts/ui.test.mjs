@@ -990,6 +990,10 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   assert.match(html, /class="attention-panel[^"]*">.*Needs your attention<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions">2<\/span>.*1 changes requested.*2 pending suggestions/s);
   assert.match(html, /attention-row attention-row--changes.*Returned one.*Changes requested by the librarian.*Review changes for Returned one">Review changes<.*attention-row ".*Live one.*2 pending suggestions from colleagues.*View suggestions for Live one">View suggestions<.*All my solutions/s);
   assert.equal((html.match(/<li /g) ?? []).length, 2);
+  // It can fold to its summary line: Hide, expanded by default.
+  assert.match(html, /aria-expanded="true"[^>]*>Hide/);
+  // The breakdown counts are filters of the attention rows only, both off by default.
+  assert.match(html, /aria-label="Show in Needs your attention".*aria-pressed="false"[^>]*>1 changes requested<.*aria-pressed="false"[^>]*>2 pending suggestions</s);
   // "Suggestions" keeps every solution that ever had one, with a blue dot while any is new; no suggestions, no chip.
   assert.match(html, /aria-pressed="false"[^>]*><span aria-hidden="true" class="inline-flex" style="color:var\(--accent\)"><svg.*?<\/svg><\/span>Has suggestions<span[^>]*>1<\/span>/);
   assert.doesNotMatch(render(MySubmissionsView, { entries, connected: true }), /Has suggestions/);
