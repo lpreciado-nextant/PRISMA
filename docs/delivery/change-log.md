@@ -11,7 +11,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Source | Progress |
 |---|---|---|---|
-| [2026-10-23](#2026-10-23--working-session-main-capability-present-mode-selection-and-form-polish) | Main capability by area, present-mode filters and selection, form polish | 🛠️ Own changes | 69% — 7 Pending review, 1 Done in Dataverse / 8 |
+| [2026-10-23](#2026-10-23--working-session-main-capability-present-mode-selection-and-form-polish) | Main capability by area, present-mode filters and selection, form polish | 🛠️ Own changes | 72% — 11 Pending review, 1 Done in Dataverse / 12 |
 | [2026-10-22](#2026-10-22--working-session-redesigned-presentation-download) | Redesigned presentation download (Dark and Light) | 🛠️ Own changes | 50% — 1 In code / 1 |
 | [2026-10-21](#2026-10-21--working-session-contact-from-the-help-page) | Contact from the help page | 🛠️ Own changes | 50% — 1 In code / 1 |
 | [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort; visual tweaks | 🛠️ Own changes | 85% — 2 Live, 3 Pending review / 5 |
@@ -76,7 +76,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 <div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
 
-**Progress:** 69% — 7 Pending review, 1 Done in Dataverse / 8
+**Progress:** 72% — 11 Pending review, 1 Done in Dataverse / 12
 
 ### Feedback
 
@@ -97,6 +97,10 @@ When a decision above gets resolved, delete its bullet here and update the match
 | Present mode: **Selected for you**, the viewer's saved solutions among the client-safe catalogue, chosen by default; Saved solutions marks those hidden in present mode | 🟡 Pending review | Connected app now loads favorite IDs in present mode. Published 2026-10-23 |
 | Status meanings under the Status field; complexity meaning as the same quiet hint line | 🟡 Pending review | Published 2026-10-23 |
 | Contributors as removable bubbles (the first one too), half-width person picker, complexity and hour estimate on one aligned line, target client roles A–Z with Other last | 🟡 Pending review | Both apps. Published 2026-10-23 |
+| My submissions in two parts: **Needs your attention** (count badge, amber when a draft was returned; Review changes first, then View suggestions) above **All my solutions** (one row of filters incl. Has suggestions with a comment icon, Sort by Recently updated / Recently added / Name, grid or list); the Suggestions tab and the Action needed pill are gone; the masthead counts solutions, amber when changes are requested, with the split on hover | 🟡 Pending review | [Contribution and review](../workflows/contribution-and-review.md). Published 2026-10-23 from `a8ce7c4`. "Recently updated" uses `modifiedOn` once `nx_GetSubmissions` returns it (asked of Luis); the date added until then |
+| Present mode: **Show my saved solutions** switch on the area filter's line replaces Saved solutions' present button | 🟡 Pending review | Published 2026-10-23 |
+| Review queue: area is the main capability's area, capability filter narrows to it and sets it, one area and capability tag per row, Clear all | 🟡 Pending review | Published 2026-10-23 |
+| Uniform cards (same height, fixed slots for areas, title, summary, one line of tags, status) and a fixed-column list view | 🟡 Pending review | Shared card, so the library lines up too. Published 2026-10-23 |
 
 ## 2026-10-22 — Working session: redesigned presentation download
 
