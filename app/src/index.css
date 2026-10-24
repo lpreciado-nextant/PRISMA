@@ -1016,24 +1016,35 @@
      for Changes requested; the status band carries the words. Reduced motion keeps the glow, still. */
   .card-unread > .solution-card {
     --glow: var(--accent);
+    /* How strongly the glow shows: the light ground needs more than the dark one. */
+    --glow-near: 55%;
+    --glow-far: 40%;
     animation: attention-glow 4.5s ease-in-out infinite;
+  }
+  [data-theme="light"] .card-unread > .solution-card {
+    --glow-near: 70%;
+    --glow-far: 55%;
   }
   @keyframes attention-glow {
     0%, 100% {
       box-shadow:
-        0 0 14px -4px color-mix(in srgb, var(--glow) 35%, transparent),
-        0 12px 28px -18px color-mix(in srgb, var(--glow) 50%, transparent);
+        0 0 0 1px color-mix(in srgb, var(--glow) 18%, transparent),
+        0 0 18px 0 color-mix(in srgb, var(--glow) var(--glow-far), transparent),
+        0 16px 36px -18px color-mix(in srgb, var(--glow) var(--glow-near), transparent);
     }
     50% {
       box-shadow:
-        0 0 26px 0 color-mix(in srgb, var(--glow) 45%, transparent),
-        0 14px 32px -16px color-mix(in srgb, var(--glow) 55%, transparent);
+        0 0 0 1px color-mix(in srgb, var(--glow) 28%, transparent),
+        0 0 34px 4px color-mix(in srgb, var(--glow) var(--glow-near), transparent),
+        0 18px 40px -16px color-mix(in srgb, var(--glow) var(--glow-near), transparent);
     }
   }
   @media (prefers-reduced-motion: reduce) {
     .card-unread > .solution-card {
       animation: none;
-      box-shadow: 0 0 22px -2px color-mix(in srgb, var(--glow) 42%, transparent);
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--glow) 22%, transparent),
+        0 0 28px 2px color-mix(in srgb, var(--glow) var(--glow-far), transparent);
     }
   }
   /* ---- Present mode: "Show my saved solutions" switch ------------------ */
@@ -1353,10 +1364,10 @@
   }
   /* List rows that need attention: the same glow as the cards, still, with no coloured border. */
   .submission-row--changes {
-    box-shadow: 0 0 20px -4px color-mix(in srgb, var(--proto) 45%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--proto) 22%, transparent), 0 0 22px 0 color-mix(in srgb, var(--proto) 50%, transparent);
   }
   .submission-row--new {
-    box-shadow: 0 0 20px -4px color-mix(in srgb, var(--accent) 40%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent), 0 0 22px 0 color-mix(in srgb, var(--accent) 48%, transparent);
   }
   /* "N new" beside a My submissions tab: open feedback items, in the accent like the masthead dot. */
   .tab-new {
