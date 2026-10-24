@@ -590,10 +590,11 @@ test("my submissions list rows keep the card's management on one line", async ()
   const { SubmissionRow } = await server.ssrLoadModule("/src/components/SubmissionRow.tsx");
   const solution = { id: "r", name: "Returned one", summary: "Summary", specializationArea: "ai", status: "Working prototype", publicationStatus: "Draft", reviewOutcome: "Changes requested", reviewComments: "Blur it.", contributors: [], capabilities: [], technologies: [], assets: [] };
   const html = render(SubmissionRow, { solution, index: 0, onOpen: noop, manage: { actions: "MENU", corner: "EDIT", onFeedback: noop, unread: 1, actionNeeded: true } });
-  assert.match(html, /submission-row[^"]*submission-row--changes.*class="card-open[^"]*"[^>]*aria-label="Returned one — Changes requested">Returned one<.*Changes requested.*Action needed.*View feedback for Returned one.*EDIT.*MENU/s);
+  assert.match(html, /submission-row[^"]*submission-row--changes.*class="card-open[^"]*"[^>]*aria-label="Returned one — Changes requested">Returned one<.*Changes requested.*View feedback for Returned one.*EDIT.*MENU/s);
   const suggested = render(SubmissionRow, { solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved", reviewComments: undefined }, index: 0, onOpen: noop, manage: { actions: null, unread: 2 } });
   assert.match(suggested, /submission-row--new.*2 new suggestions/s);
-  assert.doesNotMatch(suggested, /Action needed|View feedback/);
+  assert.doesNotMatch(suggested, /View feedback/);
+  assert.doesNotMatch(html, /Action needed/);
 });
 
 test("review queue rows show area, capability, submitter and a friendly date, newest first", () => {
@@ -989,11 +990,12 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   const addressed = render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions: { live: { count: 2, authors: [], ids: [] } } });
   assert.match(addressed, /aria-pressed="false"[^>]*>Suggestions<span[^>]*>1<\/span>/);
   assert.equal((html.match(/card-unread/g) ?? []).length, 2);
-  // The cards say the same: an amber "Action needed" for the returned draft, "N new suggestions" for the other.
+  // The cards say the same: the returned draft's band reads Changes requested (no extra pill), the other "N new suggestions".
   assert.equal((html.match(/card-action/g) ?? []).length, 1);
-  assert.match(html, /class="action-needed">.*Action needed.*new-feedback.*2 new suggestions/s);
+  assert.match(html, /Changes requested.*new-feedback.*2 new suggestions/s);
+  assert.doesNotMatch(html, /Action needed/);
   // Nothing open: no attention list at all.
-  assert.doesNotMatch(render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions: { live: { count: 0, authors: [], ids: [] } } }), /attention-panel|Action needed/);
+  assert.doesNotMatch(render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions: { live: { count: 0, authors: [], ids: [] } } }), /attention-panel/);
   // The masthead counts open items on My submissions, like Saved solutions and Review queue.
   const seen = await server.ssrLoadModule("/src/lib/feedbackSeen.ts");
   const user = { fullName: "Ana Gómez", userPrincipalName: "ana@nextant.com", live: true };

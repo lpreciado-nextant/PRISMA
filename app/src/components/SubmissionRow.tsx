@@ -1,12 +1,11 @@
 import type { Solution } from "../types";
 import type { CardManagement } from "./SolutionCard";
 import { SubmissionStatus } from "./Badges";
-import { Icon } from "./Icon";
 import { Poster, PosterTint } from "./Poster";
 import { submissionState } from "../lib/submissionState";
 
 /**
- * List-view row for My submissions: the same management as the card (status, Action needed or new suggestions,
+ * List-view row for My submissions: the same management as the card (status, new suggestions,
  * View feedback, Edit, •••) on one compact line. The name is the open button, stretched over the row, so the controls
  * sit beside it rather than inside it. A returned row takes the amber edge, one with new suggestions the accent.
  */
@@ -24,8 +23,7 @@ export function SubmissionRow({ solution, index, manage, onOpen }: { solution: S
     </div>
     <div className="card-control flex shrink-0 flex-wrap items-center justify-end gap-2">
       <SubmissionStatus state={state} />
-      {manage.actionNeeded ? <span className="action-needed"><Icon name="alert" size={12} />Action needed</span>
-        : !!manage.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
+      {!manage.actionNeeded && !!manage.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
       {manage.onFeedback && <button type="button" onClick={manage.onFeedback} aria-label={`View feedback for ${name}`} className="cursor-pointer text-[13px] font-semibold hover:underline" style={{ color: "var(--accent)" }}>View feedback</button>}
       {manage.corner}
       {manage.actions}

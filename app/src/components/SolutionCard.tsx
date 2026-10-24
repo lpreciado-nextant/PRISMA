@@ -16,7 +16,7 @@ import { FavoriteButton } from "./FavoriteButton";
  * (e.g. Edit on a draft); `onFeedback` adds "View feedback" to a returned card; `unread` (open feedback items) lights
  * the card's edge and shows "N new" until the owner addresses them.
  */
-/** `actionNeeded`: the librarian returned it (Changes requested); it outranks `unread` with an amber edge and "Action needed". */
+/** `actionNeeded`: the librarian returned it (Changes requested); it outranks `unread` with an amber edge (the band already says so). */
 export type CardManagement = { actions: ReactNode; corner?: ReactNode; onFeedback?: () => void; unread?: number; actionNeeded?: boolean };
 
 export function SolutionCard({
@@ -130,8 +130,7 @@ export function SolutionCard({
         >
           <span className="flex flex-wrap items-center justify-between gap-2">
             <SubmissionStatus state={publicationStatus} />
-            {managed && manage?.actionNeeded ? <span className="action-needed"><Icon name="alert" size={12} />Action needed</span>
-              : managed && !!manage?.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
+            {managed && !manage?.actionNeeded && !!manage?.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
           </span>
           {managed && manage?.onFeedback && (publicationStatus === "Changes requested" || publicationStatus === "Retired") && (
             <button

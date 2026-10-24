@@ -1250,7 +1250,7 @@
   }
   /* ---- Changes requested: the librarian is waiting on the owner ------ */
   /* Outranks new suggestions: the same lit edge and halo, in the amber of "Changes requested" (--proto), sweeping and
-     breathing a little faster; plus an "Action needed" pill and the banner above My submissions. */
+     breathing a little faster; the status band already reads "Changes requested" with its warning icon. */
   .card-action::before {
     background: conic-gradient(
       from var(--unread-angle),
@@ -1280,17 +1280,6 @@
         0 0 32px 2px color-mix(in srgb, var(--proto) 55%, transparent),
         0 14px 36px -14px color-mix(in srgb, var(--proto) 65%, transparent);
     }
-  }
-  .action-needed {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    padding: 0.12rem 0.55rem;
-    border-radius: 999px;
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--proto);
-    background: color-mix(in srgb, var(--proto) 15%, transparent);
   }
   /* My submissions, "Needs your attention": one compact row per solution, returned drafts first in amber (they block
      publication), then new suggestions in the accent. A glass sheet like the cards, so it reads as part of the page. */
