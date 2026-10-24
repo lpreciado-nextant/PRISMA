@@ -136,7 +136,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       .catch(() => { if (!controller.signal.aborted) setSuggestionList({ canRead: false, suggestions: [] }); });
     return () => controller.abort();
   }, [id, attempt]);
-  // New feedback stays flagged until the owner confirms reading it here (or from My submissions).
+  // New suggestions stay flagged until the owner addresses them here (or from My submissions).
   useFeedbackSeen();
   const lifetime = useRef<AbortController | null>(null);
   const running = useRef(false);
@@ -207,7 +207,8 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   // Shown when there is something to read, or on a published record (where "no suggestions yet" is meaningful).
   // Open feedback items (librarian comment, suggestions), each confirmed on its own; the heading shows a bubble while any is open.
   const openItems = review ? [] : openFeedback(feedbackKeys(solution, suggestionList?.suggestions.map(item => item.id) ?? []));
-  const newFeedback = openItems.length > 0;
+  // The badge beside the state names suggestions only: a returned draft already reads "Changes requested".
+  const newSuggestions = openItems.filter(key => key.startsWith("suggestion:")).length;
   // Same withdraw action either way; a published record is described as being unpublished.
   const confirmCopy = confirmation && (confirmation === "withdraw" && status === 125060000 ? UNPUBLISH : CONFIRMATIONS[confirmation]);
   const suggestionsPanel = suggestionList?.canRead && (suggestionList.suggestions.length > 0 || status === 125060000) ? <SuggestionsPanel list={suggestionList} /> : undefined;
@@ -232,7 +233,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
         {technologyUse && <NewTechnologies items={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologyLabels)} />}
       </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} edited={state.record.librarianEditedOn}
-        badge={newFeedback && <span className="new-feedback">{openItems.length === 1 ? "New feedback" : `${openItems.length} new feedback`}</span>} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
+        badge={newSuggestions > 0 && <span className="new-feedback"><Icon name="message" size={12} />{newSuggestions === 1 ? "1 new suggestion" : `${newSuggestions} new suggestions`}</span>} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
           {status === 125060003 ? <><button type="button" className={outlinedStatusButton} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="edit" size={16} />Edit draft</button>
             <button type="button" className={statusButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }} disabled={missing} onClick={() => void transition("submit")}><Icon name="check" size={16} />Submit for review</button></>
           : <button type="button" className={subtleStatusButton} onClick={() => setConfirmation("withdraw")}><Icon name="edit" size={15} />{status === 125060000 ? "Unpublish & edit" : "Withdraw & edit"}</button>}

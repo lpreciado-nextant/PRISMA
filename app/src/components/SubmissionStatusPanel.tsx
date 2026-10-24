@@ -21,7 +21,7 @@ export function SubmissionStatusPanel({ state, feedback, edited, feedbackAction,
   edited?: string;
   /** Beside the librarian's words, e.g. the owner's "Mark as addressed" check. */
   feedbackAction?: ReactNode;
-  /** Beside the state heading, e.g. a "New feedback" bubble. */
+  /** Beside the state heading, e.g. a "2 new suggestions" bubble. */
   badge?: ReactNode;
   /** Buttons for this state (Edit, Submit, Withdraw), shown on the right. */
   actions?: ReactNode;
