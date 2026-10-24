@@ -119,6 +119,8 @@ export interface Solution {
   dateAdded: string;
   /** System `createdon` (ISO). Drives "Newest/Oldest first"; the PoC mock falls back to `dateAdded`. */
   createdOn?: string;
+  /** System `modifiedon` (ISO): the last change. Drives My submissions' "Recently updated"; absent until the API sends it. */
+  updatedOn?: string;
   libraryNotes?: string;
   searchKeywords: string;
   /** Native N:N tags — `nx_capability` / `nx_technology` / `nx_industry`. A submission carries one capability: the main one (`nx_solution.nx_capability`). */

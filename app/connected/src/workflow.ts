@@ -9,7 +9,7 @@ import { readAll, type ReadRows } from "./catalogue.ts";
 
 export const PUBLICATIONS: Record<number, string> = { 125060000: "Published", 125060001: "Retired", 125060002: "Pending review", 125060003: "Draft" };
 /** `librarianEdit*` (ADR-0013): the last librarian edit. The editor's name reaches librarians only; `pending` until the librarian explains it. */
-export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string; librarianEditedOn?: string; librarianEditedBy?: string; librarianEditPending?: boolean };
+export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; modifiedOn?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string; librarianEditedOn?: string; librarianEditedBy?: string; librarianEditPending?: boolean };
 /** `librarianEdit`: the caller may edit it as librarian (someone else's, Pending review or Published). Absent from older plug-ins. */
 export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean; librarianEdit?: boolean };
 /** Contributor credit and the solution's effort; present mode carries neither. */
@@ -40,7 +40,7 @@ export function submissionSolution(record: Submission, names: Record<string, str
     challenges: core.challenges || undefined, lessonsLearned: core.lessonsLearned || undefined,
     ...(core.estimatedMinimumHours != null ? { estimatedMinimumHours: core.estimatedMinimumHours } : {}),
     ...(core.complexityValue != null ? { complexity: COMPLEXITY_BY_CHOICE[core.complexityValue] } : {}),
-    dateAdded: record.dateAdded ?? "", libraryNotes: record.libraryNotes, ...(record.librarianEditedOn ? { librarianEditedOn: record.librarianEditedOn } : {}), searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], clientRoles: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
+    dateAdded: record.dateAdded ?? "", ...(record.modifiedOn ? { updatedOn: record.modifiedOn } : {}), libraryNotes: record.libraryNotes, ...(record.librarianEditedOn ? { librarianEditedOn: record.librarianEditedOn } : {}), searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], clientRoles: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],
   };
 }
 export type WorkflowApi = {
@@ -102,8 +102,8 @@ export async function deleteSubmission(api: WorkflowApi, core: Pick<SavedDraft, 
 function submission(value: unknown): Submission {
   const row = object(value);
   if (typeof row.publication !== "number" || !PUBLICATIONS[row.publication] || ![125060000, 125060001, 125060002].includes(row.outcome as number) || typeof row.comments !== "string" || typeof row.cleared !== "boolean") throw new Error("Invalid submission state.");
-  const metadata: Pick<Submission, "owner" | "dateAdded" | "imageCount" | "attachmentCount" | "libraryNotes" | "librarianEditedOn" | "librarianEditedBy"> = {};
-  for (const key of ["owner", "dateAdded", "libraryNotes", "librarianEditedOn", "librarianEditedBy"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "string") throw new Error("Invalid submission metadata."); metadata[key] = row[key]; }
+  const metadata: Pick<Submission, "owner" | "dateAdded" | "modifiedOn" | "imageCount" | "attachmentCount" | "libraryNotes" | "librarianEditedOn" | "librarianEditedBy"> = {};
+  for (const key of ["owner", "dateAdded", "modifiedOn", "libraryNotes", "librarianEditedOn", "librarianEditedBy"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "string") throw new Error("Invalid submission metadata."); metadata[key] = row[key]; }
   for (const key of ["imageCount", "attachmentCount"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "number" || !Number.isInteger(row[key]) || row[key] < 0 || row[key] > 6) throw new Error("Invalid submission media count."); metadata[key] = row[key]; }
   if (!Array.isArray(row.areaIds) || row.areaIds.some(id => typeof id !== "string" || !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id)) || new Set(row.areaIds).size !== row.areaIds.length) throw new Error("Invalid submission areas.");
   if (row.librarianEditPending !== undefined && typeof row.librarianEditPending !== "boolean") throw new Error("Invalid librarian edit state.");

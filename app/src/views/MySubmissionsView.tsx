@@ -6,16 +6,23 @@ import { Chip } from "../components/Badges";
 import { Icon } from "../components/Icon";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { OverflowMenu } from "../components/OverflowMenu";
+import { SelectPicker } from "../components/SelectPicker";
 import { FeedbackPanel } from "../components/FeedbackPanel";
 import { navigate } from "../lib/router";
 import { submissionState } from "../lib/submissionState";
 import { feedbackKeys, openFeedback, setFeedbackItems, suggestionFeedbackKey, useFeedbackSeen } from "../lib/feedbackSeen";
 
 /**
- * Status filters, plus "Suggestions": every solution that ever received one, which is no status. New ones already lead
- * the attention list, so here the filter keeps the history too, with the ones still open first.
+ * Status filters, plus "Has suggestions": every solution that ever received one, which is no status. New ones already
+ * lead the attention list, so here the filter keeps the history too, with the ones still open first.
  */
-const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published", "Suggestions"] as const;
+const FILTERS = ["All", "Draft", "Pending review", "Changes requested", "Published", "Has suggestions"] as const;
+/** All my solutions' order: the last change first by default (`modifiedon`; until the API sends it, the date added). */
+const SORTS = ["updated", "added", "name"] as const;
+type Sort = typeof SORTS[number];
+const SORT_LABELS: Record<Sort, string> = { updated: "Recently updated", added: "Recently added", name: "Name (A–Z)" };
+const changedOn = (solution: Solution) => solution.updatedOn ?? solution.createdOn ?? solution.dateAdded ?? "";
+const addedOn = (solution: Solution) => solution.createdOn ?? solution.dateAdded ?? "";
 type Filter = typeof FILTERS[number];
 /** Suggestions on a published solution: the count, the distinct authors (newest first) and their ids. */
 export type SuggestionSummary = { count: number; authors: string[]; ids: string[] };
@@ -39,6 +46,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const [filter, setFilter] = useState<Filter>("All");
   const [attentionAll, setAttentionAll] = useState(false);
   const [layout, setLayout] = useState<"grid" | "list">(rememberedLayout);
+  const [sort, setSort] = useState<Sort>("updated");
   const chooseLayout = (next: "grid" | "list") => { setLayout(next); try { sessionStorage.setItem(LAYOUT_KEY, next); } catch { void 0; } };
   useFeedbackSeen();
   // Open feedback items: a draft returned with Changes requested (until resubmitted) and each unaddressed suggestion.
@@ -95,11 +103,14 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     };
   };
   const openSuggestionsOn = (solution: Solution) => openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length;
-  const matches = (solution: Solution, option: Filter) => option === "All" || (option === "Suggestions" ? (suggestions?.[solution.id]?.count ?? 0) > 0 : submissionState(solution) === option);
+  const matches = (solution: Solution, option: Filter) => option === "All" || (option === "Has suggestions" ? (suggestions?.[solution.id]?.count ?? 0) > 0 : submissionState(solution) === option);
   const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
   const filtered = entries.filter(({ solution }) => matches(solution, filter));
-  // Under Suggestions, the solutions with new ones come first, most first; the rest keep their order.
-  const visible = filter === "Suggestions" ? [...filtered].sort((left, right) => openSuggestionsOn(right.solution) - openSuggestionsOn(left.solution)) : filtered;
+  // The chosen order; under Has suggestions, the solutions with new ones still come first, most first.
+  const ordered = [...filtered].sort(({ solution: left }, { solution: right }) => sort === "name"
+    ? (left.name || "").localeCompare(right.name || "")
+    : (sort === "updated" ? changedOn(right).localeCompare(changedOn(left)) : addedOn(right).localeCompare(addedOn(left))) || (left.name || "").localeCompare(right.name || ""));
+  const visible = filter === "Has suggestions" ? ordered.sort((left, right) => openSuggestionsOn(right.solution) - openSuggestionsOn(left.solution)) : ordered;
   // One card everywhere: status, Edit, •••, and opening the solution (where its suggestions are read).
   const open = (solution: Solution) => onOpen ? onOpen(solution) : solution.publicationStatus === "Draft" ? navigate(`/submit/${solution.id}`) : navigate(`/s/${solution.id}`);
   const card = (solution: Solution, index: number) => renderCard ? renderCard(solution, index, manage(solution)) : <SolutionCard solution={{ ...solution, name: solution.name || "Untitled solution", summary: solution.summary || "No summary yet" }} present={false} index={index} showPublicationStatus manage={manage(solution)} onOpen={onOpen ? () => onOpen(solution) : solution.publicationStatus === "Draft" ? () => navigate(`/submit/${solution.id}`) : undefined} />;
@@ -129,7 +140,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     </div>
     {attention.length > 0 && <section aria-labelledby={`${attentionId}-title`} className="attention-panel mt-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 pt-3.5 pb-2.5 sm:px-5">
-        <h2 id={`${attentionId}-title`} className="text-[16px] font-semibold">{plural(attention.length, "solution")} {attention.length === 1 ? "needs" : "need"} your attention</h2>
+        <h2 id={`${attentionId}-title`} className="flex items-center gap-2 text-[16px] font-semibold">Needs your attention
+          <span className={`section-nav-count ${returned.length ? "section-nav-count--changes" : "section-nav-count--open"}`} aria-label={plural(attention.length, "solution")}>{attention.length}</span></h2>
         <p className="text-[13px]">{breakdown.flatMap((part, index) => index ? [<span key={`dot-${index}`} aria-hidden="true" style={{ color: "var(--ink-3)" }}> · </span>, part] : [part])}</p>
       </div>
       <ul className="attention-list">
@@ -143,8 +155,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
               <span className="block text-[12.5px]" style={{ color: "var(--ink-2)" }}>{changes ? "Changes requested by the librarian. Update it and resubmit to publish it." : `${plural(fresh, "new suggestion")} from colleagues. Read and address them on the solution page.`}</span>
             </span>
             {changes
-              ? <button type="button" className="attention-action attention-action--changes" onClick={() => solution.reviewComments ? setFeedbackTarget(solution) : edit(solution)} aria-label={`${solution.reviewComments ? "View feedback" : "Edit"} for ${name}`}>{solution.reviewComments ? "View feedback" : "Edit"}</button>
-              : <button type="button" className="attention-action" onClick={() => open(solution)} aria-label={`Open suggestions for ${name}`}>Open</button>}
+              ? <button type="button" className="attention-action attention-action--changes" onClick={() => solution.reviewComments ? setFeedbackTarget(solution) : edit(solution)} aria-label={`Review changes for ${name}`}>Review changes</button>
+              : <button type="button" className="attention-action" onClick={() => open(solution)} aria-label={`View suggestions for ${name}`}>View suggestions</button>}
           </li>;
         })}
       </ul>
@@ -153,8 +165,11 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     <section aria-labelledby={`${attentionId}-all`} className="mt-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 id={`${attentionId}-all`} className="section-title">All my solutions</h2>
-        {entries.length > 0 && <div className="view-toggle" role="group" aria-label="Layout">
+        {entries.length > 0 && <div className="flex flex-wrap items-center gap-2">
+        <SelectPicker compact label="Sort my solutions" value={sort} options={SORTS} getLabel={value => SORT_LABELS[value]} buttonPrefix="Sort by" buttonClassName="toolbar-select flex h-9 cursor-pointer items-center gap-2 rounded-full px-3 text-[13px] outline-none" onChange={setSort} />
+        <div className="view-toggle" role="group" aria-label="Layout">
           {(["grid", "list"] as const).map(option => <button key={option} type="button" aria-pressed={layout === option} aria-label={option === "grid" ? "Grid view" : "List view"} title={option === "grid" ? "Grid view" : "List view"} onClick={() => chooseLayout(option)}><Icon name={option} size={15} /></button>)}
+        </div>
         </div>}
       </div>
     {!entries.length ? <div className="py-20 text-center">
@@ -162,11 +177,12 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       <p className="mt-2" style={{ color: "var(--ink-2)" }}>No saved drafts or submitted solutions.</p>
     </div> : <>
       <div role="group" aria-label="Filter by status" className="mt-4 flex flex-wrap items-center gap-2">
-        {FILTERS.filter(option => option !== "Suggestions" || suggestions).map(option => {
+        {FILTERS.filter(option => option !== "Has suggestions" || suggestions).map(option => {
           const total = count(option);
           return <Chip key={option} active={filter === option} pressed={filter === option} onClick={() => setFilter(option)}>
-            {/* A dot while something is open: any returned draft, or any new suggestion. */}
-            {filter !== option && (option === "Changes requested" ? total > 0 : option === "Suggestions" && entries.some(({ solution }) => openSuggestionsOn(solution) > 0)) && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: option === "Changes requested" ? "var(--proto)" : "var(--accent)" }} />}
+            {/* Changes requested carries an amber dot while any exist; Has suggestions a blue comment icon, so it never reads as a status. */}
+            {option === "Changes requested" && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--proto)" }} />}
+            {option === "Has suggestions" && <span aria-hidden="true" className="inline-flex" style={{ color: filter === option ? "currentColor" : "var(--accent)" }}><Icon name="message" size={13} /></span>}
             {option}
             <span className="font-mono text-[11px] opacity-75">{total}</span>
           </Chip>;

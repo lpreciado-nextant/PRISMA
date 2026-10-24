@@ -283,7 +283,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
     setSaving(true);
     setSaveError("");
     try {
-      const solution: Solution = { ...preview, id: submissionId, name: draft.name.trim(), summary: draft.summary.trim(), publicationStatus: asDraft ? "Draft" : "Pending review" };
+      const solution: Solution = { ...preview, id: submissionId, name: draft.name.trim(), summary: draft.summary.trim(), publicationStatus: asDraft ? "Draft" : "Pending review", updatedOn: new Date().toISOString() };
       if (!asDraft) assertSubmissionReady(solution);
       if (asDraft) await onSaveDraft?.(solution);
       else await onSubmitted?.(solution);

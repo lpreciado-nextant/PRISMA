@@ -702,8 +702,9 @@ test("my submissions filters by review state and keeps card controls outside the
   // A managed card is not itself a button: its title opens it and the controls sit beside that button.
   assert.doesNotMatch(html, /role="button"/);
   assert.equal((html.match(/class="card-open/g) ?? []).length, 4);
-  // The returned draft offers its feedback twice: in the attention list and on its card.
-  assert.equal((html.match(/aria-label="View feedback for /g) ?? []).length, 2);
+  // The returned draft's feedback: Review changes in the attention list, View feedback on its card.
+  assert.equal((html.match(/aria-label="View feedback for /g) ?? []).length, 1);
+  assert.match(html, /aria-label="Review changes for Returned one"/);
   assert.match(html, /aria-label="View feedback for Returned one"/);
   assert.doesNotMatch(html, /Please anonymize|View submission/);
   // Connected Pending review and Published records are withdrawn on their page, not edited from the card.
@@ -980,15 +981,17 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   const html = render(MySubmissionsView, { entries, connected: true, suggestions });
   // "Needs your attention" counts solutions, with the items as a breakdown, then one row per solution:
   // the returned draft first (amber, View feedback), then the suggestions (Open), all above "All my solutions".
-  assert.match(html, /class="attention-panel[^"]*">.*2 solutions need your attention.*1 changes requested.*2 new suggestions/s);
-  assert.match(html, /attention-row attention-row--changes.*Returned one.*Changes requested by the librarian.*View feedback for Returned one.*attention-row ".*Live one.*2 new suggestions from colleagues.*Open suggestions for Live one.*All my solutions/s);
+  assert.match(html, /class="attention-panel[^"]*">.*Needs your attention<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions">2<\/span>.*1 changes requested.*2 new suggestions/s);
+  assert.match(html, /attention-row attention-row--changes.*Returned one.*Changes requested by the librarian.*Review changes for Returned one">Review changes<.*attention-row ".*Live one.*2 new suggestions from colleagues.*View suggestions for Live one">View suggestions<.*All my solutions/s);
   assert.equal((html.match(/<li /g) ?? []).length, 2);
   // "Suggestions" keeps every solution that ever had one, with a blue dot while any is new; no suggestions, no chip.
-  assert.match(html, /aria-pressed="false"[^>]*><span aria-hidden="true" class="h-1.5 w-1.5 rounded-full" style="background:var\(--accent\)"><\/span>Suggestions<span[^>]*>1<\/span>/);
-  assert.doesNotMatch(render(MySubmissionsView, { entries, connected: true }), />Suggestions</);
+  assert.match(html, /aria-pressed="false"[^>]*><span aria-hidden="true" class="inline-flex" style="color:var\(--accent\)"><svg.*?<\/svg><\/span>Has suggestions<span[^>]*>1<\/span>/);
+  assert.doesNotMatch(render(MySubmissionsView, { entries, connected: true }), /Has suggestions/);
   // All addressed: still counted (history), but no dot.
   const addressed = render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions: { live: { count: 2, authors: [], ids: [] } } });
-  assert.match(addressed, /aria-pressed="false"[^>]*>Suggestions<span[^>]*>1<\/span>/);
+  assert.match(addressed, /aria-pressed="false"[^>]*><span aria-hidden="true" class="inline-flex"[^>]*><svg.*?<\/svg><\/span>Has suggestions<span[^>]*>1<\/span>/);
+  // Sorted by the last change by default, beside the layout toggle.
+  assert.match(html, /aria-label="Sort my solutions".*Sort by.*Recently updated.*aria-label="Layout"/s);
   assert.equal((html.match(/card-unread/g) ?? []).length, 2);
   // The cards say the same: the returned draft's band reads Changes requested (no extra pill), the other "N new suggestions".
   assert.equal((html.match(/card-action/g) ?? []).length, 1);

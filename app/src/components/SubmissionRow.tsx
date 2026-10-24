@@ -1,6 +1,7 @@
 import type { Solution } from "../types";
 import type { CardManagement } from "./SolutionCard";
 import { SubmissionStatus } from "./Badges";
+import { Icon } from "./Icon";
 import { Poster, PosterTint } from "./Poster";
 import { submissionState } from "../lib/submissionState";
 
@@ -23,7 +24,7 @@ export function SubmissionRow({ solution, index, manage, onOpen }: { solution: S
     </div>
     <div className="card-control flex shrink-0 flex-wrap items-center justify-end gap-2">
       <SubmissionStatus state={state} />
-      {!manage.actionNeeded && !!manage.unread && <span className="new-feedback"><span aria-hidden="true" className="size-1.5 rounded-full" style={{ background: "var(--accent)" }} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
+      {!manage.actionNeeded && !!manage.unread && <span className="new-feedback"><Icon name="message" size={12} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
       {manage.onFeedback && <button type="button" onClick={manage.onFeedback} aria-label={`View feedback for ${name}`} className="cursor-pointer text-[13px] font-semibold hover:underline" style={{ color: "var(--accent)" }}>View feedback</button>}
       {manage.corner}
       {manage.actions}
