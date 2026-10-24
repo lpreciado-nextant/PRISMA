@@ -8,7 +8,7 @@ import { submissionState } from "../lib/submissionState";
 /**
  * List-view row for My submissions: the same management as the card (status, new suggestions,
  * View feedback, Edit, •••) on one compact line. The name is the open button, stretched over the row, so the controls
- * sit beside it rather than inside it. A returned row takes the amber edge, one with new suggestions the accent.
+ * sit beside it rather than inside it. A returned row glows amber, one with pending suggestions blue.
  */
 export function SubmissionRow({ solution, index, manage, onOpen }: { solution: Solution; index: number; manage: CardManagement; onOpen: () => void }) {
   const state = submissionState(solution);

@@ -12,8 +12,6 @@
 /* Non-inherited so a pointer move restyles only the lit card, not its whole subtree. */
 @property --mx { syntax: "*"; inherits: false; }
 @property --my { syntax: "*"; inherits: false; }
-/* Typed so the unread-card ring's conic gradient can rotate smoothly. */
-@property --unread-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 
 .loading-state {
   display: flex;
@@ -1013,72 +1011,29 @@
     opacity: 1;
     transform: none;
   }
-  /* ---- Unread feedback on My submissions cards ------------------------ */
-  /* Until opened: a lit edge (accent, Data and IBO light sweeping round the card) over a breathing accent halo,
-     plus the "N new" pill in the status band. The ring sits on the shell because the card clips its overflow;
-     it rides the card's hover lift. Reduced motion keeps the ring and halo, still. */
-  .card-unread {
-    isolation: isolate;
-  }
-  .card-unread::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 2;
-    padding: 2px;
-    border-radius: 22px;
-    pointer-events: none;
-    background: conic-gradient(
-      from var(--unread-angle),
-      color-mix(in srgb, var(--accent) 45%, transparent),
-      var(--accent) 12%,
-      var(--sa-data) 22%,
-      color-mix(in srgb, var(--accent) 45%, transparent) 34%,
-      color-mix(in srgb, var(--accent) 45%, transparent) 55%,
-      var(--sa-ibo) 66%,
-      var(--accent) 76%,
-      color-mix(in srgb, var(--accent) 45%, transparent) 88%
-    );
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
-    animation: unread-sweep 6s linear infinite;
-    transition: translate 0.55s var(--ease-spring);
-  }
-  .card-unread:hover::before {
-    translate: 0 -5px;
-  }
+  /* ---- Cards that need attention (My submissions) ------------------------ */
+  /* No ring: a soft glow around the card that breathes slowly, blue for pending suggestions and amber (.card-action)
+     for Changes requested; the status band carries the words. Reduced motion keeps the glow, still. */
   .card-unread > .solution-card {
-    border-color: transparent;
-    animation: unread-halo 3.2s ease-in-out infinite;
+    --glow: var(--accent);
+    animation: attention-glow 4.5s ease-in-out infinite;
   }
-  @keyframes unread-sweep {
-    to { --unread-angle: 360deg; }
-  }
-  @keyframes unread-halo {
+  @keyframes attention-glow {
     0%, 100% {
       box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent),
-        0 0 18px -2px color-mix(in srgb, var(--accent) 40%, transparent),
-        0 14px 32px -16px color-mix(in srgb, var(--accent) 60%, transparent);
+        0 0 14px -4px color-mix(in srgb, var(--glow) 35%, transparent),
+        0 12px 28px -18px color-mix(in srgb, var(--glow) 50%, transparent);
     }
     50% {
       box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent),
-        0 0 30px 2px color-mix(in srgb, var(--accent) 55%, transparent),
-        0 14px 36px -14px color-mix(in srgb, var(--sa-data) 55%, transparent);
+        0 0 26px 0 color-mix(in srgb, var(--glow) 45%, transparent),
+        0 14px 32px -16px color-mix(in srgb, var(--glow) 55%, transparent);
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .card-unread::before,
     .card-unread > .solution-card {
       animation: none;
-      transition: none;
-    }
-    .card-unread > .solution-card {
-      box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
-        0 0 24px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+      box-shadow: 0 0 22px -2px color-mix(in srgb, var(--glow) 42%, transparent);
     }
   }
   /* ---- Present mode: "Show my saved solutions" switch ------------------ */
@@ -1249,37 +1204,10 @@
     }
   }
   /* ---- Changes requested: the librarian is waiting on the owner ------ */
-  /* Outranks new suggestions: the same lit edge and halo, in the amber of "Changes requested" (--proto), sweeping and
-     breathing a little faster; the status band already reads "Changes requested" with its warning icon. */
-  .card-action::before {
-    background: conic-gradient(
-      from var(--unread-angle),
-      color-mix(in srgb, var(--proto) 55%, transparent),
-      var(--proto) 14%,
-      color-mix(in srgb, var(--proto) 55%, transparent) 32%,
-      color-mix(in srgb, var(--proto) 55%, transparent) 58%,
-      var(--proto) 74%,
-      color-mix(in srgb, var(--proto) 55%, transparent) 90%
-    );
-    animation-duration: 4.5s;
-  }
+  /* The attention glow in the amber of "Changes requested", breathing a little quicker than suggestions'. */
   .card-action > .solution-card {
-    animation-name: action-halo;
-    animation-duration: 2.6s;
-  }
-  @keyframes action-halo {
-    0%, 100% {
-      box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--proto) 35%, transparent),
-        0 0 18px -2px color-mix(in srgb, var(--proto) 45%, transparent),
-        0 14px 32px -16px color-mix(in srgb, var(--proto) 60%, transparent);
-    }
-    50% {
-      box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--proto) 55%, transparent),
-        0 0 32px 2px color-mix(in srgb, var(--proto) 55%, transparent),
-        0 14px 36px -14px color-mix(in srgb, var(--proto) 65%, transparent);
-    }
+    --glow: var(--proto);
+    animation-duration: 3.5s;
   }
   /* My submissions, "Needs your attention": one compact row per solution, returned drafts first in amber (they block
      publication), then new suggestions in the accent. A glass sheet like the cards, so it reads as part of the page. */
@@ -1369,18 +1297,7 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-  @media (prefers-reduced-motion: reduce) {
-    .card-action::before,
-    .card-action > .solution-card {
-      animation: none;
-    }
-    .card-action > .solution-card {
-      box-shadow:
-        0 0 0 1px color-mix(in srgb, var(--proto) 45%, transparent),
-        0 0 24px 0 color-mix(in srgb, var(--proto) 45%, transparent);
-    }
-  }
-  /* My submissions list view: a quiet glass row; a returned one keeps the amber edge, new suggestions the accent.
+  /* My submissions list view: a quiet glass row; one that needs attention glows amber or blue.
      Fixed columns (image, name and summary, state, signal, actions) from small screens up; stacked below. */
   .submission-row {
     grid-template-columns: 104px minmax(0, 1fr);
@@ -1434,13 +1351,12 @@
   .card-copy {
     min-height: calc(2 * 1.375 * 18px + 0.5rem + 2 * 1.375 * 14px);
   }
+  /* List rows that need attention: the same glow as the cards, still, with no coloured border. */
   .submission-row--changes {
-    border-color: color-mix(in srgb, var(--proto) 55%, transparent);
-    box-shadow: inset 4px 0 0 var(--proto), 0 0 18px -6px color-mix(in srgb, var(--proto) 45%, transparent);
+    box-shadow: 0 0 20px -4px color-mix(in srgb, var(--proto) 45%, transparent);
   }
   .submission-row--new {
-    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
-    box-shadow: inset 4px 0 0 var(--accent);
+    box-shadow: 0 0 20px -4px color-mix(in srgb, var(--accent) 40%, transparent);
   }
   /* "N new" beside a My submissions tab: open feedback items, in the accent like the masthead dot. */
   .tab-new {
