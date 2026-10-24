@@ -9,10 +9,11 @@ export const suggestionButton = "inline-flex min-h-10 cursor-pointer items-cente
 const panel = "glass glass-lite rounded-[20px] p-5";
 
 /**
- * Author, date and text of each suggestion, each with its own "Mark as addressed" check. Addressed items stay listed
- * (quieter) under the panel's Addressed filter.
+ * Author, date and text of each suggestion. With `canAddress` (the uploader, on their submission page) each has its own
+ * "Mark as addressed" check; everyone else (contributors, the librarian) sees its state only. Addressed items stay
+ * listed (quieter) under the panel's Addressed filter.
  */
-export function SuggestionItems({ suggestions }: { suggestions: Suggestion[] }) {
+export function SuggestionItems({ suggestions, canAddress = false }: { suggestions: Suggestion[]; canAddress?: boolean }) {
   useFeedbackSeen();
   return <ul className="flex flex-col gap-4">{suggestions.map(item => {
     const key = suggestionFeedbackKey(item.id);
@@ -22,7 +23,8 @@ export function SuggestionItems({ suggestions }: { suggestions: Suggestion[] }) 
         <p className="text-[12.5px] text-(--ink-3)"><span className="font-semibold text-(--ink-2)">{item.author}</span> · <time dateTime={item.createdOn}>{new Date(item.createdOn).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</time></p>
         <p className="mt-1 whitespace-pre-wrap break-words text-[14.5px] text-(--ink)">{item.text}</p>
       </div>
-      <AddressedToggle done={done} onToggle={() => setAddressed(key, !done)} />
+      {canAddress ? <AddressedToggle done={done} onToggle={() => setAddressed(key, !done)} />
+        : <span className={`suggestion-state ${done ? "suggestion-state--done" : ""}`}>{done ? "Addressed" : "Pending"}</span>}
     </li>;
   })}</ul>;
 }
@@ -36,23 +38,32 @@ export function AddressedToggle({ done, onToggle }: { done: boolean; onToggle: (
   </button>;
 }
 
-type View = "new" | "addressed" | "all";
+type View = "pending" | "addressed" | "all";
 
-export function SuggestionsPanel({ list }: { list: SuggestionList }) {
+/**
+ * Pending (not yet marked addressed by the uploader), Addressed, or All (the full history). Only the uploader marks
+ * them (`canAddress`); contributors and the librarian read them.
+ */
+export function SuggestionsPanel({ list, canAddress = false }: { list: SuggestionList; canAddress?: boolean }) {
   useFeedbackSeen();
-  const open = list.suggestions.filter(item => !isAddressed(suggestionFeedbackKey(item.id)));
-  const [view, setView] = useState<View>(() => open.length ? "new" : "all");
-  const shown = view === "new" ? open : view === "addressed" ? list.suggestions.filter(item => isAddressed(suggestionFeedbackKey(item.id))) : list.suggestions;
-  const views: { value: View; label: string; count: number }[] = [{ value: "new", label: "New", count: open.length }, { value: "addressed", label: "Addressed", count: list.suggestions.length - open.length }, { value: "all", label: "All", count: list.suggestions.length }];
-  return <section className={panel} aria-labelledby="suggestions-heading">
+  const pending = list.suggestions.filter(item => !isAddressed(suggestionFeedbackKey(item.id)));
+  const [view, setView] = useState<View>(() => pending.length ? "pending" : "all");
+  const shown = view === "pending" ? pending : view === "addressed" ? list.suggestions.filter(item => isAddressed(suggestionFeedbackKey(item.id))) : list.suggestions;
+  const views: { value: View; label: string; count: number }[] = [{ value: "pending", label: "Pending", count: pending.length }, { value: "addressed", label: "Addressed", count: list.suggestions.length - pending.length }, { value: "all", label: "All", count: list.suggestions.length }];
+  // Private team feedback, not part of the solution itself: a blue-tinted sheet (the suggestions colour), like the
+  // amber-tinted internal notes, so it never reads as the solution's own content.
+  return <section className={`${panel} suggestions-panel`} aria-labelledby="suggestions-heading">
     {/* Heading with its count; who can read it sits apart as a quiet note instead of an "internal only" tag. */}
     <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5">
       <h2 id="suggestions-heading" className="flex items-center gap-2 text-[15px] font-semibold" style={{ fontFamily: "var(--font-display)" }}>
         <Icon name="message" size={16} />Suggestions
         <span className="rounded-full px-2 py-px font-mono text-[11.5px] font-normal" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}>{list.suggestions.length}</span>
       </h2>
-      <p className="flex items-center gap-1.5 text-[12px] text-(--ink-3)"><Icon name="shield" size={12} />Private · owner, contributors and librarian</p>
+      <p className="flex items-center gap-1.5 text-[12px] text-(--ink-3)"><Icon name="shield" size={12} />Private · owner, this solution's contributors and the librarian</p>
     </div>
+    <p className="mb-4 text-[13.5px] text-(--ink-2)">{canAddress
+      ? "Review feedback on this solution. Mark suggestions as addressed once reviewed, whether or not you apply the changes."
+      : "Feedback on this solution. The owner marks suggestions as addressed from My submissions."}</p>
     {list.suggestions.length === 0 ? <p className="text-[14px] text-(--ink-3)">No suggestions yet. Colleagues who view this solution can send one.</p> : <>
       {/* What is still to address, what has been, or everything. */}
       <div role="group" aria-label="Show suggestions" className="mb-4 flex flex-wrap gap-1.5">
@@ -60,7 +71,7 @@ export function SuggestionsPanel({ list }: { list: SuggestionList }) {
           {option.label}<span className="font-mono text-[11px]" style={{ color: "var(--ink-3)" }}>{option.count}</span>
         </button>)}
       </div>
-      {shown.length ? <SuggestionItems suggestions={shown} /> : <p className="text-[14px] text-(--ink-3)">{view === "new" ? "Nothing new: every suggestion has been addressed." : "No suggestions addressed yet."}</p>}
+      {shown.length ? <SuggestionItems suggestions={shown} canAddress={canAddress} /> : <p className="text-[14px] text-(--ink-3)">{view === "pending" ? "Nothing pending: every suggestion has been addressed." : "No suggestions addressed yet."}</p>}
     </>}
   </section>;
 }
@@ -74,10 +85,10 @@ export function SuggestCard({ sent, focus = false, onOpen }: { sent: boolean; fo
       <span className="min-w-0">
         <span className="block text-[14.5px] font-semibold" style={{ fontFamily: "var(--font-display)" }}>Suggest an improvement</span>
         <span className="mt-0.5 block text-[13px]" style={{ color: "var(--ink-2)" }}>Have an idea to improve this solution? Share your suggestion with the solution team.</span>
-        <span className="mt-1.5 block text-[12px]" style={{ color: "var(--ink-3)" }}>Only the owner, contributors and the PRISMA librarian see it, with your name.</span>
+        <span className="mt-1.5 block text-[12px]" style={{ color: "var(--ink-3)" }}>Only the owner, the people credited on this solution and the PRISMA librarian see it, with your name.</span>
       </span>
     </button>
-    {sent && <p role="status" className="px-1 text-[13.5px] text-(--ink-2)">Thanks. Your suggestion was sent to the owner, the contributors and the librarian.</p>}
+    {sent && <p role="status" className="px-1 text-[13.5px] text-(--ink-2)">Thanks. Your suggestion was sent to the owner, the people credited on this solution and the librarian.</p>}
   </div>;
 }
 
@@ -102,7 +113,7 @@ export function SuggestForm({ api, solutionId, onClose, onSent }: { api: Suggest
   };
   return <section ref={sectionRef} className={panel} aria-labelledby={`${id}-title`}>
     <h2 id={`${id}-title`} className="text-[16px] font-semibold">Suggest an improvement</h2>
-    <p className="mt-1 text-[13px] text-(--ink-2)">Only the owner, contributors and the PRISMA librarian see it, with your name.</p>
+    <p className="mt-1 text-[13px] text-(--ink-2)">Only the owner, the people credited on this solution and the PRISMA librarian see it, with your name.</p>
     <label className="sr-only" htmlFor={`${id}-text`}>Suggestion</label>
     <textarea ref={textRef} id={`${id}-text`} className={`${submissionInputClass} mt-3 min-h-28 resize-y`} maxLength={SUGGESTION_MAX} value={text} onChange={event => setText(event.target.value)} placeholder="What would make this solution better?" disabled={busy} />
     <p className="mt-1 text-right font-mono text-[11px] text-(--ink-3)">{text.length}/{SUGGESTION_MAX}</p>

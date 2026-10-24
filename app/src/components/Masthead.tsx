@@ -170,7 +170,7 @@ function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailab
   // The hover hint is the split alone; the screen-reader label adds the total first.
   const openSplit = [
     ...(feedback.changes ? [`${feedback.changes} Changes requested`] : []),
-    ...(feedback.suggestions ? [`${feedback.suggestions} New suggestions`] : []),
+    ...(feedback.suggestions ? [`${feedback.suggestions} Pending suggestions`] : []),
   ].join(", ");
   const openHint = `${openFeedbackItems} ${openFeedbackItems === 1 ? "solution needs" : "solutions need"} your attention: ${openSplit}`;
   const items: NavItem[] = [

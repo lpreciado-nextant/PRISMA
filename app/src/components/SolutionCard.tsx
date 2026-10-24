@@ -147,7 +147,7 @@ export function SolutionCard({
                 View feedback
                 <Icon name="arrowRight" size={13} />
               </button>
-            ) : managed && !manage?.actionNeeded && !!manage?.unread && <span className="new-feedback shrink-0"><Icon name="message" size={12} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
+            ) : managed && !manage?.actionNeeded && !!manage?.unread && <span className="new-feedback shrink-0"><Icon name="message" size={12} />{manage.unread} pending {manage.unread === 1 ? "suggestion" : "suggestions"}</span>}
           </span>
         </div>
       )}

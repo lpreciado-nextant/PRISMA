@@ -16,7 +16,7 @@ export function SubmissionRow({ solution, index, manage, onOpen }: { solution: S
   const tone = manage.actionNeeded ? "submission-row--changes" : manage.unread ? "submission-row--new" : "";
   const signal = manage.onFeedback
     ? <button type="button" onClick={manage.onFeedback} aria-label={`View feedback for ${name}`} className="inline-flex cursor-pointer items-center gap-1 text-[13px] font-semibold hover:underline" style={{ color: "var(--accent)" }}>View feedback<Icon name="arrowRight" size={13} /></button>
-    : !manage.actionNeeded && !!manage.unread && <span className="new-feedback"><Icon name="message" size={12} />{manage.unread} new {manage.unread === 1 ? "suggestion" : "suggestions"}</span>;
+    : !manage.actionNeeded && !!manage.unread && <span className="new-feedback"><Icon name="message" size={12} />{manage.unread} pending {manage.unread === 1 ? "suggestion" : "suggestions"}</span>;
   // Fixed columns from small screens up, so every row lines up: image · name and summary · state · signal · actions.
   return <div className={`submission-row solution-card animate-rise relative grid min-w-0 items-center gap-x-4 gap-y-2 rounded-[16px] p-2.5 pr-3 ${tone}`} style={{ animationDelay: `${Math.min(index, 9) * 30}ms` }}>
     <div className="card-poster aspect-[16/9] w-[104px] shrink-0 overflow-hidden rounded-[10px]">

@@ -1432,6 +1432,26 @@
     color: var(--accent);
     background: color-mix(in srgb, var(--accent) 14%, transparent);
   }
+  /* The Suggestions panel: private team feedback, set apart from the solution's content by a tint of the accent. */
+  .suggestions-panel {
+    border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+    background: color-mix(in srgb, var(--accent) 11%, transparent);
+    box-shadow: inset 4px 0 0 var(--accent);
+  }
+  /* A suggestion's state for readers who cannot change it (contributors, the librarian). */
+  .suggestion-state {
+    flex-shrink: 0;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .suggestion-state--done {
+    color: var(--ink-3);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+  }
   /* One feedback item's "Mark as addressed": quiet until confirmed, then an accent check. */
   .addressed-toggle {
     color: var(--ink-2);

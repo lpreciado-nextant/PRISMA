@@ -124,7 +124,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const shownAttention = attentionAll ? attention : attention.slice(0, ATTENTION_ROWS);
   const breakdown = [
     ...(returned.length ? [<span key="returned" className="font-semibold" style={{ color: "var(--proto)" }}>{returned.length} changes requested</span>] : []),
-    ...(newSuggestions ? [<span key="suggestions" className="font-semibold" style={{ color: "var(--accent)" }}>{plural(newSuggestions, "new suggestion")}</span>] : []),
+    ...(newSuggestions ? [<span key="suggestions" className="font-semibold" style={{ color: "var(--accent)" }}>{plural(newSuggestions, "pending suggestion")}</span>] : []),
   ];
   return <div className="mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6">
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -152,7 +152,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
             <span aria-hidden="true" className="attention-icon"><Icon name={changes ? "alert" : "message"} size={16} /></span>
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold" style={{ color: "var(--ink)" }}>{name}</span>
-              <span className="block text-[12.5px]" style={{ color: "var(--ink-2)" }}>{changes ? "Changes requested by the librarian. Update it and resubmit to publish it." : `${plural(fresh, "new suggestion")} from colleagues. Read and address them on the solution page.`}</span>
+              <span className="block text-[12.5px]" style={{ color: "var(--ink-2)" }}>{changes ? "Changes requested by the librarian. Update it and resubmit to publish it." : `${plural(fresh, "pending suggestion")} from colleagues. Review them and mark them addressed.`}</span>
             </span>
             {changes
               ? <button type="button" className="attention-action attention-action--changes" onClick={() => solution.reviewComments ? setFeedbackTarget(solution) : edit(solution)} aria-label={`Review changes for ${name}`}>Review changes</button>

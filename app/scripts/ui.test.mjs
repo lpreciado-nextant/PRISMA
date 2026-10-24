@@ -592,7 +592,7 @@ test("my submissions list rows keep the card's management on one line", async ()
   const html = render(SubmissionRow, { solution, index: 0, onOpen: noop, manage: { actions: "MENU", corner: "EDIT", onFeedback: noop, unread: 1, actionNeeded: true } });
   assert.match(html, /submission-row[^"]*submission-row--changes.*class="card-open[^"]*"[^>]*aria-label="Returned one — Changes requested">Returned one<.*Changes requested.*View feedback for Returned one.*EDIT.*MENU/s);
   const suggested = render(SubmissionRow, { solution: { ...solution, publicationStatus: "Published", reviewOutcome: "Approved", reviewComments: undefined }, index: 0, onOpen: noop, manage: { actions: null, unread: 2 } });
-  assert.match(suggested, /submission-row--new.*2 new suggestions/s);
+  assert.match(suggested, /submission-row--new.*2 pending suggestions/s);
   assert.doesNotMatch(suggested, /View feedback/);
   assert.doesNotMatch(html, /Action needed/);
 });
@@ -786,18 +786,24 @@ test("tag pickers show chosen tags first, list only what is left and search only
 test("suggestions: readers see a private list with author and date; others get a short form", async () => {
   const ui = await server.ssrLoadModule("/connected/src/SolutionSuggestions.tsx");
   const empty = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: [] } });
-  assert.match(empty, /Suggestions<span[^>]*>0<\/span>.*Private · owner, contributors and librarian/s);
+  assert.match(empty, /Suggestions<span[^>]*>0<\/span>.*Private · owner, this solution&#x27;s contributors and the librarian/s);
   assert.doesNotMatch(empty, /internal only/);
   assert.match(empty, /No suggestions yet\./);
-  const one = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: [{ id: "a", text: "Add an export to Excel.", author: "Ana Gómez", createdOn: "2026-10-13T15:04:05Z" }] } });
-  // A New / Addressed / All filter (New first while anything is open) and a check on each suggestion.
-  assert.match(one, /aria-label="Show suggestions".*aria-pressed="true"[^>]*>New<span[^>]*>1<\/span>.*Addressed<span[^>]*>0<\/span>.*All<span[^>]*>1<\/span>/s);
+  const item = [{ id: "a", text: "Add an export to Excel.", author: "Ana Gómez", createdOn: "2026-10-13T15:04:05Z" }];
+  // The uploader: the description, a Pending / Addressed / All filter (Pending first while any is open) and a check on each.
+  const one = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: item }, canAddress: true });
+  assert.match(one, /Review feedback on this solution\. Mark suggestions as addressed once reviewed, whether or not you apply the changes\./);
+  assert.match(one, /aria-label="Show suggestions".*aria-pressed="true"[^>]*>Pending<span[^>]*>1<\/span>.*Addressed<span[^>]*>0<\/span>.*All<span[^>]*>1<\/span>/s);
   assert.match(one, /Add an export to Excel\..*aria-pressed="false" title="Mark as addressed"/s);
+  // Contributors and the librarian: the state only, no check.
+  const reader = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: item } });
+  assert.match(reader, /The owner marks suggestions as addressed from My submissions\..*class="suggestion-state ">Pending</s);
+  assert.doesNotMatch(reader, /Mark as addressed/);
   assert.match(one, /Ana Gómez<\/span> · <time dateTime="2026-10-13T15:04:05Z">/);
   assert.match(one, /Add an export to Excel\./);
   const form = render(ui.SuggestForm, { api: {}, solutionId: "s", onClose: noop, onSent: noop });
   assert.match(form, /Suggest an improvement/);
-  assert.match(form, /Only the owner, contributors and the PRISMA librarian see it, with your name\./);
+  assert.match(form, /Only the owner, the people credited on this solution and the PRISMA librarian see it, with your name\./);
   assert.match(form, /maxLength="1000"/);
   assert.match(form, /<button[^>]*disabled=""[^>]*>Send suggestion<\/button>/);
   // The same items render inside a submitted solution's page, below its details.
@@ -981,8 +987,8 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   const html = render(MySubmissionsView, { entries, connected: true, suggestions });
   // "Needs your attention" counts solutions, with the items as a breakdown, then one row per solution:
   // the returned draft first (amber, View feedback), then the suggestions (Open), all above "All my solutions".
-  assert.match(html, /class="attention-panel[^"]*">.*Needs your attention<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions">2<\/span>.*1 changes requested.*2 new suggestions/s);
-  assert.match(html, /attention-row attention-row--changes.*Returned one.*Changes requested by the librarian.*Review changes for Returned one">Review changes<.*attention-row ".*Live one.*2 new suggestions from colleagues.*View suggestions for Live one">View suggestions<.*All my solutions/s);
+  assert.match(html, /class="attention-panel[^"]*">.*Needs your attention<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions">2<\/span>.*1 changes requested.*2 pending suggestions/s);
+  assert.match(html, /attention-row attention-row--changes.*Returned one.*Changes requested by the librarian.*Review changes for Returned one">Review changes<.*attention-row ".*Live one.*2 pending suggestions from colleagues.*View suggestions for Live one">View suggestions<.*All my solutions/s);
   assert.equal((html.match(/<li /g) ?? []).length, 2);
   // "Suggestions" keeps every solution that ever had one, with a blue dot while any is new; no suggestions, no chip.
   assert.match(html, /aria-pressed="false"[^>]*><span aria-hidden="true" class="inline-flex" style="color:var\(--accent\)"><svg.*?<\/svg><\/span>Has suggestions<span[^>]*>1<\/span>/);
@@ -995,7 +1001,7 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   assert.equal((html.match(/card-unread/g) ?? []).length, 2);
   // The cards say the same: the returned draft's band reads Changes requested (no extra pill), the other "N new suggestions".
   assert.equal((html.match(/card-action/g) ?? []).length, 1);
-  assert.match(html, /Changes requested.*new-feedback.*2 new suggestions/s);
+  assert.match(html, /Changes requested.*new-feedback.*2 pending suggestions/s);
   assert.doesNotMatch(html, /Action needed/);
   // Nothing open: no attention list at all.
   assert.doesNotMatch(render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions: { live: { count: 0, authors: [], ids: [] } } }), /attention-panel/);
@@ -1006,10 +1012,10 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   // Counted by solution: a returned draft and a solution with two suggestions make 2, not 3.
   seen.setFeedbackItems([seen.feedbackKeys(entries[0].solution), seen.feedbackKeys(entries[1].solution, ["a", "b"])]);
   // One of them was returned: the count takes the amber of Changes requested and explains the split.
-  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions need your attention: 1 Changes requested, 1 New suggestions">2<\/span>.*class="hover-hint-text">1 Changes requested, 1 New suggestions<\/span>/s);
+  assert.match(render(masthead.Masthead, mastheadProps), /My submissions<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions need your attention: 1 Changes requested, 1 Pending suggestions">2<\/span>.*class="hover-hint-text">1 Changes requested, 1 Pending suggestions<\/span>/s);
   // Only suggestions: blue.
   seen.setFeedbackItems([seen.feedbackKeys(entries[1].solution, ["a", "b"])]);
-  assert.match(render(masthead.Masthead, mastheadProps), /section-nav-count section-nav-count--open" aria-label="1 solution needs your attention: 1 New suggestions">1<\/span>.*class="hover-hint-text">1 New suggestions<\/span>/s);
+  assert.match(render(masthead.Masthead, mastheadProps), /section-nav-count section-nav-count--open" aria-label="1 solution needs your attention: 1 Pending suggestions">1<\/span>.*class="hover-hint-text">1 Pending suggestions<\/span>/s);
   seen.setFeedbackItems([]);
   assert.doesNotMatch(render(masthead.Masthead, mastheadProps), /section-nav-count--open/);
   // The librarian's comment has no check: it stays open until the owner resubmits.
