@@ -86,3 +86,24 @@ export function PublishedThumbnail({ solution, thumbnail: known }: { solution: S
     {thumbnail ? <ProtectedImage key={thumbnail.id} item={thumbnail} className="h-full w-full object-cover" /> : <Poster id={solution.id} name={solution.name} area={solution.specializationArea} className="h-full w-full" />}
   </span>;
 }
+/** Protected thumbnail of an owned submission for its My submissions row; the generated poster stands in until it loads or when there is none. */
+export function SubmissionThumbnail({ solution }: { solution: Solution }) {
+  const container = useRef<HTMLSpanElement>(null);
+  const [thumbnail, setThumbnail] = useState<MediaItem | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const load = () => {
+      timeout = setTimeout(() => controller.abort(), 20_000);
+      void loadSubmissionCardDetails(workflowApi, readRows, solution.id, controller.signal).then(detail => {
+        if (!controller.signal.aborted) setThumbnail(detail.media.find(item => item.kind === "thumbnail" && item.complete) ?? null);
+      }).catch(() => undefined).finally(() => clearTimeout(timeout));
+    };
+    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) { observer.disconnect(); load(); } }, { rootMargin: "100px" });
+    if (container.current) observer.observe(container.current);
+    return () => { controller.abort(); clearTimeout(timeout); observer.disconnect(); };
+  }, [solution.id]);
+  return <span ref={container} className="block h-full w-full">
+    {thumbnail ? <ProtectedImage key={thumbnail.id} item={thumbnail} className="h-full w-full object-cover" /> : <Poster id={solution.id} name={solution.name || "Untitled solution"} area={solution.specializationArea} className="h-full w-full" />}
+  </span>;
+}

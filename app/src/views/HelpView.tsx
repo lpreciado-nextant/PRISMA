@@ -31,7 +31,7 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     ] },
     { id: "help-share", icon: "plus", eyebrow: "Contributors", title: "Share your work", steps: [
       <>Click <b>Submit a solution</b> in the top bar. You can <b>Save draft &amp; close</b> at any step and finish later from <b>My submissions</b>.</>,
-      <>Describe what it does and its business value, tag it with one capability, add who built it and how complex it was, then add one to six screenshots and any demo.</>,
+      <>Describe what it does and its business value, choose its main capability (and, if one played a significant role, one other), add who built it and how complex it was, then add one to six screenshots and any demo.</>,
       <>Confirm the content is safe for clients and <b>Submit for review</b>. A librarian checks it before anything is published.</>,
       <>If the librarian asks for changes, you see their comments in My submissions. Edit and resubmit.</>,
       connected
@@ -41,8 +41,8 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     ...(connected ? [{ id: "help-feedback", icon: "message" as const, eyebrow: "Everyone · Solution teams", title: "Suggestions and feedback", steps: [
       <>Anyone can open a published solution and use <b>Suggest an improvement</b>, at the end of its side column, to share an idea with the team that built it.</>,
       <>It is private, not a public comment: only the solution's owner, its contributors and librarians see it, with who sent it and when. It cannot be edited once sent.</>,
-      <>The team sees it on the solution's page and in <b>My submissions</b>, where it counts as <b>new</b> (on the card, the Suggestions tab and the top bar) until someone in the team marks it <b>Addressed</b>. There are no emails yet, so check My submissions from time to time.</>,
-      <><b>Addressed</b> only means "we have seen this and dealt with it". Nothing changes automatically: you decide whether to update the solution. You can undo it.</>,
+      <>The team sees it on the solution's page. The owner also sees it in <b>My submissions</b>: under <b>Needs your attention</b>, on the solution's card and in the top bar, it counts as <b>pending</b> until the owner marks it <b>Addressed</b>. Contributors and librarians can read it but not mark it. There are no emails yet, so check My submissions from time to time.</>,
+      <><b>Addressed</b> only means "we have seen this and dealt with it". Nothing changes automatically: the owner decides whether to update the solution, and can undo it.</>,
     ] }] : []),
     ...(librarian ? [{ id: "help-review", icon: "clipboardCheck" as const, eyebrow: "Librarians", title: "Review and curate", steps: [
       <>Open the <b>Review queue</b>, then a submission. Check its content and the <b>Publication checklist</b>.</>,
@@ -62,8 +62,8 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     ] : []),
     { question: "What do complexity and estimated hours mean?", answer: <>How hard the whole solution was to build (Easy, Medium or Hard; required to submit) and, optionally, the least time it took in whole hours, including preparation and discovery. Both are internal and never shown to clients.</> },
     { question: "Who sees my drafts?", answer: <>{connected ? "A draft stays with you until you submit it; then librarians review it. Published solutions are visible to everyone with access to PRISMA." : "In this local preview, drafts and submissions live in this browser only."}</> },
-    ...(connected ? [{ question: "Why does My submissions keep showing \"new\"?", answer: <>It counts feedback still waiting for you: each suggestion until you or a contributor marks it <b>Addressed</b>, and each solution a librarian sent back until you resubmit it. Reading a suggestion does not clear it; marking it addressed does.</> }] : []),
-    ...(connected ? [{ question: "Why can't I edit my own solution from the review queue?", answer: <>A librarian edits other people's solutions and explains the change to them. Your own you edit as its owner: withdraw it from My submissions, change it and resubmit it.</> }] : []),
+    ...(connected ? [{ question: "Why does My submissions keep showing \"pending\"?", answer: <>It counts your solutions with feedback still waiting for you: suggestions until you mark them <b>Addressed</b>, and solutions a librarian sent back until you resubmit them. Reading a suggestion does not clear it; marking it addressed does.</> }] : []),
+    ...(connected ? [{ question: "Why can't I edit my own solution from the review queue?", answer: <>A librarian edits other people's solutions and explains the change to them. Your own you edit as its owner: open it from My submissions, use <b>Withdraw &amp; edit</b> (or <b>Unpublish &amp; edit</b> if it is published), change it and resubmit it.</> }] : []),
   ];
   const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 

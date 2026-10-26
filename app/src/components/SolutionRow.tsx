@@ -11,7 +11,8 @@ import { solutionAge } from "../lib/sort";
 /**
  * List-view row for the library: the same solution as a compact horizontal line
  * (thumbnail, areas, name, summary, maturity, capability) for faster scanning.
- * The heart is a sibling of the row, not a child: the row itself is a button.
+ * The heart is a sibling of the row, not a child: the row itself is a button. It tops a compact right rail with
+ * the age beneath it; the rail lets clicks through to the row except on the heart. The whole row opens, so no arrow.
  */
 export function SolutionRow({ solution, present, index, onOpen, poster, favoritable = false, favorite }: {
   solution: Solution;
@@ -33,7 +34,7 @@ export function SolutionRow({ solution, present, index, onOpen, poster, favorita
         aria-label={`${solution.name} — ${solution.summary}`}
         onClick={open}
         onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); } }}
-        className={`solution-row solution-card glass glass-lite lift group flex min-w-0 cursor-pointer items-center gap-4 rounded-[16px] p-2.5 [overflow-wrap:anywhere] ${showHeart ? "pr-16" : "pr-4"}`}
+        className="solution-row solution-card glass glass-lite lift group flex min-w-0 cursor-pointer items-center gap-4 rounded-[16px] p-2.5 pr-14 [overflow-wrap:anywhere]"
       >
         <div className="card-poster aspect-[16/9] w-[132px] shrink-0 overflow-hidden rounded-[10px]">
           <PosterTint solution={solution}>
@@ -48,22 +49,21 @@ export function SolutionRow({ solution, present, index, onOpen, poster, favorita
         <div className="hidden shrink-0 flex-col items-end gap-1.5 md:flex">
           <StatusPill status={solution.status} />
           {solution.capabilities[0] && <Chip>{solution.capabilities[0]}</Chip>}
-          {age && (
-            <span
-              className="inline-flex items-center gap-1 font-mono text-[10.5px]"
-              style={{ color: "var(--ink-3)" }}
-              title={age.title}
-            >
-              <Icon name="clock" size={11} />
-              {age.label}
-            </span>
-          )}
         </div>
-        <span className="hidden shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 sm:block" style={{ color: "var(--accent)" }} aria-hidden="true">
-          <Icon name="arrowRight" size={16} />
-        </span>
       </div>
-      {showHeart && <FavoriteButton id={solution.id} name={solution.name} className="absolute top-1/2 right-3 z-10 -translate-y-1/2" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
+      <div className={`pointer-events-none absolute right-2.5 z-10 flex w-9 flex-col items-center gap-1.5 ${showHeart ? "top-2.5" : "inset-y-0 justify-center"}`}>
+        {showHeart && <FavoriteButton id={solution.id} name={solution.name} className="pointer-events-auto" saved={favorite?.saved} pending={favorite?.pending} onToggle={favorite?.onToggle} />}
+        {age && (
+          <span
+            className="hidden items-center gap-0.5 font-mono text-[10.5px] whitespace-nowrap sm:inline-flex"
+            style={{ color: "var(--ink-3)" }}
+            title={age.title}
+          >
+            <Icon name="clock" size={10} />
+            {age.label}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

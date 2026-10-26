@@ -962,9 +962,9 @@ test("help page: one guide per role and common questions, tailored to the app, w
   assert.match(connected, /Why can&#x27;t I edit my own solution from the review queue\?/);
   // Plain introduction: what PRISMA is, then share → review → find and present.
   assert.match(poc, /demos, prototypes and products.*1 · <\/span>Share.*2 · <\/span>Review.*3 · <\/span>Find &amp; present/s);
-  // Suggestions exist only in the connected app: who sees them, why they stay new, what Addressed means.
-  assert.match(connected, /Suggestions and feedback.*Suggest an improvement.*only the solution&#x27;s owner, its contributors and librarians.*counts as <b>new<\/b>.*marks it <b>Addressed<\/b>.*Nothing changes automatically/s);
-  assert.match(connected, /Why does My submissions keep showing &quot;new&quot;\?/);
+  // Suggestions exist only in the connected app: who sees them, why they stay pending, who marks them, what Addressed means.
+  assert.match(connected, /Suggestions and feedback.*Suggest an improvement.*only the solution&#x27;s owner, its contributors and librarians.*counts as <b>pending<\/b> until the owner marks it <b>Addressed<\/b>.*can read it but not mark it.*Nothing changes automatically/s);
+  assert.match(connected, /Why does My submissions keep showing &quot;pending&quot;\?/);
   assert.doesNotMatch(poc, /Suggestions and feedback|Addressed/);
   // Librarian guidance only for librarians in the connected app.
   const contributor = render(HelpView, { connected: true, librarian: false });

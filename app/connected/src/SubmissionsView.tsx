@@ -22,7 +22,7 @@ import { MediaPreview } from "./DraftMediaEditor";
 import { PublishedGallery } from "./PublishedView";
 import type { MediaItem } from "./media";
 import { useMediaAction } from "./useMediaAction";
-import { ConnectedSolutionCard } from "./ConnectedSolutionCard";
+import { ConnectedSolutionCard, SubmissionThumbnail } from "./ConnectedSolutionCard";
 import { ProtectedImage } from "./ProtectedImage";
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px] disabled:opacity-50";
@@ -102,6 +102,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
     // Needs your attention lists returned drafts and new suggestions; each solution shows its suggestions inside.
     return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onDelete={remove}
       renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />}
+      renderPoster={solution => <SubmissionThumbnail solution={solution} />}
       actions={<button type="button" title="Refresh submissions" aria-label="Refresh submissions" className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold hover:bg-(--glass-edge)" style={{ color: "var(--ink-2)" }} onClick={() => { setState(null); setSuggestionRows(undefined); setAttempt(current => current + 1); }}><Icon name="refresh" size={15} />Refresh</button>} />;
   }
   return <ReviewQueue entries={state.entries} connected capabilityAreas={state.capabilityAreas} />;

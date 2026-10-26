@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Solution } from "../types";
 import type { CardManagement } from "./SolutionCard";
 import { SubmissionStatus } from "./Badges";
@@ -8,9 +9,10 @@ import { submissionState } from "../lib/submissionState";
 /**
  * List-view row for My submissions: the same management as the card (status, new suggestions,
  * View feedback, Edit, •••) on one compact line. The name is the open button, stretched over the row, so the controls
- * sit beside it rather than inside it. A returned row glows amber, one with pending suggestions blue.
+ * sit beside it rather than inside it. A returned row glows amber, one with pending suggestions blue. `poster` replaces
+ * the generated poster (the connected app's protected thumbnail).
  */
-export function SubmissionRow({ solution, index, manage, onOpen }: { solution: Solution; index: number; manage: CardManagement; onOpen: () => void }) {
+export function SubmissionRow({ solution, index, manage, onOpen, poster }: { solution: Solution; index: number; manage: CardManagement; onOpen: () => void; poster?: ReactNode }) {
   const state = submissionState(solution);
   const name = solution.name || "Untitled solution";
   const tone = manage.actionNeeded ? "submission-row--changes" : manage.unread ? "submission-row--new" : "";
@@ -20,7 +22,7 @@ export function SubmissionRow({ solution, index, manage, onOpen }: { solution: S
   // Fixed columns from small screens up, so every row lines up: image · name and summary · state · signal · actions.
   return <div className={`submission-row solution-card animate-rise relative grid min-w-0 items-center gap-x-4 gap-y-2 rounded-[16px] p-2.5 pr-3 ${tone}`} style={{ animationDelay: `${Math.min(index, 9) * 30}ms` }}>
     <div className="card-poster aspect-[16/9] w-[104px] shrink-0 overflow-hidden rounded-[10px]">
-      <PosterTint solution={solution}><Poster id={solution.id} name={name} area={solution.specializationArea} src={solution.thumbnail} className="h-full w-full" /></PosterTint>
+      <PosterTint solution={solution}>{poster ?? <Poster id={solution.id} name={name} area={solution.specializationArea} src={solution.thumbnail} className="h-full w-full" />}</PosterTint>
     </div>
     <div className="min-w-0">
       <button type="button" className="card-open block max-w-full cursor-pointer truncate text-left text-[15px] font-semibold" onClick={onOpen} aria-label={`${name} — ${state}`}>{name}</button>

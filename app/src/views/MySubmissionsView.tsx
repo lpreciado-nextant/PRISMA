@@ -47,7 +47,7 @@ function rememberedLayout(): "grid" | "list" {
  * items. Below, every solution as cards with one row of status filters. `suggestions` (connected only) also puts a
  * compact count on each card's footer.
  */
-export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, suggestions }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>> }) {
+export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, renderPoster, suggestions }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; renderPoster?: (solution: Solution) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>> }) {
   const [filter, setFilter] = useState<Filter>("All");
   const [attentionAll, setAttentionAll] = useState(false);
   const [attentionHidden, setAttentionHidden] = useState(rememberedAttentionHidden);
@@ -225,7 +225,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
         <h2 className="text-[20px]">No submissions in this status</h2>
         <button type="button" className="mt-3 cursor-pointer text-[14px] font-semibold" style={{ color: "var(--accent)" }} onClick={() => setFilter("All")}>Show all submissions</button>
       </div> : layout === "list" ? <div className="mt-6 flex flex-col gap-2.5">
-        {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0"><SubmissionRow solution={solution} index={index} manage={manage(solution)} onOpen={() => open(solution)} /></article>)}
+        {visible.map(({ solution }, index) => <article key={solution.id} className="min-w-0"><SubmissionRow solution={solution} index={index} manage={manage(solution)} onOpen={() => open(solution)} poster={renderPoster?.(solution)} /></article>)}
       </div> : <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {visible.map(({ solution }, index) => <article key={solution.id} className="grid min-w-0">{card(solution, index)}</article>)}
       </div>}
