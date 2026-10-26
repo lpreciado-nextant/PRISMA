@@ -11,7 +11,7 @@ export function clearRecoveries(storage: Storage) {
 }
 export function recoveryPayload(owner: string, id: string | undefined, rowVersion: string | undefined, draft: CoreDraft, graph: DraftGraph, step: number, uncertain = false): string {
   return JSON.stringify({ version: 1, owner: owner.toLowerCase(), id: id ?? "new", rowVersion: rowVersion ?? "", draft: coreFields(draft),
-    graph: { contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId })), technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds, clientRoleIds: graph.clientRoleIds }, step, uncertain });
+    graph: { contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId })), technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds, clientRoleIds: graph.clientRoleIds, secondaryCapabilityIds: graph.secondaryCapabilityIds }, step, uncertain });
 }
 export function parseRecovery(text: string, owner: string, id?: string): DraftRecovery {
   if (text.length > 200000) throw new Error("Recovery is oversized.");
@@ -36,6 +36,8 @@ export function parseRecovery(text: string, owner: string, id?: string): DraftRe
   if (graph.areaIds === undefined) graph.areaIds = [];
   // Likewise recoveries written before client roles became N:N (PR-031).
   if (graph.clientRoleIds === undefined) graph.clientRoleIds = [];
-  for (const key of ["technologyIds", "industryIds", "projectIds", "areaIds", "clientRoleIds"] as const) if (!Array.isArray(graph[key]) || graph[key].length > 100 || graph[key].some(identifier => typeof identifier !== "string" || !guid.test(identifier))) throw new Error("Invalid recovery tags.");
+  // And before the secondary capability (2026-10-26).
+  if (graph.secondaryCapabilityIds === undefined) graph.secondaryCapabilityIds = [];
+  for (const key of ["technologyIds", "industryIds", "projectIds", "areaIds", "clientRoleIds", "secondaryCapabilityIds"] as const) if (!Array.isArray(graph[key]) || graph[key].length > (key === "secondaryCapabilityIds" ? 1 : 100) || graph[key].some(identifier => typeof identifier !== "string" || !guid.test(identifier))) throw new Error("Invalid recovery tags.");
   return JSON.parse(recoveryPayload(owner, id, value.rowVersion, { ...draft, safetyAcknowledged: false }, { ...emptyGraph(), ...graph }, value.step, value.uncertain ?? true)) as DraftRecovery;
 }

@@ -44,13 +44,15 @@ export interface DraftGraph {
   areaIds: string[];
   /** Target client roles (`nx_clientrole` N:N, PR-031). */
   clientRoleIds: string[];
+  /** At most one other capability (`nx_Solution_nx_SecondaryCapability`), never the main one; the server derives `areaIds` from both. */
+  secondaryCapabilityIds: string[];
 }
 export interface GraphSnapshot { id: string; rowVersion: string; graph: DraftGraph }
 export interface GraphApi {
   read: (id: string) => Promise<DraftResult>;
   save: (id: string, version: string, json: string) => Promise<DraftResult>;
 }
-export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [] });
+export const emptyGraph = (): DraftGraph => ({ contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [], secondaryCapabilityIds: [] });
 
 export function isEmptyContributor(person: Contributor): boolean {
   return !person.id && !person.personId;
@@ -64,6 +66,16 @@ export async function persistDraftGraph(coreApi: DraftApi, graphApi: GraphApi, d
   let current = saved;
   let confirmedGraph = baseline;
   const fields = { ...draft, safetyAcknowledged: graphChanged ? false : draft.safetyAcknowledged };
+  // The server rejects a main capability still stored as the secondary, so a promotion (or swap) releases it first.
+  const promoted = draft.capabilityId.toLowerCase();
+  if (current && promoted && promoted !== current.capabilityId.toLowerCase() && baseline.secondaryCapabilityIds.some(id => id.toLowerCase() === promoted)) {
+    const released = parseGraph(await graphApi.save(current.id, current.rowVersion, graphPayload({ ...baseline, secondaryCapabilityIds: baseline.secondaryCapabilityIds.filter(id => id.toLowerCase() !== promoted) })));
+    signal.throwIfAborted();
+    if (released.id !== current.id || released.rowVersion === current.rowVersion) throw new Error("Unconfirmed graph version.");
+    current = { ...current, rowVersion: released.rowVersion, safetyAcknowledged: false };
+    confirmedGraph = released.graph;
+    onConfirmed(current, confirmedGraph);
+  }
   if (!current || JSON.stringify(coreFields(current)) !== JSON.stringify(coreFields(fields))) {
     current = await saveDraft(coreApi, fields, current, signal);
     onConfirmed(current, confirmedGraph);
@@ -104,11 +116,11 @@ export function parseGraph(result: DraftResult): GraphSnapshot {
     return { id: person.id, personId: person.personId };
   });
   if (new Set(contributors.map(person => person.personId)).size !== contributors.length) throw new Error("Duplicate contributor.");
-  return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds), clientRoleIds: ids(graph.clientRoleIds) } };
+  return { id: data.id, rowVersion: data.rowVersion, graph: { contributors, technologyIds: ids(graph.technologyIds), industryIds: ids(graph.industryIds), projectIds: ids(graph.projectIds), areaIds: ids(graph.areaIds), clientRoleIds: ids(graph.clientRoleIds), secondaryCapabilityIds: ids(graph.secondaryCapabilityIds) } };
 }
 export function graphPayload(graph: DraftGraph): string {
   return JSON.stringify({
     contributors: graph.contributors.map(person => ({ id: person.id, personId: person.personId })),
-    technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds, clientRoleIds: graph.clientRoleIds,
+    technologyIds: graph.technologyIds, industryIds: graph.industryIds, projectIds: graph.projectIds, areaIds: graph.areaIds, clientRoleIds: graph.clientRoleIds, secondaryCapabilityIds: graph.secondaryCapabilityIds,
   });
 }

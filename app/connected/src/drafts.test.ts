@@ -153,6 +153,10 @@ test("tab recovery is identity scoped, strips extras and requires renewed acknow
   assert.equal(restored.step, 2);
   assert.equal(restored.uncertain, false);
   assert.equal(parseRecovery(recoveryPayload("owner@example.com", draft.id, draft.rowVersion, draft, emptyGraph(), 2, true), "owner@example.com", draft.id).uncertain, true);
+  const older = JSON.parse(text); delete older.graph.secondaryCapabilityIds;
+  assert.deepEqual(parseRecovery(JSON.stringify(older), "owner@example.com", draft.id).graph.secondaryCapabilityIds, []);
+  older.graph.secondaryCapabilityIds = [spare, draft.id];
+  assert.throws(() => parseRecovery(JSON.stringify(older), "owner@example.com", draft.id), /tags/);
   assert.throws(() => parseRecovery(text, "another@example.com", draft.id), /identity/);
   assert.throws(() => parseRecovery(text, "owner@example.com"), /identity/);
   assert.throws(() => parseRecovery(text.replace('"step":2', '"step":99'), "owner@example.com", draft.id), /identity/);
@@ -160,7 +164,7 @@ test("tab recovery is identity scoped, strips extras and requires renewed acknow
 });
 
 test("workflow rejects mismatched versions, unknown states and internal presentation projects", () => {
-  const graph = { id: draft.id, rowVersion: draft.rowVersion, graph: { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [] } };
+  const graph = { id: draft.id, rowVersion: draft.rowVersion, graph: { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [], secondaryCapabilityIds: [] } };
   const detail = { record: { core: draft, areaIds: [], publication: 125060003, outcome: 125060000, comments: "", cleared: false }, graph, media: [], librarian: false };
   assert.deepEqual(parseSubmission(result(detail)), detail);
   assert.throws(() => parseSubmission(result({ ...detail, graph: { ...graph, rowVersion: "1" } })), /Mismatched/);
@@ -296,7 +300,7 @@ test("media upload advances exact versions and stops after cancellation", async 
 });
 
 test("graph response preserves nullable effort and string versions", () => {
-  const graph: DraftGraph = { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [spare] };
+  const graph: DraftGraph = { contributors: [], technologyIds: [], industryIds: [], projectIds: [], areaIds: [], clientRoleIds: [spare], secondaryCapabilityIds: [] };
   const data = { id: "45dc1e23-1bb6-f111-aaac-6045bd049fba", rowVersion: "90071992547409932", graph };
   assert.deepEqual(parseGraph(result(data)), data);
   assert.equal(graphPayload(graph), JSON.stringify(graph));
@@ -334,6 +338,27 @@ test("wizard save chains confirmed versions and acknowledges only after graph wr
   assert.deepEqual(calls, ["core:false", "graph", "core:true"]);
   assert.equal(saved.core.safetyAcknowledged, true);
   assert.deepEqual(saved.graph, desired);
+});
+
+test("promoting the secondary capability releases it before the core save", async () => {
+  const main = "11111111-1111-1111-1111-111111111111";
+  const calls: string[] = [];
+  let version = BigInt(draft.rowVersion);
+  const stored = { ...draft, capabilityId: main };
+  const coreApi: DraftApi = { ...api, save: async (json, _id, expected) => {
+    assert.equal(expected, String(version));
+    calls.push(`core:${JSON.parse(json).capabilityId}`);
+    return result({ ...stored, ...JSON.parse(json), rowVersion: String(++version) });
+  } };
+  const graphApi: GraphApi = { read: unusedRead, save: async (id, expected, json) => {
+    assert.equal(expected, String(version));
+    calls.push(`graph:${JSON.parse(json).secondaryCapabilityIds.join()}`);
+    return result({ id, rowVersion: String(++version), graph: JSON.parse(json) });
+  } };
+  // A swap: main becomes the old secondary and the old main becomes the secondary.
+  const saved = await persistDraftGraph(coreApi, graphApi, { ...stored, capabilityId: spare }, stored, { ...emptyGraph(), secondaryCapabilityIds: [main] }, { ...emptyGraph(), secondaryCapabilityIds: [spare] }, signal(), () => {});
+  assert.deepEqual(calls, ["graph:", `core:${spare}`, `graph:${main}`]);
+  assert.deepEqual(saved.graph.secondaryCapabilityIds, [main]);
 });
 
 test("wizard save stops after an uncertain graph response and retains its confirmed checkpoint", async () => {

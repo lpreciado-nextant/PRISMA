@@ -266,8 +266,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     setHoursText(text);
     try { change("estimatedMinimumHours", estimatedHours(text.trim() === "" ? undefined : Number(text))); } catch { /* shown as hoursError; the draft keeps its last valid value */ }
   };
-  // Classify & tag: the main capability, by area; its area becomes the solution's only area (the draft graph's
-  // areaIds), so the existing graph API keeps it. Other capabilities wait for the secondary-capability plug-in.
+  // Classify & tag: the main capability, by area, and at most one other capability. Their areas, main first, are the
+  // solution's areas; the graph API re-derives them on the server, so `areaIds` here only keeps the preview and checks current.
   const areaOrder = [...references.areas].sort((left, right) => ["ai", "data", "ibo"].indexOf(left.name) - ["ai", "data", "ibo"].indexOf(right.name));
   const capabilityArea = (id: string) => {
     const areaId = references.capabilities.find(option => option.id === id)?.areaId;
@@ -280,10 +280,19 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     ...(unplaced.length ? [{ label: "Other", options: unplaced.map(option => ({ value: option.id, label: option.name })) }] : []),
   ];
   const mainArea = draft.capabilityId ? capabilityArea(draft.capabilityId) : undefined;
+  const classify = (main: string, secondary: string[]) => [...new Set([main, ...secondary].map(id => capabilityArea(id)?.id).filter((id): id is string => !!id))];
   const chooseCapability = (id: string) => {
     change("capabilityId", id);
-    const area = capabilityArea(id);
-    if (area && (graph.areaIds.length !== 1 || graph.areaIds[0].toLowerCase() !== area.id.toLowerCase())) changeGraph({ ...graph, areaIds: [area.id] });
+    setGraph(current => {
+      const secondaryCapabilityIds = current.secondaryCapabilityIds.filter(entry => entry.toLowerCase() !== id.toLowerCase());
+      return { ...current, secondaryCapabilityIds, areaIds: classify(id, secondaryCapabilityIds) };
+    });
+  };
+  // CapabilityFields also drops a promoted secondary after onMain; chooseCapability has already done so, so that call is a no-op.
+  const chooseSecondary = (ids: string[]) => {
+    change("safetyAcknowledged", false);
+    setGraph(current => !draft.capabilityId || ids.join() === current.secondaryCapabilityIds.join() ? current
+      : { ...current, secondaryCapabilityIds: ids, areaIds: classify(draft.capabilityId, ids) });
   };
   const capabilityName = references.capabilities.find(option => option.id === draft.capabilityId)?.name;
   const [capabilityOwner, setCapabilityOwner] = useState<{ capability: string; name: string | null } | undefined>(undefined);
@@ -349,8 +358,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
             associated={clientAssociated} onAssociated={setClientAssociated} />
           <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={change} />
         </StepShell>}
-        {step === 2 && <StepShell title="Classify & tag"><div className="flex min-w-0 flex-col gap-5"><CapabilityFields groups={capabilityGroups} main={draft.capabilityId || undefined} secondary={[]} maxSecondary={0}
-          mainArea={mainArea ? areaName(mainArea.name) : undefined} mainOwner={mainOwner} onMain={chooseCapability} onSecondary={() => undefined} /></div><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
+        {step === 2 && <StepShell title="Classify & tag"><div className="flex min-w-0 flex-col gap-5"><CapabilityFields groups={capabilityGroups} main={draft.capabilityId || undefined} secondary={graph.secondaryCapabilityIds}
+          mainArea={mainArea ? areaName(mainArea.name) : undefined} mainOwner={mainOwner} onMain={chooseCapability} onSecondary={chooseSecondary} /></div><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
       </fieldset>
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}
       {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}
