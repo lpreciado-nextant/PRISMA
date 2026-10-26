@@ -31,5 +31,15 @@ export default defineConfig({
     },
     fs: { allow: [fileURLToPath(new URL("..", import.meta.url)), fileURLToPath(new URL("../../presentation/PRISMA Demo-web.mp4", import.meta.url))] },
   },
-  build: { outDir: "dist", emptyOutDir: true },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        assetFileNames: asset => asset.names.some(name => /[^A-Za-z0-9._-]/.test(name))
+          ? "assets/[hash][extname]"
+          : "assets/[name]-[hash][extname]",
+      },
+    },
+  },
 });
