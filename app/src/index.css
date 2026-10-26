@@ -1,5 +1,33 @@
 @import "tailwindcss";
 
+.markdown-editor { border: 1px solid var(--glass-edge); border-radius: 8px; min-width: 0; }
+.markdown-editor:focus-within { border-color: var(--accent); }
+.markdown-tool { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; color: var(--ink-2); }
+.markdown-tool:hover, .markdown-tab:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.markdown-tool:disabled { opacity: .4; cursor: not-allowed; }
+.markdown-tool:focus-visible, .markdown-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.markdown-tab { min-height: 32px; padding: 4px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--ink-2); }
+.markdown-tab[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--ink); font-weight: 600; }
+.markdown-content { min-width: 0; overflow-wrap: anywhere; line-height: 1.6; }
+.markdown-content > :first-child { margin-top: 0; }
+.markdown-content > :last-child { margin-bottom: 0; }
+.markdown-content p, .markdown-content ul, .markdown-content ol, .markdown-content blockquote, .markdown-content pre, .markdown-content .markdown-table { margin-block: .65em; }
+.markdown-content ul { list-style: disc; padding-left: 1.5em; }
+.markdown-content ol { list-style: decimal; padding-left: 1.5em; }
+.markdown-content li + li { margin-top: .2em; }
+.markdown-content .contains-task-list { list-style: none; }
+.markdown-content input[type="checkbox"] { margin-right: .5em; accent-color: var(--accent); }
+.markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4, .markdown-content h5, .markdown-content h6 { font-size: 1.1em; font-weight: 600; margin-block: 1em .35em; }
+.markdown-content a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.markdown-content blockquote { border-left: 3px solid var(--glass-edge); padding-left: 1em; color: var(--ink-2); }
+.markdown-content code { font-family: var(--font-mono); font-size: .9em; background: color-mix(in srgb, var(--ink) 6%, transparent); padding: .1em .3em; border-radius: 3px; }
+.markdown-content pre { max-width: 100%; overflow-x: auto; padding: .75em; background: color-mix(in srgb, var(--ink) 6%, transparent); border-radius: 6px; }
+.markdown-content pre code { padding: 0; background: transparent; }
+.markdown-table { max-width: 100%; overflow-x: auto; }
+.markdown-content table { border-collapse: collapse; width: 100%; }
+.markdown-content th, .markdown-content td { border: 1px solid var(--glass-edge); padding: .4em .65em; text-align: left; }
+.markdown-content hr { border: 0; border-top: 1px solid var(--glass-edge); margin-block: 1em; }
+
 /* ============================================================
    Nextant Solution Library — liquid glass design system
    Palette : steel blue drawn from the Nextant wordmark

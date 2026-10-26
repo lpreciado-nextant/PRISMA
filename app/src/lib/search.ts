@@ -1,3 +1,4 @@
+import { markdownText } from "./markdown.ts";
 import type { Solution, SpecializationArea } from "../types";
 import { solutionAreas } from "./areas.ts";
 import { created } from "./sort.ts";
@@ -59,8 +60,8 @@ function haystack(s: Solution): string {
   return [
     s.name,
     s.summary,
-    s.whatItDoes,
-    s.businessValue,
+    markdownText(s.whatItDoes),
+    markdownText(s.businessValue),
     s.clientContext ?? "",
     s.clientContextRedacted ?? "",
     s.searchKeywords,

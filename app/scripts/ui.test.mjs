@@ -20,6 +20,23 @@ let masthead;
 const noop = () => {};
 const render = (component, props) => renderToStaticMarkup(createElement(component, props));
 
+test("Markdown renders formatting without HTML, remote images or unsafe navigation", async () => {
+  const { Markdown } = await server.ssrLoadModule("/src/components/Markdown.tsx");
+  const html = render(Markdown, { children: "## Outcome\n\n**Bold** and *italic*\nnext line\n\n- First\n- Second\n\n[Reference](https://example.com)\n\n<script>alert(1)</script>\n\n![remote](https://example.com/tracker.png)\n\n[bad](javascript:alert(1)) [route](#/submit)" });
+  assert.match(html, /<h2>Outcome<\/h2>/);
+  assert.match(html, /<strong>Bold<\/strong>/);
+  assert.match(html, /<em>italic<\/em>/);
+  assert.match(html, /<br\/>/);
+  assert.match(html, /<li>First<\/li>/);
+  assert.match(html, /href="https:\/\/example.com" target="_blank" rel="noopener noreferrer"/);
+  assert.doesNotMatch(html, /<script|<img|javascript:|href="#/);
+  const tasks = render(Markdown, { children: "- [x] Complete\n- [ ] Pending\n\n| Name | Result |\n| --- | --- |\n| Check | ~~old~~ |" });
+  assert.match(tasks, /type="checkbox" disabled="" readOnly="" aria-label="Completed item" checked=""/);
+  assert.match(tasks, /aria-label="Incomplete item"/);
+  assert.match(tasks, /<div class="markdown-table"><table>/);
+  assert.match(tasks, /<del>old<\/del>/);
+});
+
 before(async () => {
   cacheDirectory = await mkdtemp(join(tmpdir(), "prisma-ui-tests-"));
   server = await createServer({ configFile: false, root: fileURLToPath(new URL("../", import.meta.url)), cacheDir: cacheDirectory, plugins: [react()], optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false }, appType: "custom" });
@@ -31,6 +48,31 @@ before(async () => {
   masthead = await server.ssrLoadModule("/src/components/Masthead.tsx");
 });
 after(async () => { await server?.close(); if (cacheDirectory) await rm(cacheDirectory, { recursive: true, force: true }); });
+
+test("Markdown editors preserve accessible fields, limits and literal saved source", () => {
+  const html = render(form.StoryFields, { whatItDoes: "**Saved source**", businessValue: "- Benefit", onChange: noop });
+  assert.equal((html.match(/class="markdown-editor"/g) ?? []).length, 2);
+  assert.equal((html.match(/maxLength="4000"/g) ?? []).length, 2);
+  assert.equal((html.match(/role="tablist"/g) ?? []).length, 2);
+  assert.match(html, /<textarea[^>]+>\*\*Saved source\*\*<\/textarea>/);
+  assert.match(html, /<label for="[^"]+">/);
+  assert.doesNotMatch(html, /<label[^>]*><button/);
+  const lessons = render(form.LessonsFields, { challenges: "**Internal**", lessonsLearned: "", onChange: noop });
+  assert.equal((lessons.match(/maxLength="2000"/g) ?? []).length, 2);
+});
+
+test("Markdown detail formatting preserves present-mode exclusion of internal narratives", async () => {
+  const { DetailView } = await server.ssrLoadModule("/src/views/DetailView.tsx");
+  const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");
+  const solution = { ...SOLUTIONS[0], whatItDoes: "**Public narrative**", businessValue: "- Public benefit", challenges: "*PRIVATE-NOTE*", lessonsLearned: "PRIVATE-LESSON" };
+  const normal = render(DetailView, { solution, present: false });
+  const present = render(DetailView, { solution, present: true });
+  assert.match(normal, /<strong>Public narrative<\/strong>/);
+  assert.match(normal, /<em>PRIVATE-NOTE<\/em>/);
+  assert.match(present, /<strong>Public narrative<\/strong>/);
+  assert.match(present, /<li>Public benefit<\/li>/);
+  assert.doesNotMatch(present, /PRIVATE-NOTE|PRIVATE-LESSON/);
+});
 
 test("help guides start collapsed with accessible controls in both app targets", async () => {
   const { HelpView } = await server.ssrLoadModule("/src/views/HelpView.tsx");

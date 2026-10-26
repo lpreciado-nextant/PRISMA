@@ -1,5 +1,6 @@
 import type { Solution, SolutionStatus } from "../types.ts";
 import { AREAS } from "../data/catalogueMetadata.ts";
+import { markdownText } from "./markdown.ts";
 
 /**
  * Maps a solution to the fields of the PRISMA × Nextant presentation template.
@@ -127,8 +128,8 @@ export function buildDeckFields(input: DeckInput): DeckFields {
     tagline: fit(solution.summary, DECK_LIMITS.tagline),
     presenter_name: fit(presenter.name, DECK_LIMITS.presenter_name),
     presentation_date: monthYear(input.now ?? new Date()),
-    description: fit(solution.whatItDoes, DECK_LIMITS.description),
-    business_value: fit(solution.businessValue, DECK_LIMITS.business_value),
+    description: fit(markdownText(solution.whatItDoes), DECK_LIMITS.description),
+    business_value: fit(markdownText(solution.businessValue), DECK_LIMITS.business_value),
     industries: fit(solution.industries.join(" · "), DECK_LIMITS.industries),
     cta_headline: CTA_HEADLINE,
     prisma_href: prismaUrl,

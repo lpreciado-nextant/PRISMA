@@ -39,9 +39,15 @@
     "@microsoft/power-apps": "^1.2.5",
     "hash-wasm": "^4.12.0",
     "jszip": "^3.10.2",
+    "mdast-util-to-string": "^4.0.0",
     "mp4box": "^2.4.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-breaks": "^4.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5"
   },
   "devDependencies": {
     "@azure/identity": "4.13.3",

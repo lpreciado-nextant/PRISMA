@@ -12,6 +12,7 @@ import { DemoStage } from "../components/DemoStage";
 import { solutionAreas } from "../lib/areas";
 import { FavoriteButton } from "../components/FavoriteButton";
 import { Lightbox } from "../components/Lightbox";
+import { Markdown } from "../components/Markdown";
 
 type Behaviour = {
   label: string;
@@ -170,7 +171,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
 
       <div className="mt-6">
         <Panel title="What the solution does">
-          <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.whatItDoes}</p>
+          <Markdown className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.whatItDoes}</Markdown>
         </Panel>
       </div>
 
@@ -202,7 +203,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
 
       <div className="mt-6">
         <Panel title="Business value">
-          <p className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.businessValue}</p>
+          <Markdown className={present ? "text-[17px]" : "text-[15.5px]"}>{solution.businessValue}</Markdown>
         </Panel>
       </div>
 
@@ -225,8 +226,8 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
           {!present && (solution.challenges || solution.lessonsLearned) && (
             <Panel title="Challenges & lessons learned · internal only">
               <dl className="flex flex-col gap-4 text-[15px]">
-                {solution.challenges && <div><dt className="eyebrow mb-1">Challenges</dt><dd className="whitespace-pre-wrap break-words">{solution.challenges}</dd></div>}
-                {solution.lessonsLearned && <div><dt className="eyebrow mb-1">Lessons learned</dt><dd className="whitespace-pre-wrap break-words">{solution.lessonsLearned}</dd></div>}
+                {solution.challenges && <div><dt className="eyebrow mb-1">Challenges</dt><dd><Markdown>{solution.challenges}</Markdown></dd></div>}
+                {solution.lessonsLearned && <div><dt className="eyebrow mb-1">Lessons learned</dt><dd><Markdown>{solution.lessonsLearned}</Markdown></dd></div>}
               </dl>
             </Panel>
           )}

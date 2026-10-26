@@ -7,6 +7,15 @@ import type { Solution } from "../types.ts";
 const base = SOLUTIONS.find((solution) => canExportDeck(solution)) ?? SOLUTIONS[0];
 const input = { presenter: { name: "Ana Pérez" }, prismaUrl: "https://prisma.nextant.com/#/s/1", now: new Date("2026-10-07T12:00:00Z") };
 
+test("Markdown narratives export readable text without markup or hidden HTML", () => {
+  const solution: Solution = { ...base, clientSafeReviewed: true, publicationStatus: "Published", status: "Working prototype",
+    whatItDoes: "## Overview\n\n**Automates** [matching](https://example.com).\n\n<script>hidden</script>",
+    businessValue: "- Saves *time*\n- Reduces errors" };
+  const fields = buildDeckFields({ ...input, solution });
+  assert.equal(fields.description, "Overview Automates matching.");
+  assert.equal(fields.business_value, "Saves time Reduces errors");
+});
+
 test("only published, Cleared solutions export", () => {
   const cleared: Solution = { ...base, clientSafeReviewed: true, publicationStatus: "Published", status: "Working prototype" };
   assert.equal(canExportDeck(cleared), true);

@@ -1,5 +1,6 @@
 import { useContext, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
+import { MarkdownEditor } from "./MarkdownEditor";
 import { SectionCardsContext } from "./sectionCards";
 import { OptionalMark, RequiredLegend, RequiredMark } from "./RequiredMark";
 import { Notice } from "./Notice";
@@ -101,8 +102,9 @@ export function SubmissionSuccess({ name, children, onSubmissions, onAnother }: 
   </div>;
 }
 
-export function Field({ label, required, optional, hint, badge, children }: { label: string; required?: boolean; optional?: boolean; hint?: string; badge?: ReactNode; children: ReactNode }) {
-  return <label className="block min-w-0"><span className="mb-1.5 block"><span className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required ? <RequiredMark /> : optional && <OptionalMark />}</span>{badge}</span>{hint && <span className="mt-1 block text-[12px] text-(--ink-3)">{hint}</span>}</span>{children}</label>;
+export function Field({ label, required, optional, hint, badge, children, inputId }: { label: string; required?: boolean; optional?: boolean; hint?: string; badge?: ReactNode; children: ReactNode; inputId?: string }) {
+  const caption = <span className="mb-1.5 block"><span className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required ? <RequiredMark /> : optional && <OptionalMark />}</span>{badge}</span>{hint && <span className="mt-1 block text-[12px] text-(--ink-3)">{hint}</span>}</span>;
+  return inputId ? <div className="min-w-0"><label htmlFor={inputId}>{caption}</label>{children}</div> : <label className="block min-w-0">{caption}{children}</label>;
 }
 
 export function SubmissionSafety({ accepted, onChange }: { accepted: boolean; onChange: (accepted: boolean) => void }) {
@@ -485,19 +487,21 @@ export function SectionCard({ level = 2, icon, title, description, visibility, c
 
 /** `nested` renders the story as a section card inside a larger step (Define the solution) instead of a step of its own. */
 export function StoryFields({ whatItDoes, businessValue, onChange, nested = false, children }: { whatItDoes: string; businessValue: string; onChange: (key: "whatItDoes" | "businessValue", value: string) => void; nested?: boolean; children?: ReactNode }) {
+  const id = useId();
   const Shell = nested ? NamedSection : StepShell;
   return <Shell title="What does it do, and why does it matter?">
-    <Field label="What the solution does" required hint="What a user does in it, and what they get out of it."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={whatItDoes} onChange={event => onChange("whatItDoes", event.target.value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
-    <Field label="Business value" required hint="The problem it solves and why that matters. Add real numbers only if you have them."><textarea className={`${submissionInputClass} min-h-28 resize-y`} value={businessValue} onChange={event => onChange("businessValue", event.target.value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
+    <Field inputId={`${id}-description`} label="What the solution does" required hint="What a user does in it, and what they get out of it."><MarkdownEditor id={`${id}-description`} label="What the solution does" value={whatItDoes} onChange={value => onChange("whatItDoes", value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
+    <Field inputId={`${id}-value`} label="Business value" required hint="The problem it solves and why that matters. Add real numbers only if you have them."><MarkdownEditor id={`${id}-value`} label="Business value" value={businessValue} onChange={value => onChange("businessValue", value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
     {children}
   </Shell>;
 }
 
 /** Optional, internal-only reflections (`nx_challenges`, `nx_lessonslearned`); never part of present mode. */
 export function LessonsFields({ challenges, lessonsLearned, onChange }: { challenges: string; lessonsLearned: string; onChange: (key: "challenges" | "lessonsLearned", value: string) => void }) {
+  const id = useId();
   return <NamedSection title="Challenges & lessons learned">
-    <Field label="Challenges" optional hint="Blockers, risks or difficulties you hit while building it."><textarea className={`${submissionInputClass} min-h-24 resize-y`} value={challenges} onChange={event => onChange("challenges", event.target.value)} placeholder="e.g. Test data arrived late, so matching rules were tuned on a small sample." maxLength={2000} /></Field>
-    <Field label="Lessons learned" optional hint="Recommendations or implementation notes for the next team."><textarea className={`${submissionInputClass} min-h-24 resize-y`} value={lessonsLearned} onChange={event => onChange("lessonsLearned", event.target.value)} placeholder="e.g. Request data access in week one and agree on a sample with finance." maxLength={2000} /></Field>
+    <Field inputId={`${id}-challenges`} label="Challenges" optional hint="Blockers, risks or difficulties you hit while building it."><MarkdownEditor id={`${id}-challenges`} label="Challenges" value={challenges} onChange={value => onChange("challenges", value)} placeholder="e.g. Test data arrived late, so matching rules were tuned on a small sample." maxLength={2000} /></Field>
+    <Field inputId={`${id}-lessons`} label="Lessons learned" optional hint="Recommendations or implementation notes for the next team."><MarkdownEditor id={`${id}-lessons`} label="Lessons learned" value={lessonsLearned} onChange={value => onChange("lessonsLearned", value)} placeholder="e.g. Request data access in week one and agree on a sample with finance." maxLength={2000} /></Field>
   </NamedSection>;
 }
 
