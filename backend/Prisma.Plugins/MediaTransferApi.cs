@@ -39,16 +39,22 @@ namespace Prisma.Plugins
             if (context.MessageName == "nx_ReadVideoRange")
             {
                 var mode = context.InputParameters["Mode"] as string;
-                var columns = new ColumnSet("ownerid", "statecode", "nx_publicationstatus", "nx_clientsafereviewed", "nx_safetyacknowledged");
-                var parent = caller.Retrieve("nx_solution", id, columns);
-                var owner = parent.GetAttributeValue<EntityReference>("ownerid");
-                var librarian = mode == "submission" && (owner?.LogicalName != "systemuser" || owner.Id != context.InitiatingUserId) && ReviewApi.IsLibrarian(server, context.InitiatingUserId);
+                var columns = new ColumnSet("ownerid", "statecode", "nx_publicationstatus", "nx_clientsafereviewed", "nx_safetyacknowledged", "nx_capability");
+                var mediated = mode == "submission" || mode == "image";
+                var parent = (mediated ? server : caller).Retrieve("nx_solution", id, columns);
+                var librarian = mediated && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanManage(server, parent);
+                var reader = librarian ? server : caller;
+                if (mediated && !librarian) parent = caller.Retrieve("nx_solution", id, columns);
                 MediaTransferPolicy.ReadAccess(parent, context.InitiatingUserId, librarian, mode);
                 var assetId = (Guid)context.InputParameters["AssetId"];
                 var session = MediaApi.Session(server, id, assetId);
-                if (session == null || !session.GetAttributeValue<bool>("nx_complete") || session.GetAttributeValue<string>("nx_kind") != "attachment"
-                    || !BlobMedia.Eligible("attachment", session.GetAttributeValue<string>("nx_mime") ?? LinkedAssetPolicy.Mime)) throw MediaPolicy.Invalid("Completed attachment is unavailable.");
-                var target = caller.Retrieve("nx_demoasset", assetId, new ColumnSet("nx_solution"));
+                if (session == null || !session.GetAttributeValue<bool>("nx_complete")) throw MediaPolicy.Invalid("Completed media is unavailable.");
+                var kind = session.GetAttributeValue<string>("nx_kind");
+                var image = kind == "image" || kind == "thumbnail";
+                if (mode == "image" ? !image : kind != "attachment"
+                    || !BlobMedia.Eligible("attachment", session.GetAttributeValue<string>("nx_mime") ?? LinkedAssetPolicy.Mime))
+                    throw MediaPolicy.Invalid("Unsupported media read.");
+                var target = reader.Retrieve(MediaPolicy.Table(kind), assetId, new ColumnSet("nx_solution"));
                 if (target.GetAttributeValue<EntityReference>("nx_solution")?.Id != id) throw MediaPolicy.Invalid("Video does not belong to this solution.");
                 var version = parent.RowVersion + ":" + target.RowVersion + ":" + session.Id.ToString("N");
                 var expected = context.InputParameters.Contains("Version") ? context.InputParameters["Version"] as string : null;
@@ -62,22 +68,35 @@ namespace Prisma.Plugins
                 if (blob) data = BlobMedia.Read(storage.Store, session, offset, count);
                 else
                 {
-                    var download = (InitializeFileBlocksDownloadResponse)caller.Execute(new InitializeFileBlocksDownloadRequest { Target = target.ToEntityReference(), FileAttributeName = "nx_filemedia" });
-                    if (!download.IsChunkingSupported || download.FileSizeInBytes != size) throw MediaPolicy.Invalid("Bounded video reads are unavailable.");
-                    data = ((DownloadBlockResponse)caller.Execute(new DownloadBlockRequest { FileContinuationToken = download.FileContinuationToken, Offset = offset, BlockLength = count })).Data;
+                    var download = (InitializeFileBlocksDownloadResponse)reader.Execute(new InitializeFileBlocksDownloadRequest { Target = target.ToEntityReference(), FileAttributeName = MediaPolicy.Column(kind) });
+                    if (download.FileSizeInBytes != size || (!download.IsChunkingSupported && (!image || size > 20 * 1024 * 1024)))
+                        throw MediaPolicy.Invalid("Bounded media reads are unavailable.");
+                    data = ((DownloadBlockResponse)reader.Execute(new DownloadBlockRequest {
+                        FileContinuationToken = download.FileContinuationToken,
+                        Offset = download.IsChunkingSupported ? offset : 0,
+                        BlockLength = download.IsChunkingSupported ? count : size
+                    })).Data;
+                    if (!download.IsChunkingSupported)
+                    {
+                        if (data.Length != size) throw MediaPolicy.Invalid("Incomplete image download.");
+                        data = data.Skip(offset).Take(count).ToArray();
+                    }
                     if (data.Length != count) throw MediaPolicy.Invalid("Incomplete video range.");
                 }
-                var latest = caller.Retrieve("nx_solution", id, columns);
-                MediaTransferPolicy.ReadAccess(latest, context.InitiatingUserId, librarian, mode);
-                var latestTarget = caller.Retrieve("nx_demoasset", assetId, new ColumnSet(false));
+                var latest = reader.Retrieve("nx_solution", id, columns);
+                var stillLibrarian = librarian && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanManage(server, latest);
+                MediaTransferPolicy.ReadAccess(latest, context.InitiatingUserId, stillLibrarian, mode);
+                if (librarian && !stillLibrarian) throw MediaPolicy.Invalid("Librarian access changed. Reopen the viewer.");
+                var latestTarget = reader.Retrieve(MediaPolicy.Table(kind), assetId, new ColumnSet(false));
                 if (latest.RowVersion != parent.RowVersion || latestTarget.RowVersion != target.RowVersion) throw MediaPolicy.Invalid("Video changed during read.");
                 context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new VideoRange { Id = id.ToString("D"), AssetId = assetId.ToString("D"), Version = version,
                     Offset = offset, Size = size, Mime = session.GetAttributeValue<string>("nx_mime"), Content = Convert.ToBase64String(data), MaxRead = maxRead, ServerMs = clock.ElapsedMilliseconds });
                 return;
             }
             if (!context.IsInTransaction) throw MediaPolicy.Invalid("A media transaction is required.");
-            var draft = caller.Retrieve("nx_solution", id, new ColumnSet("ownerid", "nx_publicationstatus", "nx_status"));
-            var editMode = DraftPolicy.Editable(draft, context.InitiatingUserId, context.InputParameters["ExpectedRowVersion"] as string, () => ReviewApi.IsLibrarian(server, context.InitiatingUserId));
+            bool canManage;
+            var draft = LibrarianAccess.Resolve(server, context.InitiatingUserId).ReadSolution(caller, server, context.InitiatingUserId, id, new ColumnSet("ownerid", "nx_publicationstatus", "nx_status"), out canManage);
+            var editMode = DraftPolicy.Editable(draft, context.InitiatingUserId, context.InputParameters["ExpectedRowVersion"] as string, () => canManage);
             var digest = MediaTransferPolicy.Digest(context.InputParameters["Sha256"] as string);
             var name = context.InputParameters["FileName"] as string;
             var sizeInput = (int)context.InputParameters["Size"];
@@ -91,7 +110,7 @@ namespace Prisma.Plugins
                     requested == MediaPolicy.MaxBlobBlockSize ? "attachment:v5" : requested == MediaPolicy.BlobBlockSize ? "attachment:v4" : "attachment:v3");
                 server.Update(new Entity("nx_uploadsession", createdSession) { ["nx_sha256"] = digest });
                 context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult { Id = id.ToString("D"),
-                    RowVersion = caller.Retrieve("nx_solution", id, new ColumnSet(false)).RowVersion, SessionId = createdSession.ToString("D"),
+                    RowVersion = (canManage ? server : caller).Retrieve("nx_solution", id, new ColumnSet(false)).RowVersion, SessionId = createdSession.ToString("D"),
                     BlockSize = blockSize, Media = MediaApi.Snapshots(server, id) });
                 return;
             }

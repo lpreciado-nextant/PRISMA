@@ -189,11 +189,10 @@ namespace Prisma.Plugins
             var factory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             var caller = factory.CreateOrganizationService(context.InitiatingUserId);
             var server = factory.CreateOrganizationService(null);
-            var librarian = IsLibrarian(server, context.InitiatingUserId);
+            var access = LibrarianAccess.Resolve(server, context.InitiatingUserId);
             if (context.MessageName == "nx_GetSubmissions")
             {
                 var review = context.InputParameters.Contains("ReviewQueue") && (bool)context.InputParameters["ReviewQueue"];
-                if (review && !librarian) throw MediaPolicy.Invalid("The PRISMA Librarian role is required.");
                 var page = DraftPolicy.NormalizePage(context.InputParameters.Contains("PageNumber") ? (int)context.InputParameters["PageNumber"] : 0);
                 var cookie = context.InputParameters.Contains("PagingCookie") ? context.InputParameters["PagingCookie"] as string : null;
                 if (page > 1 && string.IsNullOrWhiteSpace(cookie)) throw MediaPolicy.Invalid("Missing page token.");
@@ -201,6 +200,7 @@ namespace Prisma.Plugins
                 query.Criteria.AddCondition("statecode", ConditionOperator.Equal, 0);
                 if (review)
                 {
+                    access.FilterQueue(query);
                     var queue = new FilterExpression(LogicalOperator.Or);
                     queue.AddCondition("nx_publicationstatus", ConditionOperator.In, ReviewPolicy.Pending, ReviewPolicy.Published);
                     var returned = new FilterExpression(LogicalOperator.And);
@@ -211,15 +211,15 @@ namespace Prisma.Plugins
                 }
                 else query.Criteria.AddCondition("ownerid", ConditionOperator.Equal, context.InitiatingUserId);
                 query.Orders.Add(new OrderExpression("nx_solutionid", OrderType.Ascending));
-                var rows = caller.RetrieveMultiple(query);
-                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionPage { Records = rows.Entities.Select(row => Summary(server, row, librarian)).ToList(), MoreRecords = rows.MoreRecords, PagingCookie = rows.PagingCookie, Librarian = librarian });
+                var rows = (review ? server : caller).RetrieveMultiple(query);
+                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionPage { Records = rows.Entities.Select(row => Summary(server, row, access.CanManage(server, row))).ToList(), MoreRecords = rows.MoreRecords, PagingCookie = rows.PagingCookie, Librarian = access.Available });
                 return;
             }
             if (context.MessageName != "nx_GetSubmission" && context.MessageName != ReviewPolicy.Transition) throw MediaPolicy.Invalid("Unknown submission operation.");
             var identifier = (Guid)context.InputParameters["SolutionId"];
-            var parent = caller.Retrieve("nx_solution", identifier, Columns());
-            var owner = parent.GetAttributeValue<EntityReference>("ownerid");
-            if (!librarian && (owner?.LogicalName != "systemuser" || owner.Id != context.InitiatingUserId)) throw MediaPolicy.Invalid("Submission access denied.");
+            bool librarian;
+            var parent = access.ReadSolution(caller, server, context.InitiatingUserId, identifier, Columns(), out librarian);
+            var reader = librarian ? server : caller;
             if (context.MessageName == ReviewPolicy.Transition)
             {
                 if (!context.IsInTransaction) throw MediaPolicy.Invalid("A transition transaction is required.");
@@ -233,7 +233,7 @@ namespace Prisma.Plugins
                 {
                     MediaApi.SaveLinkedAsset(server, parent, context.InitiatingUserId, LinkedAssetPolicy.Parse(context.InputParameters["Comments"] as string));
                     if (librarianEdit) MarkEdited(server, parent, context.InitiatingUserId);
-                    context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult { Id = identifier.ToString(), RowVersion = caller.Retrieve("nx_solution", identifier, new ColumnSet(false)).RowVersion, BlockSize = MediaPolicy.BlockSize, Media = MediaApi.Snapshots(server, identifier) });
+                    context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult { Id = identifier.ToString(), RowVersion = reader.Retrieve("nx_solution", identifier, new ColumnSet(false)).RowVersion, BlockSize = MediaPolicy.BlockSize, Media = MediaApi.Snapshots(server, identifier) });
                     return;
                 }
                 if (action == "technology")
@@ -246,7 +246,7 @@ namespace Prisma.Plugins
                     var existing = server.RetrieveMultiple(query).Entities.FirstOrDefault();
                     var technologyId = existing?.Id ?? server.Create(new Entity("nx_technology") { ["nx_technologyname"] = name, ["ownerid"] = new EntityReference("systemuser", context.InitiatingUserId) });
                     var readable = caller.Retrieve("nx_technology", technologyId, new ColumnSet("nx_technologyname"));
-                    context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new TechnologyResult { Id = identifier.ToString(), RowVersion = caller.Retrieve("nx_solution", identifier, new ColumnSet(false)).RowVersion, TechnologyId = technologyId.ToString(), Name = readable.GetAttributeValue<string>("nx_technologyname") });
+                    context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new TechnologyResult { Id = identifier.ToString(), RowVersion = reader.Retrieve("nx_solution", identifier, new ColumnSet(false)).RowVersion, TechnologyId = technologyId.ToString(), Name = readable.GetAttributeValue<string>("nx_technologyname") });
                     return;
                 }
                 var media = MediaApi.Sessions(server, identifier);
@@ -272,7 +272,7 @@ namespace Prisma.Plugins
                         server.Update(update);
                     }
                     if (altered) MarkEdited(server, parent, context.InitiatingUserId);
-                    var latest = caller.Retrieve("nx_solution", identifier, new ColumnSet(false));
+                    var latest = reader.Retrieve("nx_solution", identifier, new ColumnSet(false));
                     context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new MediaResult { Id = identifier.ToString(), RowVersion = latest.RowVersion, BlockSize = MediaPolicy.BlockSize, Media = MediaApi.Snapshots(server, identifier) });
                     return;
                 }
@@ -311,10 +311,10 @@ namespace Prisma.Plugins
                     context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new DeletedSubmission { Id = identifier.ToString("D"), Deleted = true });
                     return;
                 }
-                parent = caller.Retrieve("nx_solution", identifier, Columns());
+                parent = reader.Retrieve("nx_solution", identifier, Columns());
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionDetail {
-                Record = Summary(server, parent, librarian), Graph = DraftGraph.Read(caller, parent),
+                Record = Summary(server, parent, librarian), Graph = DraftGraph.Read(reader, parent),
                 Media = MediaApi.Snapshots(server, identifier), Librarian = librarian,
                 LibrarianEdit = librarian && DraftPolicy.LibrarianMayEdit(parent, context.InitiatingUserId)
             });
@@ -323,18 +323,6 @@ namespace Prisma.Plugins
         private static void MarkEdited(IOrganizationService server, Entity parent, Guid caller)
         {
             server.Update(DraftPolicy.LibrarianEdit(parent.Id, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, caller), DateTime.UtcNow));
-        }
-
-        public static bool IsLibrarian(IOrganizationService server, Guid caller)
-        {
-            var direct = new QueryExpression("role") { ColumnSet = new ColumnSet(false), TopCount = 1 };
-            direct.Criteria.AddCondition("name", ConditionOperator.Equal, "PRISMA Librarian");
-            direct.AddLink("systemuserroles", "roleid", "roleid").LinkCriteria.AddCondition("systemuserid", ConditionOperator.Equal, caller);
-            if (server.RetrieveMultiple(direct).Entities.Count != 0) return true;
-            var inherited = new QueryExpression("role") { ColumnSet = new ColumnSet(false), TopCount = 1 };
-            inherited.Criteria.AddCondition("name", ConditionOperator.Equal, "PRISMA Librarian");
-            inherited.AddLink("teamroles", "roleid", "roleid").AddLink("teammembership", "teamid", "teamid").LinkCriteria.AddCondition("systemuserid", ConditionOperator.Equal, caller);
-            return server.RetrieveMultiple(inherited).Entities.Count != 0;
         }
 
         private static void RequireActive(IOrganizationService caller, EntityReference reference)

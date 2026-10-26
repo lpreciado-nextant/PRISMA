@@ -13,7 +13,7 @@ export async function imageDataUrl(blob: Blob, signal?: AbortSignal): Promise<st
 
 export type MediaKind = "image" | "attachment" | "thumbnail";
 /** `purpose` (ADR-0011) is set on attachments by plug-ins that know it; older responses omit it. */
-export type MediaItem = { id: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput; storage?: "blob"; purpose?: AssetPurpose };
+export type MediaItem = { id: string; solutionId?: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput; storage?: "blob"; purpose?: AssetPurpose };
 export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[]; uploadProtocol?: 2; maxBlockSize?: 4194304; blobBlockSize?: 8388608; maxBlobBlockSize?: 16777216 };
 export type MediaApi = {
   read: (id: string) => Promise<unknown>;
@@ -34,6 +34,7 @@ export function parseMediaItem(value: unknown): MediaItem {
   if ((item.caption !== undefined && (typeof item.caption !== "string" || item.caption.length > 200)) || (item.sortOrder !== undefined && (!integer(item.sortOrder) || item.sortOrder > 12))) throw new Error("Invalid media metadata.");
   if (item.storage !== undefined && (item.storage !== "blob" || item.kind !== "attachment" || item.mime === "application/vnd.prisma.link")) throw new Error("Invalid media storage.");
   if (item.purpose !== undefined && (item.kind !== "attachment" || !(ASSET_PURPOSES as readonly unknown[]).includes(item.purpose))) throw new Error("Invalid media purpose.");
+  if (item.solutionId !== undefined && (typeof item.solutionId !== "string" || !guid.test(item.solutionId))) throw new Error("Invalid media solution.");
   if (item.mime === "application/vnd.prisma.link" || item.linkedAsset !== undefined) {
     const linked = object(item.linkedAsset);
     if (item.mime !== "application/vnd.prisma.link" || item.kind !== "attachment" || !item.complete || item.size !== 0 || item.received !== 0 || item.nextBlock !== 0

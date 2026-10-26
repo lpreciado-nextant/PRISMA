@@ -13,13 +13,26 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "verify-classification", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns", "inspect-plugin-traces", "inspect-client-roles", "migrate-client-roles" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "verify-classification", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns", "inspect-plugin-traces", "inspect-client-roles", "migrate-client-roles", "librarian-access", "verify-librarian-access", "librarian-provision" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "librarian-provision") { LibrarianProvisioning.Run(client, args.Skip(1).ToArray()); return; }
+if (command == "verify-librarian-access")
+{
+    if (args.Length != 1) throw new ArgumentException("Use verify-librarian-access; read-only.");
+    LibrarianRoleMigration.VerifyReads(client);
+    return;
+}
+if (command == "librarian-access")
+{
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "--execute")) throw new ArgumentException("Use librarian-access [--execute]; preview is read-only.");
+    LibrarianRoleMigration.Run(client, args.Length == 2);
+    return;
+}
 if (command == "verify-classification") { VerifyClassification(client, args.Skip(1).ToArray()); return; }
 if (command == "inspect-favorites")
 {
@@ -750,7 +763,7 @@ foreach (var roleName in new[] { "PRISMA Contributor", "PRISMA CSM", "PRISMA Lib
     {
         var allowed = privilege.PrivilegeType == PrivilegeType.Read ||
             (roleName != "PRISMA CSM" && new[] { PrivilegeType.Create, PrivilegeType.Write, PrivilegeType.Append }.Contains(privilege.PrivilegeType));
-        if (allowed) privileges.Add(new RolePrivilege((int)(roleName == "PRISMA Librarian" ? PrivilegeDepth.Global : PrivilegeDepth.Basic), privilege.PrivilegeId));
+        if (allowed) privileges.Add(new RolePrivilege((int)PrivilegeDepth.Basic, privilege.PrivilegeId));
     }
     foreach (var table in new[] { "nx_specializationarea", "nx_capability", "nx_technology", "nx_industry", "nx_clientrole" })
         foreach (var privilege in Metadata(client, table).Privileges)
@@ -760,18 +773,18 @@ foreach (var roleName in new[] { "PRISMA Contributor", "PRISMA CSM", "PRISMA Lib
     {
         var allowed = privilege.PrivilegeType == PrivilegeType.Read ||
             (roleName != "PRISMA CSM" && new[] { PrivilegeType.Create, PrivilegeType.Write, PrivilegeType.Delete, PrivilegeType.Append }.Contains(privilege.PrivilegeType));
-        if (allowed) privileges.Add(new RolePrivilege((int)(roleName == "PRISMA Librarian" ? PrivilegeDepth.Global : PrivilegeDepth.Basic), privilege.PrivilegeId));
+        if (allowed) privileges.Add(new RolePrivilege((int)PrivilegeDepth.Basic, privilege.PrivilegeId));
     }
     foreach (var table in new[] { "nx_demoasset", "nx_solutionimage" })
         foreach (var privilege in Metadata(client, table).Privileges.Where(privilege => privilege.PrivilegeType == PrivilegeType.Read))
-            privileges.Add(new RolePrivilege((int)(roleName == "PRISMA Librarian" ? PrivilegeDepth.Global : PrivilegeDepth.Basic), privilege.PrivilegeId));
+            privileges.Add(new RolePrivilege((int)PrivilegeDepth.Basic, privilege.PrivilegeId));
     // Read only, at User depth for every role including the Librarian: nobody reads another person's favorites directly.
     // Create/Delete go through nx_SetFavorite, which writes as the server after checking the caller can read the solution.
     foreach (var privilege in Metadata(client, "nx_solutionfavorite").Privileges.Where(privilege => privilege.PrivilegeType == PrivilegeType.Read))
         privileges.Add(new RolePrivilege((int)PrivilegeDepth.Basic, privilege.PrivilegeId));
     if (roleName != "PRISMA CSM")
         foreach (var privilege in solutionMetadata.Privileges.Where(privilege => privilege.PrivilegeType == PrivilegeType.AppendTo))
-            privileges.Add(new RolePrivilege((int)(roleName == "PRISMA Librarian" ? PrivilegeDepth.Global : PrivilegeDepth.Basic), privilege.PrivilegeId));
+            privileges.Add(new RolePrivilege((int)PrivilegeDepth.Basic, privilege.PrivilegeId));
     client.Execute(new AddPrivilegesRoleRequest { RoleId = roleId, Privileges = privileges.ToArray() });
     AddComponent(client, roleId, 20);
     var profileName = roleName == "PRISMA Librarian" ? "PRISMA Core Draft Librarian" : roleName;

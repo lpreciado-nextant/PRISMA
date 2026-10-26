@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Controlled lifecycle and approved code-app CSP configuration verified; effective non-admin acceptance pending · **Last updated:** 2026-10-21
+**Status:** Capability-owner SA scope, connected app and approved role migration deployed 2026-10-26; five owners provisioned and Luis assigned the global override; eight owner identity/onboarding blockers and effective non-admin acceptance remain open · **Last updated:** 2026-10-26
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -17,9 +17,65 @@ See [code-app hosting policy](#code-app-hosting-policy) for browser execution re
 |---|---|---|---|---|
 | Contributor | Create; Read/Write **own**; Read published (org) | Same as parent | Read; Create on `nx_technology` only | Read own |
 | CSM | Read **published** only | Read (published parents) | Read | Create; Read own |
-| Librarian | Full (org) | Full | Full | Full |
+| Librarian | Basic own/published access; scoped review/edit via plug-ins | Basic Read; scoped mediated reads/writes | Global Read/AppendTo; administration separately provisioned | Separately provisioned |
 
-`nx_solutioncontributor` follows parent Solution access: Contributors can create/read/write/delete rows only for Solutions they can manage; CSMs read rows for published parents; Librarians have full access. Enforce this through ownership/sharing and platform validation, not by assuming a lookup inherits security. Builder credit grants no additional rights. Full constraints: [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
+`nx_solutioncontributor` follows parent Solution access: Contributors can create/read/write/delete rows only for Solutions they can manage; CSMs read rows for published parents; librarians read scoped contributor data through the APIs but cannot change contributor credit through the librarian editor. Enforce this through ownership/sharing and platform validation, not by assuming a lookup inherits security. Builder credit grants no additional rights. Full constraints: [schema v2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort).
+
+## Capability-owner librarian access
+
+**Deployed 2026-10-26.** This section supersedes global librarian workflow access in the historical deployment sections below. [ADR-0013](decisions/adr-0013-librarian-content-editing.md#capability-owner-scope-2026-10-26) owns the decision.
+
+The server resolves `systemuser.internalemailaddress` to exactly one active `cr6b0_consultant.cr6b0_email`. For a direct/team **PRISMA Librarian**, active `nx_capability` rows whose `nx_capabilityowner` matches that Consultant grant their active `nx_specializationarea`. They may manage solutions with any active **main** capability in those SAs. Secondary capabilities never expand authority. Missing mappings grant no scope; ambiguous/missing Consultant identity raises an explicit error. Owning capabilities in several SAs grants all those SAs. An explicitly assigned **PRISMA Global Librarian** marker role overrides scope; the regular role and System Administrator alone do not. Self-approval within scope is allowed, with normal safety/completeness/version checks.
+
+`LibrarianAccess` applies this policy to review pagination, submission detail, transitions, core/graph/media changes, suggestions and range downloads. Core reclassification must be authorized on both sides; a global librarian handles transfers outside the caller's SAs. Ordinary owner Draft edits and published browsing remain unchanged. Scoped operations use server rights only after checks; direct writes remain guarded. Image downloads use the existing range API with `Mode=image`; its parent/asset relationship, active state, publication/owner/scope and pinned version are checked before returning bytes. It cannot read an attachment by using image mode. No storage tokens or URLs are exposed.
+
+### Coordinated rollout and provisioning
+
+The user approved plug-in/app deployment and separately approved the live role migration on 2026-10-26. Steps 1-3 were completed; user/team/profile assignments were explicitly excluded. Future deployment/live permission changes still require approval.
+
+1. Fast-forward to `origin/main` and deploy the tested, signed plug-in through the normal managed-identity process. Existing role holders who lack capability ownership will lose workflow access unless explicitly assigned the global override.
+2. Publish the compatible connected app. It reads `solutionId` on media snapshots and mediates images and contextual attachment downloads. The PoC is unchanged. Verify PNG/JPEG images and both Dataverse/Blob attachments before lowering privileges.
+3. Preview from the repository root: `dotnet backend\Prisma.Deploy\bin\Debug\net10.0\Prisma.Deploy.dll librarian-access`. The command inspects all normal librarian role copies and historical completed upload shares. With separately approved `--execute`, it atomically removes/replaces the Solution/contributor/media privileges at **Basic** depth, removes unsupported operations, replaces historical non-owner uploader shares with owner read access, and creates an **unassigned** global marker role in `PRISMA_Dev`. It preserves unrelated role privileges, publication-reader shares and existing assignments. Re-running reconciles the same desired privileges. The normal `apply` provisioning path also grants only Basic depth on these tables; it is not a replacement for the migration because additive grants alone do not downgrade old privileges.
+4. Provision each Capability Owner's normal **PRISMA Librarian** role, **PRISMA Core Draft Librarian** profile and normal app/reference access. Maintain the Consultant email, active capability owner and SA lookups; no new table is needed. Assign **PRISMA Global Librarian** only to approved global curators, alongside a normal app role/profile. The migration does not assign users, teams or profiles.
+5. Audit **effective additive access**: other roles (especially System Administrator), team ownership/membership, field profiles and ad-hoc row shares can independently grant reads. The migration does not remove unrelated grants or turn the application into an administrator security boundary. Review any extra shares on unpublished solutions and their children before declaring the restriction effective.
+6. Test with least-privilege accounts in two SAs: own/different capability in the same SA; a secondary-only SA match; multi-SA ownership; own-submission approval; out-of-scope guessed IDs and classification transfer; global override; role/owner revocation; all review tabs and paging; image/attachment reads, upload/resume/remove and caption edits; owner/CSM published browsing, withdrawal and present-mode checks. Verify direct Dataverse reads of another SA's unpublished solutions and media are denied, including media uploaded by a former librarian.
+
+**Deployment evidence (2026-10-26, completed by 15:29 UTC):** deployed from `main`, synchronized with `origin/main` at `aa2e4e1`, plus this task's changes. The Release assembly was signed with the existing pilot certificate and the deployment utility verified its signer against the installed managed-identity-bound assembly. Installed SHA-256: `82C07E54281D19CC886855ABA69B6E41DFFEE67828E34F26059C1E274F775507`. The managed identity and global graph guards remain bound/active. The connected PRISMA app (`cffbecd7-c927-474e-b6ed-6c7957ec74cb`) was pushed to `PRISMA_Dev` with explicit solution ID; bundle `index-CKDnd4jf.js`, returned `sourcetime=1793028368558`.
+
+The approved `librarian-access --execute` migrated the existing normal librarian role and verified Basic-depth Solution/contributor/media privileges. It revoked two historical non-owner uploader shares (one image, one attachment), granted their solution owners Read, and created the unassigned **PRISMA Global Librarian** marker role. A subsequent preview proposed no remaining media-share corrections. No user/team/profile assignments or solution-content changes were made.
+
+Read-only verification checked the exact deployed assembly, four catalogue solutions in both internal and present modes, two owned submission modification timestamps, submission detail classification, and 1,024-byte protected image and attachment reads with matching parent/type/size. `verify-librarian-access` provides a repeatable read-only check. The deploying account returned `librarian=false`, consistent with no mapped scope/global assignment; this is not a substitute for provisioning the real owners.
+
+The deployment's initial hosted browser verification stopped at the Microsoft sign-in redirect. The separately approved provisioning and subsequent signed-in check are recorded below. The effective additive-permission audit and least-privilege cross-account acceptance remain open.
+
+### Approved librarian provisioning (2026-10-26)
+
+The user explicitly approved five capability-owner recipients and Luis David Preciado as the only new global recipient. `Prisma.Deploy librarian-provision` applied **15 additive associations in one transaction**, verified all required effective memberships, and verified preservation of preexisting direct roles, field profiles and teams. A subsequent read-only preview proposed **zero additions**.
+
+| Recipient | Email | Workflow scope | Verified effective access |
+|---|---|---|---|
+| Andres Perez | `aperez@nextant.com` | AI & Automation | PRISMA Librarian; PRISMA Core Draft Librarian profile; Published Readers |
+| Mauricio Cubillos | `mcubillos@nextant.com` | AI & Automation | Same; existing reader membership preserved |
+| Patricia Méndez | `pmendez@nextant.com` | AI & Automation | Same; existing librarian role preserved |
+| Jorge Isaias Ardila | `j.ardila@nextant.com` | Data Solutions | PRISMA Librarian; PRISMA Core Draft Librarian profile; Published Readers |
+| Valentina Velosa | `vvelosa@nextant.com` | Intelligent Business Operations | PRISMA Librarian; PRISMA Core Draft Librarian profile; Published Readers |
+| Luis David Preciado | `lpreciado@nextant.com` | **Global override** | Existing librarian role/profile preserved; PRISMA Global Librarian and Published Readers added |
+
+No roles/profile definitions, capability ownership, schema, solution content, app sharing or licences were changed. Existing unrelated privileges, including administrator privileges, were not removed.
+
+**Blocked owners:** the following active Consultant emails have no matching Dataverse user by stored email or sign-in name in this environment: Shashank Saxena (`ssaxena@nextant.com`), Jessica Wilson (`jwilson@nextant.com`), Catalina Vasquez (`cvasquez@nextant.com`), Mary Thomason (`mthomason@nextant.com`), Antonio Alvarez (`aalvarez@nextant.com`), Lucia Bustillo (`lbustillo@nextant.com`), Gerson Salinas (`gsalinas@nextant.com`) and Juan Pablo Sarmiento (`jsarmiento@nextant.com`). No assignment was attempted for them. An environment administrator must confirm their Entra identity, licence and environment/security-group eligibility, add or enable the correct user in **Nextant Pulse**, and ensure its email uniquely matches the active Consultant. Do not create duplicate Consultants, guess a similarly named user or grant the global override to work around a mapping issue.
+
+**Repeatable commands** (repository root; the existing organization guard remains in force):
+
+```powershell
+dotnet backend\Prisma.Deploy\bin\Debug\net10.0\Prisma.Deploy.dll librarian-provision
+dotnet backend\Prisma.Deploy\bin\Debug\net10.0\Prisma.Deploy.dll librarian-provision --owner user@nextant.com
+dotnet backend\Prisma.Deploy\bin\Debug\net10.0\Prisma.Deploy.dll librarian-provision --global curator@nextant.com
+```
+
+The first command is inventory only. Named-recipient commands preview missing role/profile/Published Readers associations; repeat `--owner`/`--global` for several users. Append `--execute` only after approval of those exact recipients and changes. `--owner` requires a unique enabled human user mapped to a unique active Consultant owning an active capability in an active SA. Existing effective team-inherited roles/profiles are recognized. The command does not automatically remove access from former owners: the plug-in immediately stops their scoped workflow access when ownership no longer matches, while role/profile cleanup and global-role removal remain separate approved operations.
+
+**Verification:** Luis's API response changed from `librarian=false` to `true`; his global review queue returned seven records. In the shared signed-in hosted app, refreshing and opening Review queue displayed **0 Pending review, 3 Changes requested, 4 Published**. Protected image/attachment reads also passed. Attempts to validate other users by SDK impersonation failed the effective-identity check before scoped API tests; no per-owner behavioral acceptance is claimed. Each owner must still sign in, confirm app sharing/licensing and exercise positive in-SA and negative out-of-SA paths. Onboarding the eight unmatched owners and the additive-privilege/write acceptance gates remain open.
 
 ## Ownership
 

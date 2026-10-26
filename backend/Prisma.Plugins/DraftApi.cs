@@ -39,21 +39,26 @@ namespace Prisma.Plugins
             else
             {
                 var server = factory.CreateOrganizationService(null);
-                var current = caller.Retrieve("nx_solution", identifier, new ColumnSet(DraftPolicy.CoreColumns.Concat(new[] { "ownerid", "nx_publicationstatus" }).ToArray()));
-                var mode = DraftPolicy.Editable(current, context.InitiatingUserId, expectedVersion, () => ReviewApi.IsLibrarian(server, context.InitiatingUserId));
+                var access = LibrarianAccess.Resolve(server, context.InitiatingUserId);
+                bool librarian;
+                var current = access.ReadSolution(caller, server, context.InitiatingUserId, identifier, new ColumnSet(DraftPolicy.CoreColumns.Concat(new[] { "ownerid", "nx_publicationstatus" }).ToArray()), out librarian);
+                var mode = DraftPolicy.Editable(current, context.InitiatingUserId, expectedVersion, () => librarian);
+                if (mode == EditMode.Librarian && !access.CanManage(server, input))
+                    throw MediaPolicy.Invalid("The new main capability must remain within your librarian specialization areas. Ask a global librarian to transfer it.");
+                var writer = mode == EditMode.Librarian ? server : caller;
                 // The owner's safety acknowledgment covers what they submitted; a librarian never sets or clears it.
                 if (mode == EditMode.Librarian) input.Attributes.Remove("nx_safetyacknowledged");
                 var changed = DraftPolicy.Changed(current, input);
                 input.Id = identifier;
                 input.RowVersion = expectedVersion;
-                caller.Execute(new UpdateRequest { Target = input, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
+                writer.Execute(new UpdateRequest { Target = input, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
                 if (input.Contains("nx_capability") && capability?.Id != current.GetAttributeValue<EntityReference>("nx_capability")?.Id)
-                    DraftGraph.SaveCapabilityAreas(caller, input);
+                    DraftGraph.SaveCapabilityAreas(writer, input);
                 if (mode == EditMode.Librarian)
                 {
                     // Pending review and Published records keep their status; only a real change is recorded.
                     if (changed) server.Update(DraftPolicy.LibrarianEdit(identifier, current.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, context.InitiatingUserId), DateTime.UtcNow));
-                    context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(Snapshot(caller.Retrieve("nx_solution", identifier, Columns())));
+                    context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(Snapshot(writer.Retrieve("nx_solution", identifier, Columns())));
                     return;
                 }
             }

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fileDigest, transferVideo, readVideoRange, readAttachment, parseVideoRange, type TransferApi } from "./mediaTransfer.ts";
-import { parseMedia, type MediaApi, type MediaState } from "./media.ts";
+import { parseMedia, parseMediaItem, type MediaApi, type MediaState } from "./media.ts";
 import { bufferedAhead, FullVideoRequiredError, validateStreamingLayout } from "./videoStream.ts";
 import { captionsVtt, decodeCaption } from "./mp4Captions.ts";
 import { MediaContractError, mediaOperation, mediaProvider, rangeCount, type MediaProvider, type VideoFile } from "../../src/lib/mediaContract.ts";
@@ -11,6 +11,27 @@ const id = "11111111-1111-1111-1111-111111111111";
 const asset = "22222222-2222-2222-2222-222222222222";
 const wrap = (value: unknown) => ({ success: true, data: { ResultJson: JSON.stringify(value) } });
 const signal = () => new AbortController().signal;
+test("scoped images carry their parent and use mediated reads pinned to the exact image version", async () => {
+  const image = { id: asset, solutionId: id, sessionId: asset, kind: "image", name: "Preview.png", mime: "image/png", size: 3, received: 3, nextBlock: 1, complete: true };
+  assert.equal(parseMediaItem(image).solutionId, id);
+  assert.throws(() => parseMediaItem({ ...image, solutionId: "invalid" }), /Invalid media solution/);
+  assert.equal(parseMediaItem({ ...image, solutionId: undefined }).solutionId, undefined);
+  const version = "123:456:" + "a".repeat(32);
+  const forbidden = async () => { throw new Error("Unexpected upload"); };
+  const api: TransferApi = { begin: forbidden, checkpoint: forbidden, range: async (parent, target, mode, offset, count) => {
+    assert.equal(parent, id);
+    assert.equal(target, asset);
+    assert.equal(mode, "image");
+    assert.equal(offset, 0);
+    assert.equal(count, 3);
+    return wrap({ id, assetId: asset, version, offset, size: 3, mime: "image/png", content: btoa("abc") });
+  } };
+  const blob = await readAttachment(api, id, image, "image", signal());
+  assert.equal(blob.type, "image/png");
+  assert.equal(await blob.text(), "abc");
+  await assert.rejects(readAttachment({ ...api, range: async () => { throw new Error("Scope revoked"); } }, id, image, "image", signal()), /Scope revoked/);
+  await assert.rejects(readAttachment({ ...api, range: async () => wrap({ id, assetId: asset, version, offset: 0, size: 3, mime: "image/jpeg", content: btoa("abc") }) }, id, image, "image", signal()), /Unconfirmed/);
+});
 test("common media contract rejects unknown providers and requires reopen after an ambiguous write", async () => {
   assert.throws(() => mediaProvider("azure"), /Unsupported/);
   assert.throws(() => rangeCount({ id, assetId: asset, mode: "present", offset: -1, size: 24 }), /Invalid/);

@@ -102,7 +102,7 @@ namespace Prisma.Plugins
 
         /// <summary>
         /// The owner edits their own Draft; a PRISMA Librarian edits someone else's Pending review or Published record in
-        /// place (ADR-0013). The librarian check is deferred so owner saves never query roles.
+        /// place (ADR-0013). Callers supply the server-resolved, solution-specific librarian authorization.
         /// </summary>
         public static EditMode Editable(Entity current, Guid caller, string expectedVersion, Func<bool> librarian)
         {

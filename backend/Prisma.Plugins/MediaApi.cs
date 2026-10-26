@@ -20,6 +20,7 @@ namespace Prisma.Plugins
     [DataContract]
     public sealed class MediaSnapshot
     {
+        [DataMember(Name = "solutionId", EmitDefaultValue = false)] public string SolutionId { get; set; }
         [DataMember(Name = "id")] public string Id { get; set; }
         [DataMember(Name = "sessionId")] public string SessionId { get; set; }
         [DataMember(Name = "kind")] public string Kind { get; set; }
@@ -318,9 +319,10 @@ namespace Prisma.Plugins
             var caller = factory.CreateOrganizationService(context.InitiatingUserId);
             var server = factory.CreateOrganizationService(null);
             var identifier = (Guid)context.InputParameters["SolutionId"];
-            var parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("ownerid", "nx_publicationstatus", "nx_status"));
+            bool librarian;
+            var parent = LibrarianAccess.Resolve(server, context.InitiatingUserId).ReadSolution(caller, server, context.InitiatingUserId, identifier, new ColumnSet("ownerid", "nx_publicationstatus", "nx_status"), out librarian);
             var expected = read ? parent.RowVersion : context.InputParameters["ExpectedRowVersion"] as string;
-            var mode = DraftPolicy.Editable(parent, context.InitiatingUserId, expected, () => ReviewApi.IsLibrarian(server, context.InitiatingUserId));
+            var mode = DraftPolicy.Editable(parent, context.InitiatingUserId, expected, () => librarian);
             if (!read)
                 server.Execute(new UpdateRequest {
                     Target = Touch(server, parent, mode, context.MessageName == "nx_FinishMediaUpload" || context.MessageName == "nx_RemoveDraftMedia", context.InitiatingUserId),
@@ -352,10 +354,10 @@ namespace Prisma.Plugins
                 {
                     if (session.GetAttributeValue<bool>("nx_complete") || session.GetAttributeValue<DateTime>("nx_expires") <= DateTime.UtcNow) throw MediaPolicy.Invalid("Upload is complete or expired. Reopen the draft.");
                     if (context.MessageName == "nx_UploadMediaBlock") { Upload(server, session, context, storage, hashing, storing); progressed = session; }
-                    else Finish(server, session, context.InitiatingUserId, storage);
+                    else Finish(server, session, parent.GetAttributeValue<EntityReference>("ownerid"), storage);
                 }
             }
-            var latest = caller.Retrieve("nx_solution", identifier, new ColumnSet(false));
+            var latest = (librarian ? server : caller).Retrieve("nx_solution", identifier, new ColumnSet(false));
             ((ITracingService)serviceProvider.GetService(typeof(ITracingService)))?.Trace("{0}: storage {1}, block size {2}, {3} ms (hash {4} ms, storage {5} ms).",
                 context.MessageName, storage.UploadsToBlob ? "blob-enabled" : "dataverse", blockSize, clock.ElapsedMilliseconds, hashing.ElapsedMilliseconds, storing.ElapsedMilliseconds);
             if (progressed != null && blockSize != MediaPolicy.BlockSize)
@@ -479,7 +481,7 @@ namespace Prisma.Plugins
                 ["nx_kind"] = "attachment", ["nx_filename"] = value.Name, ["nx_mime"] = LinkedAssetPolicy.Mime,
                 ["nx_bytes"] = 0, ["nx_received"] = 0, ["nx_nextblock"] = 0, ["nx_expires"] = DateTime.UtcNow, ["nx_complete"] = true
             });
-            server.Execute(new GrantAccessRequest { Target = target.ToEntityReference(), PrincipalAccess = new PrincipalAccess { Principal = new EntityReference("systemuser", caller), AccessMask = AccessRights.ReadAccess } });
+            server.Execute(new GrantAccessRequest { Target = target.ToEntityReference(), PrincipalAccess = new PrincipalAccess { Principal = parent.GetAttributeValue<EntityReference>("ownerid"), AccessMask = AccessRights.ReadAccess } });
         }
 
         private static void Upload(IOrganizationService server, Entity session, IPluginExecutionContext context, MediaStorage storage, Stopwatch hashing, Stopwatch storing)
@@ -502,7 +504,7 @@ namespace Prisma.Plugins
             session["nx_nextblock"] = index + 1;
         }
 
-        private static void Finish(IOrganizationService server, Entity session, Guid caller, MediaStorage storage)
+        private static void Finish(IOrganizationService server, Entity session, EntityReference owner, MediaStorage storage)
         {
             if (session.GetAttributeValue<int>("nx_received") != session.GetAttributeValue<int>("nx_bytes")) throw MediaPolicy.Invalid("Upload is incomplete.");
             var kind = session.GetAttributeValue<string>("nx_kind");
@@ -510,7 +512,7 @@ namespace Prisma.Plugins
             if (BlobMedia.IsBlob(session))
             {
                 server.Update(BlobMedia.Commit(storage.Store, session));
-                server.Execute(new GrantAccessRequest { Target = target, PrincipalAccess = new PrincipalAccess { Principal = new EntityReference("systemuser", caller), AccessMask = AccessRights.ReadAccess } });
+                server.Execute(new GrantAccessRequest { Target = target, PrincipalAccess = new PrincipalAccess { Principal = owner, AccessMask = AccessRights.ReadAccess } });
                 return;
             }
             var commit = (CommitFileBlocksUploadResponse)server.Execute(new CommitFileBlocksUploadRequest {
@@ -519,7 +521,7 @@ namespace Prisma.Plugins
             });
             if (commit.FileSizeInBytes != session.GetAttributeValue<int>("nx_bytes")) throw MediaPolicy.Invalid("Committed file size differs from declared size.");
             server.Update(new Entity("nx_uploadsession", session.Id) { ["nx_complete"] = true, ["nx_token"] = null });
-            server.Execute(new GrantAccessRequest { Target = target, PrincipalAccess = new PrincipalAccess { Principal = new EntityReference("systemuser", caller), AccessMask = AccessRights.ReadAccess } });
+            server.Execute(new GrantAccessRequest { Target = target, PrincipalAccess = new PrincipalAccess { Principal = owner, AccessMask = AccessRights.ReadAccess } });
         }
 
         public static List<Entity> Sessions(IOrganizationService server, Guid parent)
@@ -580,6 +582,7 @@ namespace Prisma.Plugins
         {
             var linked = row.GetAttributeValue<string>("nx_mime") == LinkedAssetPolicy.Mime;
             return new MediaSnapshot {
+                SolutionId = row.GetAttributeValue<string>("nx_parentid"),
                 SessionId = row.Id.ToString(), Id = row.GetAttributeValue<string>("nx_targetid"), Kind = row.GetAttributeValue<string>("nx_kind"),
                 Name = row.GetAttributeValue<string>("nx_filename"), Mime = row.GetAttributeValue<string>("nx_mime"),
                 Size = row.GetAttributeValue<int>("nx_bytes"), Received = row.GetAttributeValue<int>("nx_received"),

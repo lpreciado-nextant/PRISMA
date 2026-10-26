@@ -2,6 +2,8 @@
 
 **Status:** Accepted; agreed with the user 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (about 22:05 UTC). Redeployed with ADR-0014 from `5ad96bb` (plug-in 22:35:57 UTC, then the app), which also stops offering Edit on the librarian's own solutions. The editing flow was checked in the hosted app on Mauricio's "Budget Management Solution". Non-admin acceptance is pending. The three columns were created on 2026-10-15 and their metadata and column security verified.
 **Date:** 2026-10-15
+**Last updated:** 2026-10-26
+**Scope amendment status:** Accepted and deployed 2026-10-26: signed plug-in, compatible connected app and separately approved Basic-depth role migration. A later approved provisioning assigned five capability owners and Luis as global librarian; eight owner onboarding blockers and hosted least-privilege acceptance remain pending. [Assignment evidence](../security-model.md#approved-librarian-provisioning-2026-10-26).
 
 ## Context
 
@@ -11,7 +13,7 @@ Contributors still need to know when someone changed their solution, and why. Th
 
 ## Decision
 
-**Who and when.** A caller holding the **PRISMA Librarian** role (direct or through a team, checked server-side as for review) may edit another person's solution while it is **Pending review** or **Published**. Draft records are the owner's work in progress and stay owner-only. Retired records are not editable; the owner withdraws and resubmits them as today. A librarian who owns a record edits it as its owner: withdraw first.
+**Who and when.** An authorized librarian within the [capability-owner scope](#capability-owner-scope-2026-10-26) may edit another person's solution while it is **Pending review** or **Published**. Draft records are the owner's work in progress and stay owner-only. Retired records are not editable; the owner withdraws and resubmits them as today. A librarian who owns a record edits it as its owner: withdraw first.
 
 **What.** The librarian edits the same content the owner can: core text, capability, maturity, client role, specialization areas, industries, technologies, projects and media (images, links and Blob attachments), plus the redacted client context. Contributors and their hours are not editable by the librarian: a librarian graph save writes no contributor rows. Since [ADR-0014](adr-0014-solution-effort-estimate-and-complexity.md) (2026-10-15), effort is the solution's complexity and hour estimate, so the librarian edits it like any other solution field.
 
@@ -52,11 +54,24 @@ These columns are written only through the PRISMA APIs, by librarian saves that 
 **Concurrency.** Librarian saves carry the exact row version, like every other write. If the owner withdraws or deletes the record while a librarian is editing, the librarian's save is rejected and the record must be reopened. There is a single record, so there is nothing to merge.
 
 **Implementation.**
-- **Edit mode:** `DraftPolicy.Editable` returns the edit mode, either owner in Draft or librarian in Pending review or Published. It checks the librarian role only when the caller is not editing their own Draft. `AssertEditable` keeps the owner-only behaviour.
+- **Edit mode:** `DraftPolicy.Editable` returns the edit mode, either owner in Draft or authorized librarian in Pending review or Published. The APIs resolve solution-specific access through `LibrarianAccess`; `AssertEditable` keeps the owner-only behaviour.
 - **Save APIs:** `nx_SaveCoreDraft`, `nx_SaveDraftGraph`/`nx_GetDraftGraph`, the media APIs and `nx_BeginResumableUpload` branch on that mode. No new Custom API or parameter is added: `confirm-edit` reuses the existing `Action`, `Comments` and `Cleared` parameters.
-- **Writes:** librarian content writes run as the caller, who has the librarian's Global Solution and contributor privileges. The edit trail is written with elevated access after the checks. A librarian may remove finished media uploaded by someone else, but unfinished uploads still belong to whoever started them. `SolutionWriteGuard` and the media and graph guards keep blocking direct writes.
+- **Writes:** after the scope amendment, librarian content writes run through the server service only after solution-specific authorization; ordinary owner writes retain caller rights. Reference selections still require caller read access. The edit trail is written after the checks. A librarian may remove finished media uploaded by someone else, but unfinished uploads still belong to whoever started them. `SolutionWriteGuard` and the media and graph guards keep blocking direct writes.
 - **Connected app:** the librarian editor opens at `#/review/:id/edit` from **Edit solution** in the review panel. It reuses the guided form without the safety step, the acknowledgment or the contributor editor, and returns to the review on save. The review panel requires the explanation on approval after an edit, and shows **Confirm changes** for a published record. It is hidden in present mode.
 - **Mock PoC:** unchanged.
+
+## Capability-owner scope (2026-10-26)
+
+- **Authority:** direct or team membership in `PRISMA Librarian`, plus a unique active Consultant matching the authenticated user's email. Active capabilities with `nx_capabilityowner` pointing to that Consultant grant their active `nx_specializationarea`. Missing or ambiguous identity fails explicitly; missing ownership/area grants no scoped access.
+- **Boundary:** any active main capability in one of those SAs is in scope, even if a different Consultant owns that capability. Only the solution's main `nx_capability` determines authority; secondary capabilities and the solution's area tags do not. Owning capabilities in several SAs grants the union.
+- **Override:** direct or team membership in the separately designated `PRISMA Global Librarian` role grants global workflow scope, including unclassified solutions. It is an unassigned marker role at creation, not organization-wide table access; normal app roles/profiles are still needed.
+- **Self-approval:** explicitly allowed within scope. This does not permit librarian editing of one's own Pending/Published record or skip any publication prerequisite.
+- **Every surface:** filter the review query before pagination; enforce the same scope on detail, decisions, core/graph/media edits, resumable uploads/checkpoints, private suggestions and media reads. The detail response's `librarian` and `librarianEdit` describe that solution, not a global role flag.
+- **Reclassification:** check both the current and proposed main capability before a librarian core save. Scoped librarians cannot clear classification or transfer the solution to an SA they do not manage; use a global librarian. Ordinary owner Draft classification remains unchanged.
+- **Revocation:** resolve ownership and roles on each API call, with no cross-request authorization cache. Media range reads recheck scope before returning bytes. Previously downloaded content cannot be recalled.
+- **Direct access:** downgrade the normal librarian role's Solution/contributor/media privileges to Basic and mediate scoped access in plug-ins. New media shares go to the solution owner, not a non-owner librarian uploader. The migration revokes historical non-owner uploader shares. Published-reader access remains unchanged.
+
+No schema or Custom API registration is added. `nx_ReadVideoRange` also supports `Mode=image` for images/thumbnails; media snapshots include `solutionId`. Older app/backend compatibility is transitional, not an alternative to completing the rollout. Deployment order, manual provisioning, additive-permission audit and non-admin acceptance are owned by the [security model](../security-model.md#capability-owner-librarian-access).
 
 ## Consequences
 

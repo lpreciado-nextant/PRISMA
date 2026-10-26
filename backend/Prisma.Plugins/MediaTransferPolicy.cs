@@ -43,6 +43,11 @@ namespace Prisma.Plugins
             {
                 if (!published) throw MediaPolicy.Invalid("Published video is unavailable.");
             }
+            else if (mode == "image")
+            {
+                if (!published && !librarian && (owner?.LogicalName != "systemuser" || owner.Id != caller))
+                    throw MediaPolicy.Invalid("Submission image access denied.");
+            }
             else if (mode != "submission" || (!librarian && (owner?.LogicalName != "systemuser" || owner.Id != caller))) throw MediaPolicy.Invalid("Submission video access denied.");
         }
 

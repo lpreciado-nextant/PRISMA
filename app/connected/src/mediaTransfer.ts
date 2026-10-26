@@ -1,10 +1,11 @@
 import { mediaRequest, uploadMedia, type MediaApi, type MediaState } from "./media.ts";
 
 export type PlaybackMode = "submission" | "published" | "present";
+export type MediaReadMode = PlaybackMode | "image";
 export type TransferApi = {
   begin: (id: string, version: string, name: string, size: number, sha256: string, blockSize?: 8388608 | 16777216) => Promise<unknown>;
   checkpoint: (id: string, version: string, session: string, name: string, size: number, sha256: string) => Promise<unknown>;
-  range: (id: string, assetId: string, mode: PlaybackMode, offset: number, count: number, version?: string) => Promise<unknown>;
+  range: (id: string, assetId: string, mode: MediaReadMode, offset: number, count: number, version?: string) => Promise<unknown>;
 };
 export async function fileDigest(file: File, signal: AbortSignal, progress: (percent: number) => void): Promise<string> {
   // Only uploads hash, so the WASM stays out of the library-to-viewer bundle.
@@ -37,7 +38,7 @@ export async function transferVideo(api: MediaApi, transfer: TransferApi, initia
 const readSizes = [1024 * 1024, 4 * 1024 * 1024, 8 * 1024 * 1024];
 export type VideoRange = { bytes: Uint8Array<ArrayBuffer>; version: string; maxRead: number };
 
-export async function readVideoRange(api: TransferApi, id: string, assetId: string, mode: PlaybackMode, offset: number, size: number,
+export async function readVideoRange(api: TransferApi, id: string, assetId: string, mode: MediaReadMode, offset: number, size: number,
   signal: AbortSignal, version?: string, mime = "video/mp4", length = 1024 * 1024): Promise<VideoRange> {
   signal.throwIfAborted();
   const count = Math.min(length, size - offset);
@@ -59,7 +60,7 @@ export async function readVideoRange(api: TransferApi, id: string, assetId: stri
 }
 
 // Every range is pinned to the first response's version, so a file changed or revoked mid-read fails instead of mixing revisions.
-export async function readAttachment(api: TransferApi, id: string, item: { id: string; size: number; mime: string }, mode: PlaybackMode, signal: AbortSignal): Promise<Blob> {
+export async function readAttachment(api: TransferApi, id: string, item: { id: string; size: number; mime: string }, mode: MediaReadMode, signal: AbortSignal): Promise<Blob> {
   const first = await readVideoRange(api, id, item.id, mode, 0, item.size, signal, undefined, item.mime);
   const offsets: number[] = [];
   for (let offset = first.bytes.length; offset < item.size; offset += first.maxRead) offsets.push(offset);

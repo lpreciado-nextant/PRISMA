@@ -111,11 +111,14 @@ namespace Prisma.Plugins
             if (context.MessageName == SuggestionPolicy.OpenFeedbackMessage) { OpenFeedbackFor(context, server); return; }
             if (context.MessageName == SuggestionPolicy.AddressMessage) { Address(context, caller, server); return; }
             var solutionId = (Guid)context.InputParameters["SolutionId"];
-            // Throws for a solution the caller cannot read.
-            var solution = caller.Retrieve("nx_solution", solutionId, new ColumnSet("nx_solutionname", "nx_publicationstatus", "statecode", "ownerid"));
+            var columns = new ColumnSet("nx_solutionname", "nx_publicationstatus", "statecode", "ownerid", "nx_capability");
+            var solution = server.Retrieve("nx_solution", solutionId, columns);
+            var librarian = context.MessageName == SuggestionPolicy.ListMessage
+                && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanManage(server, solution);
+            if (!librarian) solution = caller.Retrieve("nx_solution", solutionId, columns);
             var owner = solution.GetAttributeValue<EntityReference>("ownerid")?.Id == context.InitiatingUserId;
             if (context.MessageName == SuggestionPolicy.SuggestMessage) { Suggest(context, server, solution); return; }
-            if (context.MessageName == SuggestionPolicy.ListMessage) { List(context, server, solution, owner); return; }
+            if (context.MessageName == SuggestionPolicy.ListMessage) { List(context, server, solution, owner, librarian); return; }
             throw new InvalidPluginExecutionException("Invalid PRISMA suggestion registration.");
         }
 
@@ -136,9 +139,9 @@ namespace Prisma.Plugins
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SuggestionCreated { Id = id.ToString() });
         }
 
-        private static void List(IPluginExecutionContext context, IOrganizationService server, Entity solution, bool owner)
+        private static void List(IPluginExecutionContext context, IOrganizationService server, Entity solution, bool owner, bool librarian)
         {
-            var readable = SuggestionPolicy.CanRead(owner, IsContributor(server, solution.Id, context.InitiatingUserId), ReviewApi.IsLibrarian(server, context.InitiatingUserId));
+            var readable = SuggestionPolicy.CanRead(owner, IsContributor(server, solution.Id, context.InitiatingUserId), librarian);
             var result = new SuggestionList { CanRead = readable, Suggestions = new List<SuggestionEntry>() };
             if (readable)
             {

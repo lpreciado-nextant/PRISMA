@@ -1,6 +1,6 @@
 # PRISMA — Nextant Solution Library — End-to-End Design
 
-**Status:** Agreed two-field story design; wizard resume, selectable MP4 captions and same-account video acceptance verified; Blob pilot for new attachments approved (ADR-0010), not deployed; production-host and least-privilege gates remain open; two-stage AI authoring planned, not implemented; main-capability step prototyped in the PoC 2026-10-23; secondary capability live in the connected wizard 2026-10-26
+**Status:** Agreed two-field story design; wizard resume, selectable MP4 captions and same-account video acceptance verified; Blob pilot for new attachments approved (ADR-0010), not deployed; production-host and least-privilege gates remain open; two-stage AI authoring planned, not implemented; main-capability step prototyped in the PoC 2026-10-23; secondary capability live in the connected wizard 2026-10-26; capability-owner SA librarian scope deployed 2026-10-26 with role migration; five owners and Luis's global override provisioned; remaining owner onboarding and least-privilege acceptance pending
 **Last updated:** 2026-10-26
 **Owner:** _TBD_
 **Related docs:** [Documentation map](../README.md) · [Dataverse schema spec (v2)](../data_model/SchemaV2.md) · [Code app PoC](../../app/README.md) · [HTML prototype](../../examples/nextant-solution-library%201.html)
@@ -48,7 +48,7 @@ The consultant, engineer, or practice lead who built the thing.
 
 - **Wants:** credit for their work, minimal paperwork, to stop re-explaining the same demo in Teams threads.
 - **Does:** creates and edits their own solution records, uploads assets, submits for review.
-- **Cannot:** publish their own work, edit other people's records.
+- **Cannot as a Contributor:** publish their own work or edit other people's records. A person who also has authorized librarian access may approve their own submission within that scope.
 - **Friction budget:** low. If submission takes more than ~10 minutes, they won't do it, and G2 fails.
 
 ### 2.2 CSM (Consumer)
@@ -62,11 +62,13 @@ The Customer Success Manager preparing for or sitting in a client conversation.
 
 ### 2.3 Librarian (Admin)
 
-The small team that owns library quality.
+Capability Owners own library quality within their Specialization Areas. Capabilities are subdivisions of an SA, recorded in `nx_capability`.
 
 - **Wants:** consistent, accurate, non-embarrassing entries; no stale content presented to clients.
-- **Does:** reviews the submission queue, edits any record, sets publication status, manages reference data (capabilities, technologies, industries), retires stale entries.
+- **Does:** reviews, approves, edits and retires solutions whose **main capability** belongs to an SA in which they own an active capability. Scope includes other capabilities in that SA; secondary capabilities do not grant access. A separately designated **PRISMA Global Librarian** may manage solutions across all SAs. Reference-data administration remains separately provisioned.
 - **Is the only role that can publish.** This is the quality gate that makes G3 safe — nothing reaches a client screen unreviewed.
+
+**Agreed 2026-10-26:** self-approval is permitted within the caller's authorized scope; required completeness, safety confirmation and row-version checks remain. The normal PRISMA Librarian role/profile must be provisioned, and `nx_capabilityowner` resolves to the caller's unique active Consultant record. Neither the normal role alone nor System Administrator status grants global librarian workflow access. Owners still edit their own submissions only in Draft. Authorization, queue filtering and protected media access are server-enforced; the PoC remains a simulation. See [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md#capability-owner-scope-2026-10-26) and the [rollout contract](../architecture/security-model.md#capability-owner-librarian-access).
 
 ---
 
@@ -321,7 +323,7 @@ The trade: this does not scale past a few thousand records. That's a deliberate,
 |---|---|---|---|---|
 | Contributor | Create; Read/Write **own**; Read published (org) | Same as parent | Read; Create on `nx_technology` only | Read own |
 | CSM | Read **published** only | Read (published parents) | Read | Create; Read own |
-| Librarian | Full (org) | Full | Full | Full |
+| Librarian | Own/published access; scoped review and editing through plug-ins | Own/published reads; scoped mediated reads/writes | Read; administration separately provisioned | Separately provisioned |
 
 - `nx_solution` is user/team-owned; reference tables are organization-owned.
 - **Only an authorized librarian can request publication.** Protected state changes go through synchronous, caller-authorized Dataverse transitions; contributors can request draft/submit without direct write permission on publication/review fields. See [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md).

@@ -217,6 +217,7 @@ namespace Prisma.Plugins.Tests
         public ParameterCollection Output = new ParameterCollection();
         public IPluginExecutionContext Parent;
         public IOrganizationService Service;
+        public IOrganizationService CallerService;
         public IPluginExecutionContext Context { get { return (IPluginExecutionContext)GetTransparentProxy(); } }
         public TestPluginContext(Guid user, string message) : base(typeof(IPluginExecutionContext)) { this.user = user; this.message = message; }
         public override IMessage Invoke(IMessage messageCall)
@@ -239,8 +240,9 @@ namespace Prisma.Plugins.Tests
         {
             if (type == typeof(IPluginExecutionContext)) return Context;
             if (type == typeof(IOrganizationServiceFactory)) return this;
+            if (type == typeof(ITracingService)) return null;
             throw new NotSupportedException(type.Name);
         }
-        public IOrganizationService CreateOrganizationService(Guid? userId) { return Service ?? throw new NotSupportedException(); }
+        public IOrganizationService CreateOrganizationService(Guid? userId) { return (userId.HasValue ? CallerService ?? Service : Service) ?? throw new NotSupportedException(); }
     }
 }

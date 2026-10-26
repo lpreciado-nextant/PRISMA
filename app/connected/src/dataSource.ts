@@ -78,10 +78,14 @@ export type MediaAccess = { solutionId: string; mode: PlaybackMode; signal?: Abo
 export async function downloadMedia(item: MediaItem, access?: MediaAccess): Promise<Blob> {
   if (item.linkedAsset) throw new Error("Linked assets do not contain a downloadable file.");
   if (!item.complete) throw new Error("Media is not finalized.");
-  if (item.storage === "blob") {
-    if (!access) throw new Error("Protected media access context is required.");
+  if (access && item.solutionId && access.solutionId !== item.solutionId) throw new Error("Media does not belong to this solution.");
+  if (item.kind !== "attachment" && item.solutionId) {
+    return readAttachment(transferApi, item.solutionId, item, "image", access?.signal ?? new AbortController().signal);
+  }
+  if (item.kind === "attachment" && access) {
     return readAttachment(transferApi, access.solutionId, item, access.mode, access.signal ?? new AbortController().signal);
   }
+  if (item.storage === "blob") throw new Error("Protected media access context is required.");
   const client = getClient(dataSourcesInfo);
   const result = item.kind !== "attachment"
     ? await client.downloadImageFromRecord("nx_solutionimages", item.id, "nx_imagefile", true)

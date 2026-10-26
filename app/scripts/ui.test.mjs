@@ -52,6 +52,43 @@ test("help guides start collapsed with accessible controls in both app targets",
   }
 });
 
+test("connected scoped media downloads use the protected API and never fall back after denial", async () => {
+  const { downloadMedia, transferApi } = await server.ssrLoadModule("/connected/src/dataSource.ts");
+  const original = transferApi.range;
+  const solutionId = "11111111-1111-1111-1111-111111111111";
+  const assetId = "22222222-2222-2222-2222-222222222222";
+  const version = "1:2:" + "a".repeat(32);
+  const calls = [];
+  let mime = "image/png";
+  transferApi.range = async (id, asset, mode, offset, count) => {
+    calls.push({ id, asset, mode, offset, count });
+    return { success: true, data: { ResultJson: JSON.stringify({ id, assetId: asset, version, offset, size: 3, mime, content: btoa("abc") }) } };
+  };
+  const item = { id: assetId, solutionId, sessionId: assetId, kind: "image", mime, name: "Preview.png", size: 3, received: 3, nextBlock: 1, complete: true };
+  try {
+    for (const kind of ["image", "thumbnail"]) {
+      const result = await downloadMedia({ ...item, kind });
+      assert.equal(result.type, mime);
+      assert.equal(await result.text(), "abc");
+      assert.deepEqual(calls.at(-1), { id: solutionId, asset: assetId, mode: "image", offset: 0, count: 3 });
+    }
+    mime = "application/pdf";
+    for (const storage of [undefined, "blob"]) {
+      const result = await downloadMedia({ ...item, kind: "attachment", mime, storage }, { solutionId, mode: "submission" });
+      assert.equal(result.type, mime);
+      assert.equal(await result.text(), "abc");
+      assert.equal(calls.at(-1).mode, "submission");
+    }
+    const before = calls.length;
+    await assert.rejects(downloadMedia(item, { solutionId: assetId, mode: "submission" }), /does not belong/);
+    await assert.rejects(downloadMedia({ ...item, complete: false }), /not finalized/);
+    assert.equal(calls.length, before);
+    transferApi.range = async () => { throw new Error("SA access denied"); };
+    await assert.rejects(downloadMedia(item), /SA access denied/);
+    await assert.rejects(downloadMedia({ ...item, kind: "attachment", mime }, { solutionId, mode: "submission" }), /SA access denied/);
+  } finally { transferApi.range = original; }
+});
+
 test("profile photo lookup uses the signed-in identity and tolerates missing, denied or invalid photos", async () => {
   const { getUserPhoto } = await server.ssrLoadModule("/connected/src/dataSource.ts");
   const { Office365UsersService } = await server.ssrLoadModule("/connected/src/generated/services/Office365UsersService.ts");
