@@ -151,6 +151,7 @@ namespace Prisma.Plugins
         [DataMember(Name = "cleared")] public bool Cleared { get; set; }
         [DataMember(Name = "owner")] public string Owner { get; set; }
         [DataMember(Name = "dateAdded")] public string DateAdded { get; set; }
+        [DataMember(Name = "modifiedOn")] public string ModifiedOn { get; set; }
         [DataMember(Name = "imageCount")] public int ImageCount { get; set; }
         [DataMember(Name = "attachmentCount")] public int AttachmentCount { get; set; }
         [DataMember(Name = "libraryNotes")] public string LibraryNotes { get; set; }
@@ -278,6 +279,7 @@ namespace Prisma.Plugins
                 if (action == "submit" || action == "approve" || action == "confirm-edit")
                 {
                     var graph = DraftGraph.Read(server, parent);
+                    DraftGraph.PrepareClassification(caller, parent, graph.Graph);
                     ReviewPolicy.Complete(parent, graph, media);
                     RequireActive(caller, parent.GetAttributeValue<EntityReference>("nx_capability"));
                     foreach (var area in graph.Graph.AreaIds) RequireActive(caller, new EntityReference("nx_specializationarea", Guid.Parse(area)));
@@ -359,17 +361,19 @@ namespace Prisma.Plugins
                 else server.Execute(new RevokeAccessRequest { Target = target, Revokee = team });
         }
 
-        private static ColumnSet Columns() { return new ColumnSet(DraftPolicy.CoreColumns.Concat(new[] { "ownerid", "nx_dateadded", "createdon", "nx_librarynote", "nx_publicationstatus", "nx_reviewoutcome", "nx_reviewcomments", "nx_clientsafereviewed",
+        public static ColumnSet Columns() { return new ColumnSet(DraftPolicy.CoreColumns.Concat(new[] { "ownerid", "nx_dateadded", "createdon", "modifiedon", "nx_librarynote", "nx_publicationstatus", "nx_reviewoutcome", "nx_reviewcomments", "nx_clientsafereviewed",
             DraftPolicy.LibrarianEditedBy, DraftPolicy.LibrarianEditedOn, DraftPolicy.LibrarianEditPending }).ToArray()); }
-        private static SubmissionSummary Summary(IOrganizationService server, Entity record, bool librarian)
+        public static SubmissionSummary Summary(IOrganizationService server, Entity record, bool librarian)
         {
             var edited = record.GetAttributeValue<DateTime?>(DraftPolicy.LibrarianEditedOn);
             var media = MediaApi.Sessions(server, record.Id);
             var added = record.GetAttributeValue<DateTime?>("nx_dateadded") ?? record.GetAttributeValue<DateTime?>("createdon");
-            return new SubmissionSummary { Core = DraftApi.Snapshot(record), AreaIds = DraftGraph.AreaIds(server, record.Id), Publication = record.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value,
+            var modified = record.GetAttributeValue<DateTime?>("modifiedon") ?? throw MediaPolicy.Invalid("Submission modification time is unavailable.");
+            return new SubmissionSummary { Core = DraftApi.Snapshot(record), AreaIds = DraftGraph.AreaIds(server, record), Publication = record.GetAttributeValue<OptionSetValue>("nx_publicationstatus").Value,
                 Outcome = record.GetAttributeValue<OptionSetValue>("nx_reviewoutcome")?.Value ?? 125060000,
                 Comments = record.GetAttributeValue<string>("nx_reviewcomments") ?? "", Cleared = record.GetAttributeValue<bool>("nx_clientsafereviewed"),
                 Owner = record.GetAttributeValue<EntityReference>("ownerid")?.Name ?? "", DateAdded = added?.ToString("yyyy-MM-dd") ?? "",
+                ModifiedOn = modified.ToUniversalTime().ToString("o"),
                 ImageCount = media.Count(item => item.GetAttributeValue<string>("nx_kind") == "image" && item.GetAttributeValue<bool>("nx_complete")),
                 AttachmentCount = media.Count(item => item.GetAttributeValue<string>("nx_kind") == "attachment" && item.GetAttributeValue<bool>("nx_complete")),
                 LibraryNotes = record.GetAttributeValue<string>("nx_librarynote") ?? "",

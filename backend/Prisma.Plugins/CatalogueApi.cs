@@ -25,6 +25,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "industries")] public List<string> Industries { get; set; }
         /// <summary>Target client roles (PR-031), by name. Client-safe, so present mode returns them too.</summary>
         [DataMember(Name = "clientRoles")] public List<string> ClientRoles { get; set; }
+        [DataMember(Name = "secondaryCapabilityIds")] public List<string> SecondaryCapabilityIds { get; set; }
+        [DataMember(Name = "secondaryCapabilities")] public List<string> SecondaryCapabilities { get; set; }
         [DataMember(Name = "contributors", EmitDefaultValue = false)] public List<string> Contributors { get; set; }
         [DataMember(Name = "thumbnail", EmitDefaultValue = false)] public MediaSnapshot Thumbnail { get; set; }
         /// <summary>How many demo videos and interactive demos the solution has (ADR-0011); real whenever `purposes` is true.</summary>
@@ -47,6 +49,7 @@ namespace Prisma.Plugins
     {
         private readonly Dictionary<Guid, CatalogueEntry> entries = new Dictionary<Guid, CatalogueEntry>();
         private readonly Dictionary<Guid, List<MediaSnapshot>> thumbnails = new Dictionary<Guid, List<MediaSnapshot>>();
+        private readonly Dictionary<Guid, Guid> primaryAreas = new Dictionary<Guid, Guid>();
         private readonly bool present;
 
         public CatalogueGraph(IEnumerable<Guid> solutions, bool present)
@@ -57,7 +60,8 @@ namespace Prisma.Plugins
                 if (entries.ContainsKey(solution)) throw MediaPolicy.Invalid("The catalogue returned a solution twice. Retry the request.");
                 entries.Add(solution, new CatalogueEntry {
                     Id = solution.ToString("D"), Areas = new List<CatalogueArea>(), Technologies = new List<string>(), Industries = new List<string>(),
-                    ClientRoles = new List<string>(), Contributors = present ? null : new List<string>()
+                    ClientRoles = new List<string>(), SecondaryCapabilityIds = new List<string>(), SecondaryCapabilities = new List<string>(),
+                    Contributors = present ? null : new List<string>()
                 });
             }
         }
@@ -74,6 +78,16 @@ namespace Prisma.Plugins
         public void Industry(Guid solution, string name) { Add(solution, entry => entry.Industries, name); }
         public void ClientRole(Guid solution, string name) { Add(solution, entry => entry.ClientRoles, name); }
 
+        public void PrimaryArea(Guid solution, Guid area) { if (entries.ContainsKey(solution)) primaryAreas[solution] = area; }
+
+        public void SecondaryCapability(Guid solution, Guid capability, string name)
+        {
+            CatalogueEntry entry;
+            if (!entries.TryGetValue(solution, out entry)) return;
+            entry.SecondaryCapabilities.Add(Required(name));
+            entry.SecondaryCapabilityIds.Add(capability.ToString("D"));
+        }
+
         public void Contributor(Guid solution, string name)
         {
             if (present) throw MediaPolicy.Invalid("Present mode never returns builder credits.");
@@ -84,6 +98,10 @@ namespace Prisma.Plugins
         {
             foreach (var entry in entries)
             {
+                Guid primary;
+                primaryAreas.TryGetValue(entry.Key, out primary);
+                entry.Value.Areas = entry.Value.Areas.OrderBy(area => area.Id == primary.ToString("D") ? 0 : 1)
+                    .ThenBy(area => area.Order ?? int.MaxValue).ThenBy(area => area.Id, StringComparer.Ordinal).ToList();
                 List<MediaSnapshot> candidates;
                 // The same order as the published detail's media, whose first thumbnail the card used before.
                 if (thumbnails.TryGetValue(entry.Key, out candidates)) entry.Value.Thumbnail = candidates.OrderBy(item => item.SortOrder).ThenBy(item => item.Id).First();
@@ -122,7 +140,7 @@ namespace Prisma.Plugins
     }
 
     /// <summary>
-    /// nx_GetCatalogueGraph: the areas, technologies, industries, client roles and (outside present mode) contributor names of every
+    /// nx_GetCatalogueGraph: the areas, secondary capabilities, technologies, industries, client roles and (outside present mode) contributor names of every
     /// published solution the caller can read, in a few paged queries instead of several requests per solution.
     /// Reads as the caller, so sharing and privileges decide what is returned, exactly like the per-solution reads.
     /// </summary>
@@ -142,10 +160,19 @@ namespace Prisma.Plugins
             var present = (bool)context.InputParameters["Present"];
 
             var solutions = new QueryExpression("nx_solution") { ColumnSet = new ColumnSet(false) };
+            var mainCapability = solutions.AddLink("nx_capability", "nx_capability", "nx_capabilityid", JoinOperator.LeftOuter);
+            mainCapability.EntityAlias = "main";
+            mainCapability.Columns = new ColumnSet("nx_specializationarea");
             Visible(solutions.Criteria, present);
             solutions.AddOrder("nx_solutionid", OrderType.Ascending);
-            var visible = Rows(caller, solutions).Select(row => row.Id).ToList();
+            var solutionRows = Rows(caller, solutions).ToList();
+            var visible = solutionRows.Select(row => row.Id).ToList();
             var graph = new CatalogueGraph(visible, present);
+            foreach (var row in solutionRows)
+            {
+                var area = row.GetAttributeValue<AliasedValue>("main.nx_specializationarea")?.Value as EntityReference;
+                if (area != null) graph.PrimaryArea(row.Id, area.Id);
+            }
 
             Tags(caller, present, DraftGraph.Relationships[3], "nx_specializationarea", new[] { "nx_specializationareaname", "nx_sortordernumber" },
                 (solution, tag, row) => graph.Area(solution, tag, Aliased(row, "nx_specializationareaname") as string, Aliased(row, "nx_sortordernumber") as int?));
@@ -155,6 +182,8 @@ namespace Prisma.Plugins
                 (solution, tag, row) => graph.Industry(solution, Aliased(row, "nx_industryname") as string));
             Tags(caller, present, DraftGraph.Relationships[4], "nx_clientrole", new[] { "nx_clientrolename" },
                 (solution, tag, row) => graph.ClientRole(solution, Aliased(row, "nx_clientrolename") as string));
+            Tags(caller, present, DraftGraph.SecondaryRelationship, "nx_capability", new[] { "nx_capabilityname" },
+                (solution, tag, row) => graph.SecondaryCapability(solution, tag, Aliased(row, "nx_capabilityname") as string));
             if (!present)
             {
                 var contributors = new QueryExpression("nx_solutioncontributor") { ColumnSet = new ColumnSet("nx_solution") };

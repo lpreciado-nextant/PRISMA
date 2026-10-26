@@ -13,13 +13,14 @@ const string solutionName = "PRISMA_Dev";
 var organizationId = Guid.Parse("cd98dcb3-db3b-f011-be51-00224820bb36");
 var command = args.FirstOrDefault() ?? "inspect";
 if (!new[] { "inspect", "inspect-favorites", "remove-story-field", "seed-reference-data", "smoke-transfer", "media-transfer", "inspect-asset-columns", "verify-video-files", "set-video-limit", "repair-asset-url", "apply", "assign-acceptance", "smoke", "smoke-graph", "smoke-media", "smoke-review", "smoke-delete",
-    "plugin-subject", "blob-schema", "blob-plugin", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns", "inspect-plugin-traces", "inspect-client-roles", "migrate-client-roles" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
+    "plugin-subject", "blob-schema", "blob-plugin", "verify-classification", "bind-managed-identity", "set-blob-config", "smoke-blob", "catalogue-api", "technology-duplicates", "suggestion-api", "inspect-librarian-edit", "inspect-effort-columns", "inspect-plugin-traces", "inspect-client-roles", "migrate-client-roles" }.Contains(command)) throw new ArgumentException("Unknown deployment command.");
 using var client = new ServiceClient($"AuthType=OAuth;Url={organizationUrl};AppId=51f81489-12ee-4a9e-aaae-a2591f45987d;RedirectUri=http://localhost;LoginPrompt=Auto;RequireNewInstance=True");
 if (!client.IsReady) throw new InvalidOperationException("Dataverse sign-in failed. " + client.LastError);
 var identity = (WhoAmIResponse)client.Execute(new WhoAmIRequest());
 if (identity.OrganizationId != organizationId) throw new InvalidOperationException("Refusing to operate against a different organization.");
 Console.WriteLine($"Verified Nextant Pulse organization {identity.OrganizationId}; command {command}.");
 if (command == "inspect") return;
+if (command == "verify-classification") { VerifyClassification(client, args.Skip(1).ToArray()); return; }
 if (command == "inspect-favorites")
 {
     // Read-only: what the Top 10 API returns, and every favorite row the signed-in account can read.
@@ -1343,10 +1344,23 @@ static void BlobPlugin(IOrganizationService service, string[] options)
     if (assembly.Id != Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba")) throw new InvalidOperationException("Unexpected assembly target.");
     if (!((RetrieveEntityResponse)service.Execute(new RetrieveEntityRequest { LogicalName = "nx_uploadsession", EntityFilters = EntityFilters.Attributes })).EntityMetadata.Attributes.Any(attribute => attribute.LogicalName == "nx_hashstate"))
         throw new InvalidOperationException("Run blob-schema first; the updated plug-in reads the new session columns.");
+    VerifySecondaryRelationship(service);
     Console.WriteLine("Plan: update the existing assembly; register asynchronous post-delete nx_uploadsession step PRISMA.Media.BlobDeletion with a 'session' pre-image; add optional Int32 parameter nx_BeginResumableUpload.BlockSize if missing. No roles or apps change.");
     if (options.Length == 0) { Console.WriteLine("Read-only preview. No changes made."); return; }
     var path = Path.GetFullPath(options[1]);
     var signer = SigningCertificate(path);
+    var installed = service.Retrieve("pluginassembly", assembly.Id, new ColumnSet("content", "managedidentityid"));
+    if (installed.GetAttributeValue<EntityReference>("managedidentityid") != null)
+    {
+        var temporary = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllBytes(temporary, Convert.FromBase64String(installed.GetAttributeValue<string>("content")));
+            if (SigningCertificate(temporary).Thumbprint != signer.Thumbprint)
+                throw new InvalidOperationException("The signing certificate differs from the installed managed-identity assembly. Certificate rotation requires separate approval.");
+        }
+        finally { File.Delete(temporary); }
+    }
     Console.WriteLine($"Signed by {signer.Subject}.");
     service.Update(new Entity("pluginassembly", assembly.Id) { ["content"] = Convert.ToBase64String(File.ReadAllBytes(path)) });
     var deletionType = PluginType(service, assembly.Id, "Prisma.Plugins.BlobDeletion");
@@ -1371,6 +1385,86 @@ static void BlobPlugin(IOrganizationService service, string[] options)
     RegisterApi(service, PluginType(service, assembly.Id, "Prisma.Plugins.MediaTransferApi"), "nx_BeginResumableUpload", "prvWritenx_Solution", new[] {
         ("SolutionId", 12, false), ("ExpectedRowVersion", 10, false), ("FileName", 10, false), ("Size", 7, false), ("Sha256", 10, false), ("BlockSize", 7, true) });
     Console.WriteLine("Blob-capable assembly and post-commit deletion step registered. Uploads remain governed by nx_MediaBlobUploads.");
+}
+
+static void VerifySecondaryRelationship(IOrganizationService service)
+{
+    var relationship = ((RetrieveRelationshipResponse)service.Execute(new RetrieveRelationshipRequest { Name = "nx_Solution_nx_SecondaryCapability" })).RelationshipMetadata as ManyToManyRelationshipMetadata;
+    if (relationship?.Entity1LogicalName != "nx_solution" || relationship.Entity2LogicalName != "nx_capability"
+        || relationship.IntersectEntityName != "nx_solution_nx_secondarycapability"
+        || relationship.Entity1IntersectAttribute != "nx_solutionid" || relationship.Entity2IntersectAttribute != "nx_capabilityid")
+        throw new InvalidOperationException("Unexpected secondary capability relationship metadata. No schema changes are made by this command.");
+    Console.WriteLine("Verified secondary capability N:N metadata. Solution membership is unchanged.");
+}
+
+static void VerifyClassification(IOrganizationService service, string[] options)
+{
+    if (options.Length != 1) throw new ArgumentException("Use verify-classification <signed-plugin.dll>. Read-only.");
+    VerifySecondaryRelationship(service);
+    var path = Path.GetFullPath(options[0]);
+    var signer = SigningCertificate(path);
+    var assembly = service.Retrieve("pluginassembly", Guid.Parse("08207a52-1ab6-f111-aaac-6045bd049fba"), new ColumnSet("name", "content", "managedidentityid"));
+    if (assembly.GetAttributeValue<string>("name") != "Prisma.Plugins" || assembly.GetAttributeValue<EntityReference>("managedidentityid") == null)
+        throw new InvalidOperationException("Unexpected assembly or missing managed identity binding.");
+    var deployed = Convert.FromBase64String(assembly.GetAttributeValue<string>("content"));
+    var hash = System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(path));
+    if (!hash.SequenceEqual(System.Security.Cryptography.SHA256.HashData(deployed))) throw new InvalidOperationException("Deployed assembly does not match the signed local build.");
+    Console.WriteLine($"Verified deployed assembly SHA-256 {Convert.ToHexString(hash)}; signer {signer.Subject}; managed identity remains bound.");
+    var guard = Find(service, "plugintype", "typename", "Prisma.Plugins.DraftGraphGuard") ?? throw new InvalidOperationException("Graph guard missing.");
+    foreach (var message in new[] { "Associate", "Disassociate" })
+    {
+        var steps = new QueryExpression("sdkmessageprocessingstep") { ColumnSet = new ColumnSet("stage", "mode", "statecode", "sdkmessagefilterid") };
+        steps.Criteria.AddCondition("eventhandler", ConditionOperator.Equal, guard.Id);
+        steps.AddLink("sdkmessage", "sdkmessageid", "sdkmessageid").LinkCriteria.AddCondition("name", ConditionOperator.Equal, message);
+        if (!service.RetrieveMultiple(steps).Entities.Any(step => step.GetAttributeValue<OptionSetValue>("stage")?.Value == 20
+            && step.GetAttributeValue<OptionSetValue>("mode")?.Value == 0 && step.GetAttributeValue<OptionSetValue>("statecode")?.Value == 0
+            && !step.Contains("sdkmessagefilterid")))
+            throw new InvalidOperationException($"Active global synchronous graph guard missing for {message}.");
+    }
+    Console.WriteLine("Verified global Associate/Disassociate graph guards.");
+    foreach (var present in new[] { false, true })
+    {
+        using var response = JsonDocument.Parse((string)service.Execute(new OrganizationRequest("nx_GetCatalogueGraph") { ["Present"] = present })["ResultJson"]);
+        var entries = response.RootElement.GetProperty("solutions").EnumerateArray().ToList();
+        foreach (var entry in entries)
+        {
+            if (entry.GetProperty("secondaryCapabilityIds").ValueKind != JsonValueKind.Array || entry.GetProperty("secondaryCapabilities").ValueKind != JsonValueKind.Array)
+                throw new InvalidOperationException("Secondary catalogue fields are not arrays.");
+            if (present && entry.TryGetProperty("contributors", out _)) throw new InvalidOperationException("Present catalogue contains builder credits.");
+            var solution = service.Retrieve("nx_solution", Guid.Parse(entry.GetProperty("id").GetString()!), new ColumnSet("nx_capability"));
+            var capability = solution.GetAttributeValue<EntityReference>("nx_capability");
+            var area = capability == null ? null : service.Retrieve("nx_capability", capability.Id, new ColumnSet("nx_specializationarea")).GetAttributeValue<EntityReference>("nx_specializationarea");
+            var areas = entry.GetProperty("areas").EnumerateArray().Select(item => Guid.Parse(item.GetProperty("nx_specializationareaid").GetString()!)).ToList();
+            if (area != null && areas.Contains(area.Id) && areas[0] != area.Id) throw new InvalidOperationException("Catalogue main area is not first.");
+        }
+        Console.WriteLine($"Verified catalogue contracts and main-area ordering: {entries.Count} solutions, present={present}.");
+    }
+    var count = 0;
+    string? cookie = null;
+    for (var page = 1; ; page++)
+    {
+        var request = new OrganizationRequest("nx_GetSubmissions") { ["ReviewQueue"] = false, ["PageNumber"] = page };
+        if (cookie != null) request["PagingCookie"] = cookie;
+        using var response = JsonDocument.Parse((string)service.Execute(request)["ResultJson"]);
+        foreach (var entry in response.RootElement.GetProperty("records").EnumerateArray())
+        {
+            var id = Guid.Parse(entry.GetProperty("core").GetProperty("id").GetString()!);
+            var record = service.Retrieve("nx_solution", id, new ColumnSet("modifiedon"));
+            if (entry.GetProperty("modifiedOn").GetDateTime().ToUniversalTime() != record.GetAttributeValue<DateTime>("modifiedon").ToUniversalTime())
+                throw new InvalidOperationException("Submission modifiedOn differs from Dataverse modifiedon.");
+            if (count++ == 0)
+            {
+                using var detail = JsonDocument.Parse((string)service.Execute(new OrganizationRequest("nx_GetSubmission") { ["SolutionId"] = id })["ResultJson"]);
+                if (detail.RootElement.GetProperty("graph").GetProperty("graph").GetProperty("secondaryCapabilityIds").ValueKind != JsonValueKind.Array)
+                    throw new InvalidOperationException("Submission detail secondaryCapabilityIds is not an array.");
+                Console.WriteLine("Verified submission detail secondary capability contract.");
+            }
+        }
+        if (!response.RootElement.GetProperty("moreRecords").GetBoolean()) break;
+        if (page >= 50) throw new InvalidOperationException("Submission verification page limit exceeded.");
+        cookie = response.RootElement.GetProperty("pagingCookie").GetString();
+    }
+    Console.WriteLine($"Verified modifiedOn against Dataverse for {count} owned submissions. Read-only; no records changed.");
 }
 
 static void BindManagedIdentity(IOrganizationService service, string[] options)

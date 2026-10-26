@@ -24,6 +24,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "areaIds", IsRequired = true)] public List<string> AreaIds { get; set; }
         /// <summary>Target client roles (PR-031). Optional on input: clients built before it omit the field, and their saves leave the stored roles alone.</summary>
         [DataMember(Name = "clientRoleIds", EmitDefaultValue = false)] public List<string> ClientRoleIds { get; set; }
+        /// <summary>Omitted by older clients: preserve the stored secondary capability. An empty list clears it.</summary>
+        [DataMember(Name = "secondaryCapabilityIds", EmitDefaultValue = false)] public List<string> SecondaryCapabilityIds { get; set; }
     }
 
     [DataContract]
@@ -38,9 +40,10 @@ namespace Prisma.Plugins
     {
         public const string SaveMessage = "nx_SaveDraftGraph";
         public const string ReadMessage = "nx_GetDraftGraph";
+        public const string SecondaryRelationship = "nx_Solution_nx_SecondaryCapability";
         public static readonly string[] Relationships = {
             "nx_Solution_nx_Technology_nx_Technology", "nx_Solution_nx_Industry_nx_Industry", "nx_Solution_cr6b0_Project_cr6b0_Project",
-            "nx_Solution_nx_SpecializationArea_nx_SpecializationArea", "nx_ClientRole_nx_Solution_nx_Solution"
+            "nx_Solution_nx_SpecializationArea_nx_SpecializationArea", "nx_ClientRole_nx_Solution_nx_Solution", SecondaryRelationship
         };
 
         public static DraftGraphInput Parse(string json)
@@ -53,7 +56,7 @@ namespace Prisma.Plugins
                 using (var reader = JsonReaderWriterFactory.CreateJsonReader(bytes, new XmlDictionaryReaderQuotas { MaxDepth = 12, MaxStringContentLength = 200000, MaxArrayLength = 200000 }))
                 {
                     var root = XElement.Load(reader);
-                    CheckFields(root, "contributors", "technologyIds", "industryIds", "projectIds", "areaIds", "clientRoleIds");
+                    CheckFields(root, "contributors", "technologyIds", "industryIds", "projectIds", "areaIds", "clientRoleIds", "secondaryCapabilityIds");
                     var contributors = root.Element("contributors");
                     if (contributors != null)
                         // startDate, endDate, allocation and roleValue are retired; clients built before that still send them, and they are ignored.
@@ -72,6 +75,7 @@ namespace Prisma.Plugins
             Identifiers(input.ProjectIds);
             Identifiers(input.AreaIds);
             if (input.ClientRoleIds != null) Identifiers(input.ClientRoleIds);
+            if (input.SecondaryCapabilityIds != null) SecondaryIdentifiers(input.SecondaryCapabilityIds);
             return input;
         }
 
@@ -90,6 +94,47 @@ namespace Prisma.Plugins
             return identifiers;
         }
 
+        private static HashSet<Guid> SecondaryIdentifiers(List<string> values)
+        {
+            var identifiers = Identifiers(values);
+            if (identifiers.Count > 1) throw Invalid("Choose at most one secondary capability.");
+            return identifiers;
+        }
+
+        public static List<string> SecondaryIds(IOrganizationService caller, Guid parent)
+        {
+            return Links(caller, parent, SecondaryRelationship).OrderBy(id => id).Select(id => id.ToString("D")).ToList();
+        }
+
+        /// <summary>Validate the effective capabilities and replace client-supplied areas with their areas, main first.</summary>
+        public static void PrepareClassification(IOrganizationService caller, Entity parent, DraftGraphInput input)
+        {
+            var secondary = input.SecondaryCapabilityIds ?? SecondaryIds(caller, parent.Id);
+            var ids = SecondaryIdentifiers(secondary);
+            var main = parent.GetAttributeValue<EntityReference>("nx_capability");
+            if (main == null && ids.Count > 0) throw Invalid("Choose a main capability before a secondary capability.");
+            if (main != null && ids.Contains(main.Id)) throw Invalid("The secondary capability cannot be the main capability.");
+            var areas = new List<string>();
+            foreach (var id in (main == null ? Enumerable.Empty<Guid>() : new[] { main.Id }).Concat(ids))
+            {
+                var capability = caller.Retrieve("nx_capability", id, new ColumnSet("statecode", "nx_specializationarea"));
+                if (capability.GetAttributeValue<OptionSetValue>("statecode")?.Value != 0) throw Invalid("Choose an active capability.");
+                var area = capability.GetAttributeValue<EntityReference>("nx_specializationarea");
+                if (area == null) throw Invalid("The selected capability has no specialization area. Contact the librarian.");
+                if (!areas.Contains(area.Id.ToString("D"))) areas.Add(area.Id.ToString("D"));
+            }
+            input.SecondaryCapabilityIds = secondary;
+            input.AreaIds = areas;
+        }
+
+        /// <summary>A core capability edit must not leave the stored area links pointing at the old capability.</summary>
+        public static void SaveCapabilityAreas(IOrganizationService caller, Entity parent)
+        {
+            var classification = new DraftGraphInput();
+            PrepareClassification(caller, parent, classification);
+            SyncLinks(caller, parent.Id, Relationships[3], "nx_specializationarea", Identifiers(classification.AreaIds));
+        }
+
         public static DraftGraphSnapshot Read(IOrganizationService caller, Entity parent)
         {
             var contributors = Children(caller, parent.Id).Select(row => new ContributorInput {
@@ -102,8 +147,9 @@ namespace Prisma.Plugins
                     TechnologyIds = Links(caller, parent.Id, Relationships[0]).Select(identifier => identifier.ToString()).ToList(),
                     IndustryIds = Links(caller, parent.Id, Relationships[1]).Select(identifier => identifier.ToString()).ToList(),
                     ProjectIds = Links(caller, parent.Id, Relationships[2]).Select(identifier => identifier.ToString()).ToList(),
-                    AreaIds = AreaIds(caller, parent.Id),
-                    ClientRoleIds = Links(caller, parent.Id, Relationships[4]).Select(identifier => identifier.ToString()).ToList()
+                    AreaIds = AreaIds(caller, parent),
+                    ClientRoleIds = Links(caller, parent.Id, Relationships[4]).Select(identifier => identifier.ToString()).ToList(),
+                    SecondaryCapabilityIds = SecondaryIds(caller, parent.Id)
                 }
             };
         }
@@ -111,6 +157,7 @@ namespace Prisma.Plugins
         /// <summary>Saves the graph; a librarian save (ADR-0013) leaves every contributor row and its hours untouched.</summary>
         public static void Save(IOrganizationService caller, Entity parent, DraftGraphInput input, bool contributors = true)
         {
+            PrepareClassification(caller, parent, input);
             var existing = contributors ? Children(caller, parent.Id).ToDictionary(row => row.Id) : new Dictionary<Guid, Entity>();
             var retained = new HashSet<Guid>();
             foreach (var person in contributors ? input.Contributors : new List<ContributorInput>())
@@ -135,6 +182,7 @@ namespace Prisma.Plugins
             SyncLinks(caller, parent.Id, Relationships[2], "cr6b0_project", Identifiers(input.ProjectIds));
             SyncLinks(caller, parent.Id, Relationships[3], "nx_specializationarea", Identifiers(input.AreaIds));
             if (input.ClientRoleIds != null) SyncLinks(caller, parent.Id, Relationships[4], "nx_clientrole", Identifiers(input.ClientRoleIds));
+            SyncLinks(caller, parent.Id, SecondaryRelationship, "nx_capability", SecondaryIdentifiers(input.SecondaryCapabilityIds));
         }
 
         /// <summary>True when the tags, projects, areas or client roles differ from the stored graph. Contributors are not compared.</summary>
@@ -143,7 +191,8 @@ namespace Prisma.Plugins
             Func<List<string>, HashSet<Guid>> set = values => new HashSet<Guid>(values.Select(ContributorPolicy.Identifier));
             return !set(stored.TechnologyIds).SetEquals(set(input.TechnologyIds)) || !set(stored.IndustryIds).SetEquals(set(input.IndustryIds))
                 || !set(stored.ProjectIds).SetEquals(set(input.ProjectIds)) || !set(stored.AreaIds).SetEquals(set(input.AreaIds))
-                || (input.ClientRoleIds != null && !set(stored.ClientRoleIds).SetEquals(set(input.ClientRoleIds)));
+                || (input.ClientRoleIds != null && !set(stored.ClientRoleIds).SetEquals(set(input.ClientRoleIds)))
+                || (input.SecondaryCapabilityIds != null && !set(stored.SecondaryCapabilityIds ?? new List<string>()).SetEquals(set(input.SecondaryCapabilityIds)));
         }
 
         private static List<Entity> Children(IOrganizationService caller, Guid parent)
@@ -158,16 +207,18 @@ namespace Prisma.Plugins
             return rows;
         }
 
-        /// <summary>Linked specialization areas, primary first: ascending Sort Order, then id.</summary>
-        public static List<string> AreaIds(IOrganizationService caller, Guid parent)
+        /// <summary>Linked areas, main capability's area first, then ascending Sort Order and id.</summary>
+        public static List<string> AreaIds(IOrganizationService caller, Entity parent)
         {
             var query = new QueryExpression("nx_specializationarea") { ColumnSet = new ColumnSet(false), TopCount = 101 };
-            query.AddLink("nx_solution_nx_specializationarea", "nx_specializationareaid", "nx_specializationareaid").LinkCriteria.AddCondition("nx_solutionid", ConditionOperator.Equal, parent);
+            query.AddLink("nx_solution_nx_specializationarea", "nx_specializationareaid", "nx_specializationareaid").LinkCriteria.AddCondition("nx_solutionid", ConditionOperator.Equal, parent.Id);
             query.Orders.Add(new OrderExpression("nx_sortordernumber", OrderType.Ascending));
             query.Orders.Add(new OrderExpression("nx_specializationareaid", OrderType.Ascending));
             var rows = caller.RetrieveMultiple(query).Entities;
             if (rows.Count > 100) throw Invalid("Related record limit exceeded.");
-            return rows.Select(row => row.Id.ToString()).ToList();
+            var main = parent.GetAttributeValue<EntityReference>("nx_capability");
+            var primaryArea = main == null ? null : caller.Retrieve("nx_capability", main.Id, new ColumnSet("nx_specializationarea")).GetAttributeValue<EntityReference>("nx_specializationarea");
+            return rows.OrderBy(row => row.Id == primaryArea?.Id ? 0 : 1).Select(row => row.Id.ToString()).ToList();
         }
 
         private static HashSet<Guid> Links(IOrganizationService caller, Guid parent, string relationship)
@@ -212,22 +263,22 @@ namespace Prisma.Plugins
             if (context.MessageName != DraftGraph.ReadMessage && context.MessageName != DraftGraph.SaveMessage) throw new InvalidPluginExecutionException("Invalid graph operation.");
             var identifier = (Guid)context.InputParameters["SolutionId"];
             var server = factory.CreateOrganizationService(null);
-            var parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("ownerid", "nx_publicationstatus", "nx_status"));
+            var parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("ownerid", "nx_publicationstatus", "nx_status", "nx_capability"));
             var expected = context.MessageName == DraftGraph.ReadMessage ? parent.RowVersion : context.InputParameters["ExpectedRowVersion"] as string;
             var mode = DraftPolicy.Editable(parent, context.InitiatingUserId, expected, () => ReviewApi.IsLibrarian(server, context.InitiatingUserId));
             if (context.MessageName == DraftGraph.SaveMessage)
             {
                 if (!context.IsInTransaction) throw new InvalidPluginExecutionException("A transaction is required.");
                 var input = DraftGraph.Parse(context.InputParameters["GraphJson"] as string);
-                var changed = mode == EditMode.Librarian && DraftGraph.LinksChanged(DraftGraph.Read(caller, parent).Graph, input);
+                var stored = mode == EditMode.Librarian ? DraftGraph.Read(caller, parent).Graph : null;
                 caller.Execute(new UpdateRequest {
                     Target = new Entity("nx_solution", identifier) { RowVersion = expected, ["nx_status"] = parent["nx_status"] },
                     ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
                 });
                 DraftGraph.Save(caller, parent, input, mode == EditMode.Owner);
                 if (mode == EditMode.Owner) server.Update(new Entity("nx_solution", identifier) { ["nx_clientsafereviewed"] = false, ["nx_safetyacknowledged"] = false });
-                else if (changed) server.Update(DraftPolicy.LibrarianEdit(identifier, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, context.InitiatingUserId), DateTime.UtcNow));
-                parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("nx_status"));
+                else if (DraftGraph.LinksChanged(stored, input)) server.Update(DraftPolicy.LibrarianEdit(identifier, parent.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value, DraftPolicy.Editor(server, context.InitiatingUserId), DateTime.UtcNow));
+                parent = caller.Retrieve("nx_solution", identifier, new ColumnSet("nx_status", "nx_capability"));
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(DraftGraph.Read(caller, parent));
         }
@@ -241,7 +292,9 @@ namespace Prisma.Plugins
             if (context.MessageName == "Associate" || context.MessageName == "Disassociate")
             {
                 var relationship = context.InputParameters["Relationship"] as Relationship;
-                if (relationship == null || !DraftGraph.Relationships.Contains(relationship.SchemaName)) return;
+                if (relationship == null || !DraftGraph.Relationships.Contains(relationship.SchemaName, StringComparer.OrdinalIgnoreCase)) return;
+                if (string.Equals(relationship.SchemaName, DraftGraph.Relationships[3], StringComparison.OrdinalIgnoreCase)
+                    && DraftPolicy.IsOperationContext(context, DraftPolicy.SaveMessage)) return;
             }
             else if (context.PrimaryEntityName != "nx_solutioncontributor") throw new InvalidPluginExecutionException("Invalid graph guard registration.");
             if ((context.MessageName == "Delete" || context.MessageName == "Disassociate") && DraftPolicy.IsDeleteContext(context)) return;

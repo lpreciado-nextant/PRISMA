@@ -33,6 +33,8 @@ namespace Prisma.Plugins
                 input["ownerid"] = new EntityReference("systemuser", context.InitiatingUserId);
                 input["nx_dateadded"] = DateTime.UtcNow;
                 identifier = caller.Create(input);
+                input.Id = identifier;
+                if (capability != null) DraftGraph.SaveCapabilityAreas(caller, input);
             }
             else
             {
@@ -45,6 +47,8 @@ namespace Prisma.Plugins
                 input.Id = identifier;
                 input.RowVersion = expectedVersion;
                 caller.Execute(new UpdateRequest { Target = input, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
+                if (input.Contains("nx_capability") && capability?.Id != current.GetAttributeValue<EntityReference>("nx_capability")?.Id)
+                    DraftGraph.SaveCapabilityAreas(caller, input);
                 if (mode == EditMode.Librarian)
                 {
                     // Pending review and Published records keep their status; only a real change is recorded.

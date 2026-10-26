@@ -54,6 +54,27 @@ namespace Prisma.Plugins.Tests
             Assert.Empty(entry.Contributors);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SecondaryCapabilitiesAreClientSafeAndAreasPutTheMainCapabilityFirst(bool present)
+        {
+            var graph = new CatalogueGraph(new[] { Id(1) }, present);
+            graph.Area(Id(1), Id(10), "ai", 1);
+            graph.Area(Id(1), Id(11), "data", 20);
+            graph.PrimaryArea(Id(1), Id(11));
+            graph.SecondaryCapability(Id(1), Id(30), "Agents");
+            graph.SecondaryCapability(Id(9), Id(31), "Not visible");
+            var entry = graph.Build().Solutions.Single();
+            Assert.Equal(new[] { "data", "ai" }, entry.Areas.Select(area => area.Name));
+            Assert.Equal(new[] { Id(30).ToString("D") }, entry.SecondaryCapabilityIds);
+            Assert.Equal(new[] { "Agents" }, entry.SecondaryCapabilities);
+            var json = DraftPolicy.Serialize(graph.Build());
+            Assert.Contains("\"secondaryCapabilityIds\":[\"" + Id(30).ToString("D") + "\"]", json);
+            Assert.DoesNotContain("Not visible", json);
+            if (present) Assert.DoesNotContain("contributors", json);
+        }
+
         [Fact]
         public void PresentModeNeverCarriesBuilderCredits()
         {

@@ -20,7 +20,7 @@ namespace Prisma.Plugins
         [DataMember(Name = "text")] public string Text { get; set; }
         [DataMember(Name = "author")] public string Author { get; set; }
         [DataMember(Name = "createdOn")] public string CreatedOn { get; set; }
-        /// <summary>When the owner or a contributor marked it addressed (`nx_addressedon`); null while open.</summary>
+        /// <summary>When the owner marked it addressed (`nx_addressedon`); null while open.</summary>
         [DataMember(Name = "addressedOn")] public string AddressedOn { get; set; }
     }
 
@@ -86,8 +86,8 @@ namespace Prisma.Plugins
         /// <summary>Owner, any contributor and the PRISMA Librarian read a solution's suggestions; nobody else.</summary>
         public static bool CanRead(bool owner, bool contributor, bool librarian) { return owner || contributor || librarian; }
 
-        /// <summary>The solution's team (owner and contributors) mark suggestions addressed; the librarian reads but does not.</summary>
-        public static bool CanAddress(bool owner, bool contributor) { return owner || contributor; }
+        /// <summary>Only the solution owner marks suggestions addressed; contributors and librarians only read.</summary>
+        public static bool CanAddress(bool owner) { return owner; }
 
         public static string Timestamp(DateTime? value) { return value.HasValue ? value.Value.ToUniversalTime().ToString("o") : null; }
 
@@ -97,7 +97,7 @@ namespace Prisma.Plugins
     /// <summary>
     /// Private suggestions on published solutions, separate from the librarian review. Anyone who can read a
     /// Published, active solution may send one, its owner included. Only the owner, its contributors and the PRISMA
-    /// Librarian may list them; the owner and contributors mark each one addressed. The caller proves Read on the solution; the table itself is read and written as the
+    /// Librarian may list them; only the owner marks each one addressed. The caller proves Read on the solution; the table itself is read and written as the
     /// server, so no role carries privileges on it and nobody can read another person's suggestions directly.
     /// </summary>
     public sealed class SuggestionApi : IPlugin
@@ -161,8 +161,8 @@ namespace Prisma.Plugins
         }
 
         /// <summary>
-        /// Marks one suggestion addressed (now) or open again. The caller proves Read on its solution and must be its owner
-        /// or a contributor; the row is written as the server, like every other suggestion write.
+        /// Marks one suggestion addressed (now) or open again. The caller proves Read on its solution and must be its owner;
+        /// the row is written as the server, like every other suggestion write.
         /// </summary>
         private static void Address(IPluginExecutionContext context, IOrganizationService caller, IOrganizationService server)
         {
@@ -174,8 +174,8 @@ namespace Prisma.Plugins
             // Throws for a solution the caller cannot read.
             var solution = caller.Retrieve("nx_solution", solutionRef.Id, new ColumnSet("ownerid"));
             var owner = solution.GetAttributeValue<EntityReference>("ownerid")?.Id == context.InitiatingUserId;
-            if (!SuggestionPolicy.CanAddress(owner, owner || IsContributor(server, solution.Id, context.InitiatingUserId)))
-                throw new InvalidPluginExecutionException("Only the solution's owner or contributors can mark its suggestions as addressed.");
+            if (!SuggestionPolicy.CanAddress(owner))
+                throw new InvalidPluginExecutionException("Only the solution's owner can mark its suggestions as addressed.");
             DateTime? addressedOn = addressed ? DateTime.UtcNow : (DateTime?)null;
             server.Update(new Entity("nx_solutionsuggestion", suggestionId) { ["nx_addressedon"] = addressedOn });
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SuggestionAddressed { Id = suggestionId.ToString(), AddressedOn = SuggestionPolicy.Timestamp(addressedOn) });

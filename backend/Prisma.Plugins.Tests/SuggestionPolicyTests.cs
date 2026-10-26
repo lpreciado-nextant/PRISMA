@@ -35,12 +35,58 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
-        public void Only_the_owner_and_contributors_mark_suggestions_addressed()
+        public void Only_the_owner_marks_suggestions_addressed()
         {
-            Assert.True(SuggestionPolicy.CanAddress(owner: true, contributor: false));
-            Assert.True(SuggestionPolicy.CanAddress(owner: false, contributor: true));
-            // The librarian reads suggestions but does not address them for the team.
-            Assert.False(SuggestionPolicy.CanAddress(owner: false, contributor: false));
+            Assert.True(SuggestionPolicy.CanAddress(owner: true));
+            Assert.False(SuggestionPolicy.CanAddress(owner: false));
+        }
+
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(false, false)]
+        public void AddressApiChecksOwnershipForBothAddressAndReopen(bool owner, bool addressed)
+        {
+            var user = System.Guid.NewGuid();
+            var service = new AddressService { Owner = owner ? user : System.Guid.NewGuid() };
+            var context = new TestPluginContext(user, SuggestionPolicy.AddressMessage) { Service = service };
+            context.Input["SuggestionId"] = System.Guid.NewGuid();
+            context.Input["Addressed"] = addressed;
+            if (owner)
+            {
+                new SuggestionApi().Execute(context);
+                Assert.NotNull(service.Updated);
+                Assert.Equal(addressed, service.Updated["nx_addressedon"] != null);
+                Assert.Contains("\"addressedOn\":", (string)context.Output["ResultJson"]);
+            }
+            else
+            {
+                var error = Assert.Throws<InvalidPluginExecutionException>(() => new SuggestionApi().Execute(context));
+                Assert.Contains("Only the solution's owner", error.Message);
+                Assert.Null(service.Updated);
+            }
+        }
+
+        private sealed class AddressService : IOrganizationService
+        {
+            public System.Guid Owner;
+            public Entity Updated;
+            public Entity Retrieve(string entityName, System.Guid id, Microsoft.Xrm.Sdk.Query.ColumnSet columns)
+            {
+                if (entityName == "nx_solutionsuggestion")
+                    return new Entity(entityName, id) { ["nx_solution"] = new EntityReference("nx_solution", System.Guid.NewGuid()), ["statecode"] = new OptionSetValue(0) };
+                Assert.Equal("nx_solution", entityName);
+                return new Entity(entityName, id) { ["ownerid"] = new EntityReference("systemuser", Owner) };
+            }
+            public void Update(Entity entity) { Updated = entity; }
+            // Address must not consult contributors or roles: neither can grant ownership.
+            public EntityCollection RetrieveMultiple(Microsoft.Xrm.Sdk.Query.QueryBase query) { throw new System.NotSupportedException(); }
+            public OrganizationResponse Execute(OrganizationRequest request) { throw new System.NotSupportedException(); }
+            public System.Guid Create(Entity entity) { throw new System.NotSupportedException(); }
+            public void Delete(string entityName, System.Guid id) { throw new System.NotSupportedException(); }
+            public void Associate(string entityName, System.Guid id, Relationship relationship, EntityReferenceCollection relatedEntities) { throw new System.NotSupportedException(); }
+            public void Disassociate(string entityName, System.Guid id, Relationship relationship, EntityReferenceCollection relatedEntities) { throw new System.NotSupportedException(); }
         }
 
         [Fact]
