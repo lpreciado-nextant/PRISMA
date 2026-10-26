@@ -56,13 +56,13 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
       </ul>
       <p className="mt-5"><b>Important:</b> Suggestions are optional. You decide whether to apply them. Marking a suggestion as Addressed simply means you've reviewed it; it doesn't automatically change your solution.</p>
     </div> }] : []),
-    ...(librarian ? [{ id: "help-review", icon: "clipboardCheck" as const, eyebrow: "Librarians", title: "Review and curate", steps: [
-      <>Open the <b>Review queue</b>, then a submission. Check its content and the <b>Publication checklist</b>.{connected ? " The queue lists the solutions whose main capability is in an area where you own a capability; the global librarian sees them all." : ""}</>,
-      <><b>Approve</b> to publish it, or <b>Request changes</b> with a comment saying what to fix. The owner then corrects and resubmits it.</>,
+    ...(librarian ? [{ id: "help-review", icon: "clipboardCheck" as const, eyebrow: "Librarians", title: "Review and Curate", steps: [
+      <><b>Review submissions:</b> Open the <b>Review Queue</b> and select a solution. Check its content using the <b>Publication Checklist</b>.{connected ? " You'll see solutions from all capabilities within your area, while Global Librarians can review all submissions." : ""}</>,
+      <><b>Approve or Request Changes:</b> Approve solutions that are ready to publish. If significant changes are needed, select <b>Request Changes</b> and explain what the owner needs to fix before resubmitting.</>,
       ...(connected ? [
-        <>To fix something yourself, use <b>Edit solution</b>. It works on other people's pending or published solutions; your own you withdraw and edit as their owner.</>,
-        <>After editing, tell the owner what you changed and why: in the approval note for a pending solution, or with <b>Confirm changes</b> for a published one, which stays out of present mode until you confirm.</>,
-        <>On a published solution, <b>Send back to owner</b> and <b>Retire from library</b> (in the ••• menu) take it out of the library. Use them only when the owner must act, or when it is obsolete.</>,
+        <><b>Make minor corrections before publishing:</b> Use <b>Edit Solution</b> to make small corrections directly to a user's submission before approving it, such as fixing typos, formatting, or minor content issues. For larger changes, use <b>Request Changes</b> so the owner can update the solution.</>,
+        <><b>Explain your changes:</b> If you edit a solution, let the owner know what you changed and why. Use the approval note for pending solutions or <b>Confirm Changes</b> for published ones.</>,
+        <><b>Manage published solutions:</b> Use <b>Send Back to Owner</b> when updates are required, or <b>Retire from Library</b> when a solution is no longer relevant. Both options remove the solution from the Library.</>,
       ] : []),
     ] }] : []),
   ];
@@ -75,7 +75,10 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     { question: "What do complexity and estimated hours mean?", answer: <>How hard the whole solution was to build (Easy, Medium or Hard; required to submit) and, optionally, the least time it took in whole hours, including preparation and discovery. Both are internal and never shown to clients.</> },
     { question: "Who sees my drafts?", answer: <>{connected ? "A draft stays with you until you submit it; then librarians review it. Published solutions are visible to everyone with access to PRISMA." : "In this local preview, drafts and submissions live in this browser only."}</> },
     ...(connected ? [{ question: "Why does My submissions keep showing \"pending\"?", answer: <>It counts your solutions with feedback still waiting for you: suggestions until you mark them <b>Addressed</b>, and change requests until you resubmit the solution. Reading a suggestion does not clear it; marking it addressed does.</> }] : []),
-    ...(connected ? [{ question: "Why can't I edit my own solution from the review queue?", answer: <>A librarian edits other people's solutions and explains the change to them. Your own you edit as its owner: open it from My submissions, use <b>Withdraw &amp; edit</b> (or <b>Unpublish &amp; edit</b> if it is published), change it and resubmit it.</> }] : []),
+    ...(connected ? [{ question: "Why can't I edit my own solution from the Review Queue?", answer: <>
+      <span className="block">As a Librarian, you can make minor corrections to other users' solutions during review. For larger changes, use <b>Request Changes</b> so the owner can update the content.</span>
+      <span className="mt-2 block">To edit your own solution, go to <b>My Submissions</b>, select <b>Withdraw &amp; Edit</b> (or <b>Unpublish &amp; Edit</b> if already published), make your changes, and resubmit it for approval.</span>
+    </> }] : []),
   ];
   const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 

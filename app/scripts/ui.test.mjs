@@ -951,15 +951,15 @@ test("masthead: primary row with Submit, Present and utilities; section navigati
 test("help page: one guide per role and common questions, tailored to the app, with no in-page hash links", async () => {
   const { HelpView } = await server.ssrLoadModule("/src/views/HelpView.tsx");
   const poc = render(HelpView, {});
-  assert.match(poc, /How PRISMA works.*<nav aria-label="Guides".*Find and Present a Solution.*Share Your Work.*Review and curate/s);
+  assert.match(poc, /How PRISMA works.*<nav aria-label="Guides".*Find and Present a Solution.*Share Your Work.*Review and Curate/s);
   assert.match(poc, /Present Mode.*Common questions.*What does present mode hide\?/s);
   assert.match(poc, /<details[^>]*><summary/);
   // The PoC promises only what it has.
-  assert.doesNotMatch(poc, /Download Presentation|Suggest an Improvement|Edit solution|Unpublish &amp; Edit|Confirm changes/);
+  assert.doesNotMatch(poc, /Download Presentation|Suggest an Improvement|Edit Solution|Unpublish &amp; Edit|Confirm Changes/);
   assert.match(poc, /Edit submission/);
   const connected = render(HelpView, { connected: true, librarian: true });
-  assert.match(connected, /Download Presentation.*Suggest an Improvement.*Unpublish &amp; Edit.*Edit solution.*Confirm changes.*Send back to owner/s);
-  assert.match(connected, /Why can&#x27;t I edit my own solution from the review queue\?/);
+  assert.match(connected, /Download Presentation.*Suggest an Improvement.*Unpublish &amp; Edit.*Edit Solution.*Confirm Changes.*Send Back to Owner/s);
+  assert.match(connected, /Why can&#x27;t I edit my own solution from the Review Queue\?/);
   // Plain introduction: what PRISMA is, then share → review → find and present.
   assert.match(poc, /demos, prototypes and products.*1 · <\/span>Share.*2 · <\/span>Review.*3 · <\/span>Find &amp; present/s);
   // Suggestions exist only in the connected app: who sees them, why they stay pending, who marks them, what Addressed means.
@@ -968,7 +968,7 @@ test("help page: one guide per role and common questions, tailored to the app, w
   assert.doesNotMatch(poc, /Change Requests &amp; Suggestions|Addressed/);
   // Librarian guidance only for librarians in the connected app.
   const contributor = render(HelpView, { connected: true, librarian: false });
-  assert.doesNotMatch(contributor, /Review and curate|Edit solution/);
+  assert.doesNotMatch(contributor, /Review and Curate|Edit Solution/);
   // The hash belongs to the router: shortcuts are buttons, never in-page anchors.
   assert.doesNotMatch(connected, /href="#/);
   // Contact appears only when the connected app passes it: a shortcut at the top and a card with Teams and email.
