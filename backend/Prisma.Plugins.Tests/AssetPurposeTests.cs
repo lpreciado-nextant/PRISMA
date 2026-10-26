@@ -47,6 +47,30 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
+        public void DisplayNamesValidateIndependentlyAndSnapshotsKeepOriginalFilenames()
+        {
+            var metadata = "[{\"id\":\"" + Id(1) + "\",\"caption\":\"\",\"sortOrder\":1,\"displayName\":\" Client overview \"}]";
+            Assert.Equal("Client overview", MediaPolicy.ParseMetadata(metadata).Single().DisplayName);
+            Assert.Equal(100, MediaPolicy.ParseMetadata(metadata.Replace(" Client overview ", new string('x', 100))).Single().DisplayName.Length);
+            foreach (var invalid in new[] { "", " ", new string('x', 101), "bad\\u0000name", "bad\\u007fname", "bad\\u0085name" })
+                Assert.Throws<InvalidPluginExecutionException>(() => MediaPolicy.ParseMetadata(metadata.Replace(" Client overview ", invalid)));
+            var session = new Entity("nx_uploadsession", Id(5)) {
+                ["nx_targetid"] = Id(6).ToString("D"), ["nx_kind"] = "attachment", ["nx_filename"] = "original.pdf",
+                ["nx_mime"] = "application/pdf", ["nx_bytes"] = 10, ["nx_received"] = 10, ["nx_nextblock"] = 1, ["nx_complete"] = true
+            };
+            var target = new Entity("nx_demoasset", Id(6)) { ["nx_demoassetid1"] = "Client overview", ["nx_assettype"] = new OptionSetValue(Slide) };
+            var snapshot = MediaApi.Snapshot(session, target);
+            Assert.Equal("Client overview", snapshot.Name);
+            Assert.Equal("original.pdf", snapshot.FileName);
+            Assert.Contains("\"fileName\":\"original.pdf\"", DraftPolicy.Serialize(snapshot));
+            Assert.Equal("original.pdf", session.GetAttributeValue<string>("nx_filename"));
+            target.Attributes.Remove("nx_demoassetid1");
+            Assert.Equal("original.pdf", MediaApi.Snapshot(session, target).Name);
+            session["nx_kind"] = "image";
+            Assert.Null(MediaApi.Snapshot(session, target).FileName);
+        }
+
+        [Fact]
         public void SnapshotsCarryTheAttachmentPurposeOnly()
         {
             var session = new Entity("nx_uploadsession", Id(5)) {

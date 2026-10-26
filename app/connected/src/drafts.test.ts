@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, coreFields, snapshot, loadDrafts, loadDraftReferences, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
-import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaApi } from "./media.ts";
+import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaName, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
@@ -34,6 +34,31 @@ test("linked assets require safe URLs and honest desktop guidance", () => {
   const desktop = validateLinkedAsset({ ...input, assetType: "Desktop app or script", externalUrl: "", allowsEmbedding: false, embedHint: "Contact the builder to arrange a demonstration." });
   assert.equal(desktop.externalUrl, "");
   assert.throws(() => validateLinkedAsset({ ...input, name: "x".repeat(101) }));
+});
+
+test("attachment display names persist without renaming files and require confirmed metadata", async () => {
+  const item = { id: spare, sessionId: spare, kind: "attachment" as const, name: "original.pdf", mime: "application/pdf", size: 3, received: 3, nextBlock: 1, complete: true, caption: "", sortOrder: 2, purpose: "Supporting material" as const };
+  const renamed = { ...item, name: "Client-ready overview", fileName: item.name };
+  const state = { id: draft.id, rowVersion: "90071992547409932", sessionId: null, blockSize: 524288, media: [renamed] };
+  const api = { metadata: async (id: string, version: string, json: string) => {
+    assert.equal(id, draft.id);
+    assert.equal(version, draft.rowVersion);
+    assert.deepEqual(JSON.parse(json), [{ id: item.id, caption: "", sortOrder: 2, displayName: renamed.name }]);
+    return result(state);
+  } };
+  const saved = await saveMediaName(api, draft, [item], item.id, ` ${renamed.name} `, signal());
+  assert.deepEqual(mediaAsset(saved.media[0], 2), { id: item.id, name: renamed.name, fileName: item.name, assetType: "Client-ready one-pager / slide", allowsEmbedding: false, sortOrder: 2, purpose: item.purpose });
+  assert.deepEqual(parseMedia(result(saved)).media[0], renamed);
+  for (const invalid of [
+    { ...state, rowVersion: draft.rowVersion }, { ...state, id: spare },
+    { ...state, media: [item] }, { ...state, media: [{ ...renamed, fileName: "changed.pdf" }] },
+    { ...state, media: [{ ...renamed, purpose: "Demo video" }] }, { ...state, media: [] },
+  ]) await assert.rejects(saveMediaName({ metadata: async () => result(invalid) }, draft, [item], item.id, renamed.name, signal()), /confirmed/);
+  for (const value of [" ", "x".repeat(101), "bad\u0000name"]) await assert.rejects(saveMediaName(api, draft, [item], item.id, value, signal()), /Display name/);
+  await assert.rejects(saveMediaName(api, draft, [{ ...item, complete: false }], item.id, renamed.name, signal()), /saved attachment/);
+  await assert.rejects(saveMediaName(api, draft, [{ ...item, kind: "image" }], item.id, renamed.name, signal()), /saved attachment/);
+  await assert.rejects(saveMediaName(api, draft, [item], item.id, renamed.name, AbortSignal.abort()), { name: "AbortError" });
+  for (const fileName of [5, "", "x".repeat(201)]) assert.throws(() => parseMedia(result({ ...state, media: [{ ...renamed, fileName }] })), /filename/);
 });
 
 test("media reorder preserves captions and confirms exact versions and complete permutations", async () => {

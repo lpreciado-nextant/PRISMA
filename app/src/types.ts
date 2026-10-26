@@ -54,6 +54,8 @@ export type AssetType =
 export interface DemoAsset {
   id: string;
   name: string;
+  /** Original upload filename, separate from the display name. Absent on legacy assets and links. */
+  fileName?: string;
   assetType: AssetType;
   fileData?: string;
   htmlContent?: string;

@@ -16,7 +16,7 @@ export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media
 export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; email?: string; level?: string }[]; estimatedMinimumHours?: number; complexity?: Solution["complexity"]; projects: string[]; media: MediaItem[]; libraryNotes?: string };
 export function mediaAsset(item: MediaItem, index: number): Solution["assets"][number] {
   if (item.linkedAsset) return { id: item.id, ...item.linkedAsset, sortOrder: item.sortOrder ?? index, ...(item.purpose ? { purpose: item.purpose } : {}) };
-  return { id: item.id, name: item.name, assetType: item.mime === "text/html" ? "Self-contained HTML file" : item.mime.startsWith("video/") ? "Video walkthrough only" : "Client-ready one-pager / slide", allowsEmbedding: item.mime === "text/html" || item.mime.startsWith("video/"), sortOrder: index, ...(item.purpose ? { purpose: item.purpose } : {}) };
+  return { id: item.id, name: item.name, ...(item.fileName ? { fileName: item.fileName } : {}), assetType: item.mime === "text/html" ? "Self-contained HTML file" : item.mime.startsWith("video/") ? "Video walkthrough only" : "Client-ready one-pager / slide", allowsEmbedding: item.mime === "text/html" || item.mime.startsWith("video/"), sortOrder: index, ...(item.purpose ? { purpose: item.purpose } : {}) };
 }
 /** Only what feedback tracking needs (state, review outcome and comment): no reference names, so it never fails on them. */
 export function submissionFeedbackFields(record: Submission): Pick<Solution, "id" | "publicationStatus" | "reviewOutcome" | "reviewComments"> {

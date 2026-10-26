@@ -27,7 +27,7 @@ function demoAction(item: MediaItem): "Play" | "Open" | "Download" {
 }
 
 /** A readable demo title: the caption, else the file name without its extension (decision log: demo titles). */
-const demoTitle = (item: MediaItem) => item.caption?.trim() || item.name.replace(/\.[a-z0-9]{2,5}$/i, "").replace(/[-_]+/g, " ").trim();
+const demoTitle = (item: MediaItem) => item.fileName && item.name !== item.fileName ? item.name : item.caption?.trim() || item.name.replace(/\.[a-z0-9]{2,5}$/i, "").replace(/[-_]+/g, " ").trim();
 
 async function deckImage(item: MediaItem, solutionId: string, signal: AbortSignal): Promise<DeckImage | undefined> {
   try {

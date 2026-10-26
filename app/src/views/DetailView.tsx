@@ -455,7 +455,7 @@ function AssetRow({ solution, asset, basePath, onOpen, newTabUrl }: { solution: 
     } else if (behaviour.mode === "download" && asset.fileData) {
       const link = document.createElement("a");
       link.href = asset.fileData;
-      link.download = asset.name;
+      link.download = asset.fileName ?? asset.name;
       link.click();
     }
   };

@@ -9,7 +9,7 @@ import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/comp
 import { mediaApi, downloadMedia, workflowApi, transferApi } from "./dataSource";
 import { transferVideo, type PlaybackMode } from "./mediaTransfer";
 import { StreamingVideo } from "./StreamingVideo";
-import { imageDataUrl, mediaRequest, saveMediaCaptions, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
+import { imageDataUrl, mediaRequest, saveMediaCaptions, saveMediaName, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
 import { defaultPurpose, type AssetPurpose } from "../../src/lib/assetPurpose";
 import type { SavedDraft } from "./drafts";
 import { mediaAsset, saveLinkedAsset } from "./workflow";
@@ -150,6 +150,22 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     } finally { operation.current = null; if (!controller.signal.aborted) setBusy(false); }
   };
   const thumbnail = state?.media.find(item => item.kind === "thumbnail" && item.complete);
+  const rename = async (id: string, name: string) => {
+    if (disabled || operation.current || !state) throw new Error("Media unavailable. Reopen the draft.");
+    const controller = new AbortController(); operation.current = controller; setBusy(true); setError("");
+    try {
+      let checkpoint = state;
+      const confirmed = await saveMediaCaptions(mediaApi, checkpoint, checkpoint.media, captions, controller.signal);
+      if (confirmed) { checkpoint = confirmed; setState(checkpoint); onVersion(checkpoint.rowVersion); }
+      onCaptions({});
+      const next = await saveMediaName(mediaApi, checkpoint, checkpoint.media, id, name, controller.signal);
+      setState(next); onVersion(next.rowVersion); setPreview(null);
+    } catch {
+      const message = "Display name save was not confirmed. Reopen the draft before retrying.";
+      if (!controller.signal.aborted) { setUncertain(true); setError(message); }
+      throw new Error(message);
+    } finally { operation.current = null; if (!controller.signal.aborted) setBusy(false); }
+  };
   const reorder = async (kind: "image" | "attachment", ids: string[]) => {
     if (disabled || operation.current || !state || state.media.some(item => !item.complete)) return;
     const members = state.media.filter(item => item.kind === kind);
@@ -174,6 +190,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   return <section className={embedded ? "min-w-0" : "mt-12 border-t border-(--glass-edge) pt-8"}>
     <SubmissionMedia capabilities={capabilities} disabled={disabled} attachmentDisabled={uploadDisabled} onAttachment={selectAttachment} onPreparationBusy={setPreparing}
       onLinkedAsset={saveLink} onLinkedPending={setLinkedPending}
+      onRenameAttachment={rename}
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
       thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
@@ -181,7 +198,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}
       imageUpload={<ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once" />}
-      attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, linkedAsset: item.linkedAsset, purpose: item.purpose ?? defaultPurpose(mediaAsset(item, 0).assetType), status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
+      attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, fileName: item.fileName, linkedAsset: item.linkedAsset, purpose: item.purpose ?? defaultPurpose(mediaAsset(item, 0).assetType), status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
     {error && <p role="alert" className="mb-4 text-[14px]">{error}</p>}
     {uncertain && !busy && onReopen && <button type="button" className={button} onClick={onReopen}><Icon name="file" />Reopen saved draft</button>}
     {!state && !error && <LoadingState label="Loading media..." />}
@@ -225,7 +242,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
     downloaded.current = true;
     const link = document.createElement("a");
     link.href = content.url;
-    link.download = item.name;
+    link.download = item.fileName ?? item.name;
     document.body.append(link);
     link.click();
     link.remove();
@@ -267,12 +284,11 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
   const stage = error ? <p role="alert" className="p-6">Media could not be downloaded.</p> : !content ? <LoadingState variant="media" className={viewerTitle ? "h-full w-full" : "h-64"} label="Loading preview..." />
     : item.kind !== "attachment" ? <img src={content.url} alt={item.caption || item.name} className={viewerTitle ? "h-full w-full object-contain" : "max-h-[65vh] w-full object-contain"} />
     : content.html !== undefined ? <iframe title={item.name} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={content.html} className={`${viewerTitle ? "h-full" : "h-[65vh]"} w-full border-0 bg-white`} />
-    : item.mime.startsWith("video/") ? <VideoPlayer key={content.url} src={content.url} name={item.name} className={viewerTitle ? "h-full w-full" : "max-h-[65vh] w-full"} />
-    : <div className="grid h-full place-items-center p-6 text-center"><a className={button} href={content.url} download={item.name}><Icon name="download" /><span className="break-all">{item.name}</span></a></div>;
-  if (viewerTitle) return <ViewerFrame {...frame} name={viewerTitle} kind={item.kind === "attachment" ? mediaAsset(item, 0).assetType : "Screenshot"} onClose={onClose} actions={content && <a className={button} href={content.url} download={item.name} aria-label={`Download ${item.name}`} title="Download"><Icon name="download" /></a>}>{stage}</ViewerFrame>;
+    : item.mime.startsWith("video/") ? <VideoPlayer key={content.url} src={content.url} name={item.name} fileName={item.fileName} className={viewerTitle ? "h-full w-full" : "max-h-[65vh] w-full"} />
+    : <div className="grid h-full place-items-center p-6 text-center"><a className={button} href={content.url} download={item.fileName ?? item.name}><Icon name="download" /><span className="break-all">{item.name}</span></a></div>;
+  if (viewerTitle) return <ViewerFrame {...frame} name={viewerTitle} kind={item.kind === "attachment" ? mediaAsset(item, 0).assetType : "Screenshot"} onClose={onClose} actions={content && <a className={button} href={content.url} download={item.fileName ?? item.name} aria-label={`Download ${item.name}`} title="Download"><Icon name="download" /></a>}>{stage}</ViewerFrame>;
   return <div className="mt-6 border-t border-(--glass-edge) pt-5">
-    <div className="mb-4 flex flex-wrap items-center gap-3"><h3 className="min-w-0 flex-1 break-all text-[18px] font-semibold">{item.name}</h3>{content && <a className={button} href={content.url} download={item.name}><Icon name="download" />Download</a>}<button className={button} onClick={onClose} aria-label="Close preview" title="Close preview"><Icon name="close" /></button></div>
+    <div className="mb-4 flex flex-wrap items-center gap-3"><h3 className="min-w-0 flex-1 break-all text-[18px] font-semibold">{item.name}</h3>{content && <a className={button} href={content.url} download={item.fileName ?? item.name}><Icon name="download" />Download</a>}<button className={button} onClick={onClose} aria-label="Close preview" title="Close preview"><Icon name="close" /></button></div>
     {stage}
   </div>;
 }
-

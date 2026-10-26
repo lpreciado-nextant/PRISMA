@@ -175,6 +175,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const [uploading, setUploading] = useState(false);
   const [imageUploads, setImageUploads] = useState(0);
   const [preparingVideo, setPreparingVideo] = useState(false);
+  const [mediaPending, setMediaPending] = useState(false);
   const mediaBusy = uploading || preparingVideo || imageUploads > 0;
   const imageBusyChanged = (busy: boolean) => setImageUploads((count) => count + (busy ? 1 : -1));
 
@@ -279,7 +280,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   );
 
   const persist = async (asDraft: boolean) => {
-    if (saving || mediaBusy || !nameValid || (!asDraft && (!basicsValid || !safetyValid || !mediaValid || !capabilityValid))) return;
+    if (saving || mediaBusy || mediaPending || !nameValid || (!asDraft && (!basicsValid || !safetyValid || !mediaValid || !capabilityValid))) return;
     setSaving(true);
     setSaveError("");
     try {
@@ -349,7 +350,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
       <fieldset disabled={saving} className="min-w-0">
       <SectionCardsContext.Provider value>
-      <SubmissionSteps step={step} onStep={next => { if (next === 0 || safetyValid) setStep(next); }} />
+      <SubmissionSteps step={step} disabled={mediaPending} onStep={next => { if (next === 0 || safetyValid) setStep(next); }} />
 
       <div key={step} className="glass glass-lite glass-sheen animate-rise mt-5 rounded-[24px] p-6 sm:p-8">
         {step === 0 && <SubmissionSafety accepted={draft.safetyAcknowledged} onChange={value => set("safetyAcknowledged", value)} />}
@@ -413,6 +414,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
         {step === 4 && safetyValid && (
           <SubmissionMedia capabilities={[...draft.capabilities, ...draft.secondaryCapabilities]} local disabled={mediaBusy} onPreparationBusy={setPreparingVideo}
+            onLinkedPending={setMediaPending}
+            onRenameAttachment={async (id, name) => setDraft(current => ({ ...current, assets: current.assets.map(asset => asset.id === id ? { ...asset, name, fileName: asset.fileName ?? asset.name } : asset) }))}
             onReorderImages={ids => set("images", ids.map(id => draft.images.find(image => image.id === id)!))}
             onReorderAttachments={ids => set("assets", ids.map((id, sortOrder) => ({ ...draft.assets.find(asset => asset.id === id)!, sortOrder })))}
             thumbnail={draft.thumbnail ? <img src={draft.thumbnail} alt="Thumbnail preview" className="h-full w-full object-cover" /> : undefined} onRemoveThumbnail={() => set("thumbnail", "")}
@@ -430,7 +433,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
                   setUploading(true);
                   setUploadError("");
                   try {
-                    const asset: DemoAsset = { id: crypto.randomUUID(), name: file.name, assetType: type, purpose, allowsEmbedding: type !== "Client-ready one-pager / slide", sortOrder: draft.assets.length + 1 };
+                    const asset: DemoAsset = { id: crypto.randomUUID(), name: file.name, fileName: file.name, assetType: type, purpose, allowsEmbedding: type !== "Client-ready one-pager / slide", sortOrder: draft.assets.length + 1 };
                     if (type === "Self-contained HTML file") asset.htmlContent = await file.text();
                     else asset.fileData = await readDataUrl(file);
                     setDraft((current) => ({ ...current, assets: [...current.assets, asset].slice(0, 6) }));
@@ -449,7 +452,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           </SubmissionReview>
         )}
 
-        <SubmissionFooter step={step} nextLabel="Next" busy={saving || mediaBusy} canSave={nameValid} canContinue={stepValid} canSubmit={basicsValid && safetyValid && mediaValid && capabilityValid}
+        <SubmissionFooter step={step} nextLabel="Next" busy={saving || mediaBusy} locked={mediaPending} canSave={nameValid} canContinue={stepValid} canSubmit={basicsValid && safetyValid && mediaValid && capabilityValid}
           onBack={() => setStep(current => current - 1)} onSave={onSaveDraft ? () => void persist(true) : undefined} onContinue={() => setStep(current => current + 1)} onSubmit={() => void persist(false)} />
       </div>
       </SectionCardsContext.Provider>
@@ -509,4 +512,3 @@ function UploadZone({
       {error && <p role="alert">{error}</p>}
     </ImageUploadZone>;
 }
-

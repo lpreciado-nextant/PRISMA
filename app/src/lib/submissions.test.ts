@@ -4,6 +4,7 @@ import type { Solution } from "../types.ts";
 import { migrateSubmission, REVIEW_COMMENT_LIMIT, reviewContribution, saveContribution, submissionFacts } from "./submissions.ts";
 import { reviewChecklist } from "./reviewChecklist.ts";
 import { presentCatalogue } from "./catalogue.ts";
+import { validateAttachmentName } from "./attachmentName.ts";
 
 const solution: Solution = {
   id: "submission", name: "Test solution", summary: "Summary", whatItDoes: "Description", businessValue: "Value",
@@ -11,6 +12,17 @@ const solution: Solution = {
   safetyAcknowledged: true, clientSafeReviewed: false, dateAdded: "2026-09-21", searchKeywords: "",
   capabilities: ["AI & agents"], technologies: [], industries: [], clientRoles: [], assets: [], images: [{ id: "image", src: "data:image/png;base64,test" }],
 };
+
+test("display names validate and survive local draft, migration and publication separately from filenames", () => {
+  assert.equal(validateAttachmentName("  Client overview  "), "Client overview");
+  assert.equal(validateAttachmentName("x".repeat(100)).length, 100);
+  for (const value of ["", "  ", "x".repeat(101), "Bad\nname", "Bad\u007fname", "Bad\u0085name"]) assert.throws(() => validateAttachmentName(value), /Display name/);
+  const asset = { id: "asset", name: "Client overview", fileName: "client_v2.pdf", fileData: "data:application/pdf;base64,dGVzdA==", assetType: "Client-ready one-pager / slide" as const, allowsEmbedding: false, sortOrder: 1 };
+  const draft = saveContribution({ ...solution, assets: [asset] }, "Draft");
+  const reopened = migrateSubmission(JSON.parse(JSON.stringify({ owner: "builder@example.com", solution: draft })));
+  const published = reviewContribution(saveContribution(reopened.solution, "Pending review"), "publish", "Cleared.", true);
+  assert.deepEqual(presentCatalogue([published])[0].assets, [asset]);
+});
 
 test("draft, return, resubmit and publish preserve the record and media", () => {
   const pending = saveContribution(solution, "Pending review");

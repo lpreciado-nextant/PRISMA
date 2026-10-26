@@ -36,7 +36,7 @@ export function DemoStage({ solution, asset, fallbackHtml }: { solution: Solutio
   }
 
   if (asset.assetType === "Video walkthrough only") {
-    if (asset.fileData) return <VideoPlayer key={asset.fileData} className="h-full w-full" src={asset.fileData} name={asset.name} />;
+    if (asset.fileData) return <VideoPlayer key={asset.fileData} className="h-full w-full" src={asset.fileData} name={asset.name} fileName={asset.fileName} />;
     return <VideoStage name={solution.name} />;
   }
 

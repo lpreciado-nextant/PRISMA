@@ -19,9 +19,9 @@ export function LocalVideoPreview({ file, onClose }: { file: File; onClose: () =
   </section>;
 }
 
-export function VideoPlayer({ src, name, className }: { src: string; name: string; className: string }) {
+export function VideoPlayer({ src, name, fileName = name, className }: { src: string; name: string; fileName?: string; className: string }) {
   const [failed, setFailed] = useState(false);
-  if (failed) return <div role="alert" className="grid h-full min-h-48 place-items-center p-6 text-center"><div><p className="text-[16px] font-semibold">Video could not be played in this browser.</p><a href={src} download={name} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px]"><Icon name="download" />Download video</a></div></div>;
+  if (failed) return <div role="alert" className="grid h-full min-h-48 place-items-center p-6 text-center"><div><p className="text-[16px] font-semibold">Video could not be played in this browser.</p><a href={src} download={fileName} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2.5 text-[14px]"><Icon name="download" />Download video</a></div></div>;
   return <video controls src={src} aria-label={name} className={className} onError={() => setFailed(true)} />;
 }
 

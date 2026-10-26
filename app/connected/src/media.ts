@@ -1,5 +1,6 @@
 import { ASSET_PURPOSES, type AssetPurpose } from "../../src/lib/assetPurpose.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
+import { validateAttachmentName } from "../../src/lib/attachmentName.ts";
 
 export async function imageDataUrl(blob: Blob, signal?: AbortSignal): Promise<string> {
   signal?.throwIfAborted();
@@ -13,7 +14,7 @@ export async function imageDataUrl(blob: Blob, signal?: AbortSignal): Promise<st
 
 export type MediaKind = "image" | "attachment" | "thumbnail";
 /** `purpose` (ADR-0011) is set on attachments by plug-ins that know it; older responses omit it. */
-export type MediaItem = { id: string; solutionId?: string; sessionId: string; kind: MediaKind; name: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput; storage?: "blob"; purpose?: AssetPurpose };
+export type MediaItem = { id: string; solutionId?: string; sessionId: string; kind: MediaKind; name: string; fileName?: string; mime: string; size: number; received: number; nextBlock: number; complete: boolean; caption?: string; sortOrder?: number; linkedAsset?: LinkedAssetInput; storage?: "blob"; purpose?: AssetPurpose };
 export type MediaState = { id: string; rowVersion: string; sessionId: string | null; blockSize: number; media: MediaItem[]; uploadProtocol?: 2; maxBlockSize?: 4194304; blobBlockSize?: 8388608; maxBlobBlockSize?: 16777216 };
 export type MediaApi = {
   read: (id: string) => Promise<unknown>;
@@ -33,6 +34,7 @@ export function parseMediaItem(value: unknown): MediaItem {
     || !integer(item.size) || !integer(item.received) || item.received > item.size || !integer(item.nextBlock) || typeof item.complete !== "boolean") throw new Error("Invalid media record.");
   if ((item.caption !== undefined && (typeof item.caption !== "string" || item.caption.length > 200)) || (item.sortOrder !== undefined && (!integer(item.sortOrder) || item.sortOrder > 12))) throw new Error("Invalid media metadata.");
   if (item.storage !== undefined && (item.storage !== "blob" || item.kind !== "attachment" || item.mime === "application/vnd.prisma.link")) throw new Error("Invalid media storage.");
+  if (item.fileName !== undefined && (typeof item.fileName !== "string" || !item.fileName || item.fileName.length > 200 || item.kind !== "attachment" || item.mime === "application/vnd.prisma.link")) throw new Error("Invalid media filename.");
   if (item.purpose !== undefined && (item.kind !== "attachment" || !(ASSET_PURPOSES as readonly unknown[]).includes(item.purpose))) throw new Error("Invalid media purpose.");
   if (item.solutionId !== undefined && (typeof item.solutionId !== "string" || !guid.test(item.solutionId))) throw new Error("Invalid media solution.");
   if (item.mime === "application/vnd.prisma.link" || item.linkedAsset !== undefined) {
@@ -92,6 +94,23 @@ export async function mediaRequest(operation: Promise<unknown>, signal: AbortSig
 
 export function hasCaptionChanges(media: MediaItem[], captions: Record<string, string>): boolean {
   return media.some(item => item.kind === "image" && item.complete && captions[item.id] !== undefined && captions[item.id] !== (item.caption ?? ""));
+}
+
+export async function saveMediaName(api: Pick<MediaApi, "metadata">, saved: { id: string; rowVersion: string }, media: MediaItem[], id: string, value: string, signal: AbortSignal): Promise<MediaState> {
+  signal.throwIfAborted();
+  const displayName = validateAttachmentName(value);
+  const previous = media.find(item => item.id === id && item.kind === "attachment" && item.complete && !item.linkedAsset);
+  if (!previous) throw new Error("Display name does not match a saved attachment.");
+  const metadata = [{ id, caption: previous.caption ?? "", sortOrder: previous.sortOrder ?? 0, displayName }];
+  const next = await mediaRequest(api.metadata(saved.id, saved.rowVersion, JSON.stringify(metadata)), signal);
+  const renamed = next.media.find(item => item.id === id);
+  if (next.id !== saved.id || next.rowVersion === saved.rowVersion || next.media.length !== media.length
+    || !renamed || !renamed.complete || renamed.name !== displayName || renamed.fileName !== (previous.fileName ?? previous.name)
+    || renamed.sessionId !== previous.sessionId || renamed.size !== previous.size || renamed.mime !== previous.mime
+    || renamed.sortOrder !== metadata[0].sortOrder || renamed.purpose !== previous.purpose) {
+    throw new Error("Display name save was not confirmed. Reopen the draft before retrying.");
+  }
+  return next;
 }
 
 export async function saveMediaOrder(api: Pick<MediaApi, "metadata">, saved: { id: string; rowVersion: string }, media: MediaItem[], orderedIds: string[], signal: AbortSignal): Promise<MediaState> {

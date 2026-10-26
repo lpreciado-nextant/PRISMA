@@ -8,6 +8,7 @@ import { LoadingState, ProgressRail } from "./LoadingState";
 import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
 import type { AssetPurpose } from "../lib/assetPurpose";
+import { validateAttachmentName } from "../lib/attachmentName";
 import { LINK_ASSET_TYPES, assetTypeLabel, validateLinkedAsset, type LinkedAssetInput, type LinkAssetType } from "../lib/linkedAssets";
 import { useVideoPreparation } from "../lib/useVideoPreparation";
 import { LocalVideoPreview } from "./ViewerFrame";
@@ -137,12 +138,13 @@ function MediaTips({ capabilities }: { capabilities: string[] }) {
   </>;
 }
 
-export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
+export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onRenameAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
   capabilities: string[]; thumbnail?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
   images: { id: string; preview: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
   /** A file added to one of the three sections; the section sets its purpose (ADR-0011). Videos arrive after compression. */
   onAttachment: (file: File, purpose: AssetPurpose) => void;
-  attachments: { id: string; name: string; purpose: AssetPurpose; status?: ReactNode; linkedAsset?: LinkedAssetInput }[]; onRemoveAttachment: (id: string) => void;
+  attachments: { id: string; name: string; fileName?: string; purpose: AssetPurpose; status?: ReactNode; linkedAsset?: LinkedAssetInput }[]; onRemoveAttachment: (id: string) => void;
+  onRenameAttachment?: (id: string, name: string) => Promise<void>;
   onLinkedAsset?: (input: LinkedAssetInput, id: string | undefined, purpose: AssetPurpose) => Promise<void>; onLinkedPending?: (pending: boolean) => void;
   onPreviewThumbnail?: () => void; onPreviewImage?: (id: string) => void; onPreviewAttachment?: (id: string) => void;
   onReorderImages?: (ids: string[]) => void; onReorderAttachments?: (ids: string[]) => void;
@@ -152,10 +154,11 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
   // One link editor at a time: a new link in a section, or an existing link being edited.
   const [linkEditor, setLinkEditor] = useState<{ purpose: AssetPurpose; type: LinkAssetType; id?: string } | null>(null);
   const [linkedDirty, setLinkedDirty] = useState(false);
+  const [nameEditor, setNameEditor] = useState<string | null>(null);
   // The section a video was added to, carried through compression.
   const videoPurpose = useRef<AssetPurpose>("Demo video");
   const preparation = useVideoPreparation(file => onAttachment(file, videoPurpose.current), onPreparationBusy);
-  useEffect(() => { onLinkedPending?.(linkedDirty); return () => onLinkedPending?.(false); }, [linkedDirty, onLinkedPending]);
+  useEffect(() => { onLinkedPending?.(linkedDirty || nameEditor !== null); return () => onLinkedPending?.(false); }, [linkedDirty, nameEditor, onLinkedPending]);
   const full = attachments.length >= 6;
   const addFile = (file: File, purpose: AssetPurpose) => {
     if (/\.(mp4|webm)$/i.test(file.name)) { videoPurpose.current = purpose; void preparation.select(file); }
@@ -184,7 +187,7 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
         const links = !!onLinkedAsset && section.links;
         const editor = linkEditor?.purpose === section.purpose ? linkEditor : null;
         const edited = editor?.id ? items.find(item => item.id === editor.id) : undefined;
-        const locked = disabled || attachmentDisabled || linkedDirty || !!linkEditor;
+        const locked = disabled || attachmentDisabled || linkedDirty || !!linkEditor || nameEditor !== null;
         return <section key={section.purpose} aria-labelledby={`media-${section.key}`} className="min-w-0 rounded-[14px] border border-(--glass-edge) p-4" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}>
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <h3 id={`media-${section.key}`} className="text-[14.5px] font-semibold">{section.title}</h3>
@@ -192,7 +195,17 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
             {section.recommended && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>Recommended</span>}
           </div>
           <p className="mt-1 text-[12.5px] text-(--ink-2)">{links ? section.hint : section.fileHint}</p>
-          {!!items.length && <ul className="mt-3 space-y-3">{items.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={items.map(entry => entry.id)} label={item.name} group={`attachments-${section.key}`} disabled={locked} onReorder={onReorderAttachments ? ids => reorderSection(section.purpose, ids) : undefined} className="min-w-0 border-b border-(--glass-edge) pb-3 last:border-b-0 last:pb-0"><div className="flex min-w-0 flex-wrap items-center gap-3"><Icon name={item.linkedAsset ? "link" : section.purpose === "Demo video" ? "play" : "file"} className="shrink-0" /><div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{assetTypeLabel(item.linkedAsset.assetType)}</p>}{item.status}</div>{onLinkedAsset && item.linkedAsset && <button type="button" disabled={disabled || !!linkEditor || linkedDirty} title="Edit link" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (!linkedDirty) setLinkEditor({ purpose: section.purpose, type: item.linkedAsset!.assetType, id: item.id }); }}><Icon name="edit" /></button>}{onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}<button type="button" disabled={disabled || editor?.id === item.id} title="Remove" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button></div></MediaReorderItem>)}</ul>}
+          {!!items.length && <ul className="mt-3 space-y-3">{items.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={items.map(entry => entry.id)} label={item.name} group={`attachments-${section.key}`} disabled={locked} onReorder={onReorderAttachments ? ids => reorderSection(section.purpose, ids) : undefined} className="min-w-0 border-b border-(--glass-edge) pb-3 last:border-b-0 last:pb-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
+              <Icon name={item.linkedAsset ? "link" : section.purpose === "Demo video" ? "play" : "file"} className="shrink-0" />
+              <div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{!item.linkedAsset && item.fileName && item.fileName !== item.name && <p className="break-words text-[12px] text-(--ink-3)">File: {item.fileName}</p>}{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{assetTypeLabel(item.linkedAsset.assetType)}</p>}{item.status}</div>
+              {onRenameAttachment && !item.linkedAsset && <button type="button" disabled={locked || !!item.status} title="Edit display name" aria-label={`Edit display name for ${item.name}`} className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-[12.5px] disabled:opacity-40" onClick={() => setNameEditor(item.id)}><Icon name="edit" />Display name</button>}
+              {onLinkedAsset && item.linkedAsset && <button type="button" disabled={locked} title="Edit link" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (!linkedDirty) setLinkEditor({ purpose: section.purpose, type: item.linkedAsset!.assetType, id: item.id }); }}><Icon name="edit" /></button>}
+              {onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}
+              <button type="button" disabled={disabled || editor?.id === item.id || nameEditor === item.id} title="Remove" aria-label={`Remove ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onRemoveAttachment(item.id)}><Icon name="close" /></button>
+            </div>
+            {nameEditor === item.id && onRenameAttachment && <AttachmentNameEditor name={item.name} disabled={disabled} onSave={name => onRenameAttachment(item.id, name)} onClose={() => setNameEditor(null)} />}
+          </MediaReorderItem>)}</ul>}
           {editor && onLinkedAsset ? <div className="mt-3"><LinkedAssetEditor key={editor.id ?? editor.type} type={edited?.linkedAsset?.assetType ?? editor.type} initial={edited?.linkedAsset} disabled={disabled || attachmentDisabled || (!editor.id && full)} onPending={setLinkedDirty}
             onSave={async value => { await onLinkedAsset(value, editor.id, section.purpose); setLinkEditor(null); }} onCancel={() => setLinkEditor(null)} /></div>
           : <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -229,6 +242,30 @@ const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; 
     hint: "Add supporting materials that help CSMs understand and present the solution. You can upload slides, one-pagers, PDFs (up to 25 MB), or non-demo videos, and share links to relevant tools, repositories, or marketing resources.",
     fileHint: "Add supporting materials that help CSMs understand and present the solution. You can upload slides, one-pagers, PDFs (up to 25 MB), or non-demo videos." },
 ];
+
+export function AttachmentNameEditor({ name, disabled, onSave, onClose }: { name: string; disabled: boolean; onSave: (name: string) => Promise<void>; onClose: () => void }) {
+  const [value, setValue] = useState(name);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => { input.current?.focus(); input.current?.select(); }, []);
+  const save = async () => {
+    setError("");
+    try {
+      const validated = validateAttachmentName(value);
+      setBusy(true);
+      await onSave(validated);
+      onClose();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Display name could not be saved.");
+    } finally { setBusy(false); }
+  };
+  return <fieldset disabled={disabled || busy} className="mt-3 min-w-0 space-y-3">
+    <Field label="Display name" required hint="Shown in PRISMA and presentations. The original filename stays unchanged."><input ref={input} className={submissionInputClass} maxLength={100} value={value} onChange={event => setValue(event.target.value)} /></Field>
+    {error && <p role="alert" className="text-[14px]">{error}</p>}
+    <div className="flex gap-2"><button type="button" onClick={() => void save()} className="cursor-pointer rounded-lg bg-(--accent) px-3 py-2 text-[13px] font-semibold text-(--on-accent) disabled:opacity-40">{busy ? "Saving..." : "Save display name"}</button><button type="button" onClick={onClose} className="cursor-pointer rounded-lg border border-(--glass-edge) px-3 py-2 text-[13px]">Cancel</button></div>
+  </fieldset>;
+}
 
 function MediaReorderItem({ as: Element = "div", id, ids, label, group, disabled, onReorder, className, children }: {
   as?: "div" | "li"; id: string; ids: string[]; label: string; group: string; disabled: boolean; onReorder?: (ids: string[]) => void; className: string; children: ReactNode;

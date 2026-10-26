@@ -25,6 +25,7 @@ namespace Prisma.Plugins
         [DataMember(Name = "sessionId")] public string SessionId { get; set; }
         [DataMember(Name = "kind")] public string Kind { get; set; }
         [DataMember(Name = "name")] public string Name { get; set; }
+        [DataMember(Name = "fileName", EmitDefaultValue = false)] public string FileName { get; set; }
         [DataMember(Name = "mime")] public string Mime { get; set; }
         [DataMember(Name = "size")] public int Size { get; set; }
         [DataMember(Name = "received")] public int Received { get; set; }
@@ -185,6 +186,7 @@ namespace Prisma.Plugins
         [DataMember(Name = "id", IsRequired = true)] public string Id { get; set; }
         [DataMember(Name = "caption", IsRequired = true)] public string Caption { get; set; }
         [DataMember(Name = "sortOrder", IsRequired = true)] public int SortOrder { get; set; }
+        [DataMember(Name = "displayName", EmitDefaultValue = false)] public string DisplayName { get; set; }
         /// <summary>Optional, attachments only: moves the asset to another purpose its format allows.</summary>
         [DataMember(Name = "purpose", EmitDefaultValue = false)] public string Purpose { get; set; }
     }
@@ -256,7 +258,7 @@ namespace Prisma.Plugins
                 {
                     var root = XElement.Load(reader);
                     if ((string)root.Attribute("type") != "array") throw Invalid("Media metadata must be an array.");
-                    foreach (var item in root.Elements()) DraftGraph.CheckFields(item, "id", "caption", "sortOrder", "purpose");
+                    foreach (var item in root.Elements()) DraftGraph.CheckFields(item, "id", "caption", "sortOrder", "purpose", "displayName");
                 }
                 using (var stream = new MemoryStream(bytes)) items = (MediaMetadata[])new DataContractJsonSerializer(typeof(MediaMetadata[])).ReadObject(stream);
             }
@@ -264,8 +266,16 @@ namespace Prisma.Plugins
             if (items == null || items.Length > 13) throw Invalid("Too many media records.");
             var identifiers = new HashSet<Guid>();
             foreach (var item in items)
+            {
                 if (item == null || !identifiers.Add(ContributorPolicy.Identifier(item.Id)) || item.Caption == null || item.Caption.Length > 200 || item.SortOrder < 0 || item.SortOrder > 12 || (item.Purpose != null && AssetPurposePolicy.Choice(item.Purpose) < 0))
                     throw Invalid("Invalid caption, order or duplicate media identifier.");
+                if (item.DisplayName != null)
+                {
+                    item.DisplayName = item.DisplayName.Trim();
+                    if (item.DisplayName.Length == 0 || item.DisplayName.Length > 100 || item.DisplayName.Any(char.IsControl))
+                        throw Invalid("Display name must be 1 to 100 characters without control characters.");
+                }
+            }
             return items;
         }
 
@@ -574,7 +584,7 @@ namespace Prisma.Plugins
         public static MediaSnapshot Snapshot(IOrganizationService service, Entity row)
         {
             var kind = row.GetAttributeValue<string>("nx_kind");
-            var target = service.Retrieve(MediaPolicy.Table(kind), Guid.Parse(row.GetAttributeValue<string>("nx_targetid")), kind == "attachment" ? new ColumnSet("nx_sortorder", "nx_assettype", "nx_assetpurpose", "nx_externalurl", "nx_allowsembedding", "nx_embedhint") : new ColumnSet("nx_sortorder", "nx_caption"));
+            var target = service.Retrieve(MediaPolicy.Table(kind), Guid.Parse(row.GetAttributeValue<string>("nx_targetid")), kind == "attachment" ? new ColumnSet("nx_demoassetid1", "nx_sortorder", "nx_assettype", "nx_assetpurpose", "nx_externalurl", "nx_allowsembedding", "nx_embedhint") : new ColumnSet("nx_sortorder", "nx_caption"));
             return Snapshot(row, target);
         }
 
@@ -584,7 +594,9 @@ namespace Prisma.Plugins
             return new MediaSnapshot {
                 SolutionId = row.GetAttributeValue<string>("nx_parentid"),
                 SessionId = row.Id.ToString(), Id = row.GetAttributeValue<string>("nx_targetid"), Kind = row.GetAttributeValue<string>("nx_kind"),
-                Name = row.GetAttributeValue<string>("nx_filename"), Mime = row.GetAttributeValue<string>("nx_mime"),
+                Name = !linked && row.GetAttributeValue<string>("nx_kind") == "attachment" ? target.GetAttributeValue<string>("nx_demoassetid1") ?? row.GetAttributeValue<string>("nx_filename") : row.GetAttributeValue<string>("nx_filename"),
+                FileName = !linked && row.GetAttributeValue<string>("nx_kind") == "attachment" ? row.GetAttributeValue<string>("nx_filename") : null,
+                Mime = row.GetAttributeValue<string>("nx_mime"),
                 Size = row.GetAttributeValue<int>("nx_bytes"), Received = row.GetAttributeValue<int>("nx_received"),
                 NextBlock = row.GetAttributeValue<int>("nx_nextblock"), Complete = row.GetAttributeValue<bool>("nx_complete"),
                 Caption = target.GetAttributeValue<string>("nx_caption") ?? "", SortOrder = Math.Min(12, target.GetAttributeValue<int>("nx_sortorder")),

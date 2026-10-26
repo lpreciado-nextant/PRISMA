@@ -513,6 +513,25 @@ test("linked asset editor separates URLs, embedding and desktop arrangements", (
   assert.doesNotMatch(desktop, /Allow sandboxed embedding/);
 });
 
+test("uploaded attachments expose display-name editing with original filenames and upload locks", () => {
+  const props = { capabilities: [], onRemoveThumbnail: noop, images: [], onCaption: noop, onRemoveImage: noop, onAttachment: noop, onRemoveAttachment: noop, onRenameAttachment: async () => {},
+    attachments: [{ id: "pdf", name: "Client overview", fileName: "original.pdf", purpose: "Supporting material" }, { id: "upload", name: "video.mp4", purpose: "Demo video", status: "Uploading..." },
+      { id: "link", name: "Application", purpose: "Interactive demo", linkedAsset: { name: "Application", assetType: "Power Apps", externalUrl: "https://example.com", embedHint: "", allowsEmbedding: false } }] };
+  const html = render(form.SubmissionMedia, props);
+  assert.match(html, /File: original.pdf/);
+  assert.match(html, /aria-label="Edit display name for Client overview"/);
+  assert.match(html, /disabled="" title="Edit display name" aria-label="Edit display name for video.mp4"/);
+  assert.doesNotMatch(html, /Edit display name for Application/);
+  const locked = render(form.SubmissionMedia, { ...props, disabled: true });
+  assert.match(locked, /disabled="" title="Edit display name" aria-label="Edit display name for Client overview"/);
+  const editor = render(form.AttachmentNameEditor, { name: "Client overview", disabled: false, onSave: async () => {}, onClose: noop });
+  assert.match(editor, /Display name/);
+  assert.match(editor, /maxLength="100" value="Client overview"/);
+  assert.match(editor, /original filename stays unchanged/);
+  assert.match(editor, /Save display name/);
+  assert.match(editor, />Cancel<\/button>/);
+});
+
 test("media reordering exposes drag handles and bounded keyboard actions", () => {
   const props = { capabilities: [], onRemoveThumbnail: noop, thumbnailUpload: null, images: [{ id: "first", caption: "", preview: "First" }, { id: "second", caption: "", preview: "Second" }], imageUpload: null, onCaption: noop, onRemoveImage: noop, format: "Self-contained HTML file", onFormat: noop, onAttachment: noop, attachments: [], onRemoveAttachment: noop, onReorderImages: noop };
   const html = render(form.SubmissionMedia, props);

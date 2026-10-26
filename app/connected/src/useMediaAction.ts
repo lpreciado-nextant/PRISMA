@@ -38,7 +38,7 @@ export function useMediaAction(onPreview: (item: MediaItem) => void, access: Omi
       urls.current.push(url);
       const link = document.createElement("a");
       link.href = url;
-      link.download = item.name;
+      link.download = item.fileName ?? item.name;
       document.body.append(link);
       link.click();
       link.remove();

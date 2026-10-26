@@ -30,7 +30,7 @@ export function StreamingVideo({ item, solutionId, mode }: { item: MediaItem; so
       await readVideoRange(transferApi, solutionId, item.id, mode, 0, item.size, controller.signal, check.version, undefined, 1);
       controller.signal.throwIfAborted();
       const url = URL.createObjectURL(blob); downloads.current.push(url);
-      const anchor = document.createElement("a"); anchor.href = url; anchor.download = item.name;
+      const anchor = document.createElement("a"); anchor.href = url; anchor.download = item.fileName ?? item.name;
       document.body.append(anchor); anchor.click(); anchor.remove();
     } catch { if (!controller.signal.aborted) setError("Download unavailable. Reopen the video to check access."); }
     finally { if (!controller.signal.aborted) setDownloading(false); }
