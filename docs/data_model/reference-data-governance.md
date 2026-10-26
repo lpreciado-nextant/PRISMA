@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse ; capabilities replaced by the organization framework with area and owner (2026-10-13); client roles became a reference table (2026-10-21); capability list read back with IBO capabilities (2026-10-23) · **Last updated:** 2026-10-23
+**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse; capabilities replaced by the organization framework with area and owner (2026-10-13); client roles became a reference table (2026-10-21); current active references seeded and verified in Nextant Pulse Prod (2026-10-26) · **Last updated:** 2026-10-26
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -84,6 +84,20 @@ dotnet backend/Prisma.Deploy/bin/Debug/net10.0/Prisma.Deploy.dll seed-reference-
 ```
 
 The seed pages through existing rows, matches trimmed names case-insensitively, refuses duplicate/inactive matches, and creates only missing values in one transaction. It never renames, reactivates, deletes or merges existing records. New capabilities and industries receive sort orders; the current connected submission pickers sort alphabetically. Verification checks approved names and preservation of existing row fields. This is a sequentially repeatable administrative seed, not a database uniqueness constraint; avoid concurrent reference maintenance during execution.
+
+### Production reference seed (2026-10-26)
+
+With explicit user approval, copied the current active dev reference rows to **Nextant Pulse Prod** (`bce2c94a-b2b3-e487-b368-b8d7c931f90b`), not the retired six-capability starter list. Production initially had no rows in these five tables. The one-transaction seed created **84 rows**: 3 specialization areas, 13 capabilities, 17 industries, 37 technologies and 14 client roles. Names, descriptions where present and sort orders were preserved. All 13 capability owners mapped uniquely by normalized email to existing active production Consultants; area lookups were mapped to production reference IDs. No Consultant, Project, solution, submission or media records were copied, and capability ownership did not itself assign anyone a PRISMA role.
+
+[production-reference-seed.ps1](../../tools/production-reference-seed.ps1) guards both organization IDs and the installed managed release. Preview is read-only; execution requires the printed `-ExpectedPlanHash`. It refuses duplicate/inactive name matches, ID collisions, missing/ambiguous owner mappings and differing existing values rather than overwriting them. Only missing reference rows are created, in one Dataverse changeset. Run from the repository root:
+
+```powershell
+./tools/production-reference-seed.ps1
+# Only for an approved preview, using its exact hash:
+./tools/production-reference-seed.ps1 -Execute -ExpectedPlanHash <preview-hash>
+```
+
+The initial create-plan hash was `50310F143E0A0A2CDE849AFAE37EE14FCBDDE86F477B77F56BFD3516740DE35C`. Exact value and lookup readback passed; repeated previews proposed zero changes, including after disposable workflow/media acceptance. The script's original multipart response decoding was corrected after an ambiguous client result; readback confirmed the committed rows before any further action, and no create batch was replayed. Production user/team provisioning is recorded in the [security model](../architecture/security-model.md#production-access-2026-10-26).
 
 ## Admin surface
 

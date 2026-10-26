@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Capability-owner SA scope, connected app and approved role migration deployed 2026-10-26; five owners provisioned and Luis assigned the global override; eight owner identity/onboarding blockers and effective non-admin acceptance remain open · **Last updated:** 2026-10-26
+**Status:** Dev capability-owner SA scope and role migration deployed 2026-10-26; five dev owners provisioned and Luis assigned the global override. Production group contributor role/profile, automatic internal-member publication readers and group CanView share verified; Luis, Sebastian Sanchez, Andres Vega and Natalia Silva have approved global-librarian access. Four licensing exceptions and effective non-admin acceptance remain open · **Last updated:** 2026-10-26
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -139,9 +139,92 @@ The user explicitly approved these additive assignments on 2026-09-22 in Nextant
 No roles/profiles were removed or redefined; legacy PRISMA Librarian profile memberships and System Administrator privileges remain. Media Custodian membership, Consultant/Project security, schema and code-app deployment were not changed. Luis's assigned Librarian role now authorizes review. A subsequent [disposable lifecycle test](../workflows/contribution-and-review.md#verified-lifecycle) passed return/resubmit/approval and withdrawal, with all five Published Readers parent/child share masks changing from Read to zero. This is positive functional and explicit-share verification, not effective non-admin access or separate-reviewer acceptance. All three original drafts remain. Other users must sign in through their own authorized sessions; credentials must never be supplied in chat.
 
 **Full-access additions (2026-10-14).** At the user's request, `ssanchez@nextant.com`, `avega@nextant.com` and `esamudio@nextant.com` now hold Basic User plus the PRISMA Contributor, PRISMA CSM and PRISMA Librarian roles; the PRISMA Contributor, PRISMA CSM, PRISMA Core Draft Librarian and legacy PRISMA Librarian field profiles; and PRISMA Published Readers membership. Andrés and Ernesto were added to the environment with `pac admin assign-user`. Profiles and team membership were added additively through the Dataverse Web API. A post-write read verified every assignment. All three already had CanView on the connected code app. Sebastián then got "Catalogue unavailable": `nx_GetCatalogueGraph` with `Present=false` needs the caller's read on `cr6b0_consultant` (contributor names and levels), and the PRISMA roles deliberately grant no Consultant/Project privileges. All three were given the existing **Basic Nextant User Role**, the org baseline with Global Consultant/Project read. After that, an impersonated replay of the startup reads and APIs (solutions, capabilities, catalogue graph in both modes, favorites, published detail) succeeded for each account. Non-admin users need that baseline role, or another existing role with Consultant read, in addition to the PRISMA roles. Sebastián's preexisting direct **PRISMA Media Custodian** role was not changed, and nobody was added to the Media Custodian team. None of these accounts is a System Administrator, so Andrés and Ernesto are candidate non-admin identities for the pending least-privilege acceptance.
+## Production access (2026-10-26)
+
+The user explicitly selected **only Luis David Preciado** (`lpreciado@nextant.com`) for initial production access, including contributor, reader and global-librarian capabilities. In Nextant Pulse Prod, 12 additive operations were applied in one transaction and read back:
+
+- Created owner team **PRISMA Media Custodian**, ID `e4aee220-0557-4c04-950c-fb5b97f01bb0`, in the root business unit and assigned only its existing PRISMA Media Custodian role. Membership remains **zero**.
+- Created owner team **PRISMA Published Readers**, ID `93a0ac77-67e3-4e54-823c-7245545e6f78`, and assigned the existing PRISMA CSM role.
+- Added PRISMA Contributor, PRISMA CSM, PRISMA Librarian and PRISMA Global Librarian roles to Luis (`systemuserid=54f1df0e-a557-f011-877a-6045bdd9a71f`), plus PRISMA Contributor, PRISMA CSM and PRISMA Core Draft Librarian field-security profiles and Published Readers membership.
+
+Existing direct roles, field profiles and teams were preserved and verified, including Luis's preexisting System Administrator role. No other user, app sharing, licence, role definition, field-profile definition or Consultant/Project privilege was changed. Seeding capability-owner lookups did not onboard those owners. Review-queue access and the disposable workflow passed, but **these are same-account administrator checks, not least-privilege or cross-account acceptance**. The [production runbook](technical-architecture.md#production-deployment-preflight) owns the media and cleanup evidence. Onboard other users only after an approved recipient/role list and baseline Consultant/Project read access review.
+
+### Additional production recipients (2026-10-26)
+
+The user explicitly requested contributor access for `jcastelblanco@nextant.com` and access for all capability owners. The current active production capabilities resolved to 13 distinct owners, each with one active Consultant and one enabled human Dataverse user. Juliana also resolved uniquely. All 14 already held Basic User and Basic Nextant User Role directly or through teams; no baseline roles or licences were added.
+
+Applied **42 additive Dataverse associations in one transaction**, then read back every required role, profile and Published Readers membership and verified preservation of prior direct memberships. Juliana received PRISMA Contributor and its field-security profile. Each owner received PRISMA Librarian and PRISMA Core Draft Librarian profile, with workflow scope derived from their active capability areas, not the Global Librarian override.
+
+| Recipient | Production PRISMA role / workflow scope |
+|---|---|
+| `jcastelblanco@nextant.com` | Contributor |
+| `aalvarez@nextant.com` | Librarian / Data Solutions |
+| `aperez@nextant.com` | Librarian / AI & Automation |
+| `cvasquez@nextant.com` | Librarian / Intelligent Business Operations |
+| `gsalinas@nextant.com` | Librarian / Data Solutions |
+| `j.ardila@nextant.com` | Librarian / Data Solutions |
+| `jsarmiento@nextant.com` | Librarian / Data Solutions |
+| `jwilson@nextant.com` | Librarian / Intelligent Business Operations |
+| `lbustillo@nextant.com` | Librarian / Data Solutions |
+| `mcubillos@nextant.com` | Librarian / AI & Automation |
+| `mthomason@nextant.com` | Librarian / Intelligent Business Operations |
+| `pmendez@nextant.com` | Librarian / AI & Automation |
+| `ssaxena@nextant.com` | Librarian / AI & Automation |
+| `vvelosa@nextant.com` | Librarian / Intelligent Business Operations |
+
+Shared production app `57f5ef47-d997-4323-a8b8-0c4bf6a9a529` with those exact Entra object IDs as **CanView**, using the `modifyPermissions` contract from Microsoft's administration module. All 14 app grants were read back; Luis's existing Owner permission was preserved. No CanEdit/co-owner, tenant-wide or group share was added. Notification emails were suppressed.
+
+Final readback: Published Readers has 15 members including Luis; Media Custodian remains empty; Luis remains the only directly assigned PRISMA Global Librarian. No capability ownership, role/profile definitions, Consultant/Project permissions, app content, storage settings or unrelated memberships were changed. Gerson and Jorge already held System Administrator/Read-All Tables access, which was preserved; they are not least-privilege test identities. Per-user sign-in, licensing/consent, scoped workflow behavior and cross-account denial tests remain unverified by this assignment pass.
+
+### Production contributor group (2026-10-26)
+
+At the user's explicit request, assigned **PRISMA Contributor** to production team **Nextant Consulting - ALL** (`0e8457ff-6558-f011-bec1-7c1e521680bd`), verified as the Microsoft 365 group team for Entra group `071e9199-9e2a-48ca-80db-27efb9ed71bb`. Readback confirmed the added role and preservation of the team's existing **Basic User** and **Basic Nextant User Role** assignments. This grants the role through team membership, not just to the 14 individually onboarded recipients above.
+
+This was a **team security-role change only**. No app/group sharing, field-security profile association, Published Readers membership, team membership, licence, role definition or unrelated permission was changed. The earlier 14 individual app shares remain unchanged; this role assignment alone is not evidence that every group member can launch or complete a submission. Group-wide app access and contributor field-security coverage still require verification and any missing grants require approval.
+
+### Group-backed published access (2026-10-26)
+
+The user subsequently approved the remaining group contributor setup **except Power Apps app sharing**. Added the PRISMA Contributor field-security profile (`15ee916e-1ab6-f111-aaac-6045bd049fba`) to the existing Nextant Consulting - ALL team, preserving its roles and other associations. The imported Contributor role already has `isinherited=1` (Direct User Basic access and Team privileges), so member-owned draft operations do not require a change to the managed role definition.
+
+The existing group team uses membership type **Members and guests**. To keep the publication audience internal without renaming or replacing that broadly used team, created a separate Microsoft 365 group team for **Members only**, backed by the same Entra group `071e9199-9e2a-48ca-80db-27efb9ed71bb`. The existing reader team was preserved and renamed in the same transaction:
+
+| Team | ID | Current purpose |
+|---|---|---|
+| PRISMA Published Readers | `74dd1768-3a75-4348-aced-20e9eb752f6d` | New Members-only group team; PRISMA CSM role and PRISMA CSM field-security profile; active publication target |
+| PRISMA Published Readers - Initial Pilot | `93a0ac77-67e3-4e54-823c-7245545e6f78` | Retained original owner team with all 15 manual memberships and its existing role; no longer selected for new publication shares |
+
+Before the switch, all 15 prior readers were verified as enabled internal members of the directory group, and production contained zero solutions. No existing publication shares required migration. The plug-in's exact-name lookup resolves uniquely to the new group team. Future production provisioning must resolve and validate this active group-backed target rather than reuse the old team ID or require `teamtype=0`. Do not manually synchronize or nest teams; group membership is evaluated through Entra at sign-in and existing sessions may need renewal. The [ADR-0009 amendment](decisions/adr-0009-mediated-media-and-publication-access.md#production-group-backed-readers-2026-10-26) owns the design choice.
+
+Verification used disposable solution `9db0d4cd-71d1-f111-a05b-3833c5ec7e2d` and the real controlled APIs. For its solution, contributor and image, the new reader team's effective access was `None` while Draft, exactly `ReadAccess` after approval, and `None` after withdrawal. Explicit shares targeted only the new reader team, not the initial-pilot team. The fixture and all child/session rows were deleted; Media Custodian stayed empty. This tests the publication principal, **not a non-admin user's signed-in inherited access**.
+
+Power Apps permissions were read only: the pre/post fingerprint remained `79FF8F694B199614AF374305F6FE0569C2B884C85AF9263FD7ACD7545FC23787`, with 15 existing individual permissions and **no share to the group**. No `modifyPermissions` call, Entra membership edit, account enablement, role-definition update or licence assignment occurred.
+
+Directory/licensing preflight found 149 internal group users, 147 enabled. All 15 prior readers were covered. Production's environment security group is already the same Entra group. Of the enabled members, 143 had `POWERAPPS_PER_USER` with the relevant Power Apps and Dataverse plans enabled. These four need production-entitlement review; other entitlement routes such as per-app passes were not certified:
+
+| User | Assigned SKU evidence |
+|---|---|
+| `jpnavas@nextant.com` | SPB only |
+| `asnaider@nextant.com` | SPB, POWERAPPS_VIRAL trial, POWER_BI_STANDARD |
+| `shoing@nextant.com` | SPB, FLOW_FREE |
+| `psatest@nextant.com` | FLOW_FREE only |
+
+Two directory accounts (`nfonseca@nextant.com`, `sgarcia@nextant.com`) were disabled and left disabled. No billing-policy link was returned by the environment metadata check. Resolve licensing explicitly; do not purchase, allocate licences or re-enable accounts based on this inventory alone. Group app sharing was excluded from this initial configuration pass and separately approved afterward as recorded below. Actual non-admin login/create/upload/denial tests still require a recipient session.
+
+### Approved production group app share (2026-10-26)
+
+The user explicitly lifted the earlier no-sharing restriction and approved **CanView** for **Nextant Consulting - ALL**. Verified directory group `071e9199-9e2a-48ca-80db-27efb9ed71bb` and production app `57f5ef47-d997-4323-a8b8-0c4bf6a9a529` in environment `bce2c94a-b2b3-e487-b368-b8d7c931f90b`, then added the single group permission through the previously verified Power Apps `modifyPermissions` contract. Readback confirmed the Group principal and CanView role, with all 15 preexisting individual permissions unchanged: **16 total permissions**. No CanEdit/co-owner or tenant-wide share was added, and notification emails were suppressed.
+
+This completes group-level app sharing alongside the existing contributor role/profile and group-backed published-reader access. It does not allocate licences, enable disabled accounts or edit Consultant/employee records. The four entitlement exceptions above remain. A separate readiness audit found no active Consultant email match for `jpnavas`, `kmiyazaki`, `internalbi`, `psatest` and `svc-fabric-dataops` at `nextant.com`; `ssangal@nextant.com` had an active Consultant row with Employee Status false. Those records need review for credited-person picker eligibility, not an assumption that app sign-in is blocked. All 147 enabled group members had enabled Dataverse accounts at that audit. Group recipients still need their own sign-in/consent and least-privilege workflow validation.
+
+### Additional production global librarians (2026-10-26)
+
+The user explicitly approved **PRISMA Global Librarian** access for `ssanchez@nextant.com`, `avega@nextant.com` and `nsilva@nextant.com` in Nextant Pulse Prod. Each resolved to a unique enabled human Dataverse account. Applied nine missing memberships in one transaction: PRISMA Librarian, PRISMA Global Librarian and PRISMA Core Draft Librarian field-security profile for each recipient. Readback verified all required memberships and preservation of every preexisting direct role, profile and team membership.
+
+The final direct Global Librarian membership list is `lpreciado@nextant.com`, `ssanchez@nextant.com`, `avega@nextant.com` and `nsilva@nextant.com`. These recipients may perform authorized librarian workflows across all specialization areas, rather than only areas derived from capability ownership. No System Administrator role, app/co-owner share, licence, Consultant ownership or role/profile definition was added or changed. Natalia's preexisting administrator privileges were preserved. Existing group-based app and reader access remains unchanged. The recipients should renew their sessions; actual signed-in global workflows were not exercised under their identities by this provisioning pass.
+
 ## Code-app hosting policy
 
-On 2026-09-22 the user explicitly approved four additive CSP sources for **all code apps in Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`), including the separate PoC. This does not affect Nextant Pulse Prod. The change used the supported Power Platform admin center: **Manage > Environments > Nextant Pulse > Settings > Product > Privacy + Security > App (code)**. [Microsoft's documentation](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/content-security-policy) confirms the environment-wide scope and default-source merging.
+On 2026-09-22 the user explicitly approved four additive CSP sources for **all code apps in Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`), including the separate PoC. That dev change did not affect Nextant Pulse Prod; production was separately approved on 2026-10-26 as recorded below. The change used the supported Power Platform admin center: **Manage > Environments > Nextant Pulse > Settings > Product > Privacy + Security > App (code)**. [Microsoft's documentation](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/content-security-policy) confirms the environment-wide scope and default-source merging.
 
 Before the change, enforcement was On, reporting Off, and every directive used defaults. Only these custom sources were added:
 
@@ -156,7 +239,9 @@ Enforcement remains On and reporting remains Off. All other directives retain de
 
 The admin UI persisted the sources after reload. PRISMA's response header independently confirmed `media-src 'self' data: blob:`, `worker-src 'self'`, `connect-src 'self'` and `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'`; all other observed directives were unchanged. Azure CLI's management request had failed with `InsufficientDelegatedPermissions` before the successful admin UI change; no extra delegated permissions were granted.
 
-Rollback, with approval: in that same code-app tab, turn **Use default** back On for these four directives only, preserve enforcement/reporting and other settings, save, then reload PRISMA and verify the response header. This restores the prior restrictions and blocks current video/worker paths again. No app republish was needed for either policy application or verification. Hosted checks and their limits are recorded in [published host compatibility](../workflows/demo-assets.md#published-host-compatibility).
+**Production approval (2026-10-26):** the user separately approved the same four additions for **all code apps in Nextant Pulse Prod** (`bce2c94a-b2b3-e487-b368-b8d7c931f90b`). Applied through its App (code) settings and verified after an admin-page reload. Enforcement stayed On, reporting Off, and the other eleven directives stayed on defaults. The hosted production response header independently confirmed precisely the four changes above. The user had already enabled Code apps in this environment; launch succeeded after the setting propagated. No extra delegated permissions or direct browser Blob-storage access were granted. Production HTML sandbox isolation and full-file video playback passed as described in the production runbook; browser compression, broader codecs and non-admin acceptance were not retested here.
+
+Rollback, with approval: in the affected environment's code-app tab, turn **Use default** back On for these four directives only, preserve enforcement/reporting and other settings, save, then reload PRISMA and verify the response header. This restores the prior restrictions and blocks current video/worker paths again. No app republish was needed for either policy application or verification. Hosted checks and their limits are recorded in [published host compatibility](../workflows/demo-assets.md#published-host-compatibility).
 
 ## Authentication
 

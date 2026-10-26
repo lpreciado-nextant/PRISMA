@@ -164,6 +164,25 @@ try {
   assert.equal(pilotType("Microsoft.Consumption/budgets")[0].condition, "[greater(parameters('monthlyBudget'), 0)]");
   assert.doesNotMatch(JSON.stringify(pilot.outputs), /listKeys|listAccountSas|listServiceSas/i);
   console.log("PASS pilot: Entra-only storage, one container-scoped plug-in identity, audit logs, lock and optional budget");
+
+  const production = compile("build", "production-container.bicep", "production-container.json");
+  assert.deepEqual(production.resources.map(resource => resource.type), [
+    "Microsoft.Storage/storageAccounts/blobServices/containers", "Microsoft.ManagedIdentity/userAssignedIdentities",
+    "Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials", "Microsoft.Authorization/roleAssignments",
+  ], "Production must not redeploy the shared account, service, dev identity or dev container.");
+  assert.deepEqual(production.parameters.storageAccountName.allowedValues, ["stprismamediaiwguqp7gvh"]);
+  assert.equal(production.resources[0].name, "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', 'media-prod')]");
+  assert.deepEqual(production.resources[0].properties, { publicAccess: "None" });
+  assert.equal(production.resources[1].name, "id-prisma-media-plugin-prod");
+  assert.equal(production.resources[2].condition, "[not(empty(parameters('pluginFederatedSubject')))]");
+  assert.deepEqual(production.resources[2].properties.audiences, ["api://AzureADTokenExchange"]);
+  assert.equal(production.resources[2].properties.subject, "[parameters('pluginFederatedSubject')]");
+  assert.equal(production.resources[3].scope, "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', parameters('storageAccountName'), 'default', 'media-prod')]");
+  assert.equal(production.resources[3].properties.principalType, "ServicePrincipal");
+  assert.equal(production.resources[3].properties.roleDefinitionId, "[variables('blobContributor')]");
+  assert.equal(production.variables.blobContributor, template.variables.blobContributor);
+  assert.doesNotMatch(JSON.stringify(production.outputs), /listKeys|listAccountSas|listServiceSas/i);
+  console.log("PASS production container: existing account untouched, isolated container and identity, optional certificate trust");
 } finally {
   rmSync(directory, { recursive: true, force: true });
 }

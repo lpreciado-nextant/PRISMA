@@ -1,8 +1,8 @@
 # ADR-0009 - Mediated media and publication access
 
-**Status:** Accepted; protected ranges, SHA-bound resume and approved hosted CSP configuration applied; effective non-admin verification pending. [ADR-0010](adr-0010-attachments-in-blob-through-plugins.md) keeps these controls and moves new attachment bytes to Blob through the same APIs.
+**Status:** Accepted; protected ranges, SHA-bound resume and approved hosted CSP applied; production group-backed reader principal configured 2026-10-26; effective non-admin verification pending. [ADR-0010](adr-0010-attachments-in-blob-through-plugins.md) keeps these controls and moves new attachment bytes to Blob through the same APIs.
 **Date:** 2026-09-22
-**Last updated:** 2026-09-29
+**Last updated:** 2026-10-26
 
 ## Context
 
@@ -24,9 +24,17 @@ Dataverse reports no custom processing-step support for InitializeFileBlocksUplo
 - `nx_ReadVideoRange` returns at most 1 MiB per request, with parent/media version identity and no continuation token. Each call validates parent state and requested `submission`, `published` or `present` mode, target membership and completion; native download initialization/blocks execute as the caller. Parent/media versions and access are checked again before response. Present mode requires publication and both safety flags even for owners/librarians. The client validates identity/range/version and clears playback on access/version failure; a 30-second check also covers paused or already-buffered playback. This cannot retract bytes already received, saved or captured.
 - MP4Box fragments regular MP4 tracks for MediaSource with sequential reads, approximately 30 seconds ahead, eviction behind 60 seconds, a 32 MiB pending-segment ceiling and 16 MiB pre-metadata-read ceiling. Fragmented files, extra tracks or unsupported codecs do not silently lose content: the UI offers explicit full-file playback with fresh access checks. Full-download WebM remains separate. No host-token extraction, public URL, CORS bypass or new external storage is introduced.
 - Use the supported environment-level code-app CSP configuration for hosted media rather than converting large videos to data URLs or exposing public media. On 2026-09-22 the user approved adding only `media-src blob:`, `worker-src 'self'`, `connect-src 'self'` and `script-src 'wasm-unsafe-eval'` in Nextant Pulse. Enforcement stays enabled; other settings remain unchanged. This applies to every code app in the environment, including the PoC, and requires explicit approval in other environments. Exact settings, verification and rollback are owned by the [security model](../security-model.md#code-app-hosting-policy).
-- Publish by sharing Solution, contributor and completed media rows read-only with **PRISMA Published Readers**. Revoke those shares on withdrawal/retirement. Membership is manually administered; no users are assigned by deployment. Consultant/Project access remains a prerequisite and is never expanded by these shares.
+- Publish by sharing Solution, contributor and completed media rows read-only with **PRISMA Published Readers**. Revoke those shares on withdrawal/retirement. The initial pilot uses manual membership; production now uses the group-backed principal described below. Membership and app access remain separately administered, not implicit in solution import. Consultant/Project access remains a prerequisite and is never expanded by these shares.
 - Require the explicit **PRISMA Librarian** role, directly or through team membership, for decisions. System Administrator alone does not qualify. Librarians have Global media Read but no direct media Write through the PRISMA role; they are trusted reviewers across the lifecycle.
 - Do not use the legacy parent Solution image as trusted connected media. Contributors have Solution Write for controlled APIs; the unguardable file-operation surface on that column is not a publication input. The connected gallery/viewer uses only finalized team-owned media.
+
+## Production group-backed readers (2026-10-26)
+
+For the approved Nextant Consulting - ALL contributor rollout in production, use a **Members-only Microsoft 365 group team** named exactly `PRISMA Published Readers`, backed by the existing directory group. This retains per-record publication grants/revocation while automatically following internal group membership, avoiding a manually synchronized user list. It does not grant organization-wide Solution/media Read or alter the authorization APIs. The existing broadly used Nextant Consulting - ALL team and its immutable membership type are left intact; it receives the Contributor field-security profile alongside its already assigned Contributor role.
+
+Preserve the original reader owner team as `PRISMA Published Readers - Initial Pilot` rather than delete it. The name switch and new team/role/profile setup are atomic. Preconditions for this production switch were zero existing solutions and directory confirmation that all 15 prior readers were enabled internal group members. A future switch with published rows requires explicit share migration and rollback planning; renaming alone does not migrate existing record permissions.
+
+The controlled publication test confirmed `None -> ReadAccess -> None` for the new team's solution, contributor and image rights through Draft, approval and withdrawal, with no shares to the retained pilot team and complete fixture cleanup. Group-backed membership is resolved at sign-in, so this is not proof of a particular non-admin session's access. Licences, environment eligibility and app access remain prerequisites. **Power Apps app sharing was explicitly excluded and was not changed.** Exact team IDs, licence exceptions and the unchanged-sharing fingerprint are recorded in the [security model](../security-model.md#group-backed-published-access-2026-10-26).
 
 ## Consequences
 
