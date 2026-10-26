@@ -454,7 +454,7 @@ The curated asset a CSM opens. New submissions offer HTML, video and one-pager/s
 
 | Column | Logical name | Type | Required | Notes |
 |---|---|---|---|---|
-| Name *(primary name)* | `nx_demoassetid1` | StringType | Yes | Client-facing asset title. Uploaded-file display-name editor accepts 1-100 characters; defaults to the upload filename. Original filename stays in `nx_uploadsession.nx_filename`. Editor and API support implemented locally 2026-10-26, not deployed. |
+| Name *(primary name)* | `nx_demoassetid1` | StringType | Yes | Client-facing asset title. Uploaded-file display-name editor accepts 1-100 characters; defaults to the upload filename. Original filename stays in `nx_uploadsession.nx_filename`. Editor and API support deployed to connected dev and production 2026-10-26 in release 1.0.0.4; no schema change. |
 | Solution | `nx_solution` | LookupType → `nx_solution` | Yes |  |
 | Asset Type | `nx_assettype` | PicklistType (local) | Yes | Self-contained HTML · Hosted web app (URL) · Power Apps · Power BI · Desktop app or script · Video walkthrough · One-pager / slide |
 | File | `nx_filemedia` | FileType | Conditional | Required for newly submitted HTML, video and one-pager/slides. PoC fileData/htmlContent are in-memory stand-ins for this payload, not extra Dataverse columns. |

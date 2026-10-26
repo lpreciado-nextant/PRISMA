@@ -1,6 +1,6 @@
 # Demo assets
 
-**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain; asset purpose sections and Demo filter (ADR-0011) live 2026-10-06; the hosted web app link type shows as "URL" (2026-10-08); one 16:9 stage and Open in new tab in a focused viewer (2026-10-14); uploaded-file display-name editing implemented locally, not deployed. · **Last updated:** 2026-10-26
+**Status:** Local document, HTML and video fixtures organized; hosted workflow uploads, published HTML interaction and short captioned MP4 play-to-ended verified; non-admin, large-file and broader media acceptance remain; asset purpose sections and Demo filter (ADR-0011) live 2026-10-06; the hosted web app link type shows as "URL" (2026-10-08); one 16:9 stage and Open in new tab in a focused viewer (2026-10-14); uploaded-file display-name editing deployed to connected dev and production in release 1.0.0.4. · **Last updated:** 2026-10-26
 **Source:** [End-to-end design §3.3](../design/end-to-end-design.md#33-demo-assets)
 
 Asset handling is type-dependent. **The CSM should never have to guess what will happen when they click.**
@@ -36,7 +36,7 @@ After a video, HTML file, PDF or PowerPoint upload completes, select **Display n
 
 Both the mock PoC and connected app use the title in attachment lists and retain the original filename for downloads. The connected app also uses authored titles in its generated presentation. In the PoC, save the solution draft or submit it to persist the change in IndexedDB. In the connected app, the metadata API saves the title immediately, with the same ownership, row-version and librarian-edit safeguards as other media edits. Existing uploads can be renamed without uploading again. Unfinished uploads cannot be renamed.
 
-The connected title uses the existing `nx_demoasset.nx_demoassetid1` column; `nx_uploadsession.nx_filename`, file contents, storage references and upload identity remain unchanged. Media responses expose the title as `name` and the original filename as optional `fileName`; older responses/assets continue to use `name` as their download filename. This requires the updated plug-in and connected app to be deployed together; no schema change is needed.
+The connected title uses the existing `nx_demoasset.nx_demoassetid1` column; `nx_uploadsession.nx_filename`, file contents, storage references and upload identity remain unchanged. Media responses expose the title as `name` and the original filename as optional `fileName`; older responses/assets continue to use `name` as their download filename. The updated plug-in and connected app were deployed to dev and production on 2026-10-26 without a schema change; the [deployment record](../architecture/technical-architecture.md#production-deployment-preflight) owns verification evidence and limits. The mock PoC has local support; its separate hosted app was not republished in this release.
 
 ## Rules
 
