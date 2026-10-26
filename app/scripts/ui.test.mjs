@@ -951,21 +951,21 @@ test("masthead: primary row with Submit, Present and utilities; section navigati
 test("help page: one guide per role and common questions, tailored to the app, with no in-page hash links", async () => {
   const { HelpView } = await server.ssrLoadModule("/src/views/HelpView.tsx");
   const poc = render(HelpView, {});
-  assert.match(poc, /How PRISMA works.*<nav aria-label="Guides".*Find and present a solution.*Share your work.*Review and curate/s);
-  assert.match(poc, /Present mode.*Common questions.*What does present mode hide\?/s);
+  assert.match(poc, /How PRISMA works.*<nav aria-label="Guides".*Find and Present a Solution.*Share Your Work.*Review and curate/s);
+  assert.match(poc, /Present Mode.*Common questions.*What does present mode hide\?/s);
   assert.match(poc, /<details[^>]*><summary/);
   // The PoC promises only what it has.
-  assert.doesNotMatch(poc, /Download presentation|Suggest an improvement|Edit solution|Unpublish &amp; edit|Confirm changes/);
+  assert.doesNotMatch(poc, /Download Presentation|Suggest an Improvement|Edit solution|Unpublish &amp; Edit|Confirm changes/);
   assert.match(poc, /Edit submission/);
   const connected = render(HelpView, { connected: true, librarian: true });
-  assert.match(connected, /Download presentation.*Suggest an improvement.*Unpublish &amp; edit.*Edit solution.*Confirm changes.*Send back to owner/s);
+  assert.match(connected, /Download Presentation.*Suggest an Improvement.*Unpublish &amp; Edit.*Edit solution.*Confirm changes.*Send back to owner/s);
   assert.match(connected, /Why can&#x27;t I edit my own solution from the review queue\?/);
   // Plain introduction: what PRISMA is, then share → review → find and present.
   assert.match(poc, /demos, prototypes and products.*1 · <\/span>Share.*2 · <\/span>Review.*3 · <\/span>Find &amp; present/s);
   // Suggestions exist only in the connected app: who sees them, why they stay pending, who marks them, what Addressed means.
-  assert.match(connected, /Change requests and suggestions.*<b>change request<\/b> comes from its reviewer.*<b>suggestion<\/b> is an idea from any PRISMA user.*Request changes.*Suggest an improvement.*only the solution&#x27;s owner, its contributors and librarians.*counts as <b>pending<\/b> until the owner marks it <b>Addressed<\/b>.*can read them but not mark them.*does not require a change and nothing changes automatically/s);
+  assert.match(connected, /Change Requests &amp; Suggestions.*<h3[^>]*>Change Requests<\/h3>.*cannot be published until they are resolved.*<h3[^>]*>Suggestions<\/h3>.*Suggest an Improvement.*visible only to the solution owner, contributors, and Librarians.*until the owner marks them as <b>Addressed<\/b>.*Suggestions are optional/s);
   assert.match(connected, /Why does My submissions keep showing &quot;pending&quot;\?/);
-  assert.doesNotMatch(poc, /Change requests and suggestions|Addressed/);
+  assert.doesNotMatch(poc, /Change Requests &amp; Suggestions|Addressed/);
   // Librarian guidance only for librarians in the connected app.
   const contributor = render(HelpView, { connected: true, librarian: false });
   assert.doesNotMatch(contributor, /Review and curate|Edit solution/);

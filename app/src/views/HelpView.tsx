@@ -4,7 +4,8 @@ import { VideoPlayer } from "../components/ViewerFrame";
 import { navigate } from "../lib/router";
 import demoVideoUrl from "../../../presentation/PRISMA Demo-web.mp4?url";
 
-type Role = { id: string; icon: IconName; eyebrow: string; title: string; steps: ReactNode[] };
+/** A guide is numbered `steps`, or free-form `body` (headings and bullets) when steps do not fit. */
+type Role = { id: string; icon: IconName; eyebrow: string; title: string; steps?: ReactNode[]; body?: ReactNode };
 /** Prefilled links to the PRISMA team. Who is on it is configured by the app, so the page never names people. */
 export type HelpContact = { teams: string; email: string };
 const contactButton = "inline-flex min-h-10 items-center gap-2 rounded-lg px-4 py-2 text-[14px] font-semibold outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)";
@@ -20,31 +21,41 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
   const [activeGuide, setActiveGuide] = useState<string | null>(null);
   const [demoOpen, setDemoOpen] = useState(false);
   const roles: Role[] = [
-    { id: "help-find", icon: "search", eyebrow: "Everyone · CSMs", title: "Find and present a solution", steps: [
-      <>Search the <b>Library</b> by name, problem or technology, and narrow it with <b>Refine</b> (area, capability, industry, demo type and more).</>,
-      <>Open a solution to read what it does, why it matters, its demo, screenshots and who built it.</>,
-      <>Before showing it on a client's screen, turn on <b>Present mode</b> in the top bar. It removes internal information, such as real client names, contributors, effort and notes, before anything is shown.</>,
+    { id: "help-find", icon: "search", eyebrow: "Everyone · CSMs", title: "Find and Present a Solution", steps: [
+      <><b>Find a solution:</b> Search the Library by name, problem, or technology. Use <b>Refine</b> to filter by area, capability, industry, demo type, and more.</>,
+      <><b>Explore the details:</b> Open a solution to learn what it does, its business value, available demos, screenshots, and contributors.</>,
+      <><b>Present to clients:</b> Before sharing your screen with a client, enable <b>Present Mode</b> in the top bar. This hides internal information, such as client names, contributors, development effort, and internal notes.</>,
       ...(connected ? [
-        <>Use <b>Download presentation</b> for a ready-made deck. It appears only for solutions cleared for clients.</>,
-        <>Save solutions with the heart, and use <b>Suggest an improvement</b> to send the solution team an idea privately.</>,
-      ] : [<>Save solutions with the heart to find them again under <b>Saved solutions</b>.</>]),
+        <><b>Download a presentation:</b> Use <b>Download Presentation</b> to get a ready-to-use deck when the solution is approved for client sharing.</>,
+        <><b>Save and suggest:</b> Click the heart to save your favorite solutions, or use <b>Suggest an Improvement</b> to privately share feedback with the solution team.</>,
+      ] : [<><b>Save solutions:</b> Click the heart to save your favorite solutions and find them again under <b>Saved solutions</b>.</>]),
     ] },
-    { id: "help-share", icon: "plus", eyebrow: "Contributors", title: "Share your work", steps: [
-      <>Click <b>Submit a solution</b> in the top bar. You can <b>Save draft &amp; close</b> at any step and finish later from <b>My submissions</b>.</>,
-      <>Describe what it does and its business value, choose its main capability (and, if one played a significant role, one other), add who built it and how complex it was, then add one to six screenshots and any demo.</>,
-      <>Confirm the content is safe for clients and <b>Submit for review</b>. A librarian checks it before anything is published.</>,
-      <>If the reviewer requests changes, you see their comment in My submissions. Edit and resubmit.{connected ? " See Change requests and suggestions below." : ""}</>,
+    { id: "help-share", icon: "plus", eyebrow: "Contributors", title: "Share Your Work", steps: [
+      <><b>Submit a solution:</b> Click <b>Submit a Solution</b> in the top bar. You can save your progress as a draft and continue later from <b>My Submissions</b>.</>,
+      <><b>Add solution details:</b> Describe what your solution does, its business value, and its main capability. Add contributors, development effort, screenshots, and any available demos.</>,
+      <><b>Submit for review:</b> Make sure your content is safe to share and click <b>Submit for Review</b>. A Librarian will review and approve it before publication.</>,
+      <><b>Address Change Requests:</b> If the Librarian requests changes, review their comments in <b>My Submissions</b>, make the required updates, and resubmit your solution for approval.</>,
       connected
-        ? <>To change a published solution, use <b>Unpublish &amp; edit</b>. It leaves the library until it is approved again. A librarian may also correct it directly; you then see what changed and why.</>
+        ? <><b>Edit published solutions:</b> Use <b>Unpublish &amp; Edit</b> to make updates. Your solution will be temporarily removed from the Library until approved again. Librarians can also make corrections directly, and you'll be able to see what changed and why.</>
         : <>To change a submission, open it from My submissions and choose <b>Edit submission</b>.</>,
     ] },
-    ...(connected ? [{ id: "help-feedback", icon: "message" as const, eyebrow: "Solution teams", title: "Change requests and suggestions", steps: [
-      <>A solution can get two kinds of feedback. A <b>change request</b> comes from its reviewer: a librarian who owns a capability in the solution's area, or the global librarian. You must act on it before the solution is published. A <b>suggestion</b> is an idea from any PRISMA user; you decide whether to apply it.</>,
-      <><b>Change request:</b> when the reviewer uses <b>Request changes</b>, the solution goes back to Draft as <b>Changes requested</b> with their comment. It leads <b>Needs your attention</b> in My submissions, in amber. Edit the solution and resubmit it; it stays pending until you do.</>,
-      <><b>Suggestion:</b> anyone can open a published solution and use <b>Suggest an improvement</b>, at the end of its side column. It is private, not a public comment: only the solution's owner, its contributors and librarians see it, with who sent it and when. It cannot be edited once sent.</>,
-      <>The team sees suggestions on the solution's page. The owner also sees them in <b>My submissions</b>: under <b>Needs your attention</b>, on the solution's card and in the top bar, each counts as <b>pending</b> until the owner marks it <b>Addressed</b>. Contributors and librarians can read them but not mark them. There are no emails yet, so check My submissions from time to time.</>,
-      <><b>Addressed</b> only means "we have seen this and dealt with it". A suggestion does not require a change and nothing changes automatically: the owner decides whether to update the solution, and can undo it.</>,
-    ] }] : []),
+    ...(connected ? [{ id: "help-feedback", icon: "message" as const, eyebrow: "Solution teams", title: "Change Requests & Suggestions", body: <div className="mt-4 text-[15px] leading-relaxed">
+      <p>PRISMA allows users to provide two types of feedback: <b>Change Requests</b> and <b>Suggestions</b>.</p>
+      <h3 className="mt-5 text-[16px] font-semibold">Change Requests</h3>
+      <p className="mt-1.5">A Change Request comes from a Librarian during the review process. <b>Change Requests take priority because your solution cannot be published until they are resolved.</b></p>
+      <ul className="mt-2 space-y-1.5">
+        <li className="flex items-start gap-2.5"><span aria-hidden="true" className="mt-[0.6em] size-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} /><span className="min-w-0">Your solution will appear under <b>Needs Your Attention</b> in My Submissions, marked as <b>Changes Requested</b>.</span></li>
+        <li className="flex items-start gap-2.5"><span aria-hidden="true" className="mt-[0.6em] size-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} /><span className="min-w-0">Review the Librarian's comments, make the necessary changes, and resubmit your solution for approval.</span></li>
+      </ul>
+      <h3 className="mt-5 text-[16px] font-semibold">Suggestions</h3>
+      <p className="mt-1.5">Any PRISMA user can suggest improvements to a published solution by clicking <b>Suggest an Improvement</b>.</p>
+      <ul className="mt-2 space-y-1.5">
+        <li className="flex items-start gap-2.5"><span aria-hidden="true" className="mt-[0.6em] size-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} /><span className="min-w-0">Suggestions are private and visible only to the solution owner, contributors, and Librarians.</span></li>
+        <li className="flex items-start gap-2.5"><span aria-hidden="true" className="mt-[0.6em] size-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} /><span className="min-w-0">The solution owner can view suggestions directly on the solution page or under <b>Needs Your Attention</b> in My Submissions.</span></li>
+        <li className="flex items-start gap-2.5"><span aria-hidden="true" className="mt-[0.6em] size-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} /><span className="min-w-0">Suggestions remain pending until the owner marks them as <b>Addressed</b>.</span></li>
+      </ul>
+      <p className="mt-5"><b>Important:</b> Suggestions are optional. You decide whether to apply them. Marking a suggestion as Addressed simply means you've reviewed it; it doesn't automatically change your solution.</p>
+    </div> }] : []),
     ...(librarian ? [{ id: "help-review", icon: "clipboardCheck" as const, eyebrow: "Librarians", title: "Review and curate", steps: [
       <>Open the <b>Review queue</b>, then a submission. Check its content and the <b>Publication checklist</b>.{connected ? " The queue lists the solutions whose main capability is in an area where you own a capability; the global librarian sees them all." : ""}</>,
       <><b>Approve</b> to publish it, or <b>Request changes</b> with a comment saying what to fix. The owner then corrects and resubmits it.</>,
@@ -103,12 +114,12 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     {roles.map(role => <section key={role.id} id={role.id} hidden={activeGuide !== role.id} aria-labelledby={`${role.id}-title`} className="glass glass-lite glass-sheen mt-6 scroll-mt-24 rounded-[24px] p-6 sm:p-8">
       <p className="eyebrow">{role.eyebrow}</p>
       <h2 id={`${role.id}-title`} className="mt-1.5 text-[21px] font-bold">{role.title}</h2>
-      <ol className="mt-4 space-y-3">
-        {role.steps.map((step, index) => <li key={index} className="flex items-start gap-3 text-[15px] leading-relaxed">
+      {role.body ?? <ol className="mt-4 space-y-3">
+        {role.steps?.map((step, index) => <li key={index} className="flex items-start gap-3 text-[15px] leading-relaxed">
           <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full font-mono text-[12px] font-semibold" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)" }} aria-hidden="true">{index + 1}</span>
           <span className="min-w-0">{step}</span>
         </li>)}
-      </ol>
+      </ol>}
     </section>)}
 
     <section aria-labelledby="help-faq" className="mt-8">
