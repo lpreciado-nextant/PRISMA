@@ -767,7 +767,7 @@ foreach (var roleName in new[] { "PRISMA Contributor", "PRISMA CSM", "PRISMA Lib
     }
     foreach (var table in new[] { "nx_specializationarea", "nx_capability", "nx_technology", "nx_industry", "nx_clientrole" })
         foreach (var privilege in Metadata(client, table).Privileges)
-            if (privilege.PrivilegeType == PrivilegeType.Read || (roleName != "PRISMA CSM" && privilege.PrivilegeType == PrivilegeType.AppendTo))
+            if (privilege.PrivilegeType == PrivilegeType.Read || (roleName != "PRISMA CSM" && new[] { PrivilegeType.Append, PrivilegeType.AppendTo }.Contains(privilege.PrivilegeType)))
                 privileges.Add(new RolePrivilege((int)PrivilegeDepth.Global, privilege.PrivilegeId));
     foreach (var privilege in Metadata(client, "nx_solutioncontributor").Privileges)
     {

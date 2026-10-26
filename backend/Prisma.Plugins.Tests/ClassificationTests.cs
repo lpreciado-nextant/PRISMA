@@ -165,21 +165,128 @@ namespace Prisma.Plugins.Tests
             Assert.Throws<InvalidPluginExecutionException>(() => ReviewApi.Summary(Service(), parent, false));
         }
 
+        [Fact]
+        public void SaveReusesContributorRowAfterReselectingSamePerson()
+        {
+            var service = Service();
+            var parent = Parent();
+            var personId = Guid.NewGuid();
+            var contributorId = Guid.NewGuid();
+            service.Contributors[contributorId] = new Entity("nx_solutioncontributor", contributorId) {
+                ["nx_solution"] = parent.ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId)
+            };
+            var input = Input();
+            input.Contributors.Add(new ContributorInput { PersonId = personId.ToString("D") });
+
+            DraftGraph.Save(service, parent, input);
+
+            Assert.Equal(0, service.Creates);
+            Assert.Equal(1, service.Updates);
+            Assert.Equal(0, service.Deletes);
+            Assert.Equal(contributorId, Assert.Single(service.Contributors.Values).Id);
+            Assert.Equal(contributorId.ToString("D"), Assert.Single(DraftGraph.Read(service, parent).Graph.Contributors).Id);
+        }
+
+        [Fact]
+        public void SaveReusesReselectedContributorAndRemovesOmittedPeople()
+        {
+            var service = Service();
+            var parent = Parent();
+            var personId = Guid.NewGuid();
+            var keptId = Guid.NewGuid();
+            var removedId = Guid.NewGuid();
+            service.Contributors[keptId] = new Entity("nx_solutioncontributor", keptId) {
+                ["nx_solution"] = parent.ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId)
+            };
+            service.Contributors[removedId] = new Entity("nx_solutioncontributor", removedId) {
+                ["nx_solution"] = parent.ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", Guid.NewGuid())
+            };
+            var input = Input();
+            input.Contributors.Add(new ContributorInput { PersonId = personId.ToString("D") });
+
+            DraftGraph.Save(service, parent, input);
+
+            Assert.Equal(keptId, Assert.Single(service.Contributors.Values).Id);
+            Assert.Equal(0, service.Creates);
+            Assert.Equal(1, service.Updates);
+            Assert.Equal(1, service.Deletes);
+        }
+
+        [Fact]
+        public void SaveCreatesAndUpdatesContributorWithoutReusingAnotherDraftRow()
+        {
+            var service = Service();
+            var parent = Parent();
+            var personId = Guid.NewGuid();
+            var foreignId = Guid.NewGuid();
+            service.Contributors[foreignId] = new Entity("nx_solutioncontributor", foreignId) {
+                ["nx_solution"] = Parent().ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId)
+            };
+            var input = Input();
+            input.Contributors.Add(new ContributorInput { PersonId = personId.ToString("D") });
+
+            DraftGraph.Save(service, parent, input);
+            var stored = Assert.Single(DraftGraph.Read(service, parent).Graph.Contributors);
+            Assert.NotEqual(foreignId.ToString("D"), stored.Id);
+            input.Contributors[0].Id = stored.Id;
+            DraftGraph.Save(service, parent, input);
+
+            Assert.Equal(2, service.Contributors.Count);
+            Assert.True(service.Contributors.ContainsKey(foreignId));
+            Assert.Equal(1, service.Creates);
+            Assert.Equal(1, service.Updates);
+            Assert.Equal(0, service.Deletes);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SaveRejectsForeignContributorIdEvenWhenPersonAlreadyExists(bool samePersonExists)
+        {
+            var service = Service();
+            var parent = Parent();
+            var personId = Guid.NewGuid();
+            var foreignId = Guid.NewGuid();
+            service.Contributors[foreignId] = new Entity("nx_solutioncontributor", foreignId) {
+                ["nx_solution"] = Parent().ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId)
+            };
+            if (samePersonExists)
+            {
+                var localId = Guid.NewGuid();
+                service.Contributors[localId] = new Entity("nx_solutioncontributor", localId) {
+                    ["nx_solution"] = parent.ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId)
+                };
+            }
+            var input = Input();
+            input.Contributors.Add(new ContributorInput { Id = foreignId.ToString("D"), PersonId = personId.ToString("D") });
+
+            Assert.Contains("does not belong", Assert.Throws<InvalidPluginExecutionException>(() => DraftGraph.Save(service, parent, input)).Message);
+            Assert.Equal(0, service.Writes);
+        }
+
         private sealed class GraphService : IOrganizationService
         {
             public Dictionary<Guid, Entity> Capabilities = new Dictionary<Guid, Entity>();
+            public Dictionary<Guid, Entity> Contributors = new Dictionary<Guid, Entity>();
             public Dictionary<string, HashSet<Guid>> Links = DraftGraph.Relationships.ToDictionary(name => name, name => new HashSet<Guid>());
             public int Writes;
+            public int Creates, Updates, Deletes;
             public Entity Retrieve(string entityName, Guid id, ColumnSet columns)
             {
                 if (entityName == "nx_capability") return Capabilities[id];
+                if (entityName == "cr6b0_consultant") return new Entity(entityName, id);
                 Assert.Equal("nx_specializationarea", entityName);
                 return new Entity(entityName, id);
             }
             public EntityCollection RetrieveMultiple(QueryBase request)
             {
                 var query = Assert.IsType<QueryExpression>(request);
-                if (query.EntityName == "nx_solutioncontributor" || query.EntityName == "nx_uploadsession") return new EntityCollection();
+                if (query.EntityName == "nx_uploadsession") return new EntityCollection();
+                if (query.EntityName == "nx_solutioncontributor")
+                {
+                    var parentId = (Guid)query.Criteria.Conditions.Single(condition => condition.AttributeName == "nx_solution").Values[0];
+                    return new EntityCollection(Contributors.Values.Where(row => row.GetAttributeValue<EntityReference>("nx_solution").Id == parentId).ToList());
+                }
                 if (query.EntityName == "nx_specializationarea")
                     return new EntityCollection(Links[DraftGraph.Relationships[3]].OrderBy(id => id == OtherArea ? 0 : 1).Select(id => new Entity(query.EntityName, id)).ToList());
                 var name = Links.Keys.Single(key => key.ToLowerInvariant() == query.EntityName);
@@ -203,9 +310,35 @@ namespace Prisma.Plugins.Tests
                 Writes++;
                 foreach (var row in relatedEntities) Links[relationship.SchemaName].Remove(row.Id);
             }
-            public Guid Create(Entity entity) { throw new NotSupportedException(); }
-            public void Update(Entity entity) { throw new NotSupportedException(); }
-            public void Delete(string entityName, Guid id) { throw new NotSupportedException(); }
+            private void CheckContributorKey(Entity entity)
+            {
+                Assert.Equal("nx_solutioncontributor", entity.LogicalName);
+                if (Contributors.Values.Any(row => row.Id != entity.Id
+                    && row.GetAttributeValue<EntityReference>("nx_solution").Id == entity.GetAttributeValue<EntityReference>("nx_solution").Id
+                    && row.GetAttributeValue<EntityReference>("nx_builtby").Id == entity.GetAttributeValue<EntityReference>("nx_builtby").Id))
+                    throw new InvalidPluginExecutionException("Solution Contributor Key violated.");
+            }
+            public Guid Create(Entity entity)
+            {
+                CheckContributorKey(entity);
+                entity.Id = Guid.NewGuid();
+                Contributors.Add(entity.Id, entity);
+                Creates++; Writes++;
+                return entity.Id;
+            }
+            public void Update(Entity entity)
+            {
+                CheckContributorKey(entity);
+                Assert.True(Contributors.ContainsKey(entity.Id));
+                Contributors[entity.Id] = entity;
+                Updates++; Writes++;
+            }
+            public void Delete(string entityName, Guid id)
+            {
+                Assert.Equal("nx_solutioncontributor", entityName);
+                Assert.True(Contributors.Remove(id));
+                Deletes++; Writes++;
+            }
         }
     }
 

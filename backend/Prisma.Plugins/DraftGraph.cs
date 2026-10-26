@@ -166,6 +166,8 @@ namespace Prisma.Plugins
                 caller.Retrieve("cr6b0_consultant", personId, new ColumnSet(false));
                 var identifier = string.IsNullOrEmpty(person.Id) ? Guid.Empty : ContributorPolicy.Identifier(person.Id);
                 if (identifier != Guid.Empty && !existing.ContainsKey(identifier)) throw Invalid("Contributor does not belong to this draft.");
+                if (identifier == Guid.Empty)
+                    identifier = existing.Values.Where(candidate => candidate.GetAttributeValue<EntityReference>("nx_builtby")?.Id == personId).Select(candidate => candidate.Id).SingleOrDefault();
                 var row = new Entity("nx_solutioncontributor", identifier) {
                     ["nx_contributorname"] = "Contributor " + personId.ToString("D"),
                     ["nx_solution"] = parent.ToEntityReference(), ["nx_builtby"] = new EntityReference("cr6b0_consultant", personId),
