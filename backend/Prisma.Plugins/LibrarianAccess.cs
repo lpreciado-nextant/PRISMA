@@ -66,13 +66,43 @@ namespace Prisma.Plugins
             return row.GetAttributeValue<OptionSetValue>("statecode")?.Value == 0 && area != null && areas.Contains(area.Id);
         }
 
+        /// <summary>
+        /// Any librarian may read a record in the review queue (Pending review, Published, or returned with Changes requested),
+        /// in every area, with its feedback and suggestions. Deciding and editing stay with <see cref="CanManage"/>.
+        /// </summary>
+        public bool CanView(IOrganizationService server, Entity solution)
+        {
+            return Available && (InQueue(solution) || CanManage(server, solution));
+        }
+
+        /// <summary>Pending review, Published, or a Draft returned with Changes requested. Needs nx_publicationstatus and nx_reviewoutcome.</summary>
+        public static bool InQueue(Entity solution)
+        {
+            var publication = solution.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value;
+            return publication == ReviewPolicy.Pending || publication == ReviewPolicy.Published
+                || (publication == DraftPolicy.DraftStatus && solution.GetAttributeValue<OptionSetValue>("nx_reviewoutcome")?.Value == SuggestionPolicy.ChangesRequested);
+        }
+
+        /// <summary>The review queue shows every area to any librarian; each row says whether the caller may manage it.</summary>
         public void FilterQueue(QueryExpression query)
         {
             if (!Available) throw MediaPolicy.Invalid("Capability-owner librarian access or the PRISMA Global Librarian role is required.");
-            if (Global) return;
-            var capability = query.AddLink("nx_capability", "nx_capability", "nx_capabilityid");
-            capability.LinkCriteria.AddCondition("statecode", ConditionOperator.Equal, 0);
-            capability.LinkCriteria.AddCondition("nx_specializationarea", ConditionOperator.In, areas.Select(id => (object)id).ToArray());
+        }
+
+        /// <summary>
+        /// The submission page: like <see cref="ReadSolution"/>, but a librarian outside the record's area may still read a
+        /// queue record (`viewer`, read-only). Only reads may use it; every write goes through <see cref="ReadSolution"/>.
+        /// </summary>
+        public Entity ReadForReview(IOrganizationService caller, IOrganizationService server, Guid user, Guid id, ColumnSet columns, out bool librarian, out bool viewer)
+        {
+            var selected = new ColumnSet(columns.Columns.Concat(new[] { "ownerid", "nx_capability", "nx_publicationstatus", "nx_reviewoutcome" }).Distinct().ToArray());
+            var solution = server.Retrieve("nx_solution", id, selected);
+            librarian = CanManage(server, solution);
+            viewer = !librarian && Available && InQueue(solution);
+            var owner = solution.GetAttributeValue<EntityReference>("ownerid");
+            if (owner?.LogicalName == "systemuser" && owner.Id == user) return caller.Retrieve("nx_solution", id, selected);
+            if (librarian || viewer) return solution;
+            throw MediaPolicy.Invalid("Submission access denied. Librarian access is limited to records in the review queue.");
         }
 
         public Entity ReadSolution(IOrganizationService caller, IOrganizationService server, Guid user, Guid id, ColumnSet columns, out bool librarian)

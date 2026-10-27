@@ -158,6 +158,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "librarianEditedOn", EmitDefaultValue = false)] public string LibrarianEditedOn { get; set; }
         [DataMember(Name = "librarianEditedBy", EmitDefaultValue = false)] public string LibrarianEditedBy { get; set; }
         [DataMember(Name = "librarianEditPending")] public bool LibrarianEditPending { get; set; }
+        /// <summary>Review queue only: whether the caller may decide on and edit this record (false: another area, read-only).</summary>
+        [DataMember(Name = "manage", EmitDefaultValue = false)] public bool? Manage { get; set; }
     }
 
     [DataContract]
@@ -169,6 +171,8 @@ namespace Prisma.Plugins
         [DataMember(Name = "librarian")] public bool Librarian { get; set; }
         /// <summary>Whether the caller may edit this record as librarian (ADR-0013): someone else's, Pending review or Published.</summary>
         [DataMember(Name = "librarianEdit")] public bool LibrarianEdit { get; set; }
+        /// <summary>A librarian reading a queue record outside their area: content, feedback and suggestions, no decisions.</summary>
+        [DataMember(Name = "viewer", EmitDefaultValue = false)] public bool Viewer { get; set; }
     }
 
     [DataContract]
@@ -222,14 +226,17 @@ namespace Prisma.Plugins
                 else query.Criteria.AddCondition("ownerid", ConditionOperator.Equal, context.InitiatingUserId);
                 query.Orders.Add(new OrderExpression("nx_solutionid", OrderType.Ascending));
                 var rows = (review ? server : caller).RetrieveMultiple(query);
-                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionPage { Records = rows.Entities.Select(row => Summary(server, row, access.CanManage(server, row))).ToList(), MoreRecords = rows.MoreRecords, PagingCookie = rows.PagingCookie, Librarian = access.Available, Scope = review ? access.Scope() : null });
+                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionPage { Records = rows.Entities.Select(row => QueueSummary(server, row, access, review)).ToList(), MoreRecords = rows.MoreRecords, PagingCookie = rows.PagingCookie, Librarian = access.Available, Scope = review ? access.Scope() : null });
                 return;
             }
             if (context.MessageName != "nx_GetSubmission" && context.MessageName != ReviewPolicy.Transition) throw MediaPolicy.Invalid("Unknown submission operation.");
             var identifier = (Guid)context.InputParameters["SolutionId"];
-            bool librarian;
-            var parent = access.ReadSolution(caller, server, context.InitiatingUserId, identifier, Columns(), out librarian);
-            var reader = librarian ? server : caller;
+            bool librarian, viewer = false;
+            // Reading may cross areas (read-only); a transition always needs the record's own area.
+            var parent = context.MessageName == ReviewPolicy.Transition
+                ? access.ReadSolution(caller, server, context.InitiatingUserId, identifier, Columns(), out librarian)
+                : access.ReadForReview(caller, server, context.InitiatingUserId, identifier, Columns(), out librarian, out viewer);
+            var reader = librarian || viewer ? server : caller;
             if (context.MessageName == ReviewPolicy.Transition)
             {
                 if (!context.IsInTransaction) throw MediaPolicy.Invalid("A transition transaction is required.");
@@ -330,9 +337,9 @@ namespace Prisma.Plugins
                 parent = reader.Retrieve("nx_solution", identifier, Columns());
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionDetail {
-                Record = Summary(server, parent, librarian), Graph = DraftGraph.Read(reader, parent),
+                Record = Summary(server, parent, librarian || viewer), Graph = DraftGraph.Read(reader, parent),
                 Media = MediaApi.Snapshots(server, identifier), Librarian = librarian,
-                LibrarianEdit = librarian && DraftPolicy.LibrarianMayEdit(parent, context.InitiatingUserId)
+                LibrarianEdit = librarian && DraftPolicy.LibrarianMayEdit(parent, context.InitiatingUserId), Viewer = viewer
             });
         }
 
@@ -367,6 +374,15 @@ namespace Prisma.Plugins
 
         public static ColumnSet Columns() { return new ColumnSet(DraftPolicy.CoreColumns.Concat(new[] { "ownerid", "nx_dateadded", "createdon", "modifiedon", "nx_librarynote", "nx_publicationstatus", "nx_reviewoutcome", "nx_reviewcomments", "nx_clientsafereviewed",
             DraftPolicy.LibrarianEditedBy, DraftPolicy.LibrarianEditedOn, DraftPolicy.LibrarianEditPending }).ToArray()); }
+        /// <summary>A queue row: every librarian sees who edited it; `manage` says whether the caller may decide on it.</summary>
+        public static SubmissionSummary QueueSummary(IOrganizationService server, Entity record, LibrarianAccess access, bool review)
+        {
+            if (!review) return Summary(server, record, access.CanManage(server, record));
+            var summary = Summary(server, record, true);
+            summary.Manage = access.CanManage(server, record);
+            return summary;
+        }
+
         public static SubmissionSummary Summary(IOrganizationService server, Entity record, bool librarian)
         {
             var edited = record.GetAttributeValue<DateTime?>(DraftPolicy.LibrarianEditedOn);

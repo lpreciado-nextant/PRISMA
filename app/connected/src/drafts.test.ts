@@ -221,6 +221,12 @@ test("workflow rejects mismatched versions, unknown states and internal presenta
   assert.throws(() => parseSubmission(result({ ...detail, record: { ...edited, librarianEditedBy: 7 } })), /metadata/);
   // Whether the caller may edit it as librarian; older plug-ins omit it.
   assert.equal(parseSubmission(result({ ...detail, librarian: true, librarianEdit: false })).librarianEdit, false);
+  // Another area's queue record: read-only, as the plug-in says; older plug-ins send no flag.
+  assert.equal(parseSubmission(result({ ...detail, viewer: true })).viewer, true);
+  assert.equal(parseSubmission(result(detail)).viewer, undefined);
+  assert.throws(() => parseSubmission(result({ ...detail, viewer: "yes" })), /permission/);
+  assert.equal(parseSubmission(result({ ...detail, record: { ...detail.record, manage: false } })).record.manage, false);
+  assert.throws(() => parseSubmission(result({ ...detail, record: { ...detail.record, manage: 1 } })), /permission/);
   assert.equal(parseSubmission(result(detail)).librarianEdit, undefined);
   assert.throws(() => parseSubmission(result({ ...detail, librarianEdit: "no" })), /permission/);
 });

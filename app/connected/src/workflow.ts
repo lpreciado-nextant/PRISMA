@@ -9,9 +9,12 @@ import { readAll, type ReadRows } from "./catalogue.ts";
 
 export const PUBLICATIONS: Record<number, string> = { 125060000: "Published", 125060001: "Retired", 125060002: "Pending review", 125060003: "Draft" };
 /** `librarianEdit*` (ADR-0013): the last librarian edit. The editor's name reaches librarians only; `pending` until the librarian explains it. */
-export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; modifiedOn?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string; librarianEditedOn?: string; librarianEditedBy?: string; librarianEditPending?: boolean };
+export type Submission = { core: SavedDraft; areaIds: string[]; publication: number; outcome: number; comments: string; cleared: boolean; owner?: string; dateAdded?: string; modifiedOn?: string; imageCount?: number; attachmentCount?: number; libraryNotes?: string; librarianEditedOn?: string; librarianEditedBy?: string; librarianEditPending?: boolean;
+  /** Review queue: whether the caller may decide on and edit it; `false` for another area's record (read-only). */
+  manage?: boolean };
 /** `librarianEdit`: the caller may edit it as librarian (someone else's, Pending review or Published). Absent from older plug-ins. */
-export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean; librarianEdit?: boolean };
+/** `viewer`: a librarian reading another area's queue record, read-only (no decisions or edits). Absent from older plug-ins. */
+export type SubmissionDetail = { record: Submission; graph: GraphSnapshot; media: MediaItem[]; librarian: boolean; librarianEdit?: boolean; viewer?: boolean };
 /** Contributor credit and the solution's effort; present mode carries neither. */
 export type PublishedDetail = { id: string; rowVersion: string; contributors: { name: string; email?: string; level?: string }[]; estimatedMinimumHours?: number; complexity?: Solution["complexity"]; projects: string[]; media: MediaItem[]; libraryNotes?: string };
 export function mediaAsset(item: MediaItem, index: number): Solution["assets"][number] {
@@ -107,7 +110,8 @@ function submission(value: unknown): Submission {
   for (const key of ["imageCount", "attachmentCount"] as const) if (row[key] !== undefined) { if (typeof row[key] !== "number" || !Number.isInteger(row[key]) || row[key] < 0 || row[key] > 6) throw new Error("Invalid submission media count."); metadata[key] = row[key]; }
   if (!Array.isArray(row.areaIds) || row.areaIds.some(id => typeof id !== "string" || !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id)) || new Set(row.areaIds).size !== row.areaIds.length) throw new Error("Invalid submission areas.");
   if (row.librarianEditPending !== undefined && typeof row.librarianEditPending !== "boolean") throw new Error("Invalid librarian edit state.");
-  return { core: snapshot(row.core), areaIds: row.areaIds as string[], publication: row.publication, outcome: row.outcome as number, comments: row.comments, cleared: row.cleared, ...metadata, ...(row.librarianEditPending === undefined ? {} : { librarianEditPending: row.librarianEditPending as boolean }) };
+  if (row.manage !== undefined && typeof row.manage !== "boolean") throw new Error("Invalid review permission.");
+  return { core: snapshot(row.core), areaIds: row.areaIds as string[], publication: row.publication, outcome: row.outcome as number, comments: row.comments, cleared: row.cleared, ...metadata, ...(row.librarianEditPending === undefined ? {} : { librarianEditPending: row.librarianEditPending as boolean }), ...(row.manage === undefined ? {} : { manage: row.manage as boolean }) };
 }
 export function parseSubmission(value: unknown): SubmissionDetail {
   const data = workflowData(value);
@@ -116,7 +120,8 @@ export function parseSubmission(value: unknown): SubmissionDetail {
   const media = parseMedia(wrap({ id: record.core.id, rowVersion: record.core.rowVersion, sessionId: null, blockSize: 524288, media: data.media })).media;
   if (typeof data.librarian !== "boolean" || graph.id !== record.core.id || graph.rowVersion !== record.core.rowVersion) throw new Error("Mismatched submission response.");
   if (data.librarianEdit !== undefined && typeof data.librarianEdit !== "boolean") throw new Error("Invalid librarian edit permission.");
-  return { record, graph, media, librarian: data.librarian, ...(data.librarianEdit === undefined ? {} : { librarianEdit: data.librarianEdit }) };
+  if (data.viewer !== undefined && typeof data.viewer !== "boolean") throw new Error("Invalid review permission.");
+  return { record, graph, media, librarian: data.librarian, ...(data.librarianEdit === undefined ? {} : { librarianEdit: data.librarianEdit }), ...(data.viewer ? { viewer: true } : {}) };
 }
 /**
  * The review queue's view of the librarian's access, for its filters only (the plug-in still authorizes every record):

@@ -13,7 +13,8 @@ import { AreaTag } from "./Badges";
 import { Notice } from "./Notice";
 
 const filters = ["Pending review", "Changes requested", "Published"] as const;
-type Entry = { solution: Solution; owner?: string; imageCount?: number; attachmentCount?: number };
+/** `manage: false`: another area's record, which this librarian may read but not decide on (connected review queue). */
+type Entry = { solution: Solution; owner?: string; imageCount?: number; attachmentCount?: number; manage?: boolean };
 const matches = ({ solution }: Entry, status: string) => submissionState(solution) === status;
 
 type Choice<Value extends string> = { value: Value; title: string; detail: string; icon: IconName; color: string };
@@ -66,7 +67,7 @@ const textArea = "mt-2 block w-full resize-y rounded-lg border border-(--glass-e
  * Connected librarians can also edit the solution (ADR-0013). After a real edit the comment becomes required: on
  * approval for a pending record, or through "Confirm changes" for a published one, which repeats the checklist.
  */
-export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, onEdit, editBlocked, edit, onConfirmEdit, children }: {
+export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, onEdit, editBlocked, edit, onConfirmEdit, viewOnly, children }: {
   status: string; owner?: string; client?: string; context?: string; feedback?: string;
   /** The capability's owner from `nx_capability.nx_capabilityowner`: a name, `null` when none is assigned, omitted when unknown. */
   capabilityOwner?: string | null;
@@ -85,6 +86,11 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
   edit?: { on?: string; by?: string; pending: boolean };
   /** Confirms a published record's unexplained edit with the checklist and the comment. */
   onConfirmEdit?: () => void;
+  /**
+   * A librarian reading another area's record: why they cannot decide. Status, overview, feedback and the children stay;
+   * the checklist and every decision are left out (the server rejects them anyway).
+   */
+  viewOnly?: string;
   children?: ReactNode;
 }) {
   const heading = useId();
@@ -126,6 +132,9 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         {onEdit && status !== "Published" && <button type="button" disabled={disabled} onClick={onEdit} className={primaryAction} style={{ background: "var(--accent)", color: "var(--on-accent)" }}><Icon name="edit" size={14} />Edit solution</button>}
       </div>
       {!onEdit && editBlocked && <p className="mt-2 flex items-start gap-1.5 text-[13px] text-(--ink-2)"><Icon name="edit" size={13} className="mt-0.5 shrink-0" />{editBlocked}</p>}
+      {viewOnly && <p className="mt-3 flex items-start gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[13.5px] text-(--ink-2)" style={{ background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
+        <Icon name="eyeOff" size={14} className="mt-0.5 shrink-0" /><span><span className="font-semibold text-(--ink)">View only.</span> {viewOnly}</span>
+      </p>}
 
       {/* 2 · Solution overview: who and what, from the record's own fields; nothing invented when a value is missing. */}
       <section aria-labelledby={`${heading}-overview`} className={reviewSection}>
@@ -151,7 +160,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
       </section>
 
       {/* 3 · Publication checklist (pending review only): required content first, then what the librarian confirms. */}
-      {(pending || publishedEdit) && <section aria-labelledby={`${heading}-checklist`} className={reviewSection}>
+      {(pending || publishedEdit) && !viewOnly && <section aria-labelledby={`${heading}-checklist`} className={reviewSection}>
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h3 id={`${heading}-checklist`} className="eyebrow">Publication checklist</h3>
           <span className="font-mono text-[11px] text-(--ink-3)">{PUBLICATION_CHECKLIST.length - remaining} / {PUBLICATION_CHECKLIST.length} confirmed</span>
@@ -173,7 +182,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
         </fieldset>
         {children}
       </section>}
-      {!pending && !publishedEdit && children}
+      {(viewOnly || (!pending && !publishedEdit)) && children}
       {noticeBusy && typeof notice === "string" ? <LoadingState className="mt-3" label={notice} /> : notice && <div role="status" className="mt-3 text-[14px] text-(--ink-2)">{notice}</div>}
 
       {/* 3 · Review decision, then only the chosen decision's required action. */}
@@ -186,7 +195,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
           </div>
         </div>
         {feedback && <div className="mt-4 border-t border-(--glass-edge) pt-4">
-          <h4 className="eyebrow">Your feedback</h4>
+          <h4 className="eyebrow">{viewOnly ? "Librarian feedback" : "Your feedback"}</h4>
           <p className="mt-2 border-l-2 border-(--ink-3) pl-3 text-[14.5px] leading-relaxed whitespace-pre-wrap break-words">{feedback}</p>
         </div>}
       </section>}
@@ -224,7 +233,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
               className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg px-4 py-2 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--live)" }}><Icon name="check" size={15} />Confirm changes</button>
           </div>
         </fieldset>}
-        {feedback && !manage && !publishedEdit && <p className="mt-2.5 border-l-2 border-(--live) pl-3 text-[13.5px] whitespace-pre-wrap break-words text-(--ink-2)"><span className="font-semibold text-(--ink)">Your note to the contributor: </span>{feedback}</p>}
+        {feedback && !manage && !publishedEdit && <p className="mt-2.5 border-l-2 border-(--live) pl-3 text-[13.5px] whitespace-pre-wrap break-words text-(--ink-2)"><span className="font-semibold text-(--ink)">{viewOnly ? "Librarian's note to the contributor: " : "Your note to the contributor: "}</span>{feedback}</p>}
         {manage && <fieldset id={`${heading}-manage`} disabled={disabled} className="animate-rise mt-3 min-w-0 border-t border-(--glass-edge) pt-3">
           <legend className="sr-only">{manage === "changes" ? "Request changes" : "Retire from the library"}</legend>
           {/* One line on what each action means, so the two read differently. */}
@@ -249,7 +258,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
       </section>}
 
       {/* 4 · Review decision: one choice, then only its required input. */}
-      {pending && <fieldset disabled={disabled} className={`${reviewSection} min-w-0`}>
+      {pending && !viewOnly && <fieldset disabled={disabled} className={`${reviewSection} min-w-0`}>
         <legend className="sr-only">Review decision</legend>
         <h3 aria-hidden="true" className="eyebrow">Review decision</h3>
         <div role="radiogroup" aria-label="Review decision" className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -312,11 +321,11 @@ function submittedOn(value?: string) {
 
 /** An area librarian's review scope, by name: the areas they manage and the capabilities they own there. */
 export type ReviewScope = { areas: SpecializationArea[]; capabilities: string[] };
-type ScopeView = "area" | "mine";
+type ScopeView = "area" | "mine" | "all";
 const SCOPE_VIEW_KEY = "prisma.review.scope-view";
 /** The scope view survives opening a submission and coming back; unavailable storage falls back to the whole area. */
 function readScopeView(): ScopeView {
-  try { return sessionStorage.getItem(SCOPE_VIEW_KEY) === "mine" ? "mine" : "area"; } catch { return "area"; }
+  try { const stored = sessionStorage.getItem(SCOPE_VIEW_KEY); return stored === "mine" || stored === "all" ? stored : "area"; } catch { return "area"; }
 }
 
 /**
@@ -324,9 +333,10 @@ function readScopeView(): ScopeView {
  * main capability's area (its first area when the capability has none), and the capability filter lists only the
  * chosen area's capabilities; choosing a capability chooses its area.
  *
- * `scope` (an area librarian): the queue is already limited to their areas, so the Area filter gives way to "Reviewing
- * …" and a choice between the whole area and the capabilities they own. It only filters what is shown; what they may
- * review stays with the server. Without it (a global librarian) Area and Capability filter the whole queue.
+ * `scope` (an area librarian): "Reviewing …" and a choice between their whole area (what they may decide on, by the
+ * server's `manage`), the capabilities they own, and all areas, where other areas' records are view only and the Area
+ * filter returns. It only filters what is shown; what they may decide stays with the server. Without it (a global
+ * librarian) Area and Capability filter the whole queue.
  */
 export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, scope }: { entries: Entry[]; connected?: boolean; capabilityAreas?: Readonly<Record<string, SpecializationArea>>; scope?: ReviewScope }) {
   const [filter, setFilter] = useState<typeof filters[number]>("Pending review");
@@ -337,9 +347,11 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
   const [scopeView, setScopeView] = useState<ScopeView>(readScopeView);
   const view: ScopeView = scope ? scopeView : "area";
   const mainArea = (solution: Solution): SpecializationArea | undefined => capabilityAreas[solution.capabilities[0] ?? ""] ?? solutionAreas(solution)[0];
-  // Scope and area first: they decide which capabilities can be chosen.
-  const inScope = ({ solution }: Entry, viewing = view, chosenArea = area) => (viewing !== "mine" || !!scope?.capabilities.includes(solution.capabilities[0] ?? ""))
+  // Scope and area first: they decide which capabilities can be chosen. The Area filter only exists for all areas.
+  const inScope = ({ solution, manage }: Entry, viewing = view, chosenArea = area) => (viewing === "all" || manage !== false)
+    && (viewing !== "mine" || !!scope?.capabilities.includes(solution.capabilities[0] ?? ""))
     && (!chosenArea || mainArea(solution) === chosenArea);
+  const areaFilter = !scope || view === "all";
   // Only capabilities with records in the open tab, within the scope and area (A–Z): every option leads somewhere.
   const capabilityOptions = (viewing: ScopeView, chosenArea: SpecializationArea | "") =>
     ["", ...[...new Set(entries.filter(entry => matches(entry, filter) && inScope(entry, viewing, chosenArea)).flatMap(({ solution }) => solution.capabilities.slice(0, 1)))].sort((a, b) => a.localeCompare(b))];
@@ -348,7 +360,7 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
   const chooseCapability = (value: string) => {
     setCapability(value);
     const owner = capabilityAreas[value];
-    if (value && owner && !scope) setArea(owner);
+    if (value && owner && areaFilter) setArea(owner);
   };
   // A new scope or area drops a capability it no longer offers.
   const chooseArea = (value: SpecializationArea | "") => {
@@ -358,13 +370,18 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
   const chooseView = (value: ScopeView) => {
     setScopeView(value);
     try { sessionStorage.setItem(SCOPE_VIEW_KEY, value); } catch { void 0; }
-    if (!capabilityOptions(value, area).includes(capability)) setCapability("");
+    // Leaving all areas hides the Area filter, so it must stop filtering too.
+    const nextArea = value === "all" ? area : "";
+    setArea(nextArea);
+    if (!capabilityOptions(value, nextArea).includes(capability)) setCapability("");
   };
   const terms = query.trim().toLowerCase();
   // Scope, area, capability and search apply to every tab, so each tab's count matches what it lists.
   const shown = (entry: Entry) => inScope(entry) && (!chosenCapability || entry.solution.capabilities[0] === chosenCapability)
     && `${entry.solution.name} ${entry.solution.summary} ${entry.solution.capabilities.join(" ")} ${entry.owner ?? ""}`.toLowerCase().includes(terms);
   const counts = Object.fromEntries(filters.map(option => [option, entries.filter(entry => matches(entry, option) && shown(entry)).length])) as Record<typeof filters[number], number>;
+  // Amber means "your turn": only pending records this librarian may decide on, even when all areas are listed.
+  const yourTurn = entries.some(entry => matches(entry, "Pending review") && shown(entry) && entry.manage !== false);
   const visible = entries.filter(entry => matches(entry, filter) && shown(entry))
     // Undated records sort last either way; ties keep a stable alphabetical order.
     .sort((a, b) => {
@@ -387,7 +404,7 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
         return <button type="button" key={option} aria-pressed={active} onClick={() => setFilter(option)} className="-mb-px cursor-pointer border-b-[3px] px-3 py-3 text-[14px] font-semibold transition-colors" style={{ borderColor: active ? "var(--accent)" : "transparent", color: active ? "var(--accent)" : "var(--ink-2)" }}>
           {option}
           {/* Pending review is the librarian's to-do: its count is amber like the masthead's Review queue badge. */}
-          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={option === "Pending review" && counts[option] > 0
+          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={option === "Pending review" && yourTurn
             ? { color: "color-mix(in srgb, var(--proto) 85%, var(--ink))", background: "color-mix(in srgb, var(--proto) 20%, transparent)" }
             : { background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{counts[option]}</span>
         </button>;
@@ -404,20 +421,24 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
       <div className="view-toggle view-toggle--text" role="group" aria-label="Review scope">
         <button type="button" aria-pressed={view === "area"} onClick={() => chooseView("area")}>All in my area</button>
         <button type="button" aria-pressed={view === "mine"} onClick={() => chooseView("mine")}>My capabilities</button>
+        <button type="button" aria-pressed={view === "all"} onClick={() => chooseView("all")}>All areas</button>
       </div>
     </div>}
 
     {/* Search & filters: search stays the widest control; area narrows capability, and a capability sets its area. */}
     <div className={`${scope ? "mt-3" : "mt-5"} flex flex-wrap items-center gap-2.5`}>
       <label className="flex h-9 min-w-0 flex-1 basis-72 items-center gap-2 rounded-[10px] border border-(--glass-edge) px-3" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}><Icon name="search" /><input type="search" aria-label="Search review queue" placeholder={connected ? "Search submissions" : "Search submissions or owners"} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px]" /></label>
-      {!scope && <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={chooseArea} getLabel={value => value ? AREAS[value].name : "All areas"} buttonClassName={`${filterButton} min-w-[200px]`} />}
-      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={chooseCapability} getLabel={value => value || "All capabilities"} getHint={value => { const owner = capabilityAreas[value]; return value && owner && !area && (!scope || scope.areas.length > 1) ? AREAS[owner].short : ""; }} buttonClassName={`${filterButton} min-w-[240px]`} />
+      {areaFilter && <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={chooseArea} getLabel={value => value ? AREAS[value].name : "All areas"} buttonClassName={`${filterButton} min-w-[200px]`} />}
+      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={chooseCapability} getLabel={value => value || "All capabilities"} getHint={value => { const owner = capabilityAreas[value]; return value && owner && !area && (areaFilter || scope.areas.length > 1) ? AREAS[owner].short : ""; }} buttonClassName={`${filterButton} min-w-[240px]`} />
       <SelectPicker compact label="Sort" value={sort} options={["newest", "oldest"] as const} onChange={setSort} getLabel={value => value === "newest" ? "Newest first" : "Oldest first"} getButtonLabel={value => `Sort: ${value === "newest" ? "Newest" : "Oldest"}`} />
     </div>
 
     <div className="mt-4 flex flex-wrap items-center gap-3"><p className="text-[13px] text-(--ink-2)" role="status">{plural(visible.length, "submission")}</p>{narrowed && visible.length > 0 && clearButton}</div>
     {!visible.length ? <div className="py-16 text-center"><Icon name="check" size={26} className="mx-auto" /><h2 className="mt-4 text-[20px]">{narrowed ? "No matching submissions" : filter === "Pending review" ? "Nothing awaiting review" : "No submissions in this status"}</h2>{narrowed && <div className="mt-3">{clearButton}</div>}</div> : <ul className="mt-3 space-y-2.5">
-      {visible.map(({ solution, owner, imageCount, attachmentCount }) => {
+      {visible.map(({ solution, owner, imageCount, attachmentCount, manage }) => {
+        // Another area's record: readable, not this librarian's to decide.
+        const viewOnly = manage === false;
+        const action = viewOnly ? "View" : filter === "Pending review" ? "Review" : "View";
         // The main area and the main capability, as the form classifies them.
         const primary = mainArea(solution);
         const areas = primary ? [primary] : [];
@@ -433,6 +454,7 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
             <div className="flex flex-wrap items-center gap-1.5 pr-20 sm:pr-0">
               {areas.map(value => <AreaTag key={value} area={value} size="xs" />)}
               {solution.capabilities.slice(0, 1).map(value => <span key={value} className="inline-flex items-center rounded-full border border-(--glass-edge) px-2 py-0.5 text-[10.5px] font-semibold text-(--ink-2)">{value}</span>)}
+              {viewOnly && <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-semibold text-(--ink-2)" style={{ background: "color-mix(in srgb, var(--ink) 8%, transparent)" }}><Icon name="eyeOff" size={11} />View only</span>}
             </div>
             <h2 className="mt-2 break-words text-[17px] leading-snug font-semibold">{solution.name || "Untitled solution"}</h2>
             {solution.summary && <p className="mt-0.5 line-clamp-2 break-words text-[14px] text-(--ink-2)">{solution.summary}</p>}
@@ -443,9 +465,9 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
               ].filter(Boolean).flatMap((item, index) => index ? [<span key={`dot-${index}`} aria-hidden="true">·</span>, item] : [item])}
             </p>
           </div>
-          <button type="button" aria-label={`${filter === "Pending review" ? "Review" : "View"} ${solution.name}`} onClick={() => navigate(`/review/${solution.id}`)}
+          <button type="button" aria-label={`${action} ${solution.name}`} onClick={() => navigate(`/review/${solution.id}`)}
             className="inline-flex cursor-pointer items-center justify-center gap-2 self-center justify-self-start rounded-lg border border-(--accent)/40 px-4 py-2.5 text-[14px] font-semibold text-(--accent) transition-colors group-hover:border-(--accent) group-hover:bg-(--accent) group-hover:text-(--on-accent) focus-visible:bg-(--accent) focus-visible:text-(--on-accent)">
-            {filter === "Pending review" ? "Review submission" : "View status"}<Icon name="arrowRight" />
+            {viewOnly ? "View" : filter === "Pending review" ? "Review submission" : "View status"}<Icon name="arrowRight" />
           </button>
         </li>;
       })}

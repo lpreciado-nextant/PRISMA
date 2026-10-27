@@ -6,7 +6,7 @@ import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { MySubmissionsView, type SuggestionSummary } from "../../src/views/MySubmissionsView";
 import { DetailView } from "../../src/views/DetailView";
 import { ReviewPanel, ReviewQueue, type ReviewScope } from "../../src/components/ReviewQueue";
-import { AREA_ORDER } from "../../src/data/catalogueMetadata";
+import { AREA_ORDER, AREAS } from "../../src/data/catalogueMetadata";
 import { outlinedStatusButton, statusButton, subtleStatusButton, SubmissionStatusPanel } from "../../src/components/SubmissionStatusPanel";
 import { submissionState } from "../../src/lib/submissionState";
 import { reviewChecklist } from "../../src/lib/reviewChecklist";
@@ -48,7 +48,7 @@ const TRANSITION_LABELS: Record<string, string> = {
 const UNPUBLISH = { title: "Unpublish to edit?", label: "Unpublish & edit", body: "It leaves the Solution Library and returns to Draft so you can edit it. It is published again once a librarian approves it." };
 
 export function SubmissionsView({ review }: { review: boolean }) {
-  const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number }[]; librarian: boolean; capabilityAreas: Record<string, SpecializationArea>; scope?: ReviewScope } | null>(null);
+  const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number; manage?: boolean }[]; librarian: boolean; capabilityAreas: Record<string, SpecializationArea>; scope?: ReviewScope } | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const uncertainDeletes = useRef(new Set<string>());
@@ -74,7 +74,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
         capabilities: references.capabilities.filter(option => access.capabilityIds.includes(option.id.toLowerCase())).map(option => option.name),
       };
       uncertainDeletes.current.clear();
-      setState({ entries: result.records.map(record => ({ solution: submissionSolution(record, names), rowVersion: record.core.rowVersion, owner: record.owner, imageCount: record.imageCount, attachmentCount: record.attachmentCount })), librarian: result.librarian, capabilityAreas, ...(scope?.areas.length ? { scope } : {}) });
+      setState({ entries: result.records.map(record => ({ solution: submissionSolution(record, names), rowVersion: record.core.rowVersion, owner: record.owner, imageCount: record.imageCount, attachmentCount: record.attachmentCount, ...(record.manage === undefined ? {} : { manage: record.manage }) })), librarian: result.librarian, capabilityAreas, ...(scope?.areas.length ? { scope } : {}) });
     }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [review, attempt]);
@@ -171,7 +171,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
     const timeout = window.setTimeout(() => { controller.abort(); setError("Submission could not be loaded."); }, 20_000);
     void workflowApi.read(id).then(parseSubmission).then(result => {
       controller.signal.throwIfAborted();
-      if (result.record.core.id !== id || (review && !result.librarian)) throw new Error("Submission access denied.");
+      if (result.record.core.id !== id || (review && !result.librarian && !result.viewer)) throw new Error("Submission access denied.");
       setState(result);
     }).catch(() => { if (!controller.signal.aborted) setError("Submission unavailable. Check your access and retry."); }).finally(() => window.clearTimeout(timeout));
     const definitions = [
@@ -287,7 +287,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={
       <><BusyOverlay label={busy ? TRANSITION_LABELS[busyAction] ?? "Updating submission..." : duplicateBusy ? "Updating technologies..." : undefined} />
-      {review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
+      {review ? <ReviewPanel viewOnly={state.viewer ? viewOnlyReason(state.record.areaIds.map(area => names[area])[0]) : undefined} status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
         solution={solution} capabilityOwner={capabilityOwnerName(capabilityOwners, core.capabilityId, names)} checks={reviewChecklist({
           summary: !!core.summary.trim(), story: !!core.whatItDoes.trim() && !!core.businessValue.trim(), capability: !!core.capabilityId,
           contributors: graph.contributors.length > 0, effort: core.complexityValue != null,
@@ -328,6 +328,12 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       </>
     } />;
 }
+/** Why a librarian from another area reads this record without deciding on it. */
+function viewOnlyReason(area: string | undefined) {
+  const name = area === "ai" || area === "data" || area === "ibo" ? AREAS[area].name : undefined;
+  return name ? `It belongs to ${name}: a ${name} librarian or a global librarian decides on it.` : "It belongs to another area: a librarian of that area or a global librarian decides on it.";
+}
+
 /**
  * The owner of the submission's capability, by name: `null` when the capability names none, `undefined` (row hidden)
  * while unknown — the owners did not load, there is no capability, or the owner is not an active consultant.

@@ -2,7 +2,8 @@
 
 **Status:** Accepted; agreed with the user 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (about 22:05 UTC). Redeployed with ADR-0014 from `5ad96bb` (plug-in 22:35:57 UTC, then the app), which also stops offering Edit on the librarian's own solutions. The editing flow was checked in the hosted app on Mauricio's "Budget Management Solution". Non-admin acceptance is pending. The three columns were created on 2026-10-15 and their metadata and column security verified.
 **Date:** 2026-10-15
-**Last updated:** 2026-10-26
+**Last updated:** 2026-10-27
+**Read-across amendment status:** Proposed 2026-10-27 by Juliana; implemented on branch `feat/librarian-read-all-areas`, pending Luis's review and the signed plug-in deploy. See [Read across areas](#read-across-areas-proposed-2026-10-27).
 **Scope amendment status:** Accepted and deployed 2026-10-26: signed plug-in, compatible connected app and separately approved Basic-depth role migration. A later approved provisioning assigned five capability owners and Luis as global librarian; eight owner onboarding blockers and hosted least-privilege acceptance remain pending. [Assignment evidence](../security-model.md#approved-librarian-provisioning-2026-10-26).
 
 ## Context
@@ -72,6 +73,14 @@ These columns are written only through the PRISMA APIs, by librarian saves that 
 - **Direct access:** downgrade the normal librarian role's Solution/contributor/media privileges to Basic and mediate scoped access in plug-ins. New media shares go to the solution owner, not a non-owner librarian uploader. The migration revokes historical non-owner uploader shares. Published-reader access remains unchanged.
 
 No schema or Custom API registration is added. `nx_ReadVideoRange` also supports `Mode=image` for images/thumbnails; media snapshots include `solutionId`. Older app/backend compatibility is transitional, not an alternative to completing the rollout. Deployment order, manual provisioning, additive-permission audit and non-admin acceptance are owned by the [security model](../security-model.md#capability-owner-librarian-access).
+
+## Read across areas (proposed 2026-10-27)
+
+- **Decision:** any librarian may **read** every record in the review queue, in every area: Pending review, Published, and Drafts returned with Changes requested, with their content, media, review feedback and suggestions. **Deciding and editing stay with the capability-owner scope above**: approve, return, retire, confirm-edit, librarian core/graph/media edits, uploads and technology decisions still require `CanManage`. Global librarians are unchanged.
+- **Why:** librarians want the context of other areas (what is being submitted, the feedback given, possible duplicates) without the power to decide outside their area. Juliana confirmed there is nothing confidential between areas.
+- **Out of scope:** Drafts never submitted, or not returned, stay owner-only. Nobody gains edit rights. No role, profile, schema or Custom API changes.
+- **Implementation:** `LibrarianAccess.CanView` (queue records, any area) beside `CanManage`. `nx_GetSubmissions` stops filtering the queue by area and marks each row `manage`. `nx_GetSubmission` reads through `ReadForReview`, which returns `viewer` (read-only) outside the area, while `nx_TransitionSubmission` keeps `ReadSolution`. `nx_ReadVideoRange` (submission and image modes) and `nx_GetSolutionSuggestions` use `CanView`. The editor surfaces (`nx_GetDraftGraph`, `nx_GetDraftMedia`, uploads and checkpoints) keep the area check.
+- **Connected app:** the area librarian's switch gains **All areas**. Other areas' records show **View only** with a **View** button, the Area filter returns there, and the submission page shows the content with a view-only note instead of the checklist and decision. The masthead's pending count and the amber "your turn" count only records the librarian may decide on. With an older plug-in (no `manage`), the app behaves as before.
 
 ## Consequences
 

@@ -111,10 +111,11 @@ namespace Prisma.Plugins
             if (context.MessageName == SuggestionPolicy.OpenFeedbackMessage) { OpenFeedbackFor(context, server); return; }
             if (context.MessageName == SuggestionPolicy.AddressMessage) { Address(context, caller, server); return; }
             var solutionId = (Guid)context.InputParameters["SolutionId"];
-            var columns = new ColumnSet("nx_solutionname", "nx_publicationstatus", "statecode", "ownerid", "nx_capability");
+            var columns = new ColumnSet("nx_solutionname", "nx_publicationstatus", "nx_reviewoutcome", "statecode", "ownerid", "nx_capability");
             var solution = server.Retrieve("nx_solution", solutionId, columns);
+            // Reading suggestions: any librarian, for a queue record in any area.
             var librarian = context.MessageName == SuggestionPolicy.ListMessage
-                && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanManage(server, solution);
+                && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanView(server, solution);
             if (!librarian) solution = caller.Retrieve("nx_solution", solutionId, columns);
             var owner = solution.GetAttributeValue<EntityReference>("ownerid")?.Id == context.InitiatingUserId;
             if (context.MessageName == SuggestionPolicy.SuggestMessage) { Suggest(context, server, solution); return; }

@@ -599,6 +599,13 @@ test("upload progress uses themed bounded progress and distinguishes finalizatio
   assert.match(render(form.UploadProgress, { name: "demo.html", received: 720, size: 1000, active: false }), /Upload incomplete/);
 });
 
+test("review panel in view only: content and feedback, never a checklist or a decision", () => {
+  const props = { status: "Pending review", owner: "Ana", comments: "", onComments: noop, cleared: false, onCleared: noop, busy: false, onReturn: noop, onApprove: noop, feedback: "Blur the logo", viewOnly: "It belongs to Data Solutions: a Data Solutions librarian or a global librarian decides on it." };
+  const html = render(review.ReviewPanel, { ...props, children: "DUPLICATES" });
+  assert.match(html, /Pending review.*View only\.<\/span> It belongs to Data Solutions.*Solution overview.*Blur the logo.*DUPLICATES/s);
+  assert.doesNotMatch(html, /Publication checklist|Review decision|Approve|Request changes/);
+});
+
 test("review panel: overview, required publication checklist, and a decision that needs real feedback", () => {
   const props = { status: "Pending review", owner: "Ana", comments: "", onComments: noop, cleared: false, onCleared: noop, busy: false, onReturn: noop, onApprove: noop };
   // Status, Solution overview, Publication checklist, then the decision; nothing to act on until a decision is chosen.
@@ -726,6 +733,32 @@ test("review queue classifies by the main capability: its area, then the capabil
   assert.doesNotMatch(html, />Clear all</);
   // Without a known capability area, the first area stands in.
   assert.match(render(review.ReviewQueue, { entries, connected: true }).slice(html.indexOf("<ul")), /AI &amp; Automation/);
+});
+
+test("review queue all areas: other areas' records are listed view only, with the Area filter back", () => {
+  const base = { summary: "Summary", status: "Working prototype", reviewOutcome: "None", contributors: [], technologies: [], assets: [], dateAdded: "2026-10-01", publicationStatus: "Pending review" };
+  const entries = [
+    { owner: "Ana", manage: true, solution: { ...base, id: "own", name: "Own one", specializationArea: "ai", capabilities: ["Copilot Agents"] } },
+    { owner: "Luis", manage: false, solution: { ...base, id: "other", name: "Other one", specializationArea: "data", capabilities: ["Data Engineering"] } },
+  ];
+  const capabilityAreas = { "Copilot Agents": "ai", "Data Engineering": "data" };
+  const scope = { areas: ["ai"], capabilities: ["Copilot Agents"] };
+  // My area: only what the librarian may decide on.
+  const area = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
+  assert.match(area, />All in my area<.*>My capabilities<.*aria-pressed="false"[^>]*>All areas</s);
+  assert.match(area, /Own one/);
+  assert.doesNotMatch(area, /Other one|View only|aria-label="Specialization area"/);
+  globalThis.sessionStorage = { getItem: () => "all", setItem() {} };
+  try {
+    const all = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
+    assert.match(all, /Pending review<span[^>]*>2<\/span>.*aria-pressed="true"[^>]*>All areas<.*aria-label="Specialization area"/s);
+    assert.match(all, /View only<\/span>.*Other one.*aria-label="View Other one"[^>]*>View</s);
+    assert.match(all, /aria-label="Review Own one"[^>]*>Review submission</);
+    // "Your turn" amber still follows the librarian's own pending records only.
+    assert.match(all, /Pending review<span[^>]*style="color:color-mix\(in srgb, var\(--proto\)/);
+    const othersOnly = render(review.ReviewQueue, { entries: [entries[1]], connected: true, capabilityAreas, scope });
+    assert.doesNotMatch(othersOnly, /Pending review<span[^>]*var\(--proto\)/);
+  } finally { delete globalThis.sessionStorage; }
 });
 
 test("review queue scope: area librarians see their area and a scope switch, global librarians keep every filter", () => {

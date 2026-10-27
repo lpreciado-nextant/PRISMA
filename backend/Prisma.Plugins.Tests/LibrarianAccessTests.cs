@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using Xunit;
 
@@ -104,7 +105,7 @@ namespace Prisma.Plugins.Tests
         }
 
         [Fact]
-        public void QueueScopeIsAppliedBeforePagingAndReturnsOnlyMainAreaMatches()
+        public void QueueShowsEveryAreaAndMarksOnlyTheLibrariansOwnRowsAsManageable()
         {
             var service = new AccessService();
             var context = service.Context("nx_GetSubmissions");
@@ -115,22 +116,62 @@ namespace Prisma.Plugins.Tests
             Assert.Equal(2, service.LastQueue.PageInfo.PageNumber);
             Assert.Equal(100, service.LastQueue.PageInfo.Count);
             Assert.Equal("previous", service.LastQueue.PageInfo.PagingCookie);
-            var link = Assert.Single(service.LastQueue.LinkEntities);
-            Assert.Equal("nx_capability", link.LinkToEntityName);
-            Assert.Equal("nx_capability", link.LinkFromAttributeName);
-            var area = Assert.Single(link.LinkCriteria.Conditions, condition => condition.AttributeName == "nx_specializationarea");
-            Assert.Equal(ConditionOperator.In, area.Operator);
-            Assert.Equal(service.Area, Assert.Single(area.Values));
+            // No area filter before paging: every librarian reads the whole queue.
+            Assert.Empty(service.LastQueue.LinkEntities);
             var json = (string)context.Output["ResultJson"];
-            Assert.Contains(service.Solution.Id.ToString(), json);
-            Assert.DoesNotContain(service.Outside.Id.ToString(), json);
+            Assert.Contains("\"id\":\"" + service.Solution.Id + "\"", json);
+            Assert.Contains("\"id\":\"" + service.Outside.Id + "\"", json);
+            // Deciding stays with the area: the outside row says so.
+            var own = json.IndexOf(service.Solution.Id.ToString(), StringComparison.Ordinal);
+            var outside = json.IndexOf(service.Outside.Id.ToString(), StringComparison.Ordinal);
+            Assert.Contains("\"manage\":true", own < outside ? json.Substring(own, outside - own) : json.Substring(own));
+            Assert.Contains("\"manage\":false", outside < own ? json.Substring(outside, own - outside) : json.Substring(outside));
             Assert.Contains("\"librarian\":true", json);
             Assert.Contains("\"moreRecords\":true", json);
             Assert.Contains("\"pagingCookie\":\"next\"", json);
         }
 
+        [Fact]
+        public void AnotherAreasQueueRecordIsReadableButNeverDecidable()
+        {
+            var service = new AccessService();
+            service.Solution["nx_capability"] = new EntityReference("nx_capability", service.OtherCapability);
+            var read = service.Context("nx_GetSubmission");
+            new ReviewApi().Execute(read);
+            var json = (string)read.Output["ResultJson"];
+            Assert.Contains("\"librarian\":false", json);
+            Assert.Contains("\"librarianEdit\":false", json);
+            Assert.Contains("\"viewer\":true", json);
+            Assert.Equal(0, service.Writes);
+            // Its images and attachments are readable too.
+            var image = service.Context("nx_ReadVideoRange");
+            image.Input["Mode"] = "image";
+            new MediaTransferApi().Execute(image);
+            Assert.Contains("\"content\":\"YWJj\"", (string)image.Output["ResultJson"]);
+            Assert.Equal(0, service.Writes);
+        }
+
+        [Fact]
+        public void AnotherAreasDraftOutsideTheQueueStaysClosed()
+        {
+            var service = new AccessService();
+            service.Solution["nx_capability"] = new EntityReference("nx_capability", service.OtherCapability);
+            service.Solution["nx_publicationstatus"] = new OptionSetValue(DraftPolicy.DraftStatus);
+            foreach (var message in new[] { "nx_GetSubmission", "nx_ReadVideoRange" })
+            {
+                var context = service.Context(message);
+                IPlugin plugin = message == "nx_GetSubmission" ? (IPlugin)new ReviewApi() : new MediaTransferApi();
+                Assert.Throws<InvalidPluginExecutionException>(() => plugin.Execute(context));
+                Assert.Empty(context.Output);
+            }
+            // Returned with Changes requested, it is back in the queue and readable.
+            service.Solution["nx_reviewoutcome"] = new OptionSetValue(SuggestionPolicy.ChangesRequested);
+            var returned = service.Context("nx_GetSubmission");
+            new ReviewApi().Execute(returned);
+            Assert.Contains("\"viewer\":true", (string)returned.Output["ResultJson"]);
+        }
+
         [Theory]
-        [InlineData("nx_GetSubmission")]
         [InlineData("nx_TransitionSubmission")]
         [InlineData("nx_SaveCoreDraft")]
         [InlineData("nx_GetDraftGraph")]
@@ -142,8 +183,7 @@ namespace Prisma.Plugins.Tests
         [InlineData("nx_RemoveDraftMedia")]
         [InlineData("nx_BeginResumableUpload")]
         [InlineData("nx_GetUploadCheckpoint")]
-        [InlineData("nx_ReadVideoRange")]
-        public void EverySubmissionSurfaceRejectsAnotherAreaBeforeMutation(string message)
+        public void EveryDecisionAndEditSurfaceRejectsAnotherAreaBeforeMutation(string message)
         {
             var service = new AccessService();
             service.Solution["nx_capability"] = new EntityReference("nx_capability", service.OtherCapability);
@@ -217,14 +257,24 @@ namespace Prisma.Plugins.Tests
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
-        public void PrivateSuggestionsDoNotInheritLibrarianAccessFromAnotherArea(bool outside)
+        public void PrivateSuggestionsAreReadableByLibrariansOfEveryArea(bool outside)
         {
             var service = new AccessService { PublishedReadable = true };
             service.Solution["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published);
             if (outside) service.Solution["nx_capability"] = new EntityReference("nx_capability", service.OtherCapability);
             var context = service.Context(SuggestionPolicy.ListMessage);
             new SuggestionApi().Execute(context);
-            Assert.Contains("\"canRead\":" + (outside ? "false" : "true"), (string)context.Output["ResultJson"]);
+            Assert.Contains("\"canRead\":true", (string)context.Output["ResultJson"]);
+        }
+
+        [Fact]
+        public void SuggestionsStayClosedToANonLibrarian()
+        {
+            var service = new AccessService { PublishedReadable = true, Role = "Basic User" };
+            service.Solution["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Published);
+            var context = service.Context(SuggestionPolicy.ListMessage);
+            new SuggestionApi().Execute(context);
+            Assert.Contains("\"canRead\":false", (string)context.Output["ResultJson"]);
         }
 
         [Theory]
@@ -262,7 +312,10 @@ namespace Prisma.Plugins.Tests
                     ["ownerid"] = new EntityReference("systemuser", Guid.NewGuid()), ["nx_capability"] = new EntityReference("nx_capability", SameAreaCapability),
                     ["nx_solutionname"] = "Solution", ["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Pending),
                     ["nx_status"] = new OptionSetValue(125060001), ["statecode"] = new OptionSetValue(0), ["modifiedon"] = DateTime.UtcNow };
-                Outside = new Entity("nx_solution", Guid.NewGuid()) { ["nx_capability"] = new EntityReference("nx_capability", OtherCapability) };
+                Outside = new Entity("nx_solution", Guid.NewGuid()) { RowVersion = "1",
+                    ["ownerid"] = new EntityReference("systemuser", Guid.NewGuid()), ["nx_capability"] = new EntityReference("nx_capability", OtherCapability),
+                    ["nx_solutionname"] = "Outside", ["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Pending),
+                    ["nx_status"] = new OptionSetValue(125060001), ["statecode"] = new OptionSetValue(0), ["modifiedon"] = DateTime.UtcNow };
                 Session = new Entity("nx_uploadsession", Guid.NewGuid()) {
                     ["nx_parentid"] = Solution.Id.ToString("D"), ["nx_targetid"] = Asset.ToString("D"), ["nx_kind"] = "image",
                     ["nx_mime"] = "image/png", ["nx_bytes"] = 3, ["nx_complete"] = true
@@ -320,13 +373,14 @@ namespace Prisma.Plugins.Tests
                 if (query.EntityName == "nx_solution")
                 {
                     LastQueue = query;
-                    var areaFilter = Assert.Single(query.LinkEntities).LinkCriteria.Conditions.Single(condition => condition.AttributeName == "nx_specializationarea");
-                    return new EntityCollection(new[] { Solution, Outside }.Where(row => areaFilter.Values.Contains(Capabilities[row.GetAttributeValue<EntityReference>("nx_capability").Id].GetAttributeValue<EntityReference>("nx_specializationarea").Id)).ToList()) { MoreRecords = true, PagingCookie = "next" };
+                    return new EntityCollection(new List<Entity> { Solution, Outside }) { MoreRecords = true, PagingCookie = "next" };
                 }
                 if (query.EntityName == "nx_uploadsession")
                     return query.Criteria.Conditions.Any(condition => condition.AttributeName == "nx_targetid") ? Rows(new[] { Session }) : Rows(Array.Empty<Entity>());
                 if (query.EntityName == "nx_specializationarea") return Rows(new[] { new Entity(query.EntityName, Area) });
                 if (query.EntityName == "nx_solutioncontributor" || query.EntityName == "nx_solutionsuggestion") return Rows(Array.Empty<Entity>());
+                // Tag intersect tables (technologies, industries, projects, client roles, secondary capability): none linked.
+                if (DraftGraph.Relationships.Concat(new[] { DraftGraph.SecondaryRelationship }).Any(name => name.ToLowerInvariant() == query.EntityName)) return Rows(Array.Empty<Entity>());
                 throw new NotSupportedException(query.EntityName);
             }
 
@@ -340,6 +394,12 @@ namespace Prisma.Plugins.Tests
                     Assert.Equal("nx_imagefile", download.FileAttributeName);
                     return new InitializeFileBlocksDownloadResponse { Results = new ParameterCollection { ["FileSizeInBytes"] = 3L, ["IsChunkingSupported"] = Chunking, ["FileContinuationToken"] = "private" } };
                 }
+                var relationship = request as RetrieveRelationshipRequest;
+                if (relationship != null)
+                    return new RetrieveRelationshipResponse { Results = new ParameterCollection { ["RelationshipMetadata"] = new ManyToManyRelationshipMetadata {
+                        Entity1LogicalName = "nx_solution", Entity1IntersectAttribute = "nx_solutionid", Entity2LogicalName = "tag",
+                        Entity2IntersectAttribute = "tagid", IntersectEntityName = relationship.Name.ToLowerInvariant()
+                    } } };
                 if (request is DownloadBlockRequest)
                 {
                     if (RevokeOnDownload) Capabilities[OwnedCapability].Attributes.Remove("nx_capabilityowner");

@@ -39,10 +39,11 @@ namespace Prisma.Plugins
             if (context.MessageName == "nx_ReadVideoRange")
             {
                 var mode = context.InputParameters["Mode"] as string;
-                var columns = new ColumnSet("ownerid", "statecode", "nx_publicationstatus", "nx_clientsafereviewed", "nx_safetyacknowledged", "nx_capability");
+                var columns = new ColumnSet("ownerid", "statecode", "nx_publicationstatus", "nx_reviewoutcome", "nx_clientsafereviewed", "nx_safetyacknowledged", "nx_capability");
                 var mediated = mode == "submission" || mode == "image";
                 var parent = (mediated ? server : caller).Retrieve("nx_solution", id, columns);
-                var librarian = mediated && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanManage(server, parent);
+                // Any librarian may read a queue record's media, in every area (CanView); writes still need CanManage.
+                var librarian = mediated && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanView(server, parent);
                 var reader = librarian ? server : caller;
                 if (mediated && !librarian) parent = caller.Retrieve("nx_solution", id, columns);
                 MediaTransferPolicy.ReadAccess(parent, context.InitiatingUserId, librarian, mode);
@@ -84,7 +85,7 @@ namespace Prisma.Plugins
                     if (data.Length != count) throw MediaPolicy.Invalid("Incomplete video range.");
                 }
                 var latest = reader.Retrieve("nx_solution", id, columns);
-                var stillLibrarian = librarian && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanManage(server, latest);
+                var stillLibrarian = librarian && LibrarianAccess.Resolve(server, context.InitiatingUserId).CanView(server, latest);
                 MediaTransferPolicy.ReadAccess(latest, context.InitiatingUserId, stillLibrarian, mode);
                 if (librarian && !stillLibrarian) throw MediaPolicy.Invalid("Librarian access changed. Reopen the viewer.");
                 var latestTarget = reader.Retrieve(MediaPolicy.Table(kind), assetId, new ColumnSet(false));

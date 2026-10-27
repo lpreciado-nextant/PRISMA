@@ -207,7 +207,8 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
     if (present || !librarian) return;
     const controller = new AbortController();
     void loadSubmissions(workflowApi, true, controller.signal).then(result => {
-      if (!controller.signal.aborted) setReviewPending(result.records.filter(record => record.publication === 125060002).length);
+      // Only what this librarian may decide on: other areas' records are view only.
+      if (!controller.signal.aborted) setReviewPending(result.records.filter(record => record.publication === 125060002 && record.manage !== false).length);
     }).catch(() => undefined);
     return () => controller.abort();
   }, [present, librarian, route.path, refreshVersion]);
