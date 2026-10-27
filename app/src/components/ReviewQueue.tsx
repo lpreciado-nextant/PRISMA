@@ -418,7 +418,7 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
       <p className="flex min-w-0 flex-wrap items-center gap-x-2 text-[14px] text-(--ink-2)">Reviewing
         {scope.areas.map(value => <span key={value} className="inline-flex items-center gap-1.5 font-semibold text-(--ink)"><span aria-hidden="true" className="size-2 rounded-full" style={{ background: AREAS[value].cssVar }} />{AREAS[value].name}</span>)}
       </p>
-      <div className="view-toggle view-toggle--text" role="group" aria-label="Review scope">
+      <div className="view-toggle view-toggle--text h-auto min-h-9 max-w-full flex-wrap gap-y-1" role="group" aria-label="Review scope">
         <button type="button" aria-pressed={view === "area"} onClick={() => chooseView("area")}>All in my area</button>
         <button type="button" aria-pressed={view === "mine"} onClick={() => chooseView("mine")}>My capability</button>
         <button type="button" aria-pressed={view === "all"} onClick={() => chooseView("all")}>All areas</button>

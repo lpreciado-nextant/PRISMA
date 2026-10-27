@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Dev capability-owner SA scope and role migration deployed 2026-10-26; production contributor/reader access and named global librarians configured. Reference Append and contributor re-selection fixes deployed; Juliana confirmed progression to Media. Four licensing exceptions and broader non-admin acceptance remain open · **Last updated:** 2026-10-26
+**Status:** Dev capability-owner SA scope and role migration deployed 2026-10-26; cross-area queue reading explicitly approved 2026-10-27, with rollout evidence maintained in the technical architecture. Production contributor/reader access and named global librarians configured. Reference Append and contributor re-selection fixes deployed; Juliana confirmed progression to Media. Four licensing exceptions and broader non-admin acceptance remain open · **Last updated:** 2026-10-27
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -25,7 +25,7 @@ See [code-app hosting policy](#code-app-hosting-policy) for browser execution re
 
 **Deployed 2026-10-26.** This section supersedes global librarian workflow access in the historical deployment sections below. [ADR-0013](decisions/adr-0013-librarian-content-editing.md#capability-owner-scope-2026-10-26) owns the decision.
 
-**Proposed 2026-10-27, not deployed:** librarians may *read* every review-queue record in every area (content, media, feedback, suggestions); deciding and editing stay with the scope below. See [ADR-0013 read across areas](decisions/adr-0013-librarian-content-editing.md#read-across-areas-proposed-2026-10-27). Until the signed plug-in from that branch is deployed, the scope below also limits reads.
+**Approved 2026-10-27:** valid librarians may *read* every active review-queue record in every area (internal content/client context, contributor/project graph, finalized media, review feedback, library notes and private suggestions); deciding and editing stay with the scope below. This includes Pending, Published and Changes requested, explicitly superseding the Pending-only recommendation. Ordinary Drafts and out-of-area Retired records remain closed; editor reads, checkpoints and all mutations retain their existing gates. Direct privileges/shares, published/present projections and global authority do not change. See [ADR-0013 read across areas](decisions/adr-0013-librarian-content-editing.md#read-across-areas-approved-2026-10-27) and [deployment evidence](technical-architecture.md). Live non-admin cross-area acceptance is still required.
 
 The server resolves `systemuser.internalemailaddress` to exactly one active `cr6b0_consultant.cr6b0_email`. For a direct/team **PRISMA Librarian**, active `nx_capability` rows whose `nx_capabilityowner` matches that Consultant grant their active `nx_specializationarea`. They may manage solutions with any active **main** capability in those SAs. Secondary capabilities never expand authority. Missing mappings grant no scope; ambiguous/missing Consultant identity raises an explicit error. Owning capabilities in several SAs grants all those SAs. An explicitly assigned **PRISMA Global Librarian** marker role overrides scope; the regular role and System Administrator alone do not. Self-approval within scope is allowed, with normal safety/completeness/version checks.
 

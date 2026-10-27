@@ -79,8 +79,9 @@ namespace Prisma.Plugins
         public static bool InQueue(Entity solution)
         {
             var publication = solution.GetAttributeValue<OptionSetValue>("nx_publicationstatus")?.Value;
-            return publication == ReviewPolicy.Pending || publication == ReviewPolicy.Published
-                || (publication == DraftPolicy.DraftStatus && solution.GetAttributeValue<OptionSetValue>("nx_reviewoutcome")?.Value == SuggestionPolicy.ChangesRequested);
+            return solution.GetAttributeValue<OptionSetValue>("statecode")?.Value == 0
+                && (publication == ReviewPolicy.Pending || publication == ReviewPolicy.Published
+                    || (publication == DraftPolicy.DraftStatus && solution.GetAttributeValue<OptionSetValue>("nx_reviewoutcome")?.Value == SuggestionPolicy.ChangesRequested));
         }
 
         /// <summary>The review queue shows every area to any librarian; each row says whether the caller may manage it.</summary>
@@ -95,7 +96,7 @@ namespace Prisma.Plugins
         /// </summary>
         public Entity ReadForReview(IOrganizationService caller, IOrganizationService server, Guid user, Guid id, ColumnSet columns, out bool librarian, out bool viewer)
         {
-            var selected = new ColumnSet(columns.Columns.Concat(new[] { "ownerid", "nx_capability", "nx_publicationstatus", "nx_reviewoutcome" }).Distinct().ToArray());
+            var selected = new ColumnSet(columns.Columns.Concat(new[] { "ownerid", "nx_capability", "statecode", "nx_publicationstatus", "nx_reviewoutcome" }).Distinct().ToArray());
             var solution = server.Retrieve("nx_solution", id, selected);
             librarian = CanManage(server, solution);
             viewer = !librarian && Available && InQueue(solution);

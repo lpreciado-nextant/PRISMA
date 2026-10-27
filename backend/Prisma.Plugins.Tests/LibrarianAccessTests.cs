@@ -65,6 +65,7 @@ namespace Prisma.Plugins.Tests
             var access = LibrarianAccess.Resolve(service, service.User);
             Assert.False(access.Available);
             Assert.False(access.CanManage(service, service.Solution));
+            Assert.False(access.CanView(service, service.Solution));
             Assert.Throws<InvalidPluginExecutionException>(() => access.FilterQueue(new QueryExpression("nx_solution")));
         }
 
@@ -131,11 +132,16 @@ namespace Prisma.Plugins.Tests
             Assert.Contains("\"pagingCookie\":\"next\"", json);
         }
 
-        [Fact]
-        public void AnotherAreasQueueRecordIsReadableButNeverDecidable()
+        [Theory]
+        [InlineData(ReviewPolicy.Pending)]
+        [InlineData(ReviewPolicy.Published)]
+        [InlineData(DraftPolicy.DraftStatus)]
+        public void AnotherAreasQueueRecordIsReadableButNeverDecidable(int status)
         {
             var service = new AccessService();
             service.Solution["nx_capability"] = new EntityReference("nx_capability", service.OtherCapability);
+            service.Solution["nx_publicationstatus"] = new OptionSetValue(status);
+            service.Solution["nx_reviewoutcome"] = new OptionSetValue(SuggestionPolicy.ChangesRequested);
             var read = service.Context("nx_GetSubmission");
             new ReviewApi().Execute(read);
             var json = (string)read.Output["ResultJson"];
@@ -148,6 +154,63 @@ namespace Prisma.Plugins.Tests
             image.Input["Mode"] = "image";
             new MediaTransferApi().Execute(image);
             Assert.Contains("\"content\":\"YWJj\"", (string)image.Output["ResultJson"]);
+            Assert.Equal(0, service.Writes);
+        }
+
+        [Theory]
+        [InlineData("submission", "application/pdf", true)]
+        [InlineData("submission", "text/html", true)]
+        [InlineData("submission", "video/mp4", true)]
+        [InlineData("published", "video/mp4", false)]
+        [InlineData("present", "video/mp4", false)]
+        public void CrossAreaFilesUseProtectedSubmissionReadsAndRequireCompletion(string mode, string mime, bool allowed)
+        {
+            var service = new AccessService();
+            service.Solution["nx_capability"] = new EntityReference("nx_capability", service.OtherCapability);
+            service.Session["nx_kind"] = "attachment";
+            service.Session["nx_mime"] = mime;
+            var context = service.Context("nx_ReadVideoRange");
+            context.Input["Mode"] = mode;
+            if (allowed)
+            {
+                new MediaTransferApi().Execute(context);
+                Assert.Contains("\"content\":\"YWJj\"", (string)context.Output["ResultJson"]);
+                context.Output.Clear();
+                service.Session["nx_complete"] = false;
+                Assert.Throws<InvalidPluginExecutionException>(() => new MediaTransferApi().Execute(context));
+                Assert.Empty(context.Output);
+            }
+            else Assert.Throws<InvalidPluginExecutionException>(() => new MediaTransferApi().Execute(context));
+            Assert.Equal(0, service.Writes);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void CrossAreaMediaRechecksRevocationAndQueueExitBeforeReturningBytes(bool revoke)
+        {
+            var service = new AccessService { RevokeOnDownload = revoke, LeaveQueueOnDownload = !revoke };
+            service.Solution["nx_capability"] = new EntityReference("nx_capability", service.OtherCapability);
+            var context = service.Context("nx_ReadVideoRange");
+            context.Input["Mode"] = "image";
+            Assert.Throws<InvalidPluginExecutionException>(() => new MediaTransferApi().Execute(context));
+            Assert.Empty(context.Output);
+        }
+
+        [Theory]
+        [InlineData(ReviewPolicy.Pending)]
+        [InlineData(ReviewPolicy.Published)]
+        [InlineData(DraftPolicy.DraftStatus)]
+        public void InactiveRecordsNeverGainCrossAreaReadAccess(int status)
+        {
+            var service = new AccessService();
+            service.Solution["nx_capability"] = new EntityReference("nx_capability", service.OtherCapability);
+            service.Solution["nx_publicationstatus"] = new OptionSetValue(status);
+            service.Solution["nx_reviewoutcome"] = new OptionSetValue(SuggestionPolicy.ChangesRequested);
+            service.Solution["statecode"] = new OptionSetValue(1);
+            Assert.False(LibrarianAccess.Resolve(service, service.User).CanView(service, service.Solution));
+            Assert.Throws<InvalidPluginExecutionException>(() => new ReviewApi().Execute(service.Context("nx_GetSubmission")));
+            Assert.Throws<InvalidPluginExecutionException>(() => new SuggestionApi().Execute(service.Context(SuggestionPolicy.ListMessage)));
             Assert.Equal(0, service.Writes);
         }
 
@@ -296,7 +359,7 @@ namespace Prisma.Plugins.Tests
             public readonly Dictionary<Guid, Entity> Capabilities = new Dictionary<Guid, Entity>();
             public Entity Solution, Outside, Session;
             public string Role = LibrarianAccess.ScopedRole;
-            public bool Inherited, RevokeOnDownload, PublishedReadable;
+            public bool Inherited, RevokeOnDownload, LeaveQueueOnDownload, PublishedReadable;
             public bool AreaActive = true, Chunking = true;
             public int ConsultantCount = 1, Writes;
             public QueryExpression LastQueue;
@@ -343,7 +406,7 @@ namespace Prisma.Plugins.Tests
                 if (table == "systemuser") return new Entity(table, id) { ["internalemailaddress"] = "owner@example.test" };
                 if (table == "nx_capability") return Capabilities[id];
                 if (table == "nx_solution") { Assert.Equal(Solution.Id, id); return Solution; }
-                if (table == "nx_solutionimage") { Assert.Equal(Asset, id); return new Entity(table, id) { RowVersion = "2", ["nx_solution"] = Solution.ToEntityReference() }; }
+                if (table == "nx_solutionimage" || table == "nx_demoasset") { Assert.Equal(Asset, id); return new Entity(table, id) { RowVersion = "2", ["nx_solution"] = Solution.ToEntityReference() }; }
                 throw new NotSupportedException(table);
             }
 
@@ -391,7 +454,7 @@ namespace Prisma.Plugins.Tests
                 var download = request as InitializeFileBlocksDownloadRequest;
                 if (download != null)
                 {
-                    Assert.Equal("nx_imagefile", download.FileAttributeName);
+                    Assert.Equal(Session.GetAttributeValue<string>("nx_kind") == "attachment" ? "nx_filemedia" : "nx_imagefile", download.FileAttributeName);
                     return new InitializeFileBlocksDownloadResponse { Results = new ParameterCollection { ["FileSizeInBytes"] = 3L, ["IsChunkingSupported"] = Chunking, ["FileContinuationToken"] = "private" } };
                 }
                 var relationship = request as RetrieveRelationshipRequest;
@@ -403,6 +466,7 @@ namespace Prisma.Plugins.Tests
                 if (request is DownloadBlockRequest)
                 {
                     if (RevokeOnDownload) Capabilities[OwnedCapability].Attributes.Remove("nx_capabilityowner");
+                    if (LeaveQueueOnDownload) Solution["nx_publicationstatus"] = new OptionSetValue(ReviewPolicy.Retired);
                     return new DownloadBlockResponse { Results = new ParameterCollection { ["Data"] = new byte[] { 97, 98, 99 } } };
                 }
                 throw new NotSupportedException(request.RequestName);

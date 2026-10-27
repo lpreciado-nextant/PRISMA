@@ -338,7 +338,7 @@ namespace Prisma.Plugins
             }
             context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionDetail {
                 Record = Summary(server, parent, librarian || viewer), Graph = DraftGraph.Read(reader, parent),
-                Media = MediaApi.Snapshots(server, identifier), Librarian = librarian,
+                Media = MediaApi.Snapshots(server, identifier).Where(item => !viewer || item.Complete).ToArray(), Librarian = librarian,
                 LibrarianEdit = librarian && DraftPolicy.LibrarianMayEdit(parent, context.InitiatingUserId), Viewer = viewer
             });
         }
