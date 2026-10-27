@@ -28,6 +28,25 @@ namespace Prisma.Plugins.Tests
             Assert.False(access.CanManage(service, service.Solution));
         }
 
+        [Fact]
+        public void ScopeNamesTheManagedAreasAndOwnedCapabilitiesOrGlobalForTheQueueFilters()
+        {
+            var service = new AccessService();
+            var scope = LibrarianAccess.Resolve(service, service.User).Scope();
+            Assert.False(scope.Global);
+            Assert.Equal(new[] { service.Area.ToString("D") }, scope.AreaIds);
+            // Only the capability the librarian owns, not every capability of the area they manage.
+            Assert.Equal(new[] { service.OwnedCapability.ToString("D") }, scope.CapabilityIds);
+            Assert.Contains("\"scope\":{\"areaIds\":[\"" + service.Area + "\"],\"capabilityIds\":[\"" + service.OwnedCapability + "\"],\"global\":false}", DraftPolicy.Serialize(new SubmissionPage { Records = new List<SubmissionSummary>(), Scope = scope }));
+            Assert.DoesNotContain("\"scope\"", DraftPolicy.Serialize(new SubmissionPage { Records = new List<SubmissionSummary>() }));
+
+            var global = LibrarianAccess.Resolve(new AccessService { Role = LibrarianAccess.GlobalRole }, service.User).Scope();
+            Assert.True(global.Global);
+            Assert.Empty(global.AreaIds);
+            Assert.Empty(global.CapabilityIds);
+            Assert.Null(LibrarianAccess.Resolve(new AccessService { Role = "Basic User" }, service.User).Scope());
+        }
+
         [Theory]
         [InlineData("role")]
         [InlineData("owner")]

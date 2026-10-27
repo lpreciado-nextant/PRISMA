@@ -28,9 +28,11 @@ import { HelpView } from "../../src/views/HelpView";
 import { contactLinks, PRISMA_CONTACTS } from "./contact";
 
 // Contributor and librarian screens load on first use, keeping the CSM's library-to-viewer path lighter.
-const DraftsView = lazy(() => import("./DraftsView").then(module => ({ default: module.DraftsView })));
-const SubmissionsView = lazy(() => import("./SubmissionsView").then(module => ({ default: module.SubmissionsView })));
-const SubmissionView = lazy(() => import("./SubmissionsView").then(module => ({ default: module.SubmissionView })));
+const loadDraftsView = () => import("./DraftsView");
+const loadSubmissionsView = () => import("./SubmissionsView");
+const DraftsView = lazy(() => loadDraftsView().then(module => ({ default: module.DraftsView })));
+const SubmissionsView = lazy(() => loadSubmissionsView().then(module => ({ default: module.SubmissionsView })));
+const SubmissionView = lazy(() => loadSubmissionsView().then(module => ({ default: module.SubmissionView })));
 
 const PRESENT_KEY = "prisma.connected.present";
 async function readCredits(id: string, present: boolean, signal: AbortSignal) {
@@ -112,6 +114,10 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   const [pendingFavorites, setPendingFavorites] = useState<Set<string>>(new Set());
   const [topRanking, setTopRanking] = useState<TopFavorite[]>([]);
   const [topVersion, setTopVersion] = useState(0);
+  // The library's Refresh button: each press re-reads the catalogue, saved solutions and the review count.
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const previousRefresh = useRef(0);
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
     if (transitionComplete) main.current?.focus({ preventScroll: true });
@@ -204,7 +210,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
       if (!controller.signal.aborted) setReviewPending(result.records.filter(record => record.publication === 125060002).length);
     }).catch(() => undefined);
     return () => controller.abort();
-  }, [present, librarian, route.path]);
+  }, [present, librarian, route.path, refreshVersion]);
   useEffect(() => {
     // Loaded in present mode too, for "Selected for you" (the viewer's own saved IDs, crossed with the client-safe
     // catalogue in the library). The masthead link, its count and the card hearts still hide themselves there.
@@ -215,7 +221,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
       if (!controller.signal.aborted) setFavorites(ids);
     }).catch(() => { if (!controller.signal.aborted) setFavorites(null); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
-  }, [user.live]);
+  }, [user.live, refreshVersion]);
   useEffect(() => {
     // The Top 10 is internal team signal: never loaded in present mode. A failed read just hides the shelf.
     if (present || !user.live) return;
@@ -274,8 +280,11 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   useEffect(() => {
     const previous = previousPath.current;
     previousPath.current = route.path;
-    if (route.path !== "/" || previous === "/") return;
+    const refresh = previousRefresh.current !== refreshVersion;
+    previousRefresh.current = refreshVersion;
+    if (!refresh && (route.path !== "/" || previous === "/")) return;
     const controller = new AbortController();
+    if (refresh) setRefreshing(true);
     // The library already on screen stays usable while it refreshes; only a missing catalogue waits or fails.
     setState(current => current.kind === "ready" ? current : { kind: "loading" });
     const timeout = window.setTimeout(() => { controller.abort(); setState(current => current.kind === "ready" ? current : { kind: "error" }); }, 20_000);
@@ -284,10 +293,20 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
       setState({ kind: "ready", catalogue });
       // The ranking may have moved while this person was elsewhere (their own saves, or other people's).
       setTopVersion(version => version + 1);
-    }).catch(() => { if (!controller.signal.aborted) setState(current => current.kind === "ready" ? current : { kind: "error" }); }).finally(() => window.clearTimeout(timeout));
-    return () => { controller.abort(); window.clearTimeout(timeout); };
-  }, [route.path, present]);
+    }).catch(() => { if (!controller.signal.aborted) setState(current => current.kind === "ready" ? current : { kind: "error" }); }).finally(() => {
+      window.clearTimeout(timeout);
+      if (!controller.signal.aborted) setRefreshing(false);
+    });
+    return () => { controller.abort(); window.clearTimeout(timeout); setRefreshing(false); };
+  }, [route.path, present, refreshVersion]);
   useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [route.path]);
+  // Once the library is up, fetch the submission and review screens' code in the background, so opening one shows its
+  // own loader straight away instead of a generic "Loading..." page first. A failed fetch retries on navigation.
+  useEffect(() => {
+    if (present || !user.live || state.kind !== "ready") return;
+    void loadSubmissionsView().catch(() => undefined);
+    void loadDraftsView().catch(() => undefined);
+  }, [present, user.live, state.kind]);
   const filters = useMemo(() => filtersFromQuery(route.query), [route.query]);
   const segments = route.path.split("/").filter(Boolean);
   const section = segments[0];
@@ -300,10 +319,13 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   // A demo opened in its own tab shows the viewer alone: no masthead, tabs or banner.
   const focused = route.query.get("focus") === "1" && segments.length === 4 && segments[2] === "demo";
   const showBanner = present && bannerVisible && !focused;
+  // Present mode is offered where a solution is shown to a client: the library, saved solutions and a solution's pages.
+  const presentAvailable = route.path === "/" || route.path === "/favorites" || section === "s";
 
   return <div className="min-h-full" style={{ "--sticky-top": showBanner ? "9.75rem" : "6rem" } as CSSProperties}>
     <Background />
-    {!focused && <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} reviewCount={librarian ? reviewPending : undefined} favoriteCount={present ? undefined : favorites?.size} />}
+    {!focused && <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} reviewCount={librarian ? reviewPending : undefined} favoriteCount={present ? undefined : favorites?.size}
+      presentAvailable={presentAvailable} onRefresh={route.path === "/" && state.kind === "ready" ? () => setRefreshVersion(version => version + 1) : undefined} refreshing={refreshing} />}
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
     <main key={route.path} ref={main} tabIndex={-1} className="focus-visible:outline-none">
       <Suspense fallback={<LoadingState variant="page" label="Loading..." />}>

@@ -155,6 +155,11 @@ export default function App() {
             const entry = submissions.find((candidate) => candidate.solution.id === id);
             if (!entry) throw new Error("Submission unavailable. Return to the queue.");
             await persistEntry({ ...entry, solution: reviewContribution(entry.solution, decision, comments, clientSafe) });
+          }} published={published} onReplaceTechnology={async (id, submitted, existing) => {
+            const entry = submissions.find((candidate) => candidate.solution.id === id);
+            if (!entry) throw new Error("Submission unavailable. Return to the queue.");
+            const technologies = [...new Set(entry.solution.technologies.map((name) => name === submitted ? existing : name))];
+            await persistEntry({ ...entry, solution: { ...entry.solution, technologies } });
           }} />
         ) : ownSolution?.publicationStatus === "Draft" ? null : solution && asset ? (
           <ViewerView solution={solution} asset={asset} present={present} />

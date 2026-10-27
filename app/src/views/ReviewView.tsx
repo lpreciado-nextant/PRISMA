@@ -1,22 +1,32 @@
 import { useState } from "react";
 import { Icon } from "../components/Icon";
+import { DuplicateTechnologies, type DuplicateDecision } from "../components/DuplicateTechnologies";
 import { ReviewPanel, ReviewQueue } from "../components/ReviewQueue";
+import { newTechnologies } from "../lib/technologyName";
+import type { Solution } from "../types";
 import { submissionFacts, type SubmissionEntry } from "../lib/submissions";
 import { reviewChecklist } from "../lib/reviewChecklist";
 import { navigate } from "../lib/router";
 import { DetailView } from "./DetailView";
 import { CAPABILITIES } from "../data/catalogueMetadata";
 
-export function ReviewView({ entries, selectedId, onDecision }: {
+export function ReviewView({ entries, selectedId, onDecision, published = [], onReplaceTechnology }: {
   entries: SubmissionEntry[];
   selectedId?: string;
   onDecision: (id: string, decision: "publish" | "return", comments: string, clientSafe: boolean) => Promise<void>;
+  /** The local library, for possible duplicate technologies: what other published solutions use, and every known name. */
+  published?: Solution[];
+  /** "Use existing": swap the submitted technology for the existing one on this browser's submission. */
+  onReplaceTechnology?: (id: string, submitted: string, existing: string) => Promise<void>;
 }) {
   const [comments, setComments] = useState("");
   const [clientSafe, setClientSafe] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [duplicates, setDuplicates] = useState<Record<string, DuplicateDecision>>({});
+  const [duplicateBusy, setDuplicateBusy] = useState<string>();
+  const [duplicateError, setDuplicateError] = useState<{ name: string; message: string }>();
   const selected = entries.find((entry) => entry.solution.id === selectedId);
   const decide = async (decision: "publish" | "return") => {
     if (!selected || saving) return;
@@ -32,6 +42,23 @@ export function ReviewView({ entries, selectedId, onDecision }: {
     }
   };
 
+  const replaceWithExisting = async (name: string, existing: string) => {
+    if (!selected || !onReplaceTechnology || duplicateBusy) return;
+    setDuplicateBusy(name);
+    setDuplicateError(undefined);
+    try {
+      await onReplaceTechnology(selected.solution.id, name, existing);
+      setDuplicates(current => ({ ...current, [name]: { kind: "existing", existing } }));
+    } catch {
+      setDuplicateError({ name, message: "The technology was not replaced. Try again." });
+    } finally { setDuplicateBusy(undefined); }
+  };
+  const keep = (name: string, kept: boolean) => setDuplicates(current => {
+    const next = { ...current };
+    if (kept) next[name] = { kind: "kept" }; else delete next[name];
+    return next;
+  });
+
   if (selectedId) {
     // A returned record opens in the review panel ("Waiting for corrections"); a plain draft is not the librarian's to see.
     if (!selected || (selected.solution.publicationStatus === "Draft" && selected.solution.reviewOutcome !== "Changes requested")) return <div className="mx-auto max-w-[1340px] px-6 py-10">
@@ -43,7 +70,12 @@ export function ReviewView({ entries, selectedId, onDecision }: {
     return <DetailView solution={selected.solution} present={false} onBack={() => navigate("/review")} backLabel="Review queue" assetBasePath={`/review/${selected.solution.id}`} reviewActions={
       <ReviewPanel local status={selected.solution.publicationStatus} owner={selected.owner} client={selected.solution.clientContext} context={selected.solution.clientContextRedacted} feedback={selected.solution.reviewComments}
         solution={selected.solution} checks={reviewChecklist(submissionFacts(selected.solution))}
-        comments={comments} onComments={setComments} cleared={clientSafe} onCleared={setClientSafe} busy={saving} notice={notice} error={error} onReturn={() => void decide("return")} onApprove={() => void decide("publish")} />
+        comments={comments} onComments={setComments} cleared={clientSafe} onCleared={setClientSafe} busy={saving} notice={notice} error={error} onReturn={() => void decide("return")} onApprove={() => void decide("publish")}>
+        <DuplicateTechnologies decisions={duplicates} busy={duplicateBusy} error={duplicateError}
+          suspects={newTechnologies(selected.solution.technologies, new Set(published.filter(other => other.id !== selected.solution.id).flatMap(other => other.technologies)), [...new Set(published.flatMap(other => other.technologies))])}
+          editable={!!onReplaceTechnology && !saving && (selected.solution.publicationStatus === "Pending review" || selected.solution.publicationStatus === "Published")}
+          onUseExisting={(name, existing) => void replaceWithExisting(name, existing)} onKeep={name => keep(name, true)} onUndoKeep={name => keep(name, false)} />
+      </ReviewPanel>
     } />;
   }
 

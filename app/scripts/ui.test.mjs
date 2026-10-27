@@ -214,6 +214,27 @@ test("copy link renders only for a shareable route and player address", async ()
   assert.equal(render(CopyLinkButton, { appLocation, route: "/admin" }), "");
 });
 
+test("possible duplicate technologies explain themselves and get one decision each", async () => {
+  const { DuplicateTechnologies } = await server.ssrLoadModule("/src/components/DuplicateTechnologies.tsx");
+  const suspects = [{ name: "OpenAI on Azure", similar: ["Azure OpenAI"] }, { name: "Power-BI", similar: ["Power BI", "Power BI Embedded"] }, { name: "Kubernetes", similar: [] }];
+  const props = { suspects, decisions: {}, editable: true, onUseExisting() {}, onKeep() {}, onUndoKeep() {} };
+  const html = render(DuplicateTechnologies, props);
+  assert.match(html, /Possible duplicate technologies.*0 \/ 2 resolved.*This technology may already exist in the catalog\. Review the suggested match and choose whether to use the existing technology or keep the submitted one\./s);
+  assert.match(html, /Submitted technology<\/dt><dd[^>]*>OpenAI on Azure<.*Existing technology<\/dt><dd[^>]*><span[^>]*>Azure OpenAI</s);
+  assert.equal(html.match(/>Use existing</g)?.length, 2);
+  assert.equal(html.match(/>Keep submitted</g)?.length, 2);
+  assert.doesNotMatch(html, /Kubernetes/);
+  // Each decision resolves only its own row; a replaced technology stays listed once it has left the solution.
+  const decided = render(DuplicateTechnologies, { ...props, suspects: suspects.slice(1), decisions: { "OpenAI on Azure": { kind: "existing", existing: "Azure OpenAI" } } });
+  assert.match(decided, /1 \/ 2 resolved.*Power-BI.*Replaced .*OpenAI on Azure.* with the existing .*Azure OpenAI/s);
+  assert.equal(decided.match(/>Use existing</g)?.length, 1);
+  const kept = render(DuplicateTechnologies, { ...props, decisions: { "Power-BI": { kind: "kept" } } });
+  assert.match(kept, /Kept .*Power-BI.* as a separate technology.*Undo/s);
+  // Without edit rights the comparison stays, with no decision buttons.
+  assert.doesNotMatch(render(DuplicateTechnologies, { ...props, editable: false }), /Use existing|Keep submitted/);
+  assert.equal(render(DuplicateTechnologies, { ...props, suspects: [suspects[2]] }), "");
+});
+
 test("submission routes use page loaders with contextual labels and retain back navigation", async () => {
   const { DraftsView } = await server.ssrLoadModule("/connected/src/DraftsView.tsx");
   const { SubmissionsView, SubmissionView } = await server.ssrLoadModule("/connected/src/SubmissionsView.tsx");
@@ -684,6 +705,31 @@ test("review queue classifies by the main capability: its area, then the capabil
   assert.match(render(review.ReviewQueue, { entries, connected: true }).slice(html.indexOf("<ul")), /AI &amp; Automation/);
 });
 
+test("review queue scope: area librarians see their area and a scope switch, global librarians keep every filter", () => {
+  const base = { summary: "Summary", status: "Working prototype", reviewOutcome: "None", contributors: [], technologies: [], assets: [], dateAdded: "2026-10-01" };
+  const row = (id, capabilities, publicationStatus = "Pending review") => ({ owner: "Ana", solution: { ...base, id, name: `Solution ${id}`, publicationStatus, specializationArea: "data", capabilities } });
+  const entries = [row("owned", ["Data Engineering"]), row("other", ["Analytics Consulting"]), row("live", ["Analytics Consulting"], "Published")];
+  const capabilityAreas = { "Data Engineering": "data", "Analytics Consulting": "data", "Copilot Agents": "ai" };
+  const scope = { areas: ["data"], capabilities: ["Data Engineering"] };
+  const area = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
+  // Tabs, banner, then "Reviewing …" with the switch, above search, capability and sort; no Area filter.
+  assert.match(area, /aria-label="Review status".*Your turn.*Reviewing.*Data Solutions.*role="group" aria-label="Review scope".*aria-pressed="true"[^>]*>All in my area<.*aria-pressed="false"[^>]*>My capabilities<.*Search review queue.*aria-label="Capability".*aria-label="Sort"/s);
+  assert.doesNotMatch(area, /aria-label="Specialization area"/);
+  assert.match(area, /Pending review<span[^>]*>2<\/span>.*Published<span[^>]*>1<\/span>.*2 submissions.*Solution other.*Solution owned/s);
+  // "My capabilities" (remembered for the session) narrows every tab's count to the capabilities the librarian owns.
+  globalThis.sessionStorage = { getItem: () => "mine", setItem() {} };
+  try {
+    const mine = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
+    assert.match(mine, /aria-pressed="false"[^>]*>All in my area<.*aria-pressed="true"[^>]*>My capabilities</s);
+    assert.match(mine, /Pending review<span[^>]*>1<\/span>.*Published<span[^>]*>0<\/span>.*1 submission<.*Solution owned/s);
+    assert.doesNotMatch(mine, /Solution other/);
+  } finally { delete globalThis.sessionStorage; }
+  // A global librarian: Area and Capability filters, no scope switch.
+  const global = render(review.ReviewQueue, { entries, connected: true, capabilityAreas });
+  assert.match(global, /aria-label="Specialization area".*All areas.*aria-label="Capability"/s);
+  assert.doesNotMatch(global, /Reviewing|Review scope|My capabilities/);
+});
+
 test("my submissions list rows keep the card's management on one line", async () => {
   const { SubmissionRow } = await server.ssrLoadModule("/src/components/SubmissionRow.tsx");
   const solution = { id: "r", name: "Returned one", summary: "Summary", specializationArea: "ai", status: "Working prototype", publicationStatus: "Draft", reviewOutcome: "Changes requested", reviewComments: "Blur it.", contributors: [], capabilities: [], technologies: [], assets: [] };
@@ -1013,7 +1059,7 @@ test("help page: one guide per role and common questions, tailored to the app, w
   const { HelpView } = await server.ssrLoadModule("/src/views/HelpView.tsx");
   const poc = render(HelpView, {});
   assert.match(poc, /How PRISMA works.*<nav aria-label="Guides".*Find and Present a Solution.*Share Your Work.*Review and Curate/s);
-  assert.match(poc, /Present Mode.*Common questions.*What does present mode hide\?/s);
+  assert.match(poc, /Present Mode.*Common questions.*What does Present Mode hide\?.*it does not replace security permissions\./s);
   assert.match(poc, /<details[^>]*><summary/);
   // The PoC promises only what it has.
   assert.doesNotMatch(poc, /Download Presentation|Suggest an Improvement|Edit Solution|Unpublish &amp; Edit|Confirm Changes/);
@@ -1086,7 +1132,7 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   // "Needs your attention" counts solutions, with the items as a breakdown, then one row per solution:
   // the returned draft first (amber, View feedback), then the suggestions (Open), all above "All my solutions".
   assert.match(html, /class="attention-panel[^"]*">.*Needs your attention<span class="section-nav-count section-nav-count--changes" aria-label="2 solutions">2<\/span>.*1 changes requested.*2 pending suggestions/s);
-  assert.match(html, /attention-row attention-row--changes.*Returned one.*Changes requested by the librarian.*Review changes for Returned one">Review changes<.*attention-row ".*Live one.*2 pending suggestions from colleagues.*View suggestions for Live one">View suggestions<.*All my solutions/s);
+  assert.match(html, /attention-row attention-row--changes.*Returned one.*The Librarian requested changes\. Review the feedback, update your solution, and resubmit it\..*Review changes for Returned one">Review changes<.*attention-row ".*Live one.*You have 2 suggestions to review\. Mark them as addressed once you&#x27;ve reviewed them\..*View suggestions for Live one">View suggestions<.*All my solutions/s);
   assert.equal((html.match(/<li /g) ?? []).length, 2);
   // It can fold to its summary line: Hide, expanded by default.
   assert.match(html, /aria-expanded="true"[^>]*>Hide/);

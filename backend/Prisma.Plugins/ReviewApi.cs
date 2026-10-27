@@ -178,6 +178,16 @@ namespace Prisma.Plugins
         [DataMember(Name = "moreRecords")] public bool MoreRecords { get; set; }
         [DataMember(Name = "pagingCookie")] public string PagingCookie { get; set; }
         [DataMember(Name = "librarian")] public bool Librarian { get; set; }
+        /// <summary>Review queue only: the librarian's scope, for the queue's filters (never an authorization input).</summary>
+        [DataMember(Name = "scope", EmitDefaultValue = false)] public LibrarianScope Scope { get; set; }
+    }
+
+    [DataContract]
+    public sealed class LibrarianScope
+    {
+        [DataMember(Name = "global")] public bool Global { get; set; }
+        [DataMember(Name = "areaIds")] public List<string> AreaIds { get; set; }
+        [DataMember(Name = "capabilityIds")] public List<string> CapabilityIds { get; set; }
     }
 
     public sealed class ReviewApi : IPlugin
@@ -212,7 +222,7 @@ namespace Prisma.Plugins
                 else query.Criteria.AddCondition("ownerid", ConditionOperator.Equal, context.InitiatingUserId);
                 query.Orders.Add(new OrderExpression("nx_solutionid", OrderType.Ascending));
                 var rows = (review ? server : caller).RetrieveMultiple(query);
-                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionPage { Records = rows.Entities.Select(row => Summary(server, row, access.CanManage(server, row))).ToList(), MoreRecords = rows.MoreRecords, PagingCookie = rows.PagingCookie, Librarian = access.Available });
+                context.OutputParameters["ResultJson"] = DraftPolicy.Serialize(new SubmissionPage { Records = rows.Entities.Select(row => Summary(server, row, access.CanManage(server, row))).ToList(), MoreRecords = rows.MoreRecords, PagingCookie = rows.PagingCookie, Librarian = access.Available, Scope = review ? access.Scope() : null });
                 return;
             }
             if (context.MessageName != "nx_GetSubmission" && context.MessageName != ReviewPolicy.Transition) throw MediaPolicy.Invalid("Unknown submission operation.");

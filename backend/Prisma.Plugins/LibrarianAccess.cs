@@ -11,6 +11,7 @@ namespace Prisma.Plugins
         public const string ScopedRole = "PRISMA Librarian";
         public const string GlobalRole = "PRISMA Global Librarian";
         private readonly HashSet<Guid> areas = new HashSet<Guid>();
+        private readonly HashSet<Guid> capabilities = new HashSet<Guid>();
         public bool Global { get; private set; }
         public bool Available { get { return Global || areas.Count != 0; } }
 
@@ -34,12 +35,25 @@ namespace Prisma.Plugins
                 foreach (var row in page.Entities)
                 {
                     var area = row.GetAttributeValue<EntityReference>("nx_specializationarea");
-                    if (area != null) access.areas.Add(area.Id);
+                    if (area == null) continue;
+                    access.areas.Add(area.Id);
+                    access.capabilities.Add(row.Id);
                 }
                 if (!page.MoreRecords) return access;
                 query.PageInfo.PageNumber++;
                 query.PageInfo.PagingCookie = page.PagingCookie;
             }
+        }
+
+        /// <summary>
+        /// What the review queue shows of this access, for its filters only: global, or the managed areas and the active
+        /// capabilities the librarian owns in them. Never used to authorize; `null` without librarian access.
+        /// </summary>
+        public LibrarianScope Scope()
+        {
+            if (!Available) return null;
+            return Global ? new LibrarianScope { Global = true, AreaIds = new List<string>(), CapabilityIds = new List<string>() }
+                : new LibrarianScope { AreaIds = areas.OrderBy(id => id).Select(id => id.ToString("D")).ToList(), CapabilityIds = capabilities.OrderBy(id => id).Select(id => id.ToString("D")).ToList() };
         }
 
         public bool CanManage(IOrganizationService server, Entity solution)

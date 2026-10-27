@@ -184,7 +184,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
             <span aria-hidden="true" className="attention-icon"><Icon name={changes ? "alert" : "message"} size={16} /></span>
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold" style={{ color: "var(--ink)" }}>{name}</span>
-              <span className="block text-[12.5px]" style={{ color: "var(--ink-2)" }}>{changes ? "Changes requested by the librarian. Update it and resubmit to publish it." : `${plural(fresh, "pending suggestion")} from colleagues. Review them and mark them addressed.`}</span>
+              <span className="block text-[12.5px]" style={{ color: "var(--ink-2)" }}>{changes ? "The Librarian requested changes. Review the feedback, update your solution, and resubmit it." : `You have ${plural(fresh, "suggestion")} to review. ${fresh === 1 ? "Mark it as addressed once you've reviewed it." : "Mark them as addressed once you've reviewed them."}`}</span>
             </span>
             {changes
               ? <button type="button" className="attention-action attention-action--changes" onClick={() => solution.reviewComments ? setFeedbackTarget(solution) : edit(solution)} aria-label={`Review changes for ${name}`}>Review changes</button>

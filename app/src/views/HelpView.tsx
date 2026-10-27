@@ -67,7 +67,11 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     ] }] : []),
   ];
   const questions: { question: string; answer: ReactNode }[] = [
-    { question: "What does present mode hide?", answer: <>Real client names (the anonymous description is shown instead), contributors and the CSM, effort, projects, library notes and every internal section. Your submissions, saved solutions and the review queue are unavailable until you turn it off. It prevents accidental exposure on a shared screen; it is not a permission system.</> },
+    { question: "What does Present Mode hide?", answer: <>
+      <span className="block">Present Mode hides internal information, including real client names (replaced by anonymous descriptions), contributors, CSMs, development effort, project details, and internal notes.</span>
+      <span className="mt-2 block">It also temporarily hides My Submissions, Saved Solutions, and the Review Queue to keep the experience focused on client-ready content.</span>
+      <span className="mt-2 block">Present Mode helps prevent accidental exposure of sensitive information during client presentations, but it does not replace security permissions.</span>
+    </> },
     ...(connected ? [
       { question: "Why can't I edit a solution after submitting it?", answer: <>Submitted and published solutions are locked so the librarian reviews exactly what you sent. Use <b>Withdraw &amp; edit</b> (pending) or <b>Unpublish &amp; edit</b> (published) from the solution's page in My submissions, then resubmit.</> },
       { question: "Why isn't Download presentation offered?", answer: <>The deck is only produced for published solutions that are cleared for clients, and it never includes effort, builder names or internal notes.</> },

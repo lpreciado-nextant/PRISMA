@@ -1,10 +1,10 @@
 # Present mode
 
-**Status:** Agreed safety-first contract; PoC mirror implemented; solution side column split into client-facing and internal cards 2026-10-14; Refine filters behind a Filters button and Selected for you 2026-10-23 · **Last updated:** 2026-10-23
+**Status:** Agreed safety-first contract; PoC mirror implemented; solution side column split into client-facing and internal cards 2026-10-14; Refine filters behind a Filters button and Selected for you 2026-10-23; connected switch limited to library pages 2026-10-27 · **Last updated:** 2026-10-27
 **Source:** [End-to-end design §3.4](../design/end-to-end-design.md#34-present-mode)
 **Principle:** never embarrass a CSM in front of a client. Present mode **restricts** rather than merely hides.
 
-One switch in the masthead, available from any page, flipped before the CSM shares their screen. It is a mode over every route, not a separate route — that is what keeps its state persistent ([ADR-0003](../architecture/decisions/adr-0003-hash-routing.md)).
+One switch in the masthead, flipped before the CSM shares their screen. Since 2026-10-27 the connected app offers it only on the library, Saved solutions and a solution's pages (not while submitting, in My submissions, the Review queue or Help); once on, it stays visible everywhere so it can always be turned off. It is a mode over every route, not a separate route — that is what keeps its state persistent ([ADR-0003](../architecture/decisions/adr-0003-hash-routing.md)).
 
 ## What it does
 

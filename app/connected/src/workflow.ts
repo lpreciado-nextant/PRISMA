@@ -118,8 +118,25 @@ export function parseSubmission(value: unknown): SubmissionDetail {
   if (data.librarianEdit !== undefined && typeof data.librarianEdit !== "boolean") throw new Error("Invalid librarian edit permission.");
   return { record, graph, media, librarian: data.librarian, ...(data.librarianEdit === undefined ? {} : { librarianEdit: data.librarianEdit }) };
 }
+/**
+ * The review queue's view of the librarian's access, for its filters only (the plug-in still authorizes every record):
+ * global, or the managed areas and the capabilities the librarian owns there. Absent from older plug-ins.
+ */
+export type LibrarianScope = { global: true } | { global: false; areaIds: string[]; capabilityIds: string[] };
+const scopeGuid = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+export function parseScope(value: unknown): LibrarianScope | undefined {
+  if (value === undefined || value === null) return undefined;
+  const scope = value as Record<string, unknown>;
+  const ids = (list: unknown) => Array.isArray(list) && list.every(id => typeof id === "string" && scopeGuid.test(id)) ? (list as string[]).map(id => id.toLowerCase()) : undefined;
+  const areaIds = ids(scope.areaIds), capabilityIds = ids(scope.capabilityIds);
+  if (typeof value !== "object" || typeof scope.global !== "boolean" || !areaIds || !capabilityIds) throw new Error("Invalid librarian scope.");
+  if (scope.global) return { global: true };
+  if (!areaIds.length) throw new Error("Invalid librarian scope.");
+  return { global: false, areaIds, capabilityIds };
+}
 export async function loadSubmissions(api: WorkflowApi, review: boolean, signal: AbortSignal) {
   const records: Submission[] = [];
+  let scope: LibrarianScope | undefined;
   const cookies = new Set<string>();
   let cookie: string | undefined;
   for (let page = 1; page <= 10000; page++) {
@@ -128,8 +145,9 @@ export async function loadSubmissions(api: WorkflowApi, review: boolean, signal:
     signal.throwIfAborted();
     if (!Array.isArray(data.records) || typeof data.moreRecords !== "boolean" || typeof data.librarian !== "boolean") throw new Error("Invalid submissions page.");
     records.push(...data.records.map(submission));
+    if (page === 1) scope = parseScope(data.scope);
     if (new Set(records.map(item => item.core.id)).size !== records.length) throw new Error("Submission list changed. Retry.");
-    if (!data.moreRecords) return { records, librarian: data.librarian };
+    if (!data.moreRecords) return { records, librarian: data.librarian, ...(scope ? { scope } : {}) };
     if (typeof data.pagingCookie !== "string" || !data.pagingCookie || cookies.has(data.pagingCookie)) throw new Error("Invalid submission page token.");
     cookie = data.pagingCookie;
     cookies.add(cookie);

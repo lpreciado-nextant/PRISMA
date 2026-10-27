@@ -247,6 +247,18 @@
     background: color-mix(in srgb, var(--accent) 35%, transparent);
   }
 
+  /* Every enabled button answers the pointer before it is pressed: it lights up on the dark ground and deepens on the
+     light one. Buttons with their own hover (utilities, components) keep theirs, since those layers win. */
+  button {
+    transition: filter 0.18s ease;
+  }
+  button:not(:disabled):hover {
+    filter: brightness(1.15);
+  }
+  [data-theme="light"] button:not(:disabled):hover {
+    filter: brightness(0.92);
+  }
+
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--ink-3) 45%, transparent) transparent;
@@ -924,6 +936,21 @@
   .section-nav-link[aria-current="page"] > svg {
     color: var(--accent);
   }
+  /* Refresh, at the right end of the tabs: quiet like the tabs, accent on hover. */
+  .section-nav-refresh {
+    color: var(--ink-2);
+    transition: color 0.2s var(--ease-sheet), background 0.2s var(--ease-sheet);
+  }
+  .section-nav-refresh:not(:disabled):hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .section-nav-refresh-spin {
+    animation: section-nav-spin 0.9s linear infinite;
+  }
+  @keyframes section-nav-spin {
+    to { transform: rotate(360deg); }
+  }
   .section-nav-link > svg.nav-heart-saved {
     color: var(--favorite);
   }
@@ -1033,7 +1060,13 @@
     pointer-events: none;
     transition: opacity 0.18s var(--ease-sheet), transform 0.18s var(--ease-sheet);
   }
+  /* For controls at the right edge: the hint opens leftwards so it stays on screen. */
+  .hover-hint-text--end {
+    right: 0;
+    left: auto;
+  }
   .hover-hint:hover .hover-hint-text,
+  .hover-hint:focus-visible .hover-hint-text,
   .section-nav-link:hover > .hover-hint-text,
   .section-nav-link:focus-visible > .hover-hint-text {
     opacity: 1;
@@ -1488,6 +1521,15 @@
     color: color-mix(in srgb, var(--ink-3) 90%, transparent);
     cursor: pointer;
     transition: background 0.25s var(--ease-sheet), color 0.25s var(--ease-sheet);
+  }
+  /* Text options (e.g. the review queue's "All in my area · My capabilities"). */
+  .view-toggle--text > button {
+    width: auto;
+    padding-inline: 0.85rem;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--ink-2);
   }
   .view-toggle > button:hover {
     background: color-mix(in srgb, var(--sa-ibo) 9%, transparent);

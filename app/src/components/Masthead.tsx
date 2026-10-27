@@ -17,6 +17,9 @@ export function Masthead({
   reviewAvailable = !draftOnly,
   favoriteCount,
   reviewCount,
+  presentAvailable = true,
+  onRefresh,
+  refreshing = false,
 }: {
   user: AppUser;
   theme: Theme;
@@ -30,6 +33,11 @@ export function Masthead({
   favoriteCount?: number;
   /** Submissions awaiting review, shown on the Review queue tab (librarians only; hidden at zero or when unknown). */
   reviewCount?: number;
+  /** False hides the Present mode switch while it is off (it stays visible while on, so it can always be turned off). */
+  presentAvailable?: boolean;
+  /** When set, a Refresh button sits at the right end of the section tabs. */
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   const route = useRoute();
   const showNav = !present && !readOnly;
@@ -84,16 +92,15 @@ export function Masthead({
             </button>
           )}
 
-          <PresentToggle present={present} onToggle={onTogglePresent} />
+          {(present || presentAvailable) && <PresentToggle present={present} onToggle={onTogglePresent} />}
 
           {showNav && (
             <button
               type="button"
               onClick={() => navigate("/help")}
               aria-label="Help: how PRISMA works"
-              title="How PRISMA works"
               aria-current={route.path === "/help" ? "page" : undefined}
-              className="grid h-10 w-10 cursor-pointer place-items-center rounded-xl border transition-colors duration-200"
+              className="hover-hint relative grid h-10 w-10 cursor-pointer place-items-center rounded-xl border transition-colors duration-200"
               style={{
                 borderColor: route.path === "/help" ? "color-mix(in srgb, var(--accent) 45%, transparent)" : "var(--glass-edge)",
                 background: "color-mix(in srgb, var(--ink) 6%, transparent)",
@@ -101,6 +108,7 @@ export function Masthead({
               }}
             >
               <Icon name="info" size={17} />
+              <span aria-hidden="true" className="hover-hint-text hover-hint-text--end">How PRISMA works</span>
             </button>
           )}
 
@@ -108,7 +116,7 @@ export function Masthead({
             type="button"
             onClick={onToggleTheme}
             aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
-            className="grid h-10 w-10 cursor-pointer place-items-center rounded-xl border transition-colors duration-200"
+            className="hover-hint relative grid h-10 w-10 cursor-pointer place-items-center rounded-xl border transition-colors duration-200"
             style={{
               borderColor: "var(--glass-edge)",
               background: "color-mix(in srgb, var(--ink) 6%, transparent)",
@@ -116,6 +124,7 @@ export function Masthead({
             }}
           >
             <Icon name={theme === "dark" ? "sun" : "moon"} size={17} />
+            <span aria-hidden="true" className="hover-hint-text hover-hint-text--end">{theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}</span>
           </button>
 
           {!present && (
@@ -146,7 +155,7 @@ export function Masthead({
         </div>
       </div>
     </header>
-    {showNav && <SectionNav path={route.path} favoriteCount={favoriteCount} reviewCount={reviewCount} draftOnly={draftOnly} reviewAvailable={reviewAvailable} />}
+    {showNav && <SectionNav path={route.path} favoriteCount={favoriteCount} reviewCount={reviewCount} draftOnly={draftOnly} reviewAvailable={reviewAvailable} onRefresh={onRefresh} refreshing={refreshing} />}
     </>
   );
 }
@@ -161,7 +170,7 @@ type NavItem = { path: string; label: string; icon: IconName; active: boolean; c
  * enforces it). An accent underline marks the current section. Below `sm`, Library and Saved solutions stay visible
  * and the rest move into a "More" menu.
  */
-function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailable }: { path: string; favoriteCount?: number; reviewCount?: number; draftOnly: boolean; reviewAvailable: boolean }) {
+function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailable, onRefresh, refreshing }: { path: string; favoriteCount?: number; reviewCount?: number; draftOnly: boolean; reviewAvailable: boolean; onRefresh?: () => void; refreshing?: boolean }) {
   // My submissions counts its solutions with open feedback (returned drafts, new suggestions), like its attention list.
   // Amber when one was returned with Changes requested (it blocks publication), blue when all are suggestions.
   useFeedbackSeen();
@@ -185,8 +194,15 @@ function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailab
     <nav aria-label="Sections" className="mx-auto mt-3 w-full max-w-[1340px] px-4 sm:px-6">
       <div className="flex h-11 items-stretch gap-1 border-b border-(--glass-edge) sm:gap-2">
         {items.map((item, index) => <NavLink key={item.path} item={item} className={index >= primary.length ? "hidden sm:inline-flex" : "inline-flex"} />)}
-        {rest.length > 0 && <div className="ml-auto flex items-center sm:hidden">
-          <OverflowMenu label="More sections" items={rest.map(item => ({ label: item.label, icon: item.icon, onSelect: () => navigate(item.path) }))} />
+        {(rest.length > 0 || onRefresh) && <div className="ml-auto flex items-center gap-1">
+          {rest.length > 0 && <div className="sm:hidden">
+            <OverflowMenu label="More sections" items={rest.map(item => ({ label: item.label, icon: item.icon, onSelect: () => navigate(item.path) }))} />
+          </div>}
+          {onRefresh && <button type="button" onClick={onRefresh} disabled={refreshing} aria-label={refreshing ? "Refreshing the library" : "Refresh the library"}
+            className="hover-hint section-nav-refresh relative grid h-9 w-9 cursor-pointer place-items-center rounded-xl disabled:cursor-progress">
+            <Icon name="refresh" size={17} className={refreshing ? "section-nav-refresh-spin" : undefined} />
+            <span aria-hidden="true" className="hover-hint-text hover-hint-text--end">{refreshing ? "Refreshing…" : "Refresh the library"}</span>
+          </button>}
         </div>}
       </div>
     </nav>

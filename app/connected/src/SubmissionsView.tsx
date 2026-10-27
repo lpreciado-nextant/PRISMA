@@ -4,15 +4,19 @@ import { LoadingState } from "../../src/components/LoadingState";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { MySubmissionsView, type SuggestionSummary } from "../../src/views/MySubmissionsView";
 import { DetailView } from "../../src/views/DetailView";
-import { ReviewPanel, ReviewQueue } from "../../src/components/ReviewQueue";
+import { ReviewPanel, ReviewQueue, type ReviewScope } from "../../src/components/ReviewQueue";
+import { AREA_ORDER } from "../../src/data/catalogueMetadata";
 import { outlinedStatusButton, statusButton, subtleStatusButton, SubmissionStatusPanel } from "../../src/components/SubmissionStatusPanel";
 import { submissionState } from "../../src/lib/submissionState";
 import { reviewChecklist } from "../../src/lib/reviewChecklist";
-import { newTechnologies, type NewTechnology } from "../../src/lib/technologyName";
+import { newTechnologies } from "../../src/lib/technologyName";
 import type { Solution, SpecializationArea } from "../../src/types";
 import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
-import { workflowApi, readRows, suggestionApi } from "./dataSource";
+import { graphApi, workflowApi, readRows, suggestionApi } from "./dataSource";
+import { graphPayload, parseGraph } from "./draftGraph";
+import { DuplicateTechnologies } from "../../src/components/DuplicateTechnologies";
+import { readKept, replaceTechnology, writeKept, type DuplicateDecision } from "./technologyDuplicates";
 import { loadSuggestions, type Suggestion, type SuggestionList } from "./suggestions";
 import { feedbackKeys, openFeedback, useFeedbackSeen } from "../../src/lib/feedbackSeen";
 import { SuggestionsPanel } from "./SolutionSuggestions";
@@ -27,6 +31,8 @@ import { ProtectedImage } from "./ProtectedImage";
 
 const button = "inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-3 py-2 text-[14px] disabled:opacity-50";
 const shell = "mx-auto max-w-[1100px] px-6 py-10";
+// Browser storage for "Keep submitted" decisions; a blocked localStorage throws inside the calls, which readKept/writeKept absorb.
+const keptStorage = { getItem: (key: string) => window.localStorage.getItem(key), setItem: (key: string, value: string) => window.localStorage.setItem(key, value) };
 // Transitions that change what CSMs can see are confirmed first; each key is the plug-in action it sends.
 const CONFIRMATIONS = {
   withdraw: { title: "Withdraw submission?", label: "Withdraw & edit", body: "This submission will return to Draft for editing. Any published access will be removed until it is approved again." },
@@ -36,7 +42,7 @@ const CONFIRMATIONS = {
 const UNPUBLISH = { title: "Unpublish to edit?", label: "Unpublish & edit", body: "It leaves the Solution Library and returns to Draft so you can edit it. It is published again once a librarian approves it." };
 
 export function SubmissionsView({ review }: { review: boolean }) {
-  const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number }[]; librarian: boolean; capabilityAreas: Record<string, SpecializationArea> } | null>(null);
+  const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number }[]; librarian: boolean; capabilityAreas: Record<string, SpecializationArea>; scope?: ReviewScope } | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const uncertainDeletes = useRef(new Set<string>());
@@ -54,8 +60,15 @@ export function SubmissionsView({ review }: { review: boolean }) {
         const area = option.areaId ? areaNames.get(option.areaId) : undefined;
         return area === "ai" || area === "data" || area === "ibo" ? [[option.name, area as SpecializationArea]] : [];
       }));
+      // An area librarian's scope by name: their areas and the capabilities they own. A global librarian (or an older
+      // plug-in that sends no scope) gets the full Area and Capability filters instead.
+      const access = result.scope?.global === false ? result.scope : undefined;
+      const scope: ReviewScope | undefined = access && {
+        areas: AREA_ORDER.filter(area => access.areaIds.some(id => areaNames.get(id) === area)),
+        capabilities: references.capabilities.filter(option => access.capabilityIds.includes(option.id.toLowerCase())).map(option => option.name),
+      };
       uncertainDeletes.current.clear();
-      setState({ entries: result.records.map(record => ({ solution: submissionSolution(record, names), rowVersion: record.core.rowVersion, owner: record.owner, imageCount: record.imageCount, attachmentCount: record.attachmentCount })), librarian: result.librarian, capabilityAreas });
+      setState({ entries: result.records.map(record => ({ solution: submissionSolution(record, names), rowVersion: record.core.rowVersion, owner: record.owner, imageCount: record.imageCount, attachmentCount: record.attachmentCount })), librarian: result.librarian, capabilityAreas, ...(scope?.areas.length ? { scope } : {}) });
     }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => window.clearTimeout(timeout));
     return () => { controller.abort(); window.clearTimeout(timeout); };
   }, [review, attempt]);
@@ -105,13 +118,17 @@ export function SubmissionsView({ review }: { review: boolean }) {
       renderPoster={solution => <SubmissionThumbnail solution={solution} />}
       actions={<button type="button" title="Refresh submissions" aria-label="Refresh submissions" className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold hover:bg-(--glass-edge)" style={{ color: "var(--ink-2)" }} onClick={() => { setState(null); setSuggestionRows(undefined); setAttempt(current => current + 1); }}><Icon name="refresh" size={15} />Refresh</button>} />;
   }
-  return <ReviewQueue entries={state.entries} connected capabilityAreas={state.capabilityAreas} />;
+  return <ReviewQueue entries={state.entries} connected capabilityAreas={state.capabilityAreas} scope={state.scope} />;
 }
 
 export function SubmissionView({ id, review, technologyUse }: { id: string; review: boolean; technologyUse?: ReadonlyMap<string, string[]> }) {
   const [state, setState] = useState<SubmissionDetail | null>(null);
   const [names, setNames] = useState<Record<string, string>>({});
-  const [technologyLabels, setTechnologyLabels] = useState<string[]>([]);
+  const [technologies, setTechnologies] = useState<[string, string][]>([]);
+  // The librarian's decision on each possible duplicate technology, by submitted name; "Keep submitted" is remembered here.
+  const [duplicates, setDuplicates] = useState<Record<string, DuplicateDecision>>(() => Object.fromEntries(readKept(keptStorage, id).map(name => [name, { kind: "kept" }])));
+  const [duplicateBusy, setDuplicateBusy] = useState<string>();
+  const [duplicateError, setDuplicateError] = useState<{ name: string; message: string }>();
   const [emails, setEmails] = useState<Record<string, string>>({});
   const [levels, setLevels] = useState<Record<string, string>>({});
   const [namesLoaded, setNamesLoaded] = useState(false);
@@ -163,7 +180,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         if (table === "people" && !controller.signal.aborted && typeof values[primary] === "string" && typeof values.cr6b0_consultantlevel === "string" && values.cr6b0_consultantlevel.trim()) setLevels(current => ({ ...current, [values[primary] as string]: (values.cr6b0_consultantlevel as string).trim() }));
         return typeof values[primary] === "string" && typeof values[label] === "string" ? [[values[primary] as string, values[label] as string]] : [];
       }); } catch { return []; }
-    })).then(lists => { if (!controller.signal.aborted) { setNames(Object.fromEntries(lists.flat())); setTechnologyLabels(lists[2].map(([, label]) => label)); setNamesLoaded(true); } });
+    })).then(lists => { if (!controller.signal.aborted) { setNames(Object.fromEntries(lists.flat())); setTechnologies(lists[2] as [string, string][]); setNamesLoaded(true); } });
     // Capability owners (`nx_capabilityowner`, a consultant lookup) in their own read: a failure only hides the row.
     void readAll(readRows, "capabilities", { select: ["nx_capabilityid", "_nx_capabilityowner_value"], filter: "statecode eq 0" }, controller.signal).then(rows => {
       if (controller.signal.aborted) return;
@@ -195,11 +212,56 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
       if (!controller.signal.aborted) { setUncertain(true); setError("Transition was not confirmed. Check required content, uploads, permissions and the saved version, then reopen before retrying."); }
     } finally { window.clearTimeout(timeout); running.current = false; if (!controller.signal.aborted) setBusy(false); }
   };
+  // "Use existing": a librarian graph save (ADR-0013) that swaps the submitted technology for the existing one. The
+  // server records it as the librarian's edit, so the re-read submission asks for an explanation on approval.
+  const replaceWithExisting = async (name: string, existing: string) => {
+    const controller = lifetime.current;
+    if (!state || !controller || controller.signal.aborted || running.current || uncertain) return;
+    const submittedId = state.graph.graph.technologyIds.find(technology => names[technology] === name);
+    const existingId = technologies.find(([technology, label]) => label === existing && technology !== submittedId)?.[0];
+    const graph = submittedId && existingId ? replaceTechnology(state.graph.graph, submittedId, existingId) : undefined;
+    if (!graph) { setDuplicateError({ name, message: "The existing technology could not be matched. Reopen the submission and try again." }); return; }
+    running.current = true;
+    setDuplicateBusy(name);
+    setDuplicateError(undefined);
+    let expired = false;
+    const timeout = window.setTimeout(() => { expired = true; if (!controller.signal.aborted) { setUncertain(true); setDuplicateBusy(undefined); setError("The technology change was not confirmed. Reopen before retrying."); } }, 30_000);
+    let saved = false;
+    try {
+      const next = parseGraph(await graphApi.save(id, state.record.core.rowVersion, graphPayload(graph)));
+      controller.signal.throwIfAborted();
+      if (expired) return;
+      if (next.id !== id || next.rowVersion === state.record.core.rowVersion) throw new Error("Unconfirmed graph version.");
+      saved = true;
+      setDuplicates(current => ({ ...current, [name]: { kind: "existing", existing } }));
+      const detail = parseSubmission(await workflowApi.read(id));
+      controller.signal.throwIfAborted();
+      if (expired) return;
+      if (detail.record.core.id !== id) throw new Error("Mismatched submission.");
+      setState(detail);
+    } catch {
+      if (controller.signal.aborted || expired) return;
+      // Saved but not re-read: the row version on screen is stale, so further decisions must wait for a reopen.
+      if (saved) { setUncertain(true); setError("The technology was replaced, but the submission could not be refreshed. Reopen before continuing."); }
+      else setDuplicateError({ name, message: "The technology was not replaced. Reopen the submission and try again." });
+    } finally { window.clearTimeout(timeout); running.current = false; if (!controller.signal.aborted) setDuplicateBusy(undefined); }
+  };
+  const keepTechnology = (name: string, keep: boolean) => {
+    setDuplicateError(undefined);
+    setDuplicates(current => {
+      const next = { ...current };
+      if (keep) next[name] = { kind: "kept" }; else delete next[name];
+      writeKept(keptStorage, id, Object.entries(next).flatMap(([technology, decision]) => decision.kind === "kept" ? [technology] : []));
+      return next;
+    });
+  };
   const reload = () => { setError(""); setState(null); setNamesLoaded(false); setUncertain(false); setPreview(null); setAttempt(current => current + 1); };
   const core = state?.record.core;
   const status = state?.record.publication;
   const missing = !core || !core.summary.trim() || !core.whatItDoes.trim() || !core.businessValue.trim() || !core.capabilityId || !core.safetyAcknowledged || (!!core.clientContext.trim() && !core.clientContextRedacted.trim()) || !state?.graph.graph.contributors.length || core.complexityValue == null || !state.media.some(item => item.kind === "image" && item.complete) || state.media.some(item => !item.complete);
-  if (!state || !core || !namesLoaded || state.record.areaIds.some(area => !["ai", "data", "ibo"].includes(names[area]))) return <section className={shell}><button className={button} onClick={() => navigate(review ? "/review" : "/my-submissions")}><Icon name="chevronLeft" />{review ? "Review queue" : "My submissions"}</button>{error || namesLoaded ? <div role="alert" className="my-6"><p className="mb-3">{error || "Specialization unavailable. Check your reference-data access."}</p><button className={button} onClick={reload}><Icon name="arrowRight" />Reopen</button></div> : <LoadingState variant="page" label="Loading submission..." />}</section>;
+  // Loading until both the submission and its reference names are in, whichever arrives first; only then can a missing
+  // specialization be told apart from one still loading.
+  if (!state || !core || !namesLoaded || state.record.areaIds.some(area => !["ai", "data", "ibo"].includes(names[area]))) return <section className={shell}><button className={button} onClick={() => navigate(review ? "/review" : "/my-submissions")}><Icon name="chevronLeft" />{review ? "Review queue" : "My submissions"}</button>{error || (state && namesLoaded) ? <div role="alert" className="my-6"><p className="mb-3">{error || "Specialization unavailable. Check your reference-data access."}</p><button className={button} onClick={reload}><Icon name="arrowRight" />Reopen</button></div> : <LoadingState variant="page" label="Loading submission..." />}</section>;
   if (preview) return <MediaPreview key={preview.id} item={preview} solutionId={core.id} mode="submission" viewerTitle={core.name} onClose={() => setPreview(null)} />;
   const graph = state.graph.graph;
   const thumbnail = state.media.find(item => item.kind === "thumbnail" && item.complete);
@@ -232,7 +294,9 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         onConfirmEdit={state.librarian && status === 125060000 && !uncertain ? () => void transition("confirm-edit") : undefined}
         onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
-        {technologyUse && <NewTechnologies items={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologyLabels)} />}
+        {technologyUse && <DuplicateTechnologies suspects={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologies.map(([, label]) => label))}
+          decisions={duplicates} editable={state.librarian && state.librarianEdit !== false && (status === 125060000 || status === 125060002) && !uncertain && !busy}
+          busy={duplicateBusy} error={duplicateError} onUseExisting={(name, existing) => void replaceWithExisting(name, existing)} onKeep={name => keepTechnology(name, true)} onUndoKeep={name => keepTechnology(name, false)} />}
       </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} edited={state.record.librarianEditedOn}
         badge={newSuggestions > 0 && <span className="new-feedback"><Icon name="message" size={12} />{newSuggestions === 1 ? "1 pending suggestion" : `${newSuggestions} pending suggestions`}</span>} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">
           {status === 125060003 ? <><button type="button" className={outlinedStatusButton} onClick={() => navigate(`/submit?draft=${id}`)}><Icon name="edit" size={16} />Edit draft</button>
@@ -264,14 +328,3 @@ function capabilityOwnerName(owners: Record<string, string | null> | undefined, 
   return owner === null ? null : names[owner];
 }
 
-/** New technologies that resemble an existing one: likely duplicates. Nothing renders when there are none. */
-function NewTechnologies({ items }: { items: NewTechnology[] }) {
-  const suspects = items.filter(item => item.similar.length > 0);
-  if (!suspects.length) return null;
-  return <section aria-label="Possible duplicate technologies" className="mt-4 rounded-xl border p-4 text-[14px]" style={{ borderColor: "color-mix(in srgb, var(--proto) 40%, transparent)" }}>
-    <h3 className="flex items-center gap-1.5 font-semibold" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} />Possible duplicate {suspects.length === 1 ? "technology" : "technologies"}</h3>
-    <ul className="mt-2 space-y-1.5">
-      {suspects.map(item => <li key={item.name}><span className="font-semibold">{item.name}</span><span className="text-(--ink-2)"> · looks like {item.similar.join(", ")}</span></li>)}
-    </ul>
-  </section>;
-}

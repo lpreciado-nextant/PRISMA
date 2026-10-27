@@ -232,6 +232,17 @@ test("submission paging rejects loops and cancelled responses", async () => {
   await assert.rejects(loadSubmissions({ ...api, list: async () => { controller.abort(); return result({ records: [], moreRecords: false, librarian: false }); } }, false, controller.signal), /abort/i);
 });
 
+test("the review queue reads the librarian's scope when the plug-in sends it", async () => {
+  const area = "AAAAAAAA-0000-0000-0000-000000000001", owned = "aaaaaaaa-0000-0000-0000-000000000002";
+  const list = (scope?: unknown) => ({ list: async () => result({ records: [], moreRecords: false, librarian: true, ...(scope === undefined ? {} : { scope }) }), read: async () => ({}), transition: async () => ({}), published: async () => ({}) }) as WorkflowApi;
+  assert.deepEqual((await loadSubmissions(list({ global: false, areaIds: [area], capabilityIds: [owned] }), true, signal())).scope, { global: false, areaIds: [area.toLowerCase()], capabilityIds: [owned] });
+  assert.deepEqual((await loadSubmissions(list({ global: true, areaIds: [], capabilityIds: [] }), true, signal())).scope, { global: true });
+  // Older plug-ins send none: the queue keeps its full filters.
+  assert.equal((await loadSubmissions(list(), true, signal())).scope, undefined);
+  for (const scope of [{ global: false, areaIds: [], capabilityIds: [] }, { global: "no", areaIds: [], capabilityIds: [] }, { global: false, areaIds: ["x"], capabilityIds: [] }, { global: false, areaIds: [area] }])
+    await assert.rejects(loadSubmissions(list(scope), true, signal()), /scope/);
+});
+
 test("media responses retain exact versions and reject unsafe shapes", () => {
   const state = { id: "45dc1e23-1bb6-f111-aaac-6045bd049fba", rowVersion: "90071992547409932", sessionId: null, blockSize: 524288, media: [] };
   assert.deepEqual(parseMedia(result(state)), state);

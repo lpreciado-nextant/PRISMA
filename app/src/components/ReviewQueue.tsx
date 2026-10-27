@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState, type CSSProperties, type ReactNode } from "react";
 import type { Solution, SpecializationArea } from "../types";
 import { AREA_ORDER, AREAS } from "../data/catalogueMetadata";
 import { navigate } from "../lib/router";
@@ -39,8 +39,9 @@ const compactAction = "inline-flex min-h-9 cursor-pointer items-center gap-1.5 r
 
 /** One option of a decision, as a selectable card backed by a native radio (arrow keys move between options). */
 function ChoiceCard<Value extends string>({ name, option, selected, onSelect }: { name: string; option: Choice<Value>; selected: boolean; onSelect: () => void }) {
-  return <label className="flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--accent)"
-    style={{ borderColor: selected ? option.color : "var(--glass-edge)", background: selected ? `color-mix(in srgb, ${option.color} 12%, transparent)` : "color-mix(in srgb, var(--ink) 3%, transparent)" }}>
+  // Unselected, it takes a hint of its own colour on hover, so the choice reads before it is made.
+  return <label className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-(--accent) ${selected ? "" : "border-(--glass-edge) bg-(--ink)/3 hover:border-[color-mix(in_srgb,var(--choice)_55%,transparent)] hover:bg-[color-mix(in_srgb,var(--choice)_8%,transparent)]"}`}
+    style={selected ? { borderColor: option.color, background: `color-mix(in srgb, ${option.color} 12%, transparent)` } : { "--choice": option.color } as CSSProperties}>
     <input type="radio" name={name} value={option.value} checked={selected} onChange={onSelect} className="sr-only" />
     <span className="grid size-8 shrink-0 place-items-center rounded-lg" style={{ color: option.color, background: `color-mix(in srgb, ${option.color} 16%, transparent)` }}><Icon name={option.icon} size={16} /></span>
     <span className="min-w-0">
@@ -309,31 +310,66 @@ function submittedOn(value?: string) {
   return { short, full: date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }), iso: match[0] };
 }
 
+/** An area librarian's review scope, by name: the areas they manage and the capabilities they own there. */
+export type ReviewScope = { areas: SpecializationArea[]; capabilities: string[] };
+type ScopeView = "area" | "mine";
+const SCOPE_VIEW_KEY = "prisma.review.scope-view";
+/** The scope view survives opening a submission and coming back; unavailable storage falls back to the whole area. */
+function readScopeView(): ScopeView {
+  try { return sessionStorage.getItem(SCOPE_VIEW_KEY) === "mine" ? "mine" : "area"; } catch { return "area"; }
+}
+
 /**
  * `capabilityAreas` maps a capability's name to the specialization area it belongs to. A solution's area here is its
  * main capability's area (its first area when the capability has none), and the capability filter lists only the
  * chosen area's capabilities; choosing a capability chooses its area.
+ *
+ * `scope` (an area librarian): the queue is already limited to their areas, so the Area filter gives way to "Reviewing
+ * …" and a choice between the whole area and the capabilities they own. It only filters what is shown; what they may
+ * review stays with the server. Without it (a global librarian) Area and Capability filter the whole queue.
  */
-export function ReviewQueue({ entries, connected = false, capabilityAreas = {} }: { entries: Entry[]; connected?: boolean; capabilityAreas?: Readonly<Record<string, SpecializationArea>> }) {
+export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, scope }: { entries: Entry[]; connected?: boolean; capabilityAreas?: Readonly<Record<string, SpecializationArea>>; scope?: ReviewScope }) {
   const [filter, setFilter] = useState<typeof filters[number]>("Pending review");
   const [query, setQuery] = useState("");
   const [area, setArea] = useState<SpecializationArea | "">("");
   const [capability, setCapability] = useState("");
   const [sort, setSort] = useState<Sort>("newest");
+  const [scopeView, setScopeView] = useState<ScopeView>(readScopeView);
+  const view: ScopeView = scope ? scopeView : "area";
   const mainArea = (solution: Solution): SpecializationArea | undefined => capabilityAreas[solution.capabilities[0] ?? ""] ?? solutionAreas(solution)[0];
-  const inArea = entries.filter(entry => matches(entry, filter)).filter(({ solution }) => !area || mainArea(solution) === area);
-  // Capabilities narrow with the chosen area: the main capabilities among the records it leaves, A–Z.
-  const capabilities = ["", ...[...new Set(inArea.flatMap(({ solution }) => solution.capabilities.slice(0, 1)))].sort((a, b) => a.localeCompare(b))];
+  // Scope and area first: they decide which capabilities can be chosen.
+  const inScope = ({ solution }: Entry, viewing = view, chosenArea = area) => (viewing !== "mine" || !!scope?.capabilities.includes(solution.capabilities[0] ?? ""))
+    && (!chosenArea || mainArea(solution) === chosenArea);
+  // Every capability the scope or area allows (A–Z), plus any main capability on a record in it.
+  const capabilityOptions = (viewing: ScopeView, chosenArea: SpecializationArea | "") => {
+    const allowed = scope && viewing === "mine" ? scope.capabilities
+      : Object.entries(capabilityAreas).filter(([, owner]) => chosenArea ? owner === chosenArea : !scope || scope.areas.includes(owner)).map(([name]) => name);
+    const used = entries.filter(entry => inScope(entry, viewing, chosenArea)).flatMap(({ solution }) => solution.capabilities.slice(0, 1));
+    return ["", ...[...new Set([...allowed, ...used])].sort((a, b) => a.localeCompare(b))];
+  };
+  const capabilities = capabilityOptions(view, area);
   const chosenCapability = capabilities.includes(capability) ? capability : "";
   const chooseCapability = (value: string) => {
     setCapability(value);
     const owner = capabilityAreas[value];
-    if (value && owner) setArea(owner);
+    if (value && owner && !scope) setArea(owner);
+  };
+  // A new scope or area drops a capability it no longer offers.
+  const chooseArea = (value: SpecializationArea | "") => {
+    setArea(value);
+    if (!capabilityOptions(view, value).includes(capability)) setCapability("");
+  };
+  const chooseView = (value: ScopeView) => {
+    setScopeView(value);
+    try { sessionStorage.setItem(SCOPE_VIEW_KEY, value); } catch { void 0; }
+    if (!capabilityOptions(value, area).includes(capability)) setCapability("");
   };
   const terms = query.trim().toLowerCase();
-  const visible = inArea
-    .filter(({ solution }) => !chosenCapability || solution.capabilities[0] === chosenCapability)
-    .filter(({ solution, owner }) => `${solution.name} ${solution.summary} ${solution.capabilities.join(" ")} ${owner ?? ""}`.toLowerCase().includes(terms))
+  // Scope, area, capability and search apply to every tab, so each tab's count matches what it lists.
+  const shown = (entry: Entry) => inScope(entry) && (!chosenCapability || entry.solution.capabilities[0] === chosenCapability)
+    && `${entry.solution.name} ${entry.solution.summary} ${entry.solution.capabilities.join(" ")} ${entry.owner ?? ""}`.toLowerCase().includes(terms);
+  const counts = Object.fromEntries(filters.map(option => [option, entries.filter(entry => matches(entry, option) && shown(entry)).length])) as Record<typeof filters[number], number>;
+  const visible = entries.filter(entry => matches(entry, filter) && shown(entry))
     // Undated records sort last either way; ties keep a stable alphabetical order.
     .sort((a, b) => {
       const left = a.solution.dateAdded ?? "", right = b.solution.dateAdded ?? "";
@@ -355,20 +391,31 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {} }
         return <button type="button" key={option} aria-pressed={active} onClick={() => setFilter(option)} className="-mb-px cursor-pointer border-b-[3px] px-3 py-3 text-[14px] font-semibold transition-colors" style={{ borderColor: active ? "var(--accent)" : "transparent", color: active ? "var(--accent)" : "var(--ink-2)" }}>
           {option}
           {/* Pending review is the librarian's to-do: its count is amber like the masthead's Review queue badge. */}
-          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={option === "Pending review" && entries.some(entry => matches(entry, option))
+          <span className="ml-2 rounded-full px-1.5 py-0.5 font-mono text-[11.5px]" style={option === "Pending review" && counts[option] > 0
             ? { color: "color-mix(in srgb, var(--proto) 85%, var(--ink))", background: "color-mix(in srgb, var(--proto) 20%, transparent)" }
-            : { background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{entries.filter(entry => matches(entry, option)).length}</span>
+            : { background: active ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "color-mix(in srgb, var(--ink) 7%, transparent)" }}>{counts[option]}</span>
         </button>;
       })}
     </div>
 
     <div className="mt-4"><Notice icon={TAB_NOTICE[filter].icon} tone={TAB_NOTICE[filter].tone} title={TAB_NOTICE[filter].title}>{TAB_NOTICE[filter].text(connected)}</Notice></div>
 
+    {/* An area librarian's scope: which area, then the whole area or only the capabilities they own. */}
+    {scope && <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <p className="flex min-w-0 flex-wrap items-center gap-x-2 text-[14px] text-(--ink-2)">Reviewing
+        {scope.areas.map(value => <span key={value} className="inline-flex items-center gap-1.5 font-semibold text-(--ink)"><span aria-hidden="true" className="size-2 rounded-full" style={{ background: AREAS[value].cssVar }} />{AREAS[value].name}</span>)}
+      </p>
+      <div className="view-toggle view-toggle--text" role="group" aria-label="Review scope">
+        <button type="button" aria-pressed={view === "area"} onClick={() => chooseView("area")}>All in my area</button>
+        <button type="button" aria-pressed={view === "mine"} onClick={() => chooseView("mine")}>My capabilities</button>
+      </div>
+    </div>}
+
     {/* Search & filters: search stays the widest control; area narrows capability, and a capability sets its area. */}
-    <div className="mt-5 flex flex-wrap items-center gap-2.5">
+    <div className={`${scope ? "mt-3" : "mt-5"} flex flex-wrap items-center gap-2.5`}>
       <label className="flex h-9 min-w-0 flex-1 basis-72 items-center gap-2 rounded-[10px] border border-(--glass-edge) px-3" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}><Icon name="search" /><input type="search" aria-label="Search review queue" placeholder={connected ? "Search submissions" : "Search submissions or owners"} value={query} onChange={event => setQuery(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[14px]" /></label>
-      <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={setArea} getLabel={value => value ? AREAS[value].name : "All areas"} buttonClassName={`${filterButton} min-w-[200px]`} />
-      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={chooseCapability} getLabel={value => value || "All capabilities"} getHint={value => { const owner = capabilityAreas[value]; return value && owner && !area ? AREAS[owner].short : ""; }} buttonClassName={`${filterButton} min-w-[240px]`} />
+      {!scope && <SelectPicker compact label="Specialization area" value={area} options={["", ...AREA_ORDER]} onChange={chooseArea} getLabel={value => value ? AREAS[value].name : "All areas"} buttonClassName={`${filterButton} min-w-[200px]`} />}
+      <SelectPicker compact label="Capability" value={chosenCapability} options={capabilities} onChange={chooseCapability} getLabel={value => value || "All capabilities"} getHint={value => { const owner = capabilityAreas[value]; return value && owner && !area && (!scope || scope.areas.length > 1) ? AREAS[owner].short : ""; }} buttonClassName={`${filterButton} min-w-[240px]`} />
       <SelectPicker compact label="Sort" value={sort} options={["newest", "oldest"] as const} onChange={setSort} getLabel={value => value === "newest" ? "Newest first" : "Oldest first"} getButtonLabel={value => `Sort: ${value === "newest" ? "Newest" : "Oldest"}`} />
     </div>
 
