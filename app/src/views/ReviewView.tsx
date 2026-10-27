@@ -71,7 +71,7 @@ export function ReviewView({ entries, selectedId, onDecision, published = [], on
       <ReviewPanel local status={selected.solution.publicationStatus} owner={selected.owner} client={selected.solution.clientContext} context={selected.solution.clientContextRedacted} feedback={selected.solution.reviewComments}
         solution={selected.solution} checks={reviewChecklist(submissionFacts(selected.solution))}
         comments={comments} onComments={setComments} cleared={clientSafe} onCleared={setClientSafe} busy={saving} notice={notice} error={error} onReturn={() => void decide("return")} onApprove={() => void decide("publish")}>
-        <DuplicateTechnologies decisions={duplicates} busy={duplicateBusy} error={duplicateError}
+        <DuplicateTechnologies technologies={selected.solution.technologies} decisions={duplicates} busy={duplicateBusy} error={duplicateError}
           suspects={newTechnologies(selected.solution.technologies, new Set(published.filter(other => other.id !== selected.solution.id).flatMap(other => other.technologies)), [...new Set(published.flatMap(other => other.technologies))])}
           editable={!!onReplaceTechnology && !saving && (selected.solution.publicationStatus === "Pending review" || selected.solution.publicationStatus === "Published")}
           onUseExisting={(name, existing) => void replaceWithExisting(name, existing)} onKeep={name => keep(name, true)} onUndoKeep={name => keep(name, false)} />

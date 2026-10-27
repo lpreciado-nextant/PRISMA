@@ -295,7 +295,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
         {technologyUse && <DuplicateTechnologies suspects={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologies.map(([, label]) => label))}
-          decisions={duplicates} editable={state.librarian && state.librarianEdit !== false && (status === 125060000 || status === 125060002) && !uncertain && !busy}
+          technologies={solution.technologies} decisions={duplicates} editable={state.librarian && state.librarianEdit !== false && (status === 125060000 || status === 125060002) && !uncertain && !busy}
           blocked={state.librarian && state.librarianEdit === false && (status === 125060000 || status === 125060002) ? "You submitted this solution, so you can't replace its technologies from the review. To use the existing one, withdraw it from My submissions, change the technology and resubmit." : undefined}
           busy={duplicateBusy} error={duplicateError} onUseExisting={(name, existing) => void replaceWithExisting(name, existing)} onKeep={name => keepTechnology(name, true)} onUndoKeep={name => keepTechnology(name, false)} />}
       </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} edited={state.record.librarianEditedOn}

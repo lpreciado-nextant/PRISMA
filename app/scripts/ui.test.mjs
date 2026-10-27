@@ -230,6 +230,16 @@ test("possible duplicate technologies explain themselves and get one decision ea
   assert.equal(decided.match(/>Use existing</g)?.length, 1);
   const kept = render(DuplicateTechnologies, { ...props, decisions: { "Power-BI": { kind: "kept" } } });
   assert.match(kept, /Kept .*Power-BI.* as a separate technology.*Undo/s);
+  // Both look-alikes on the solution: one row to remove either or keep both, never two rows that contradict.
+  const both = [{ name: "OpenAI on Azure", similar: ["Azure OpenAI"] }, { name: "Azure OpenAI", similar: ["OpenAI on Azure"] }];
+  const pairHtml = render(DuplicateTechnologies, { ...props, suspects: both, technologies: ["OpenAI on Azure", "Azure OpenAI"] });
+  assert.match(pairHtml, /Possible duplicate technology<.*0 \/ 1 resolved.*On this solution.*OpenAI on Azure.*and.*Azure OpenAI.*>Remove OpenAI on Azure<.*>Remove Azure OpenAI<.*>Keep both</s);
+  assert.doesNotMatch(pairHtml, /Use existing|Keep submitted/);
+  // Once one is removed it is never offered again: the other is no longer a suspect.
+  const removedHtml = render(DuplicateTechnologies, { ...props, suspects: [both[1]], technologies: ["Azure OpenAI"], decisions: { "OpenAI on Azure": { kind: "existing", existing: "Azure OpenAI" } } });
+  assert.match(removedHtml, /1 \/ 1 resolved.*Removed .*OpenAI on Azure.*; .*Azure OpenAI.* stays/s);
+  assert.doesNotMatch(removedHtml, /Use existing|Remove /);
+  assert.match(render(DuplicateTechnologies, { ...props, suspects: both, technologies: ["OpenAI on Azure", "Azure OpenAI"], decisions: { "OpenAI on Azure": { kind: "kept" }, "Azure OpenAI": { kind: "kept" } } }), /1 \/ 1 resolved.*Kept both .*OpenAI on Azure.* and .*Azure OpenAI.*Undo/s);
   // The librarian's own solution: Use existing is disabled with the reason; Keep submitted still decides.
   const own = render(DuplicateTechnologies, { ...props, editable: false, blocked: "You submitted this solution." });
   assert.match(own, /<button type="button" disabled=""[^>]*aria-describedby="([^"]+)"[^>]*>.*Use existing.*Keep submitted.*<p id="\1"[^>]*>You submitted this solution\.</s);
