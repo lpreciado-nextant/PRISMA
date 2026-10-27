@@ -1,7 +1,7 @@
 # AGENTS.md
 
-**Status:** Active guidance for the mock-data PoC, the published Dataverse-connected PRISMA app, its plug-in backend and the Blob media pilot.
-**Last updated:** 2026-10-07
+**Status:** Active guidance for the mock PoC, connected dev and managed production PRISMA deployments, plug-in backend and isolated Blob containers.
+**Last updated:** 2026-10-27
 
 Guidance for coding agents working in the PRISMA repository.
 
@@ -14,7 +14,7 @@ There are two runnable targets that share one UI:
 - **Mock PoC** (`app/src`, app **PRISMA PoC**): the look-and-feel reference. All data is an in-memory mock catalogue shaped like the Dataverse schema; submissions live in browser IndexedDB. No Dataverse reads or writes.
 - **Connected PRISMA** (`app/connected`, app **PRISMA**): the real app. It reads the published catalogue through generated Dataverse services and performs every write (drafts, contributor graph, media, review, favorites) through PRISMA Custom APIs implemented as plug-ins in `backend/Prisma.Plugins`. New video/HTML/PDF/PowerPoint uploads are stored in Azure Blob Storage through the plug-ins' managed identity ([ADR-0010](docs/architecture/decisions/adr-0010-attachments-in-blob-through-plugins.md)); images, links and older files stay in Dataverse.
 
-The connected app is a pilot: privileged-account lifecycles have passed, but non-admin (least-privilege) acceptance is still open. Shared components in `app/src` must keep working for both targets; connected-only behaviour enters through optional props or `app/connected/src` adapters, never by redesigning the PoC experience.
+The connected app is deployed in dev and production; privileged-account lifecycles have passed, but broader non-admin (least-privilege) acceptance is still open. Dev may contain approved changes not yet promoted to production. Shared components in `app/src` must keep working for both targets; connected-only behaviour enters through optional props or `app/connected/src` adapters, never by redesigning the PoC experience.
 
 ## Repository map
 
@@ -25,8 +25,8 @@ The connected app is a pilot: privileged-account lifecycles have passed, but non
 | `app/local-media`, `app/scripts` | Local Blob media workbench (Azurite), migration dry-run tooling, UI tests, video benchmark and acceptance scripts |
 | `backend/Prisma.Plugins` | Dataverse plug-ins (.NET Framework 4.6.2): Custom APIs for drafts, graph, media transfer, Blob storage, review/publication, published detail, catalogue graph and favorites; write guards |
 | `backend/Prisma.Plugins.Tests` | xUnit tests for plug-in policy and storage logic |
-| `backend/Prisma.Deploy` | .NET 10 deployment utility for Nextant Pulse. Commands are read-only previews unless `--execute` is passed |
-| `infra/media` | Bicep for the Blob media storage (`pilot.bicep` is live; `lab.bicep` is a development lab; `main.bicep` is the private-endpoint production foundation) |
+| `backend/Prisma.Deploy` | .NET 10 deployment utility guarded to Nextant Pulse dev. Configuration commands generally preview before `--execute`; smoke commands can create/delete fixtures and require separate approval |
+| `infra/media` | Bicep for Blob media: live pilot account, development lab, additive `production-container.bicep` for the shared account's isolated production container/identity, and undeployed private-endpoint `main.bicep` foundation |
 | `presentation/` | Self-contained walkthrough builds (`npm run build:presentation`) |
 | `tools/pptx-template/` | Solution presentation field map, reference fill script and Forge sample data |
 | `test-data/` | Local, gitignored test media |
@@ -63,19 +63,27 @@ Backend, from the repo root:
 ```powershell
 dotnet test backend/Prisma.Plugins.Tests
 dotnet build backend/Prisma.Deploy
-dotnet backend/Prisma.Deploy/bin/Debug/net10.0/Prisma.Deploy.dll <command>   # read-only unless --execute
+dotnet backend/Prisma.Deploy/bin/Debug/net10.0/Prisma.Deploy.dll inspect   # read-only dev identity check
 ```
 
 Or from the repo root, `run-poc.bat` installs, builds, and serves the PoC production bundle at `http://localhost:4173/`. CI (`.github/workflows/ci.yml`) runs the same builds, lint and tests on pull requests.
 
 ## Deployment
 
-Nothing is deployed or published unless the user explicitly asks for it; ordinary code or documentation edits do not authorize an upload, a plug-in push or a Dataverse change. All three targets live in the same **Nextant Pulse** environment, which is shared with teammates:
+Nothing is deployed or published unless the user explicitly asks for it; ordinary code or documentation edits do not authorize an upload, plug-in push, import or Dataverse change. **Read the [production deployment runbook](docs/architecture/technical-architecture.md#production-deployment-runbook) before any production action.** It owns the complete IDs, managed promotion commands, settings, backup, verification and recovery procedure.
+
+| Target | Environment ID | Code app ID |
+|---|---|---|
+| Connected dev: Nextant Pulse | `ce09ad9b-57d1-e5df-9400-8ce973c86213` | `cffbecd7-c927-474e-b6ed-6c7957ec74cb` |
+| Connected production: Nextant Pulse Prod | `bce2c94a-b2b3-e487-b368-b8d7c931f90b` | `57f5ef47-d997-4323-a8b8-0c4bf6a9a529` |
+| Separate mock PRISMA PoC, in dev | `ce09ad9b-57d1-e5df-9400-8ce973c86213` | `69a956d5-2180-4ad6-9136-136c48cc197f` |
 
 - **Fast-forward to `origin/main` first** and deploy only from it. A teammate's publish or plug-in push replaces yours; a stale checkout has already removed live features once.
-- **Connected app:** `npm run build:connected`, then from `app/connected` run `../node_modules/.bin/pa.cmd app push --solution-id adddc940-98ff-4b2f-9c8a-e89245c2fc33`. Always pass `--solution-id`, keep app ID `cffbecd7-c927-474e-b6ed-6c7957ec74cb`, and never copy the PoC's ID. New Custom API clients are generated from `app/connected` with `pa app add dataverse-api --api-name <name>` after the API exists in Dataverse. Details: [connected PRISMA target](app/README.md#connected-prisma-target).
-- **Plug-ins:** build Release, Authenticode-sign `Prisma.Plugins.dll`, then `Prisma.Deploy blob-plugin --execute <signed.dll>` (the managed identity is bound to the signing certificate). New Custom APIs need their registration command (for example `catalogue-api --execute`) before the client is generated. Schema, roles and configuration commands are separate and separately approved.
-- **Infrastructure:** what-if first, then deploy with approval. See the [Blob storage pilot](docs/architecture/technical-architecture.md#blob-storage-pilot-through-plug-ins).
+- **Connected dev app:** `npm run build:connected`, then from `app/connected` run `../node_modules/.bin/pa.cmd app push --solution-id adddc940-98ff-4b2f-9c8a-e89245c2fc33`. Keep `app/connected/power.config.json` pointed at dev; never replace its IDs with production's. Generate new Custom API clients there with `pa app add dataverse-api --api-name <name>` only after the approved API exists. Details: [connected PRISMA target](app/README.md#connected-prisma-target).
+- **Connected production:** export the reviewed connected-only **PRISMA_Release** from dev (unmanaged source ID `1da6ffed-57d1-f111-a059-002248040303`) and import it as managed into production (installed solution ID `63184600-1271-42ba-85a4-ff46053bbd67`). Do not import `PRISMA_Dev`, directly push over the managed production app, or hand-edit an export ZIP. Query current versions, verify the live source components and artifact, confirm a fresh backup and obtain import approval. Preserve actual production settings, app shares and identity binding. Latest source code/dev publish is not proof of production scope.
+- **Plug-ins:** test/build Release, Authenticode-sign `Prisma.Plugins.dll`, preview `Prisma.Deploy blob-plugin`, then execute only when approved. This utility is hard-guarded to **dev**; production receives the reviewed signed assembly through managed import. Do not bypass/retarget the guard. Certificate rotation, new schema/APIs, roles and configuration require their own approval. The existing self-signed certificate is a recorded user exception, not the recommended production signing standard.
+- **Infrastructure:** what-if first, then deploy with approval. Production reuses account `stprismamediaiwguqp7gvh`, but uses **media-prod** and a separate identity; dev uses **media**. Use the additive production template only in incremental mode, never overwrite the pilot's account-wide settings. Exact IDs and first-time prerequisites are in the canonical runbook.
+- **Runtime setup is separate:** solution import does not seed reference rows, assign people/teams, grant licences, share the app or enable Code apps/CSP. These steps require explicit approval. Production's active Published Readers is group-backed; do not assume the initial owner team or its ID is still the publication target.
 
 ### PoC deployment
 
@@ -151,7 +159,7 @@ Liquid-glass surfaces over an aurora ground; light and dark themes both first-cl
 
 - Don't wire real Dataverse, auth, or Power Automate into the mock PoC target — real integration belongs in `app/connected` and `backend/`.
 - Don't redesign shared UI while doing backend integration; the connected app inherits the PoC's UI/UX.
-- Don't bypass `Prisma.Deploy` preview guards, don't target another organization, and don't reinitialize either code app.
+- Don't bypass or retarget `Prisma.Deploy` guards. Use only the explicitly approved environment and the production runbook for managed promotion; never reinitialize existing code apps.
 - Don't edit `examples/nextant-solution-library 1.html`; it is a frozen reference.
 - Don't add social features, analytics dashboards, external/client access, or CRM integration — explicitly out of scope for v1.
 - Don't self-host or swap fonts without checking the CSP note in `app/README.md`.

@@ -1,6 +1,6 @@
 # Technical architecture
 
-**Status:** Living; broad cross-area review reading deployed to dev on 2026-10-27 with signed plug-in/app upload and privileged API checks verified; hosted refresh/authentication and non-admin acceptance remain pending. Production remains on managed release 1.0.0.4 with uploaded-file display names and Markdown. Full Markdown round-trip/export verification, broader recipient coverage and private-endpoint foundation remain open · **Last updated:** 2026-10-27
+**Status:** Living; repeatable production promotion runbook and identity matrix updated 2026-10-27. Broad cross-area review reading is deployed to dev with privileged API and subsequent global-librarian hosted checks verified; actual non-admin acceptance remains pending. Latest recorded production is managed 1.0.0.4 with uploaded-file display names and Markdown. Full Markdown round-trip/export verification, broader recipient coverage and private-endpoint foundation remain open · **Last updated:** 2026-10-27
 **Source:** [End-to-end design §7](../design/end-to-end-design.md#7-technical-architecture)
 
 **Authorization status (2026-10-26):** Capability-owner SA scope, compatible connected app and separately approved role migration deployed; five owners and Luis's global override provisioned; remaining owner onboarding and least-privilege acceptance pending. [ADR-0013 amendment](decisions/adr-0013-librarian-content-editing.md#capability-owner-scope-2026-10-26) replaces unscoped librarian checks with `LibrarianAccess` across review, editing and media. Queue queries join the main capability and filter authorized SAs before paging; detail flags are solution-specific. Scoped operations use server rights after authorization rather than requiring organization-wide table privileges. Media snapshots add optional `solutionId`; `nx_ReadVideoRange` accepts `Mode=image` for bounded PNG/JPEG image and thumbnail reads, including non-chunkable Dataverse images up to the existing 20 MiB limit. Attachment modes and present-mode checks are unchanged. The API returns bytes and pinned versions, never storage credentials. The compatible connected client was deployed before the [preview-first role migration](security-model.md#capability-owner-librarian-access); no new Custom API or schema component was required. The security model records installed assembly verification, app bundle, media-share migration and privileged read evidence.
@@ -15,7 +15,9 @@ From synchronized `origin/main` `6857ad4`, built clean Release and signed with e
 
 Immediately published connected app `cffbecd7-c927-474e-b6ed-6c7957ec74cb` into `PRISMA_Dev` with explicit solution ID. Upload succeeded with `sourcetime=1793127562490`, bundle `index-45tcUHmX.js`. Read-only calls as global librarian Luis verified eight queue records with `manage=true`, detail without view-only permissions, 1,024 protected image bytes and readable suggestions. The existing hosted tab remained at the platform's old-version refresh banner with a blank app frame; a new tab redirected to Microsoft sign-in. Therefore hosted execution of the new bundle and actual area-librarian cross-account acceptance are not claimed. Refresh/sign in, then verify both area and global workflows. No business records were created or changed; production and the separately published PoC were not deployed.
 
-The earlier scope-metadata-only dev deployment from `51091fe` was verified at `18:08:24Z` with SHA-256 `7DABDFCBD09DD08A2EA10436A3C81FCEB7F4E5087993426DAA44A1074F1CB68C`; its global hosted queue check passed before this broader rollout. It is superseded by the assembly above, not evidence that the new hosted bundle was tested.
+**Subsequent hosted check (2026-10-27):** a fresh signed-in dev session as global librarian Luis served the exact `index-45tcUHmX.js` bundle and reached Catalogue ready. The review queue displayed 1 Pending review, 4 Changes requested and 3 Published records without app alerts. Area and Capability filters were present; no area-scope selector was expected for a global librarian. POC Forge detail exposed the global librarian's edit/decision controls, its thumbnail and six screenshots decoded, and its private suggestion list was visible. Returned to Pending review without editing, approving or changing any business records. This supersedes the earlier hosted refresh/sign-in blocker for this bundle; actual non-admin cross-area behavior remains unverified.
+
+The earlier scope-metadata-only dev deployment from `51091fe` was verified at `18:08:24Z` with SHA-256 `7DABDFCBD09DD08A2EA10436A3C81FCEB7F4E5087993426DAA44A1074F1CB68C`; its global hosted queue check passed before this broader rollout. It is superseded by the assembly above.
 
 **Confirmed stack:** Power Platform code app (React + TypeScript) over Dataverse, Microsoft Entra ID SSO, internal Nextant users only, Nextant brand standards.
 
@@ -26,6 +28,183 @@ The Power Platform solution **`PRISMA_Dev`** exists in **Nextant Pulse**, enviro
 This Power Platform solution is distinct from both the published code app **PRISMA PoC** and the catalogue's `nx_solution` records. PAC CLI inspection on 2026-09-21 confirmed unmanaged solution version `1.0.0.1`, solution ID `adddc940-98ff-4b2f-9c8a-e89245c2fc33`, publisher `nx`, customization prefix `nx`, and choice-value prefix `12506`. The Dataverse URL is `https://nextantpulse.crm.dynamics.com/`.
 
 The initial 2026-09-21 export included **PRISMA PoC** (`cr6b0_prismapoc_c440f`, CodeApp type 4); `pac code list` returned only the existing PoC app. Its connection/database references were empty. App IDs, publishing commands and verification status are maintained in the [deployment details](../../app/README.md#poc-deployment). No connected PRISMA app was published during that initial inspection.
+
+### Production deployment runbook
+
+**Status:** Repeatable managed-solution promotion procedure; no deployment is authorized by these instructions. **Last updated:** 2026-10-27.
+
+Use this section for the next release; [production deployment preflight](#production-deployment-preflight) below is the historical execution record, not a command sequence to replay. The latest **recorded production version is `1.0.0.4`**. The newer cross-area review implementation was deployed to **dev only** on 2026-10-27. Query both environments before selecting the next version, and obtain approval for the actual feature/security delta being promoted. A branch name, successful local build or dev publish is not proof of what production runs.
+
+#### Deployment identities
+
+| Identifier | Dev / source | Production / destination |
+|---|---|---|
+| Environment name | Nextant Pulse | Nextant Pulse Prod |
+| Power Platform environment ID | `ce09ad9b-57d1-e5df-9400-8ce973c86213` | `bce2c94a-b2b3-e487-b368-b8d7c931f90b` |
+| Dataverse URL | `https://nextantpulse.crm.dynamics.com/` | `https://org08fa4839.crm.dynamics.com/` |
+| Dataverse organization ID (`WhoAmI.OrganizationId`) | `cd98dcb3-db3b-f011-be51-00224820bb36` | `b3aa4d34-8957-f011-8ee3-7c1e52172903` |
+| Connected code app | PRISMA / `cffbecd7-c927-474e-b6ed-6c7957ec74cb` | PRISMA / `57f5ef47-d997-4323-a8b8-0c4bf6a9a529` |
+| Development solution | `PRISMA_Dev`, unmanaged / `adddc940-98ff-4b2f-9c8a-e89245c2fc33` | Do not import this broad solution |
+| Release solution | `PRISMA_Release`, unmanaged / `1da6ffed-57d1-f111-a059-002248040303` | `PRISMA_Release`, managed / `63184600-1271-42ba-85a4-ff46053bbd67` |
+| Plug-in assembly ID | `08207a52-1ab6-f111-aaac-6045bd049fba` | Same component ID; separate environment |
+| Dataverse managed-identity record | `eeac4d3a-1cbc-f111-aaae-6045bd049fba` | Same component ID, **different Azure client ID** |
+| Azure identity name / client ID | `id-prisma-media-plugin` / `ed62de8f-c17f-4d6b-b7b4-62f90898f18f` | `id-prisma-media-plugin-prod` / `e23344b9-5f16-4004-bc86-0c908205ea52` |
+| Azure identity principal ID | `ac094a3e-3b65-40a9-8c70-b4a2f0f9362f` | `299331d2-848d-4b55-b11f-72801fca98eb` |
+| Private Blob container | `media` | `media-prod` |
+
+Shared tenant: `d232b207-f86f-4fba-8891-ccbf30b12898`. Release publisher: `nx`, ID `ab4abd97-8dc8-4f71-b7b9-78333094d3de`. Shared Azure subscription: `f997a88d-a154-449c-8e29-5518ffe24c02`; resource group: `RG-Prisma-Media-DEV`; account: `stprismamediaiwguqp7gvh`. The resource group's DEV name does **not** make its production container disposable. Do not copy reference metadata that points production at `media` or the dev identity.
+
+- [Open connected dev](https://apps.powerapps.com/play/e/ce09ad9b-57d1-e5df-9400-8ce973c86213/app/cffbecd7-c927-474e-b6ed-6c7957ec74cb?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)
+- [Open production](https://apps.powerapps.com/play/e/bce2c94a-b2b3-e487-b368-b8d7c931f90b/app/57f5ef47-d997-4323-a8b8-0c4bf6a9a529?tenantId=d232b207-f86f-4fba-8891-ccbf30b12898)
+- The separate **PRISMA PoC** app is `69a956d5-2180-4ad6-9136-136c48cc197f` in dev, configured by `app/power.config.json`. It is not the release source. Connected source configuration is `app/connected/power.config.json`; keep it pointed at **dev**. Never replace its environment/app IDs with production's, reinitialize either app, or directly `pa app push` over the managed production app.
+- Power Platform/PAC environment arguments use the **environment ID or Dataverse URL**. Admin-center Settings routes use the **Dataverse organization ID**, for example [production Features](https://admin.powerplatform.microsoft.com/manage/environments/b3aa4d34-8957-f011-8ee3-7c1e52172903/settings/Features). The IDs are not interchangeable.
+
+#### 1. Approve and freeze the release
+
+Coordinate with teammates before replacing the shared dev app or assembly. Work from current, committed `main`; preserve unrelated local edits and stop if a fast-forward or a clean release build cannot be obtained. Do not automatically stash, discard, force-push or include another person's unfinished work. Get explicit permission for dev publication and production import. New schema, APIs, roles, CSP, infrastructure, licence/user assignments and data migration are separate decisions, not implied by an ordinary UI release.
+
+Use PowerShell 7.3+ from the repository root, an authenticated `pac`, the project-local `pa`, Node/npm and the required .NET SDKs. The following variables are reused by later blocks. These blocks are **instructions**, not an unattended deployment script; stop at every review gate.
+
+```powershell
+$ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $true
+$devEnvironment = 'ce09ad9b-57d1-e5df-9400-8ce973c86213'
+$prodEnvironment = 'bce2c94a-b2b3-e487-b368-b8d7c931f90b'
+$devUrl = 'https://nextantpulse.crm.dynamics.com'
+$prodUrl = 'https://org08fa4839.crm.dynamics.com'
+$releaseSolution = 'PRISMA_Release'
+
+git fetch origin
+git merge --ff-only origin/main
+git status --short --branch
+pac env list
+pac solution online-version --environment $devUrl --solution-name $releaseSolution
+pac solution online-version --environment $prodUrl --solution-name $releaseSolution
+```
+
+Confirm `main`, `HEAD=origin/main`, the intended tenant and both exact environment URLs. Record the approved commit and change list. A production export contains **published dev components**, not an automatic build of the checkout: reconcile the deployed app bundle, assembly hash and release-solution membership with the approved revision before proceeding. In particular, do not promote the broader dev review policy merely because it is now in the source environment.
+
+#### 2. Build and publish the approved source components
+
+Run the relevant checks from the [app commands](../../app/README.md#running-it). For shared UI or client changes, the usual gate is:
+
+```powershell
+npm --prefix app ci
+npm --prefix app run lint
+npm --prefix app run typecheck:tests
+npm --prefix app test
+npm --prefix app run test:connected
+npm --prefix app run test:ui
+npm --prefix app run build
+npm --prefix app run build:connected
+```
+
+For a **plug-in change**, also run the backend tests, build clean Release, sign with the approved certificate and use the guarded dev deployment command. Never run this utility against production or bypass its fixed dev organization check. Rebuilds invalidate the previous Authenticode signature. Do not print/export private keys. The existing self-signed certificate is a user-approved exception, not Microsoft's recommended production certificate policy; rotation requires separate approval and federation updates.
+
+```powershell
+dotnet test backend/Prisma.Plugins.Tests --configuration Release
+dotnet build backend/Prisma.Plugins --configuration Release --no-incremental
+dotnet build backend/Prisma.Deploy
+$plugin = (Resolve-Path 'backend/Prisma.Plugins/bin/Release/net462/Prisma.Plugins.dll').Path
+$certificate = Get-Item Cert:\CurrentUser\My\7C1DE36FE41E9376A7F5998ED59E748DBABD48A2
+if (-not $certificate.HasPrivateKey -or $certificate.NotAfter -le (Get-Date)) { throw 'Signing certificate unavailable or expired.' }
+Set-AuthenticodeSignature -FilePath $plugin -Certificate $certificate -HashAlgorithm SHA256
+Get-AuthenticodeSignature $plugin | Format-List Status, StatusMessage, SignerCertificate
+Get-FileHash $plugin -Algorithm SHA256
+dotnet backend/Prisma.Deploy/bin/Debug/net10.0/Prisma.Deploy.dll blob-plugin
+# After reviewing the preview and signer:
+dotnet backend/Prisma.Deploy/bin/Debug/net10.0/Prisma.Deploy.dll blob-plugin --execute $plugin
+```
+
+Stop on an unsigned file, hash mismatch, unexpected signer or unexpected preview. The known self-signed-root warning must not be used to dismiss other signing errors. The utility checks the installed certificate binding before replacing the dev assembly. Register any **separately approved** new API/schema first, and regenerate its client from `app/connected`; never hand-edit generated files. For a client change or coordinated backend/client release, publish connected dev only after a successful build:
+
+```powershell
+$config = Get-Content -Raw app/connected/power.config.json | ConvertFrom-Json
+if ($config.environmentId -ne $devEnvironment -or $config.appId -ne 'cffbecd7-c927-474e-b6ed-6c7957ec74cb') { throw 'Unexpected connected dev target.' }
+Push-Location app/connected
+try {
+        & ../node_modules/.bin/pa.cmd app push --solution-id adddc940-98ff-4b2f-9c8a-e89245c2fc33 --non-interactive
+} finally { Pop-Location }
+```
+
+Use the returned URL to check the actual hosted bundle. A host **Refresh** banner may be required. Skip the plug-in push for UI-only releases; skip a redundant app push when the approved app is already published and its assets are verified. Preserve compatible backend/client ordering. Do not run broad `Prisma.Deploy apply` as a shortcut.
+
+#### 3. Version and export PRISMA_Release
+
+Review release membership first. `PRISMA_Release` must contain the connected app, required PRISMA tables/relationships, APIs, plug-ins/steps and security definitions, but **not** the PoC, full unrelated Consultant/Project customizations, dev current environment-variable values or the dev managed-identity record. Adding a component to `PRISMA_Dev` does not automatically add it to `PRISMA_Release`. Add new release components only as approved, without blindly including every dependency. Exporting a solution does not copy business/reference rows or configure users and teams.
+
+Choose a new four-part version greater than the installed production version after querying both environments; do not reuse an example version or assume `1.0.0.5` is still available. Keep each reviewed artifact immutable, with a unique path and SHA-256. Temporary artifacts from the historical rollout are not a durable release archive.
+
+```powershell
+$releaseVersion = Read-Host 'Approved NEW release version (four numeric parts)'
+if ($releaseVersion -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw 'Invalid release version.' }
+$commit = git rev-parse --short HEAD
+$artifactDirectory = Join-Path $env:TEMP "PRISMA-release-$releaseVersion-$commit"
+if (Test-Path $artifactDirectory) { throw 'Choose a new artifact directory; do not overwrite reviewed artifacts.' }
+New-Item -ItemType Directory -Path $artifactDirectory | Out-Null
+$package = Join-Path $artifactDirectory "PRISMA_Release_${releaseVersion}_managed.zip"
+$settings = Join-Path $artifactDirectory 'production.settings.json'
+pac solution online-version --environment $devUrl --solution-name $releaseSolution --solution-version $releaseVersion
+pac solution export --environment $devUrl --name $releaseSolution --path $package --managed
+pac solution create-settings --solution-zip $package --settings-file $settings
+Get-FileHash $package -Algorithm SHA256
+```
+
+#### 4. Review the artifact and production settings
+
+Do not import until all of these are checked:
+
+- Manifest unique name/version/managed flag and component scope match the approved release. Resolve declared dependencies against production without `--skip-dependency-check`; compare schema, roles, API contracts and assembly changes, not only component counts.
+- The packaged app assets match the intended source build and the packaged assembly matches the tested signed artifact. For UI-only releases, confirm the backend is unchanged; for backend-only releases, confirm any packaged app update is intended. Reject asset paths that fail OPC validation after URL decoding; a literal space in a demo-video filename previously broke import. Keep the existing connected build's safe filename rule.
+- The package excludes dev environment-variable **current values**. Populate `$settings` with production values read immediately before import. Current recorded container URL is `https://stprismamediaiwguqp7gvh.blob.core.windows.net/media-prod`; current recorded `nx_MediaBlobUploads` is `yes`. Preserve actual existing values on updates. First-time setup starts at `no` until identity, policy and media tests pass. Do not reuse the initial migration's uploads-off settings for a normal update.
+- An empty `ConnectionReferences` array does not prove no connector setup is needed: the code app carries an Office 365 Users reference and environment-relative `default.cds` metadata. Verify target-only Dataverse routing, connection/consent behavior and any new connector bindings.
+- The production assembly's managed-identity record resolves to the **production** Azure client above. The same Dataverse identity-record GUID in both environments does not mean the same Azure identity. Source export can retain an assembly lookup even when the identity record is omitted from the package. Existing production binding is a prerequisite to preserve, not a reason to copy dev identity settings.
+
+Example **current update values**, not permission to change them:
+
+```json
+{
+    "EnvironmentVariables": [
+        { "SchemaName": "nx_MediaBlobContainerUrl", "Value": "https://stprismamediaiwguqp7gvh.blob.core.windows.net/media-prod" },
+        { "SchemaName": "nx_MediaBlobUploads", "Value": "yes" }
+    ],
+    "ConnectionReferences": []
+}
+```
+
+Edit the generated settings JSON, retain any other required generated entries and validate it with `ConvertFrom-Json`. No tokens, keys, signed storage URLs or certificate private material belong in the settings or app bundle. Preserve the final ZIP, settings, commit and hashes in the team's approved restricted release location before the temporary files disappear.
+
+#### 5. Back up, approve and import
+
+Capture production's current managed version, app ID/bundle, assembly hash and identity binding, Blob settings, app-sharing permissions, key role privileges and runtime-team identities. Coordinate an import window with active contributors. Confirm a fresh recovery point, then approve the reviewed package/version/hash/settings and exact target. A backup is not authorization to restore a shared environment.
+
+```powershell
+pac admin backup --environment $prodEnvironment --label "PRISMA before $releaseVersion ($commit)"
+pac admin list-backups --environment $prodEnvironment
+# Stop here until the backup and package review are confirmed and import is approved.
+pac solution import --environment $prodUrl --path $package --settings-file $settings --activate-plugins --async --max-async-wait-time 60
+```
+
+Normal updates intentionally omit `--force-overwrite`, `--skip-dependency-check`, `--publish-changes`, `--import-as-holding` and `--stage-and-upgrade`. Use a different ALM operation only with a reviewed reason and explicit approval. Retain the returned operation/import-job ID and final result. On timeout, ambiguous output or failure, inspect that job and target state before any retry; do not assume success or complete rollback from command duration alone.
+
+#### 6. Verify and record the result
+
+```powershell
+pac solution online-version --environment $prodUrl --solution-name $releaseSolution
+```
+
+Verify the installed version is managed, app IDs remain unchanged, the assembly bytes and signer match the release, its production identity binding is intact, required steps/APIs are active, intended privileges are present, and existing Blob values/app shares/team configuration are preserved. Separately open **production**, refresh the host if prompted and confirm its actual bundle and rendering. Test the changed workflow, error/denial paths and relevant media/present-mode behavior; metadata or administrator checks do not replace a real non-admin session. Preserve unsaved user work; never use another person's draft as a deployment probe. Test writes must use approved, labelled disposable fixtures with verified cleanup.
+
+Update this document's latest production version and release evidence: source commit, package/hash/location, backup ID, operation result, deployed bundle/assembly hashes, preserved settings, verification results and remaining gates. Mark dev-only changes clearly. Build, upload/import and hosted acceptance are separate outcomes; report each honestly.
+
+#### First-time setup, access and recovery
+
+- These are not repeated on every release: provision the isolated production container/identity via [production-container.bicep](../../infra/media/production-container.bicep), with reviewed what-if and **incremental mode only**; configure production-specific certificate federation and the Dataverse identity record. Do not redeploy the pilot template or alter account-wide policy merely to update the app.
+- Enable **Power Apps code apps** in the production Features settings. If launch returns `CodeAppOperationNotAllowedInEnvironment`, verify the saved setting in the correct environment; allow platform propagation before considering another import. The four approved media/worker/WASM CSP sources are environment-wide and owned by the [hosting policy](security-model.md#code-app-hosting-policy); do not disable enforcement or add wildcards to repair a launch error.
+- Seed only separately approved reference data with [production-reference-seed.ps1](../../tools/production-reference-seed.ps1), starting with its read-only preview and exact plan hash. Do not rerun creation or copy dev submissions/attachments as part of solution promotion. [Reference governance](../data_model/reference-data-governance.md#production-reference-seed-2026-10-26) owns lookup mapping and repeatability.
+- [Production security](security-model.md#production-access-2026-10-26) owns current users, field profiles, licences, app sharing and runtime teams. The active **PRISMA Published Readers** is group-backed (`74dd1768-3a75-4348-aced-20e9eb752f6d`), not the retained initial-pilot owner team. **PRISMA Media Custodian** (`e4aee220-0557-4c04-950c-fb5b97f01bb0`) must stay empty. Importing roles does not assign members, and contributor role membership alone does not grant app access or a licence.
+- [production-acceptance.ps1](../../tools/production-acceptance.ps1) is a dated, checkpointed acceptance tool: `Inspect` is read-only; `Create`/`Cleanup` perform real production writes and can change upload enablement. Existing checkpoints, fixture dependencies, the approved test user and cleanup expectations must be reviewed before reuse. It is not an automatic post-deployment command.
+- On failure, stop further promotion, inspect the import job and actual app/assembly/schema state, and preserve evidence. Prefer an approved forward fix with a new managed version when appropriate. Do not uninstall the managed solution, force an older package, delete records or restore the environment automatically. Backup restore affects other production applications/data and needs coordinated approval; separate Azure changes and Blob bytes have their own recovery requirements. A reviewed rollback plan must cover both Dataverse and storage, not merely the previous ZIP.
 
 ### Production deployment preflight
 

@@ -1,8 +1,8 @@
 # PRISMA — Nextant Solution Library code app PoC
 
-**Status:** Mock PoC (published 2026-09-18) and connected PRISMA pilot (published, Blob media pilot enabled 2026-09-29) both live in Nextant Pulse. Privileged-account lifecycles verified; non-admin and separate-reviewer acceptance remain open. The bulk catalogue graph API, plug-in tracing and on-demand contributor screens were deployed and published on 2026-09-30, followed the same day by graph card thumbnails, shared detail reads and blur-only glass. Contributor minimum hours and the consultant-level CSM were deployed on 2026-10-08. Multiple client roles (PR-031) were deployed on 2026-10-21; deletion of the legacy choice column remains pending. Collapsible help guides and a bundled demo video were published on 2026-10-22; hosted UI verification awaits sign-in. Local media workbench, migration dry-run tooling and infrastructure templates are complete but are development tools, not production services.
-**Last updated:** 2026-10-26
-**Authorization status:** Capability-owner SA access deployed 2026-10-26; five owners provisioned and Luis assigned the global override. Luis's hosted review queue verified; eight owner onboarding blockers and hosted least-privilege acceptance remain open. [Assignment inventory](../docs/architecture/security-model.md#approved-librarian-provisioning-2026-10-26).
+**Status:** Mock PRISMA PoC and connected PRISMA run in Nextant Pulse dev; a separate managed PRISMA app runs in Nextant Pulse Prod. Latest recorded production release is 1.0.0.4; newer cross-area review changes are dev-only until explicitly promoted. Privileged-account checks have passed; broader non-admin and separate-reviewer acceptance remain open. Local media workbench and migration tooling are development tools, not production services; the private-endpoint foundation remains undeployed.
+**Last updated:** 2026-10-27
+**Authorization status:** Production contributor group, capability-owner librarians and approved global librarians are configured separately from dev. [Production access and remaining gates](../docs/architecture/security-model.md#production-access-2026-10-26) owns assignments; [dev cross-area rollout](../docs/architecture/technical-architecture.md#cross-area-review-rollout-2026-10-27-dev-only) owns the newer dev behavior. Role assignment and administrator testing do not prove non-admin acceptance.
 
 A look-and-feel proof of concept for [PRISMA](../docs/design/end-to-end-design.md), Nextant's internal solution library, built as a **Power Apps code app**: React 19 + TypeScript + Vite + Tailwind v4, scaffolded from the official `microsoft/PowerAppsCodeApps/templates/vite` template.
 
@@ -469,6 +469,19 @@ npx pa app push
 The setting takes effect in the hosted app after publishing. See the [Microsoft quickstart](https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/create-an-app-from-scratch) for initializing a separate deployment.
 
 ## Connected PRISMA target
+
+### Deploy connected dev and production
+
+Use the **[production deployment runbook](../docs/architecture/technical-architecture.md#production-deployment-runbook)** for exact tenant, environment, Dataverse organization, app, solution and storage identities, and the reviewed command sequence. Do not use the historical PoC commands above for connected production.
+
+| Target | Environment ID | App ID |
+|---|---|---|
+| Nextant Pulse: connected dev | `ce09ad9b-57d1-e5df-9400-8ce973c86213` | `cffbecd7-c927-474e-b6ed-6c7957ec74cb` |
+| Nextant Pulse Prod: connected production | `bce2c94a-b2b3-e487-b368-b8d7c931f90b` | `57f5ef47-d997-4323-a8b8-0c4bf6a9a529` |
+
+`connected/power.config.json` stays configured for **dev**. Publish approved, tested code there with `pa app push --solution-id adddc940-98ff-4b2f-9c8a-e89245c2fc33` from `app/connected`. Promote the **published** connected app and approved backend using an export of `PRISMA_Release` and managed import into production, with a new reviewed version, a verified backup and production deployment settings. Do not directly push over the managed production app, change the local app IDs or import the broad `PRISMA_Dev` solution. The root `power.config.json` belongs to the separate mock PoC.
+
+The Blob account is shared, but containers and identities are not: dev uses `media`; production uses `media-prod`. Preserve the live production upload-enable value on updates. Backend changes require the approved signed assembly in dev before exporting; UI-only releases do not need a plug-in update. Solution import does not copy business/reference rows or configure app sharing, users, licences, Code apps enablement or CSP. Those are separately approved setup steps. The dated entries below are deployment history; use the runbook for current promotion instructions and verify the actual target state before every release.
 
 ### Help guides and demo video (2026-10-22)
 

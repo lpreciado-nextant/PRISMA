@@ -1,10 +1,10 @@
 # PRISMA documentation
 
-**Status:** Living; connected PRISMA pilot published with plug-in backend and Azure Blob media pilot live since 2026-09-29; offline migration tooling and production infrastructure templates remain undeployed; two-stage AI authoring planned, not implemented · **Last updated:** 2026-10-16
+**Status:** Living; connected dev and managed production PRISMA are deployed, with isolated containers/identities on the existing Blob account. Production promotion has a repeatable runbook; the private-endpoint foundation remains undeployed. Two-stage AI authoring is planned, not implemented · **Last updated:** 2026-10-27
 
 Documentation map for the PRISMA — Nextant Solution Library project. The [end-to-end design](design/end-to-end-design.md) is the overview; each aspect below has a dedicated living document.
 
-**Environment and solution:** `PRISMA_Dev` exists in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`). The [technical architecture](architecture/technical-architecture.md#environment-and-solution) owns this context; [PoC deployment details](../app/README.md#poc-deployment) cover the separate PRISMA PoC code app and publishing commands.
+**Environments and solutions:** develop in **Nextant Pulse** (`ce09ad9b-57d1-e5df-9400-8ce973c86213`); promote the connected-only `PRISMA_Release` solution to **Nextant Pulse Prod** (`bce2c94a-b2b3-e487-b368-b8d7c931f90b`). The [production deployment runbook](architecture/technical-architecture.md#production-deployment-runbook) owns app/solution/organization/storage IDs, commands and safeguards. Do not import the broader `PRISMA_Dev` solution or confuse these targets with the separate [PRISMA PoC deployment](../app/README.md#poc-deployment).
 
 ## Map
 
@@ -14,6 +14,7 @@ Documentation map for the PRISMA — Nextant Solution Library project. The [end-
 | | [Design system](design/design-system.md) | Palette, typography, liquid-glass surface language, motion, theming |
 | | [Accessibility](design/accessibility.md) | WCAG 2.1 AA commitments and verification checklist |
 | **Architecture** | [Technical architecture](architecture/technical-architecture.md) | Stack, system shape, integration points, search approach |
+| | [Production deployment runbook](architecture/technical-architecture.md#production-deployment-runbook) | Exact dev/prod identities; source publication, managed export/import, settings, backup, verification and rollback gates |
 | | [Azure Blob Storage transition plan](architecture/technical-architecture.md#azure-blob-storage-transition-plan) | Draft migration scope, security decisions, phased gates and rollback; not deployment authorization |
 | | [Infrastructure template runbook](architecture/technical-architecture.md#infrastructure-template-runbook) | Private-storage Bicep foundation, required IT inputs, local checks and undeployed cloud acceptance gates |
 | | [Security model](architecture/security-model.md) | Roles, table privileges, field-level security, present-mode enforcement |
