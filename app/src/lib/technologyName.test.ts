@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { capitalizeTechnology, checkTechnologyName, newTechnologies, technologyKey } from "./technologyName.ts";
+import { capitalizeTechnology, checkTechnologyName, newTechnologies, technologyKey, unresolvedDuplicates } from "./technologyName.ts";
 
 const listed = ["Power BI", "Power Apps", "Power Automate", "ADO", "Fabric", "Microsoft Teams", "Azure Functions", "Azure AI Search", "PostgreSQL", "Node.js", ".NET", "Python", "SharePoint", "C#", "React"];
 
@@ -68,4 +68,16 @@ test("newTechnologies flags names no other published solution uses, with their l
   assert.equal(result[0].similar[0], "Power BI", "an exact variant leads");
   assert.ok(result[1].similar.includes("Azure OpenAI"));
   assert.deepEqual(newTechnologies(["Kubernetes"], used, labels), []);
+});
+
+test("unresolvedDuplicates counts both row kinds until each is decided", () => {
+  const suspects = [{ name: "Power Apps Code App", similar: ["Power Apps"] }, { name: "Azure OpenAI", similar: ["OpenAI on Azure"] }];
+  // "Power Apps" is on the solution too, so those two share one row; "OpenAI on Azure" is only in the catalogue.
+  const technologies = ["Power Apps Code App", "Power Apps", "Azure OpenAI"];
+  assert.equal(unresolvedDuplicates(suspects, technologies, {}), 2);
+  assert.equal(unresolvedDuplicates(suspects, technologies, { "Power Apps": { kind: "kept" } }), 1);
+  assert.equal(unresolvedDuplicates(suspects, technologies, { "Power Apps": { kind: "kept" }, "Azure OpenAI": { kind: "kept" } }), 0);
+  // Using the existing technology resolves the row and leaves it listed as resolved.
+  assert.equal(unresolvedDuplicates([suspects[0]], ["Power Apps"], { "Power Apps Code App": { kind: "existing", existing: "Power Apps" } }), 0);
+  assert.equal(unresolvedDuplicates([], ["Power Apps"], {}), 0);
 });

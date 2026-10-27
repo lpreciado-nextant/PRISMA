@@ -10,7 +10,7 @@ import { AREA_ORDER, AREAS } from "../../src/data/catalogueMetadata";
 import { outlinedStatusButton, statusButton, subtleStatusButton, SubmissionStatusPanel } from "../../src/components/SubmissionStatusPanel";
 import { submissionState } from "../../src/lib/submissionState";
 import { reviewChecklist } from "../../src/lib/reviewChecklist";
-import { newTechnologies } from "../../src/lib/technologyName";
+import { newTechnologies, unresolvedDuplicates } from "../../src/lib/technologyName";
 import type { Solution, SpecializationArea } from "../../src/types";
 import { navigate } from "../../src/lib/router";
 import { readAll } from "./catalogue";
@@ -282,6 +282,9 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const newSuggestions = openItems.filter(key => key.startsWith("suggestion:")).length;
   // Same withdraw action either way; a published record is described as being unpublished.
   const confirmCopy = confirmation && (confirmation === "withdraw" && status === 125060000 ? UNPUBLISH : CONFIRMATIONS[confirmation]);
+  // Submitted technologies no other published solution uses, compared with the whole technology list. Only a pending
+  // review asks about them: once published, the question is settled.
+  const suspects = status === 125060002 && technologyUse && newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologies.map(([, label]) => label));
   const suggestionsPanel = suggestionList?.canRead && (suggestionList.suggestions.length > 0 || status === 125060000) ? <SuggestionsPanel list={suggestionList} canAddress={!review} /> : undefined;
   return <DetailView solution={solution} present={false} connected effort={effort} panels={suggestionsPanel} backLabel={review ? "Review queue" : "My submissions"} onBack={() => navigate(review ? "/review" : "/my-submissions")}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
@@ -294,7 +297,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
           images: state.media.filter(item => item.kind === "image" && item.complete).length, uploadsComplete: state.media.every(item => item.complete),
           safety: core.safetyAcknowledged, anonymized: !core.clientContext.trim() || !!core.clientContextRedacted.trim(),
         })}
-        comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} notice={mediaAction.message} noticeBusy={mediaAction.downloading}
+        comments={comments} onComments={setComments} cleared={cleared} onCleared={setCleared} busy={busy} locked={uncertain || !state.librarian} canApprove={!missing} duplicates={suspects ? unresolvedDuplicates(suspects, solution.technologies, duplicates) : 0} notice={mediaAction.message} noticeBusy={mediaAction.downloading}
         error={error && <><p className="mb-3">{error}</p><button className={button} disabled={busy} onClick={reload}><Icon name="arrowRight" />Reopen</button></>}
         onReturn={() => void transition("return")} onApprove={() => void transition("approve")}
         onEdit={state.librarian && state.librarianEdit !== false && (status === 125060000 || status === 125060002) && !uncertain ? () => navigate(`/review/${id}/edit`) : undefined}
@@ -303,9 +306,9 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
         onConfirmEdit={state.librarian && status === 125060000 && !uncertain ? () => void transition("confirm-edit") : undefined}
         onRequestChanges={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("request-changes") : undefined}
         onRetire={state.librarian && status === 125060000 && !uncertain ? () => setConfirmation("retire") : undefined}>
-        {technologyUse && <DuplicateTechnologies suspects={newTechnologies(solution.technologies, new Set([...technologyUse].filter(([, ids]) => ids.some(other => other !== id.toLowerCase())).map(([name]) => name)), technologies.map(([, label]) => label))}
-          technologies={solution.technologies} decisions={duplicates} editable={state.librarian && state.librarianEdit !== false && (status === 125060000 || status === 125060002) && !uncertain && !busy}
-          blocked={state.librarian && state.librarianEdit === false && (status === 125060000 || status === 125060002) ? "You submitted this solution, so you can't replace its technologies from the review. To use the existing one, withdraw it from My submissions, change the technology and resubmit." : undefined}
+        {suspects && <DuplicateTechnologies suspects={suspects}
+          technologies={solution.technologies} decisions={duplicates} editable={state.librarian && state.librarianEdit !== false && status === 125060002 && !uncertain && !busy}
+          blocked={state.librarian && state.librarianEdit === false && status === 125060002 ? "You submitted this solution, so you can't replace its technologies from the review. To use the existing one, withdraw it from My submissions, change the technology and resubmit." : undefined}
           busy={duplicateBusy} error={duplicateError} onUseExisting={(name, existing) => void replaceWithExisting(name, existing)} onKeep={name => keepTechnology(name, true)} onUndoKeep={name => keepTechnology(name, false)} />}
       </ReviewPanel> : <SubmissionStatusPanel state={submissionState(solution)} feedback={state.record.comments || undefined} edited={state.record.librarianEditedOn}
         badge={newSuggestions > 0 && <span className="new-feedback"><Icon name="message" size={12} />{newSuggestions === 1 ? "1 pending suggestion" : `${newSuggestions} pending suggestions`}</span>} actions={<fieldset disabled={busy || uncertain} className="flex min-w-0 flex-wrap items-center gap-2.5">

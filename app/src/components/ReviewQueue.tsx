@@ -67,7 +67,7 @@ const textArea = "mt-2 block w-full resize-y rounded-lg border border-(--glass-e
  * Connected librarians can also edit the solution (ADR-0013). After a real edit the comment becomes required: on
  * approval for a pending record, or through "Confirm changes" for a published one, which repeats the checklist.
  */
-export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, onEdit, editBlocked, edit, onConfirmEdit, viewOnly, children }: {
+export function ReviewPanel({ status, owner, client, context, feedback, solution, capabilityOwner, checks, comments, onComments, cleared, onCleared, busy, locked = false, canApprove = true, local = false, notice, noticeBusy = false, error, onReturn, onApprove, defaultDecision, onRequestChanges, onRetire, onEdit, editBlocked, edit, onConfirmEdit, viewOnly, duplicates = 0, children }: {
   status: string; owner?: string; client?: string; context?: string; feedback?: string;
   /** The capability's owner from `nx_capability.nx_capabilityowner`: a name, `null` when none is assigned, omitted when unknown. */
   capabilityOwner?: string | null;
@@ -91,6 +91,8 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
    * the checklist and every decision are left out (the server rejects them anyway).
    */
   viewOnly?: string;
+  /** Possible duplicate technologies still undecided: approval waits for every one. */
+  duplicates?: number;
   children?: ReactNode;
 }) {
   const heading = useId();
@@ -111,7 +113,9 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
   const remaining = confirmed.filter(item => !item).length;
   const commentReady = comments.trim().length >= MIN_CHANGE_COMMENT;
   const hint = decision === "changes" ? !commentReady && `Explain what needs to be corrected (at least ${MIN_CHANGE_COMMENT} characters).`
-    : decision === "publish" ? !canApprove ? "Add the missing content before approving." : !cleared && `Confirm the publication checklist to approve (${remaining} of ${PUBLICATION_CHECKLIST.length} left).` : undefined;
+    : decision === "publish" ? !canApprove ? "Add the missing content before approving."
+      : duplicates > 0 ? `Decide on the possible duplicate ${duplicates === 1 ? "technology" : `technologies (${duplicates} left)`} before approving.`
+      : !cleared && `Confirm the publication checklist to approve (${remaining} of ${PUBLICATION_CHECKLIST.length} left).` : undefined;
   const pending = status === "Pending review";
   // A real edit must be explained to the owner: required approval note, or Confirm changes on a published record.
   const explain = !!edit?.pending;
@@ -280,7 +284,7 @@ export function ReviewPanel({ status, owner, client, context, feedback, solution
             {approveHint && <p id={`${heading}-hint`} className="mr-auto text-[13px] text-(--ink-2)">{approveHint}</p>}
             {decision === "changes"
               ? <button type="button" aria-describedby={approveHint ? `${heading}-hint` : undefined} disabled={!commentReady || disabled} onClick={onReturn} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--proto)" }}><Icon name="chevronLeft" />Send back for changes</button>
-              : <button type="button" aria-describedby={approveHint ? `${heading}-hint` : undefined} disabled={!cleared || !canApprove || !explained || disabled} onClick={onApprove} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--live)" }}><Icon name="check" />Approve &amp; publish</button>}
+              : <button type="button" aria-describedby={approveHint ? `${heading}-hint` : undefined} disabled={!cleared || !canApprove || duplicates > 0 || !explained || disabled} onClick={onApprove} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-4 py-2.5 text-[14px] font-semibold text-(--on-accent) disabled:cursor-not-allowed disabled:opacity-40" style={{ background: "var(--live)" }}><Icon name="check" />Approve &amp; publish</button>}
           </div>
         </div>}
       </fieldset>}

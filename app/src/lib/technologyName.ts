@@ -142,3 +142,37 @@ export function newTechnologies(selected: readonly string[], usedElsewhere: Read
     return { name, similar: [...new Set([...(check.existing ? [check.existing] : []), ...check.similar])] };
   });
 }
+
+/** How the librarian settled one possible duplicate: replaced by an existing technology, or kept as its own entry. */
+export type DuplicateDecision = { kind: "existing"; existing: string } | { kind: "kept" };
+
+/**
+ * One warning row: a submitted technology and its matches. `pair`: the match is also on the solution, so the two
+ * look-alikes share one row. `stays`: a resolved row whose match was already on the solution (it was removed, not swapped).
+ */
+export type DuplicateRow = NewTechnology & { pair?: string; stays?: boolean };
+
+/** The warning's rows: look-alikes on the solution share one, and replaced or removed technologies stay listed as resolved. */
+export function duplicateRows(suspects: readonly NewTechnology[], technologies: readonly string[], decisions: Readonly<Record<string, DuplicateDecision>>) {
+  const onSolution = new Set(technologies);
+  const removed = new Map(Object.entries(decisions).flatMap(([name, decision]) => decision.kind === "existing" ? [[name, decision.existing] as const] : []));
+  const rows: DuplicateRow[] = [];
+  const paired = new Set<string>();
+  for (const suspect of suspects) {
+    const similar = suspect.similar.filter(name => !removed.has(name));
+    if (!similar.length || paired.has(suspect.name)) continue;
+    const pair = similar.find(name => onSolution.has(name));
+    if (pair) paired.add(pair);
+    rows.push(pair ? { name: suspect.name, similar: [pair], pair } : { name: suspect.name, similar });
+  }
+  // A replaced or removed technology leaves the solution, so it is no longer a suspect: it stays listed as resolved.
+  for (const [name, existing] of removed) if (!suspects.some(item => item.name === name)) rows.push({ name, similar: [existing], stays: onSolution.has(existing) });
+  return rows;
+}
+
+export const isResolved = (row: DuplicateRow, decisions: Readonly<Record<string, DuplicateDecision>>) => !!decisions[row.name] || (!!row.pair && !!decisions[row.pair]);
+
+/** How many possible duplicates still wait for a decision; approval waits for none. */
+export function unresolvedDuplicates(suspects: readonly NewTechnology[], technologies: readonly string[], decisions: Readonly<Record<string, DuplicateDecision>>) {
+  return duplicateRows(suspects, technologies, decisions).filter(row => !isResolved(row, decisions)).length;
+}

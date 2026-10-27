@@ -1,25 +1,19 @@
 import { useId, useState } from "react";
 import { Icon } from "./Icon";
 import { SelectPicker } from "./SelectPicker";
-import type { NewTechnology } from "../lib/technologyName";
+import { duplicateRows, isResolved, type DuplicateDecision, type DuplicateRow as Row, type NewTechnology } from "../lib/technologyName";
 
-/** How the librarian settled one possible duplicate: replaced by an existing technology, or kept as its own entry. */
-export type DuplicateDecision = { kind: "existing"; existing: string } | { kind: "kept" };
+export type { DuplicateDecision };
 
 const decisionButton = "inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-40";
-
-/**
- * One warning row: a submitted technology and its matches. `pair`: the match is also on the solution, so the two
- * look-alikes share one row. `stays`: a resolved row whose match was already on the solution (it was removed, not swapped).
- */
-type Row = NewTechnology & { pair?: string; stays?: boolean };
 
 /**
  * New technologies that resemble an existing one: possible duplicates, never confirmed errors. Each one gets its own
  * decision, so the librarian settles them one by one: use the existing catalogue entry (a librarian edit of the
  * solution's technologies) or keep the submitted one as its own entry. When both look-alikes are on the solution
  * (`technologies`), they share one row instead of two that contradict each other: remove either, or keep both.
- * A removed technology is never offered as a match again. Nothing renders when there are none.
+ * A removed technology is never offered as a match again. Nothing renders when there are none. Approval waits until
+ * every row is decided (`unresolvedDuplicates`).
  * Without `editable` (the record cannot be edited now) the comparison shows with no decision buttons. With `blocked`
  * (the librarian may review but not edit it, e.g. their own solution) the changing buttons stay visible but disabled,
  * with the reason, and keeping still works: it changes no data.
@@ -40,21 +34,9 @@ export function DuplicateTechnologies({ suspects, technologies = [], decisions, 
   onUndoKeep: (name: string) => void;
 }) {
   const heading = useId();
-  const onSolution = new Set(technologies);
-  const removed = new Map(Object.entries(decisions).flatMap(([name, decision]) => decision.kind === "existing" ? [[name, decision.existing] as const] : []));
-  const rows: Row[] = [];
-  const paired = new Set<string>();
-  for (const suspect of suspects) {
-    const similar = suspect.similar.filter(name => !removed.has(name));
-    if (!similar.length || paired.has(suspect.name)) continue;
-    const pair = similar.find(name => onSolution.has(name));
-    if (pair) paired.add(pair);
-    rows.push(pair ? { name: suspect.name, similar: [pair], pair } : { name: suspect.name, similar });
-  }
-  // A replaced or removed technology leaves the solution, so it is no longer a suspect: it stays listed as resolved.
-  for (const [name, existing] of removed) if (!suspects.some(item => item.name === name)) rows.push({ name, similar: [existing], stays: onSolution.has(existing) });
+  const rows = duplicateRows(suspects, technologies, decisions);
   if (!rows.length) return null;
-  const resolved = rows.filter(row => decisions[row.name] || (row.pair && decisions[row.pair])).length;
+  const resolved = rows.filter(row => isResolved(row, decisions)).length;
   const decidable = editable || !!blocked;
   const blockedId = blocked ? `${heading}-blocked` : undefined;
   return <section aria-labelledby={heading} className="mt-4 rounded-xl border p-4 text-[14px]" style={{ borderColor: "color-mix(in srgb, var(--proto) 40%, transparent)" }}>

@@ -664,6 +664,11 @@ test("review panel: overview, required publication checklist, and a decision tha
   const incomplete = render(review.ReviewPanel, { ...publish, cleared: true, canApprove: false });
   assert.match(incomplete, /disabled=""[^>]*>.*Approve &amp; publish/s);
   assert.match(incomplete, /Add the missing content before approving\./);
+  // Possible duplicate technologies: every row, of either kind, must be decided first.
+  const duplicates = render(review.ReviewPanel, { ...publish, cleared: true, duplicates: 2 });
+  assert.match(duplicates, /disabled=""[^>]*>.*Approve &amp; publish/s);
+  assert.match(duplicates, /Decide on the possible duplicate technologies \(2 left\) before approving\./);
+  assert.match(render(review.ReviewPanel, { ...publish, cleared: true, duplicates: 1 }), /Decide on the possible duplicate technology before approving\./);
   assert.match(render(review.ReviewPanel, { ...publish, cleared: true, locked: true }), /<fieldset disabled=""/);
   assert.doesNotMatch(render(review.ReviewPanel, { ...props, status: "Published" }), /Review decision|Approve &amp; publish/);
   assert.match(render(review.ReviewPanel, { ...props, busy: true }), /loading-state--inline/);
