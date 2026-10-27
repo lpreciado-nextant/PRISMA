@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
+import { BusyOverlay } from "../../src/components/BusyOverlay";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { MySubmissionsView, type SuggestionSummary } from "../../src/views/MySubmissionsView";
 import { DetailView } from "../../src/views/DetailView";
@@ -39,6 +40,11 @@ const CONFIRMATIONS = {
   "request-changes": { title: "Send back to the owner?", label: "Send back to owner", body: "This is not an edit. It leaves the library and CSMs lose access to it; the owner sees your comments as Changes requested and must resubmit it. To fix it yourself, cancel and use Edit solution." },
   retire: { title: "Retire from the library?", label: "Retire from library", body: "It is removed from the Solution Library for good: it disappears from search and browse and CSMs lose access to it. The record is kept, not deleted, and the owner sees your reason." },
 } as const;
+/** What the busy overlay says while each workflow action runs. */
+const TRANSITION_LABELS: Record<string, string> = {
+  approve: "Publishing...", return: "Sending back for changes...", submit: "Submitting for review...", withdraw: "Withdrawing...",
+  "request-changes": "Sending back to the owner...", retire: "Retiring from the library...", "confirm-edit": "Confirming your changes...",
+};
 const UNPUBLISH = { title: "Unpublish to edit?", label: "Unpublish & edit", body: "It leaves the Solution Library and returns to Draft so you can edit it. It is published again once a librarian approves it." };
 
 export function SubmissionsView({ review }: { review: boolean }) {
@@ -138,6 +144,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   const [cleared, setCleared] = useState(false);
   const [confirmation, setConfirmation] = useState<keyof typeof CONFIRMATIONS | null>(null);
   const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState("");
   const [uncertain, setUncertain] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [preview, setPreview] = useState<MediaItem | null>(null);
@@ -195,6 +202,7 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
     const controller = lifetime.current;
     if (!state || !controller || controller.signal.aborted || running.current || uncertain) return;
     running.current = true;
+    setBusyAction(action);
     setBusy(true);
     let expired = false;
     const timeout = window.setTimeout(() => { expired = true; if (!controller.signal.aborted) { setUncertain(true); setBusy(false); setError("Transition was not confirmed. Reopen before retrying."); } }, 30_000);
@@ -278,7 +286,8 @@ export function SubmissionView({ id, review, technologyUse }: { id: string; revi
   return <DetailView solution={solution} present={false} connected effort={effort} panels={suggestionsPanel} backLabel={review ? "Review queue" : "My submissions"} onBack={() => navigate(review ? "/review" : "/my-submissions")}
     poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>}
     imageCount={state.media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={state.media} />} onAssetOpen={asset => void mediaAction.open(state.media.find(item => item.id === asset.id))} reviewActions={
-      <>{review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
+      <><BusyOverlay label={busy ? TRANSITION_LABELS[busyAction] ?? "Updating submission..." : duplicateBusy ? "Updating technologies..." : undefined} />
+      {review ? <ReviewPanel status={PUBLICATIONS[state.record.publication]} owner={state.record.owner} client={core.clientContext} context={core.clientContextRedacted} feedback={state.record.comments}
         solution={solution} capabilityOwner={capabilityOwnerName(capabilityOwners, core.capabilityId, names)} checks={reviewChecklist({
           summary: !!core.summary.trim(), story: !!core.whatItDoes.trim() && !!core.businessValue.trim(), capability: !!core.capabilityId,
           contributors: graph.contributors.length > 0, effort: core.complexityValue != null,

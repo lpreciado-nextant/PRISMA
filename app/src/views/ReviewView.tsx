@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Icon } from "../components/Icon";
+import { BusyOverlay } from "../components/BusyOverlay";
 import { DuplicateTechnologies, type DuplicateDecision } from "../components/DuplicateTechnologies";
 import { ReviewPanel, ReviewQueue } from "../components/ReviewQueue";
 import { newTechnologies } from "../lib/technologyName";
@@ -67,7 +68,7 @@ export function ReviewView({ entries, selectedId, onDecision, published = [], on
       <p role="status" className="mt-3">{selected ? "This submission is with its contributor for editing." : "This submission is no longer available for review."}</p>
     </div>;
 
-    return <DetailView solution={selected.solution} present={false} onBack={() => navigate("/review")} backLabel="Review queue" assetBasePath={`/review/${selected.solution.id}`} reviewActions={
+    return <><BusyOverlay label={saving ? "Saving review..." : duplicateBusy ? "Updating technologies..." : undefined} /><DetailView solution={selected.solution} present={false} onBack={() => navigate("/review")} backLabel="Review queue" assetBasePath={`/review/${selected.solution.id}`} reviewActions={
       <ReviewPanel local status={selected.solution.publicationStatus} owner={selected.owner} client={selected.solution.clientContext} context={selected.solution.clientContextRedacted} feedback={selected.solution.reviewComments}
         solution={selected.solution} checks={reviewChecklist(submissionFacts(selected.solution))}
         comments={comments} onComments={setComments} cleared={clientSafe} onCleared={setClientSafe} busy={saving} notice={notice} error={error} onReturn={() => void decide("return")} onApprove={() => void decide("publish")}>
@@ -76,7 +77,7 @@ export function ReviewView({ entries, selectedId, onDecision, published = [], on
           editable={!!onReplaceTechnology && !saving && (selected.solution.publicationStatus === "Pending review" || selected.solution.publicationStatus === "Published")}
           onUseExisting={(name, existing) => void replaceWithExisting(name, existing)} onKeep={name => keep(name, true)} onUndoKeep={name => keep(name, false)} />
       </ReviewPanel>
-    } />;
+    } /></>;
   }
 
   return <ReviewQueue entries={entries} capabilityAreas={Object.fromEntries(CAPABILITIES.map(({ name, area }) => [name, area]))} />;

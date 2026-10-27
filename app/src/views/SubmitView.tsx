@@ -23,6 +23,7 @@ import { capabilityAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
 import { assetPurpose, purposeAllows } from "../lib/assetPurpose";
 import { NamedSection, SolutionDetailsFields, CapabilityFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, LessonsFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, EffortFields, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
+import { BusyOverlay } from "../components/BusyOverlay";
 import { ImageFramer } from "../components/ImageFramer";
 
 const MAX_GALLERY = 6;
@@ -169,6 +170,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const [framing, setFraming] = useState<string | null>(null);
   const [submissionId, setSubmissionId] = useState(() => initialSolution?.id ?? crypto.randomUUID());
   const [saving, setSaving] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [storageError, setStorageError] = useState("");
   const [uploadError, setUploadError] = useState("");
@@ -240,6 +242,16 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   const mediaValid = draft.images.length > 0 && !mediaBusy;
   const capabilityValid = draft.capabilities.length === 1;
   const areas = useMemo(() => capabilityAreas(draft.capabilities[0], draft.secondaryCapabilities), [draft.capabilities, draft.secondaryCapabilities]);
+  // What still blocks Next or Submit, step by step, named as the form labels them.
+  const needs = (...items: (string | false | undefined)[]) => items.filter((item): item is string => !!item);
+  const detailNeeds = needs(!nameValid && "Solution name", !draft.summary.trim() && "One-line summary", !draft.whatItDoes.trim() && "What the solution does", !draft.businessValue.trim() && "Business value");
+  const capabilityNeeds = needs(!capabilityValid && "Main capability");
+  const contextNeeds = needs(clientAssociated === undefined && "Whether it's associated with a client", clientAssociated === true && !draft.clientContext.trim() && "Client name",
+    clientAssociated === true && !draft.redacted.trim() && "Anonymous client profile", !contributorsValid && "A person for every contributor", !draft.complexity && "Complexity", !!hoursError && "A valid hour estimate");
+  const mediaNeeds = needs(!draft.images.length && "At least one detail image", mediaBusy && "Wait for uploads to finish");
+  const safetyNeeds = needs(!safetyValid && "The confirmation in Before you start");
+  const missing = step === 0 ? safetyNeeds : step === 1 ? [...safetyNeeds, ...detailNeeds] : step === 2 ? [...safetyNeeds, ...capabilityNeeds]
+    : step === 3 ? [...safetyNeeds, ...contextNeeds] : step === 4 ? [...safetyNeeds, ...mediaNeeds] : [...safetyNeeds, ...detailNeeds, ...capabilityNeeds, ...contextNeeds, ...mediaNeeds];
   const stepValid = safetyValid && (step === 1 ? detailsValid : step === 2 ? capabilityValid : step === 3 ? clientValid && contributorsValid && effortValid : step === 4 ? mediaValid : true);
   const updateContributor = (id: string, patch: Partial<SolutionContributor>) =>
     set("contributors", draft.contributors.map((contributor) => contributor.id === id ? { ...contributor, ...patch } : contributor));
@@ -281,6 +293,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
   const persist = async (asDraft: boolean) => {
     if (saving || mediaBusy || mediaPending || !nameValid || (!asDraft && (!basicsValid || !safetyValid || !mediaValid || !capabilityValid))) return;
+    setSavingDraft(asDraft);
     setSaving(true);
     setSaveError("");
     try {
@@ -308,6 +321,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
   return (
     <div className="mx-auto w-full max-w-[980px] px-4 pt-8 pb-24 sm:px-6">
+      <BusyOverlay label={saving ? savingDraft ? "Saving draft..." : "Submitting for review..." : undefined} />
       {framing && <ImageFramer source={framing} name="thumbnail" onCancel={() => setFraming(null)} onConfirm={file => {
         const reader = new FileReader();
         reader.onload = () => { if (typeof reader.result === "string") set("thumbnail", reader.result); setFraming(null); };
@@ -452,7 +466,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
           </SubmissionReview>
         )}
 
-        <SubmissionFooter step={step} nextLabel="Next" busy={saving || mediaBusy} locked={mediaPending} canSave={nameValid} canContinue={stepValid} canSubmit={basicsValid && safetyValid && mediaValid && capabilityValid}
+        <SubmissionFooter step={step} nextLabel="Next" busy={saving || mediaBusy} locked={mediaPending} canSave={nameValid} canContinue={stepValid} canSubmit={basicsValid && safetyValid && mediaValid && capabilityValid} missing={missing}
           onBack={() => setStep(current => current - 1)} onSave={onSaveDraft ? () => void persist(true) : undefined} onContinue={() => setStep(current => current + 1)} onSubmit={() => void persist(false)} />
       </div>
       </SectionCardsContext.Provider>

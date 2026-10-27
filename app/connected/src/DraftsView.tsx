@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../../src/components/Icon";
 import { LoadingState } from "../../src/components/LoadingState";
+import { BusyOverlay } from "../../src/components/BusyOverlay";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { SolutionCard } from "../../src/components/SolutionCard";
 import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, EffortFields, SolutionDetailsFields, ClientFields, StoryFields, LessonsFields, SubmissionReview, StatusField, CapabilityFields } from "../../src/components/SubmissionForm";
@@ -82,6 +83,8 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const [hoursText, setHoursText] = useState(() => initial?.record.core.estimatedMinimumHours?.toString() ?? "");
   const [mediaBusy, setMediaBusy] = useState(false);
   const [mediaPending, setMediaPending] = useState(false);
+  // Which save is running, so the busy overlay can say what it is waiting for.
+  const [savingAction, setSavingAction] = useState<"continue" | "close" | "submit" | "technology">("continue");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "uncertain">("idle");
   const saving = useRef(false);
   const lifetime = useRef<AbortController | null>(null);
@@ -153,6 +156,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     const controller = lifetime.current;
     if (!controller || !saved || saving.current || status === "uncertain" || mediaBusy) throw new Error("Draft unavailable.");
     saving.current = true;
+    setSavingAction("technology");
     setStatus("saving");
     const operation = new AbortController();
     const abort = () => operation.abort();
@@ -176,6 +180,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     if (!controller || saving.current || status === "uncertain" || mediaBusy || mediaPending) return;
     if (step === 0 && action === "continue") { setStep(1); return; }
     saving.current = true;
+    setSavingAction(action);
     setStatus("saving");
     const operation = new AbortController();
     const abort = () => operation.abort();
@@ -310,12 +315,26 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const effortComplete = graph.contributors.length > 0 && graph.contributors.every(person => !!person.personId) && draft.complexityValue != null;
   const storyComplete = !!draft.whatItDoes.trim() && !!draft.businessValue.trim();
   const complete = canSave && graph.areaIds.length > 0 && !!draft.summary.trim() && storyComplete && !!draft.capabilityId && effortComplete && clientValid && media.some(item => item.kind === "image" && item.complete) && !media.some(item => !item.complete);
+  // What still blocks Continue or Submit, step by step, named as the form labels them.
+  const needs = (...items: (string | false | undefined)[]) => items.filter((item): item is string => !!item);
+  const nameNeeds = needs((!draft.name.trim() || draft.name.trim().toLowerCase() === "untitled solution") && "Solution name");
+  const detailNeeds = needs(!draft.summary.trim() && "One-line summary", !draft.whatItDoes.trim() && "What the solution does", !draft.businessValue.trim() && "Business value");
+  const capabilityNeeds = needs(!draft.capabilityId && "Main capability");
+  const contextNeeds = needs(!graph.contributors.length && "At least one contributor", graph.contributors.some(person => !person.personId) && "A person for every contributor",
+    draft.complexityValue == null && "Complexity", !!hoursError && "A valid hour estimate", clientAssociated === undefined && "Whether it's associated with a client",
+    clientAssociated === true && !draft.clientContext.trim() && "Client name", clientAssociated === true && !draft.clientContextRedacted.trim() && "Anonymous client profile");
+  const mediaNeeds = needs(!media.some(item => item.kind === "image" && item.complete) && "At least one detail image", media.some(item => !item.complete) && "Finish or remove unfinished uploads");
+  const allNeeds = [...nameNeeds, ...detailNeeds, ...capabilityNeeds, ...contextNeeds, ...mediaNeeds];
+  const missing = step === 0 ? needs(!accepted && "The confirmation above") : step === 1 ? [...nameNeeds, ...detailNeeds] : step === 2 ? [...nameNeeds, ...capabilityNeeds]
+    : step === 3 ? [...nameNeeds, ...contextNeeds] : step === 4 ? allNeeds
+    : [...allNeeds, ...needs(!librarian && !draft.safetyAcknowledged && "The safety acknowledgment", captionsDirty && "Save your caption changes")];
   const canContinue = step === 0 ? accepted : step === 1 ? canSave && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && !!draft.capabilityId : step === 3 ? canSave && effortComplete && clientValid : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked && !(librarian && next === 0)) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;
 
   return <>
+    <BusyOverlay label={status === "saving" ? savingAction === "technology" ? "Adding technology..." : savingAction === "submit" ? librarian ? "Saving your changes..." : "Submitting for review..." : savingAction === "close" ? "Saving draft..." : "Saving..." : undefined} />
     <button type="button" disabled={busy} className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-(--ink-2)" onClick={() => { if (dirty) setConfirmation("leave"); else navigate(librarian ? reviewPath : "/"); }}><Icon name="chevronLeft" size={15} />{librarian ? "Back to review" : "Back to the library"}</button>
     <div className="animate-rise mt-4"><p className="eyebrow">{librarian ? "Librarian · editing a contributor's solution" : "Contributor · guided submission"}</p><h1 className="mt-2 text-[28px] font-bold">{librarian ? "Edit solution" : initial ? "Edit submission" : "Put your work on the shelf"}</h1><p role="status" className="mt-2 text-[14px] text-(--ink-2)">{busy ? "Saving..." : dirty || captionsDirty ? "Unsaved changes" : saved ? "Saved to Dataverse" : "Draft"}</p></div>
     {librarian && <LibrarianEditNotice published={publishedEdit} />}
@@ -367,7 +386,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
         images={`${thumbnail ? "Thumbnail" : "Generated poster"} · ${media.filter(item => item.kind === "image" && item.complete).length} screenshots`} safety={draft.safetyAcknowledged ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.clientContextRedacted} nextState={publishedEdit ? "Published" : "Pending review"}>
         {!librarian && <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>}{!complete && <p role="alert">{librarian ? "Complete Define the solution, the client question, a capability and at least one detail image before saving." : "Complete Define the solution, Solution context (status, contributors, complexity and the client question), a capability and at least one detail image before submitting."}</p>}
       </SubmissionReview>}
-      <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave} canContinue={canContinue} canSubmit={librarian ? complete && !captionsDirty : complete && !captionsDirty && draft.safetyAcknowledged}
+      <SubmissionFooter step={step} busy={busy} locked={locked} canSave={canSave} canContinue={canContinue} canSubmit={librarian ? complete && !captionsDirty : complete && !captionsDirty && draft.safetyAcknowledged} missing={missing}
         saveLabel={librarian ? "Save & back to review" : undefined} submitLabel={librarian ? "Save & back to review" : undefined}
         onBack={() => goBack(step - 1)} onSave={() => void persist("close")} onContinue={() => void persist("continue")} onSubmit={() => void persist("submit")} />
     </div>

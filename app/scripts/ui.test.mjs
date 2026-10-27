@@ -419,6 +419,15 @@ test("wizard footer preserves labels and locks every action during uncertain sav
   assert.doesNotMatch(render(form.SubmissionFooter, props), /disabled=""/);
 });
 
+test("wizard footer names what still blocks Continue or Submit", () => {
+  const props = { canSave: true, canContinue: false, canSubmit: false, missing: ["One-line summary", "Business value"], onBack: noop, onSave: noop, onContinue: noop, onSubmit: noop };
+  const next = render(form.SubmissionFooter, { ...props, step: 1 });
+  assert.match(next, /<button type="button" disabled=""[^>]*aria-describedby="([^"]+)"[^>]*>Continue<\/button><p id="\1" role="status"[^>]*>.*To continue, complete: One-line summary, Business value\./s);
+  assert.match(render(form.SubmissionFooter, { ...props, step: 5 }), /To submit, complete: One-line summary, Business value\./);
+  // Nothing to say while saving or locked, or when nothing is missing.
+  for (const extra of [{ busy: true }, { locked: true }, { missing: [] }, { canContinue: true }]) assert.doesNotMatch(render(form.SubmissionFooter, { ...props, step: 1, ...extra }), /To continue/);
+});
+
 test("identity fields retain PoC examples, limits and separate client contexts", () => {
   const html = render(form.IdentityFields, { value: { name: "", summary: "", clientContext: "Internal client", redacted: "" }, onText: noop, area: "ai", areas: [{ value: "ai", label: "AI & Automation" }], onArea: noop, status: "prototype", statuses: [{ value: "prototype", label: "Working prototype" }], onStatus: noop });
   assert.match(html, /e.g. Ledger Reconciler/);
