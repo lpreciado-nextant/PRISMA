@@ -420,7 +420,7 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
       </p>
       <div className="view-toggle view-toggle--text" role="group" aria-label="Review scope">
         <button type="button" aria-pressed={view === "area"} onClick={() => chooseView("area")}>All in my area</button>
-        <button type="button" aria-pressed={view === "mine"} onClick={() => chooseView("mine")}>My capabilities</button>
+        <button type="button" aria-pressed={view === "mine"} onClick={() => chooseView("mine")}>My capability</button>
         <button type="button" aria-pressed={view === "all"} onClick={() => chooseView("all")}>All areas</button>
       </div>
     </div>}

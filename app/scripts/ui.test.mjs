@@ -745,7 +745,7 @@ test("review queue all areas: other areas' records are listed view only, with th
   const scope = { areas: ["ai"], capabilities: ["Copilot Agents"] };
   // My area: only what the librarian may decide on.
   const area = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
-  assert.match(area, />All in my area<.*>My capabilities<.*aria-pressed="false"[^>]*>All areas</s);
+  assert.match(area, />All in my area<.*>My capability<.*aria-pressed="false"[^>]*>All areas</s);
   assert.match(area, /Own one/);
   assert.doesNotMatch(area, /Other one|View only|aria-label="Specialization area"/);
   globalThis.sessionStorage = { getItem: () => "all", setItem() {} };
@@ -769,21 +769,21 @@ test("review queue scope: area librarians see their area and a scope switch, glo
   const scope = { areas: ["data"], capabilities: ["Data Engineering"] };
   const area = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
   // Tabs, banner, then "Reviewing …" with the switch, above search, capability and sort; no Area filter.
-  assert.match(area, /aria-label="Review status".*Your turn.*Reviewing.*Data Solutions.*role="group" aria-label="Review scope".*aria-pressed="true"[^>]*>All in my area<.*aria-pressed="false"[^>]*>My capabilities<.*Search review queue.*aria-label="Capability".*aria-label="Sort"/s);
+  assert.match(area, /aria-label="Review status".*Your turn.*Reviewing.*Data Solutions.*role="group" aria-label="Review scope".*aria-pressed="true"[^>]*>All in my area<.*aria-pressed="false"[^>]*>My capability<.*Search review queue.*aria-label="Capability".*aria-label="Sort"/s);
   assert.doesNotMatch(area, /aria-label="Specialization area"/);
   assert.match(area, /Pending review<span[^>]*>2<\/span>.*Published<span[^>]*>1<\/span>.*2 submissions.*Solution other.*Solution owned/s);
-  // "My capabilities" (remembered for the session) narrows every tab's count to the capabilities the librarian owns.
+  // "My capability" (remembered for the session) narrows every tab's count to the capabilities the librarian owns.
   globalThis.sessionStorage = { getItem: () => "mine", setItem() {} };
   try {
     const mine = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
-    assert.match(mine, /aria-pressed="false"[^>]*>All in my area<.*aria-pressed="true"[^>]*>My capabilities</s);
+    assert.match(mine, /aria-pressed="false"[^>]*>All in my area<.*aria-pressed="true"[^>]*>My capability</s);
     assert.match(mine, /Pending review<span[^>]*>1<\/span>.*Published<span[^>]*>0<\/span>.*1 submission<.*Solution owned/s);
     assert.doesNotMatch(mine, /Solution other/);
   } finally { delete globalThis.sessionStorage; }
   // A global librarian: Area and Capability filters, no scope switch.
   const global = render(review.ReviewQueue, { entries, connected: true, capabilityAreas });
   assert.match(global, /aria-label="Specialization area".*All areas.*aria-label="Capability"/s);
-  assert.doesNotMatch(global, /Reviewing|Review scope|My capabilities/);
+  assert.doesNotMatch(global, /Reviewing|Review scope|My capability/);
 });
 
 test("my submissions list rows keep the card's management on one line", async () => {
