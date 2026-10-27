@@ -248,14 +248,16 @@
   }
 
   /* Every enabled button answers the pointer before it is pressed: it lights up on the dark ground and deepens on the
-     light one. Buttons with their own hover (utilities, components) keep theirs, since those layers win. */
+     light one. Buttons with their own hover (utilities, components) keep theirs, since those layers win.
+     Not .card-open: a filter makes the button the containing block of its card-wide ::after, which would shrink under
+     the pointer, drop the hover and flicker, so clicks on the card miss. */
   button {
     transition: filter 0.18s ease;
   }
-  button:not(:disabled):hover {
+  button:not(:disabled, .card-open):hover {
     filter: brightness(1.15);
   }
-  [data-theme="light"] button:not(:disabled):hover {
+  [data-theme="light"] button:not(:disabled, .card-open):hover {
     filter: brightness(0.92);
   }
 

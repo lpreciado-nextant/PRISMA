@@ -233,7 +233,7 @@ test("possible duplicate technologies explain themselves and get one decision ea
   // Both look-alikes on the solution: one row to remove either or keep both, never two rows that contradict.
   const both = [{ name: "OpenAI on Azure", similar: ["Azure OpenAI"] }, { name: "Azure OpenAI", similar: ["OpenAI on Azure"] }];
   const pairHtml = render(DuplicateTechnologies, { ...props, suspects: both, technologies: ["OpenAI on Azure", "Azure OpenAI"] });
-  assert.match(pairHtml, /Possible duplicate technology<.*0 \/ 1 resolved.*On this solution.*OpenAI on Azure.*and.*Azure OpenAI.*>Remove OpenAI on Azure<.*>Remove Azure OpenAI<.*>Keep both</s);
+  assert.match(pairHtml, /Possible duplicate technology<.*0 \/ 1 resolved.*OpenAI on Azure.*and.*Azure OpenAI.*may overlap.*>Remove OpenAI on Azure<.*>Remove Azure OpenAI<.*>Keep both</s);
   assert.doesNotMatch(pairHtml, /Use existing|Keep submitted/);
   // Once one is removed it is never offered again: the other is no longer a suspect.
   const removedHtml = render(DuplicateTechnologies, { ...props, suspects: [both[1]], technologies: ["Azure OpenAI"], decisions: { "OpenAI on Azure": { kind: "existing", existing: "Azure OpenAI" } } });
