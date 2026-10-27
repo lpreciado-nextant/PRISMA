@@ -1532,8 +1532,10 @@
     cursor: pointer;
     transition: background 0.25s var(--ease-sheet), color 0.25s var(--ease-sheet);
   }
-  /* Text options (e.g. the review queue's "All in my area · My capability"). */
+  /* Text options (e.g. the review queue's "All in my area · My capability"): the label and its count on one line. */
   .view-toggle--text > button {
+    display: inline-flex;
+    align-items: center;
     width: auto;
     padding-inline: 0.85rem;
     font-size: 13px;
