@@ -745,19 +745,20 @@ test("review queue all areas: other areas' records are listed view only, with th
   const scope = { areas: ["ai"], capabilities: ["Copilot Agents"] };
   // My area: only what the librarian may decide on.
   const area = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
-  assert.match(area, />All in my area<.*>My capability<.*aria-pressed="false"[^>]*>All areas</s);
+  assert.match(area, />All in my area<span[^>]*>\d+<\/span><.*>My capability<span[^>]*>\d+<\/span><.*aria-pressed="false"[^>]*>All areas<span[^>]*>\d+<\/span></s);
   assert.match(area, /Own one/);
   assert.doesNotMatch(area, /Other one|View only|aria-label="Specialization area"/);
+  assert.match(area, /Pending review<span[^>]*style="color:color-mix\(in srgb, var\(--proto\)/);
   globalThis.sessionStorage = { getItem: () => "all", setItem() {} };
   try {
     const all = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
-    assert.match(all, /Pending review<span[^>]*>2<\/span>.*aria-pressed="true"[^>]*>All areas<.*aria-label="Specialization area"/s);
+    assert.match(all, /Pending review<span[^>]*>2<\/span>.*aria-pressed="true"[^>]*>All areas<span[^>]*>\d+<\/span><.*aria-label="Specialization area"/s);
     assert.match(all, /View only<\/span>.*Other one.*aria-label="View Other one"[^>]*>View</s);
     assert.match(all, /aria-label="Review Own one"[^>]*>Review submission</);
-    // "Your turn" amber still follows the librarian's own pending records only.
-    assert.match(all, /Pending review<span[^>]*style="color:color-mix\(in srgb, var\(--proto\)/);
-    const othersOnly = render(review.ReviewQueue, { entries: [entries[1]], connected: true, capabilityAreas, scope });
-    assert.doesNotMatch(othersOnly, /Pending review<span[^>]*var\(--proto\)/);
+    // Each option counts what it would list: 1 in the area, 1 of the librarian's capability, 2 across all areas.
+    assert.match(all, />All in my area<span[^>]*>1<\/span><.*>My capability<span[^>]*>1<\/span><.*>All areas<span[^>]*>2<\/span></s);
+    // All areas is a look-around view: its Pending count stays neutral; amber stays with the librarian's own views.
+    assert.doesNotMatch(all, /Pending review<span[^>]*var\(--proto\)/);
   } finally { delete globalThis.sessionStorage; }
 });
 
@@ -769,14 +770,14 @@ test("review queue scope: area librarians see their area and a scope switch, glo
   const scope = { areas: ["data"], capabilities: ["Data Engineering"] };
   const area = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
   // Tabs, banner, then "Reviewing …" with the switch, above search, capability and sort; no Area filter.
-  assert.match(area, /aria-label="Review status".*Your turn.*Reviewing.*Data Solutions.*role="group" aria-label="Review scope".*aria-pressed="true"[^>]*>All in my area<.*aria-pressed="false"[^>]*>My capability<.*Search review queue.*aria-label="Capability".*aria-label="Sort"/s);
+  assert.match(area, /aria-label="Review status".*Your turn.*Reviewing.*Data Solutions.*role="group" aria-label="Review scope".*aria-pressed="true"[^>]*>All in my area<span[^>]*>\d+<\/span><.*aria-pressed="false"[^>]*>My capability<span[^>]*>\d+<\/span><.*Search review queue.*aria-label="Capability".*aria-label="Sort"/s);
   assert.doesNotMatch(area, /aria-label="Specialization area"/);
   assert.match(area, /Pending review<span[^>]*>2<\/span>.*Published<span[^>]*>1<\/span>.*2 submissions.*Solution other.*Solution owned/s);
   // "My capability" (remembered for the session) narrows every tab's count to the capabilities the librarian owns.
   globalThis.sessionStorage = { getItem: () => "mine", setItem() {} };
   try {
     const mine = render(review.ReviewQueue, { entries, connected: true, capabilityAreas, scope });
-    assert.match(mine, /aria-pressed="false"[^>]*>All in my area<.*aria-pressed="true"[^>]*>My capability</s);
+    assert.match(mine, /aria-pressed="false"[^>]*>All in my area<span[^>]*>\d+<\/span><.*aria-pressed="true"[^>]*>My capability<span[^>]*>\d+<\/span></s);
     assert.match(mine, /Pending review<span[^>]*>1<\/span>.*Published<span[^>]*>0<\/span>.*1 submission<.*Solution owned/s);
     assert.doesNotMatch(mine, /Solution other/);
   } finally { delete globalThis.sessionStorage; }

@@ -377,11 +377,19 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
   };
   const terms = query.trim().toLowerCase();
   // Scope, area, capability and search apply to every tab, so each tab's count matches what it lists.
-  const shown = (entry: Entry) => inScope(entry) && (!chosenCapability || entry.solution.capabilities[0] === chosenCapability)
-    && `${entry.solution.name} ${entry.solution.summary} ${entry.solution.capabilities.join(" ")} ${entry.owner ?? ""}`.toLowerCase().includes(terms);
+  const searched = ({ solution, owner }: Entry) => `${solution.name} ${solution.summary} ${solution.capabilities.join(" ")} ${owner ?? ""}`.toLowerCase().includes(terms);
+  const shown = (entry: Entry) => inScope(entry) && (!chosenCapability || entry.solution.capabilities[0] === chosenCapability) && searched(entry);
   const counts = Object.fromEntries(filters.map(option => [option, entries.filter(entry => matches(entry, option) && shown(entry)).length])) as Record<typeof filters[number], number>;
-  // Amber means "your turn": only pending records this librarian may decide on, even when all areas are listed.
-  const yourTurn = entries.some(entry => matches(entry, "Pending review") && shown(entry) && entry.manage !== false);
+  // Amber means "your turn": only in a view that lists nothing but records this librarian decides on. All areas is a
+  // look-around view, so its Pending count stays neutral; the masthead and "All in my area" still carry the amber.
+  const yourTurn = (!scope || view !== "all") && counts["Pending review"] > 0;
+  // Each scope option's count, in the open tab with the same search and capability: what clicking it would list.
+  const viewCount = (viewing: ScopeView) => {
+    const chosenArea = viewing === "all" ? area : "";
+    const narrowedBy = capability && capabilityOptions(viewing, chosenArea).includes(capability) ? capability : "";
+    return entries.filter(entry => matches(entry, filter) && inScope(entry, viewing, chosenArea) && (!narrowedBy || entry.solution.capabilities[0] === narrowedBy) && searched(entry)).length;
+  };
+  const scopeOptions: { value: ScopeView; label: string }[] = [{ value: "area", label: "All in my area" }, { value: "mine", label: "My capability" }, { value: "all", label: "All areas" }];
   const visible = entries.filter(entry => matches(entry, filter) && shown(entry))
     // Undated records sort last either way; ties keep a stable alphabetical order.
     .sort((a, b) => {
@@ -419,9 +427,9 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
         {scope.areas.map(value => <span key={value} className="inline-flex items-center gap-1.5 font-semibold text-(--ink)"><span aria-hidden="true" className="size-2 rounded-full" style={{ background: AREAS[value].cssVar }} />{AREAS[value].name}</span>)}
       </p>
       <div className="view-toggle view-toggle--text h-auto min-h-9 max-w-full flex-wrap gap-y-1" role="group" aria-label="Review scope">
-        <button type="button" aria-pressed={view === "area"} onClick={() => chooseView("area")}>All in my area</button>
-        <button type="button" aria-pressed={view === "mine"} onClick={() => chooseView("mine")}>My capability</button>
-        <button type="button" aria-pressed={view === "all"} onClick={() => chooseView("all")}>All areas</button>
+        {scopeOptions.map(option => <button key={option.value} type="button" aria-pressed={view === option.value} onClick={() => chooseView(option.value)}>
+          {option.label}<span className="ml-1.5 font-mono text-[11px] opacity-70">{viewCount(option.value)}</span>
+        </button>)}
       </div>
     </div>}
 
