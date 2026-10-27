@@ -340,13 +340,9 @@ export function ReviewQueue({ entries, connected = false, capabilityAreas = {}, 
   // Scope and area first: they decide which capabilities can be chosen.
   const inScope = ({ solution }: Entry, viewing = view, chosenArea = area) => (viewing !== "mine" || !!scope?.capabilities.includes(solution.capabilities[0] ?? ""))
     && (!chosenArea || mainArea(solution) === chosenArea);
-  // Every capability the scope or area allows (A–Z), plus any main capability on a record in it.
-  const capabilityOptions = (viewing: ScopeView, chosenArea: SpecializationArea | "") => {
-    const allowed = scope && viewing === "mine" ? scope.capabilities
-      : Object.entries(capabilityAreas).filter(([, owner]) => chosenArea ? owner === chosenArea : !scope || scope.areas.includes(owner)).map(([name]) => name);
-    const used = entries.filter(entry => inScope(entry, viewing, chosenArea)).flatMap(({ solution }) => solution.capabilities.slice(0, 1));
-    return ["", ...[...new Set([...allowed, ...used])].sort((a, b) => a.localeCompare(b))];
-  };
+  // Only capabilities with records in the open tab, within the scope and area (A–Z): every option leads somewhere.
+  const capabilityOptions = (viewing: ScopeView, chosenArea: SpecializationArea | "") =>
+    ["", ...[...new Set(entries.filter(entry => matches(entry, filter) && inScope(entry, viewing, chosenArea)).flatMap(({ solution }) => solution.capabilities.slice(0, 1)))].sort((a, b) => a.localeCompare(b))];
   const capabilities = capabilityOptions(view, area);
   const chosenCapability = capabilities.includes(capability) ? capability : "";
   const chooseCapability = (value: string) => {
