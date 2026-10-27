@@ -230,6 +230,10 @@ test("possible duplicate technologies explain themselves and get one decision ea
   assert.equal(decided.match(/>Use existing</g)?.length, 1);
   const kept = render(DuplicateTechnologies, { ...props, decisions: { "Power-BI": { kind: "kept" } } });
   assert.match(kept, /Kept .*Power-BI.* as a separate technology.*Undo/s);
+  // The librarian's own solution: Use existing is disabled with the reason; Keep submitted still decides.
+  const own = render(DuplicateTechnologies, { ...props, editable: false, blocked: "You submitted this solution." });
+  assert.match(own, /<button type="button" disabled=""[^>]*aria-describedby="([^"]+)"[^>]*>.*Use existing.*Keep submitted.*<p id="\1"[^>]*>You submitted this solution\.</s);
+  assert.doesNotMatch(own, /<button type="button" disabled=""[^>]*aria-label="Keep submitted/);
   // Without edit rights the comparison stays, with no decision buttons.
   assert.doesNotMatch(render(DuplicateTechnologies, { ...props, editable: false }), /Use existing|Keep submitted/);
   assert.equal(render(DuplicateTechnologies, { ...props, suspects: [suspects[2]] }), "");

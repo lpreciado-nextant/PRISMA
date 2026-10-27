@@ -12,12 +12,16 @@ const decisionButton = "inline-flex min-h-8 cursor-pointer items-center gap-1.5 
  * New technologies that resemble an existing one: possible duplicates, never confirmed errors. Each one gets its own
  * decision, so the librarian settles them one by one: use the existing catalogue entry (a librarian edit of the
  * solution's technologies) or keep the submitted one as its own entry. Nothing renders when there are none.
- * Without `editable` (the record cannot be edited now) the comparison shows with no decision buttons.
+ * Without `editable` (the record cannot be edited now) the comparison shows with no decision buttons. With `blocked`
+ * (the librarian may review but not edit it, e.g. their own solution) Use existing stays visible but disabled, with
+ * the reason, and Keep submitted still works: it changes no data.
  */
-export function DuplicateTechnologies({ suspects, decisions, editable, busy, error, onUseExisting, onKeep, onUndoKeep }: {
+export function DuplicateTechnologies({ suspects, decisions, editable, blocked, busy, error, onUseExisting, onKeep, onUndoKeep }: {
   suspects: NewTechnology[];
   decisions: Readonly<Record<string, DuplicateDecision>>;
   editable: boolean;
+  /** Why Use existing is unavailable while the librarian can still decide. */
+  blocked?: string;
   /** The technology whose replacement is being saved. */
   busy?: string;
   error?: { name: string; message: string };
@@ -31,6 +35,7 @@ export function DuplicateTechnologies({ suspects, decisions, editable, busy, err
   const rows = [...suspects.filter(item => item.similar.length > 0), ...replaced];
   if (!rows.length) return null;
   const resolved = rows.filter(item => decisions[item.name]).length;
+  const decidable = editable || !!blocked;
   return <section aria-labelledby={heading} className="mt-4 rounded-xl border p-4 text-[14px]" style={{ borderColor: "color-mix(in srgb, var(--proto) 40%, transparent)" }}>
     <div className="flex flex-wrap items-baseline justify-between gap-2">
       <h3 id={heading} className="flex items-center gap-1.5 font-semibold" style={{ color: "var(--proto)" }}><Icon name="alert" size={14} />Possible duplicate {rows.length === 1 ? "technology" : "technologies"}</h3>
@@ -38,15 +43,16 @@ export function DuplicateTechnologies({ suspects, decisions, editable, busy, err
     </div>
     <p className="mt-1 text-[13.5px] text-(--ink-2)">This technology may already exist in the catalog. Review the suggested match and choose whether to use the existing technology or keep the submitted one.</p>
     <ul className="mt-3 space-y-2">
-      {rows.map(item => <DuplicateRow key={item.name} item={item} decision={decisions[item.name]} editable={editable} busy={busy} error={error?.name === item.name ? error.message : undefined}
+      {rows.map(item => <DuplicateRow key={item.name} item={item} decision={decisions[item.name]} editable={editable} decidable={decidable} blockedId={blocked ? `${heading}-blocked` : undefined} busy={busy} error={error?.name === item.name ? error.message : undefined}
         onUseExisting={existing => onUseExisting(item.name, existing)} onKeep={() => onKeep(item.name)} onUndoKeep={() => onUndoKeep(item.name)} />)}
     </ul>
-    {editable && resolved < rows.length && <p className="mt-2.5 text-[12.5px] text-(--ink-3)">Use existing changes the solution's technologies, so it counts as your edit: explain it to the owner when you decide.</p>}
+    {resolved < rows.length && (editable ? <p className="mt-2.5 text-[12.5px] text-(--ink-3)">Use existing changes the solution's technologies, so it counts as your edit: explain it to the owner when you decide.</p>
+      : blocked && <p id={`${heading}-blocked`} className="mt-2.5 text-[12.5px] text-(--ink-2)">{blocked}</p>)}
   </section>;
 }
 
-function DuplicateRow({ item, decision, editable, busy, error, onUseExisting, onKeep, onUndoKeep }: {
-  item: NewTechnology; decision?: DuplicateDecision; editable: boolean; busy?: string; error?: string;
+function DuplicateRow({ item, decision, editable, decidable, blockedId, busy, error, onUseExisting, onKeep, onUndoKeep }: {
+  item: NewTechnology; decision?: DuplicateDecision; editable: boolean; decidable: boolean; blockedId?: string; busy?: string; error?: string;
   onUseExisting: (existing: string) => void; onKeep: () => void; onUndoKeep: () => void;
 }) {
   const [match, setMatch] = useState(item.similar[0]);
@@ -56,7 +62,7 @@ function DuplicateRow({ item, decision, editable, busy, error, onUseExisting, on
     <span className="min-w-0 flex-1">{decision.kind === "existing"
       ? <>Replaced <span className="font-semibold">{item.name}</span> with the existing <span className="font-semibold">{decision.existing}</span></>
       : <>Kept <span className="font-semibold">{item.name}</span> as a separate technology</>}</span>
-    {decision.kind === "kept" && editable && <button type="button" onClick={onUndoKeep} disabled={!!busy} aria-label={`Undo: decide again for ${item.name}`} className="cursor-pointer rounded-md px-1.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-40" style={{ color: "var(--accent)" }}>Undo</button>}
+    {decision.kind === "kept" && decidable && <button type="button" onClick={onUndoKeep} disabled={!!busy} aria-label={`Undo: decide again for ${item.name}`} className="cursor-pointer rounded-md px-1.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-40" style={{ color: "var(--accent)" }}>Undo</button>}
   </li>;
   const saving = busy === item.name;
   return <li className="rounded-lg border border-(--glass-edge) bg-(--ink)/3 px-3 py-2.5">
@@ -68,8 +74,8 @@ function DuplicateRow({ item, decision, editable, busy, error, onUseExisting, on
         ? <SelectPicker compact label={`Existing technology to use instead of ${item.name}`} value={existing} options={item.similar} onChange={setMatch} />
         : <span className="font-semibold break-words">{existing}</span>}</dd>
     </dl>
-    {editable && <div className="mt-2.5 flex flex-wrap items-center justify-end gap-2">
-      <button type="button" disabled={!!busy} onClick={() => onUseExisting(existing)} aria-label={`Use existing: replace ${item.name} with ${existing}`} className={decisionButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
+    {decidable && <div className="mt-2.5 flex flex-wrap items-center justify-end gap-2">
+      <button type="button" disabled={!!busy || !editable} aria-describedby={editable ? undefined : blockedId} onClick={() => onUseExisting(existing)} aria-label={`Use existing: replace ${item.name} with ${existing}`} className={decisionButton} style={{ background: "var(--accent)", color: "var(--on-accent)" }}>
         <Icon name="check" size={13} />{saving ? "Replacing…" : "Use existing"}
       </button>
       <button type="button" disabled={!!busy} onClick={onKeep} aria-label={`Keep submitted: keep ${item.name} as a separate technology`} className={`${decisionButton} border border-(--glass-edge) text-(--ink-2)`}>
