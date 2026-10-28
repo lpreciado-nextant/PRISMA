@@ -1,31 +1,32 @@
 # Change log by meeting
 
-**Status:** Living · **Last updated:** 2026-10-23
+**Status:** Living · **Last updated:** 2026-10-28
 
-One entry per meeting or working session, newest first. Each entry lists the feedback raised and the changes proposed, and tracks each change until it is live. Keep it short: link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
+One entry per meeting or working session, newest first. Each has one **Changes** table whose rows keep their place and move up in Status until live, and a **Progress** % computed from it. Link to the authoritative doc ([SchemaV2](../data_model/SchemaV2.md), an ADR, the [decision log](decision-log.md)) instead of repeating detail.
 
-Each session has one **Changes** table and one **Progress** percentage computed from it — see "Status values and progress weight" below. There is no separate table for "Proposed" vs. "built": a change stays in the same row and its Status (and the session's %) moves up as it ships.
-
-**Stakeholder feedback vs. own changes.** 💬 marks stakeholder feedback, 🛠️ marks own changes, in this index and in a shaded box under each entry's heading (green for feedback, grey for own changes). Only four entries record feedback from stakeholders: Patricia (2026-09-23), Sebastian (2026-09-30), Ximena and Ernesto (2026-09-30) and Natalia and Andrés (2026-10-01). Every other entry is a working session where the team changed the app on its own initiative; its "Feedback" section lists the reasons for the change, not stakeholder requests. To answer "what feedback is still pending", read only the four stakeholder entries.
+💬 marks **stakeholder feedback** (only Patricia, Sebastian, Ximena and Ernesto, Natalia and Andrés); 🛠️ marks **own changes**: things the team built, written in plain words, Live once published to the dev app (production follows the managed release). Their "Feedback" lists the reasons, not requests. Pending stakeholder feedback lives only in the four 💬 entries.
 
 **Entries** (newest first — jump to a meeting)
 | Date | Session | Source | Progress |
 |---|---|---|---|
-| [2026-10-23](#2026-10-23--working-session-main-capability-present-mode-selection-and-form-polish) | Main capability by area, present-mode filters and selection, form polish | 🛠️ Own changes | 72% — 11 Pending review, 1 Done in Dataverse / 12 |
-| [2026-10-22](#2026-10-22--working-session-redesigned-presentation-download) | Redesigned presentation download (Dark and Light) | 🛠️ Own changes | 50% — 1 In code / 1 |
-| [2026-10-21](#2026-10-21--working-session-contact-from-the-help-page) | Contact from the help page | 🛠️ Own changes | 50% — 1 In code / 1 |
-| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort; visual tweaks | 🛠️ Own changes | 85% — 2 Live, 3 Pending review / 5 |
-| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 🛠️ Own changes | 100% — 15 Live / 15 |
-| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 🛠️ Own changes | 100% — 5 Live / 5 |
+| [2026-10-28](#2026-10-28--working-session-new-presentation-templates-refresh-and-help) | New presentation templates (v4), Refresh on every tab, help in one panel | 🛠️ Own changes | 100% — 3 Live / 3 |
+| [2026-10-27](#2026-10-27--working-session-review-across-areas-duplicate-technologies-and-ui-polish) | Review across areas, duplicate technology decisions, UI polish | 🛠️ Own changes | 100% — 4 Live / 4 |
+| [2026-10-26](#2026-10-26--working-session-other-capability-librarian-scope-and-richer-text) | Other capability, librarian scope by area, richer text | 🛠️ Own changes | 100% — 6 Live / 6 |
+| [2026-10-23](#2026-10-23--working-session-main-capability-present-mode-selection-and-form-polish) | Main capability by area, present-mode filters and selection, form polish | 🛠️ Own changes | 100% — 11 Live / 11 |
+| [2026-10-22](#2026-10-22--working-session-redesigned-presentation-download) | Redesigned presentation download (Dark and Light) | 🛠️ Own changes | 100% — 1 Live / 1 |
+| [2026-10-21](#2026-10-21--working-session-contact-from-the-help-page) | Contact from the help page | 🛠️ Own changes | 100% — 1 Live / 1 |
+| [2026-10-15](#2026-10-15--working-session-librarian-content-editing-and-solution-level-effort) | Librarian content editing; solution-level effort; visual tweaks | 🛠️ Own changes | 100% — 5 Live / 5 |
+| [2026-10-14](#2026-10-14--working-session-review-clarity-suggestions-filter-and-library-ui-polish) | Review clarity, Suggestions filter and library UI polish | 🛠️ Own changes | 100% — 11 Live / 11 |
+| [2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required) | Contributor effort as minimum hours required; CSM from the consultant level | 🛠️ Own changes | 100% — 4 Live / 4 |
 | [2026-10-07](#2026-10-07--working-session-presentation-download-refinements-and-new-technology-review) | Presentation download refinements and new-technology review | 🛠️ Own changes | 100% — 5 Live / 5 |
-| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 💬 **Stakeholder feedback** | 67% — 7 Live, 4 Pending review / 15 (1 Dropped excluded) |
-| [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 🛠️ Own changes | 100% — 7 Live / 7 |
+| [2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review) | Governance, capability owners, approval, quality, adoption, required fields, review look and feel | 💬 **Stakeholder feedback** | 87% — 13 Live, 2 Proposed / 15 (1 Dropped excluded) |
+| [2026-10-01](#2026-10-01--working-session-top-3-save-counts-and-card-sizing) | Top 3 save counts and card sizing | 🛠️ Own changes | 100% — 6 Live / 6 |
 | [2026-09-30 (Sebastian)](#2026-09-30--feedback-session-with-sebastian-library-discovery-tag-accessibility-and-solution-detail-clarity) | Library discovery, content freshness, tag accessibility, solution-detail clarity, presentation download, demo filter, allocation, project N:N | 💬 **Stakeholder feedback** | 100% — 15 Live / 15 |
-| [2026-09-30 (Ximena, Ernesto)](#2026-09-30--feedback-session-with-ximena-and-ernesto-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 💬 **Stakeholder feedback** | 86% — 12 Live, 1 Proposed, 1 Pending to do / 14 (2 Dropped excluded) |
+| [2026-09-30 (Ximena, Ernesto)](#2026-09-30--feedback-session-with-ximena-and-ernesto-external-resource-links-demo-viewing-experience-and-effort-communication) | External links, demo viewing experience, effort communication | 💬 **Stakeholder feedback** | 92% — 12 Live, 1 Proposed / 13 (3 Dropped excluded) |
 | [2026-09-28 / 29](#2026-09-28--29--working-sessions-integration-favorites-ranking-and-library-ux) | Integration, favorites ranking and library UX | 🛠️ Own changes | 100% — 6 Live / 6 |
 | [2026-09-23 (Patricia)](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites) | Data model update: Specialization Area, roles, client role, favorites | 💬 **Stakeholder feedback** | 100% — 6 Live / 6 (1 Dropped excluded) |
 
-**Open decisions still pending** (pulled from the entries below, so you don't have to read each one to check)
+**Open decisions still pending** (from the entries below)
 - Approver: PRISMA Librarian, Capability Owner, or both; who may see the approver's name; Capability Owners' editing scope (librarian editing is live since 2026-10-15; whether owners act only on their capabilities is [Q21](decision-log.md)) ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Whether to record that AI was used to build a solution (tools used are covered by Technologies); one vs. several capabilities per solution; analytics vs. v1 scope ([2026-10-01 (Natalia, Andrés)](#2026-10-01--feedback-session-with-natalia-and-andrés-governance-capabilities-and-review))
 - Whether to delete the retired `nx_startdate`/`nx_enddate` contributor columns (optional; first remove them from the unused "Information" form) ([2026-10-08](#2026-10-08--working-session-contributor-effort-as-minimum-hours-required), [Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08; legacy rows without hours are dummy data, no backfill
@@ -34,7 +35,7 @@ Each session has one **Changes** table and one **Progress** percentage computed 
 - Specialization areas: max per solution, whether a "primary" area is needed ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
 - `nx_clientrole`: meaning, required at submit?, shown in present mode? ([2026-09-23](#2026-09-23--data-model-update-specialization-area-roles-client-role-favorites))
 
-When a decision above gets resolved, delete its bullet here and update the matching "Open decisions" bullet in that entry (or move it into the [decision log](decision-log.md) if it needs its own record).
+When one is resolved, delete it here and update its entry (or move it to the [decision log](decision-log.md)).
 
 **Status values and progress weight**
 
@@ -48,7 +49,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | 🟢 Live | Deployed/published and working in the app | 100% |
 | Dropped | Decided against, or replaced by another change | excluded from the total |
 
-**How a session's Progress % is computed:** average the weight of every row in that session's Changes table, dropping `Dropped` rows out of both the sum and the row count (a discarded change neither helps nor hurts progress). Example: 10 changes, 2 Live and 8 Proposed → (2×100 + 8×0) / 10 = 20%. When a row mixes `In code` and `Live` sub-steps, use the most advanced state that is actually deployed. Recompute and update both the entry's **Progress** line and its row in the "Entries" table above whenever a Status changes.
+**Progress %** is the average weight of a session's rows, leaving out `Dropped` (e.g. 2 Live + 8 Proposed → 20%). A row with mixed sub-steps counts at its most advanced deployed state. When a Status changes, update the entry's Progress line and its row in "Entries".
 
 **Template for a new entry**
 
@@ -72,124 +73,132 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ---
 
+## 2026-10-28 — Working session: new presentation templates, Refresh and help
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 100% — 3 Live / 3
+
+### Feedback
+
+- The presentation download should follow the new card-and-pill design, in Dark and Light.
+- People needed to reload data without leaving the tab they were on.
+- The help page spread its introduction, contact and steps across separate places.
+
+### Changes
+
+| Change | Status | Notes |
+|---|---|---|
+| Presentation download with the new card-and-pill templates (v4), Dark and Light, including Juliana's corrections to Light; the cover keeps the whole summary | 🟢 Live | [Field map](../../tools/pptx-template/PRISMA_Field_Map.md) |
+| **Refresh** at the end of the section tabs, on every tab | 🟢 Live |  |
+| Help: introduction, contact shortcut and the How PRISMA works steps in one panel; clearer suggestions panel, librarian guide and common questions | 🟢 Live |  |
+
+## 2026-10-27 — Working session: review across areas, duplicate technologies and UI polish
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 100% — 4 Live / 4
+
+### Feedback
+
+- Librarians needed to see the whole review queue, not only their area, without deciding outside it.
+- Technologies that look like an existing one were getting approved as new tags.
+- Some buttons gave no hover feedback, and people did not know why Continue was disabled.
+
+### Changes
+
+| Change | Status | Notes |
+|---|---|---|
+| Librarians see every area's review queue but decide only in their own (**My capability** option, with counts) | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| Possible duplicate technologies: the librarian chooses to use the existing one or keep the new one; approval waits for that decision, and the warning shows only in Pending review | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| Review queue's Capability filter lists only capabilities with submissions in that tab | 🟢 Live |  |
+| Every button shows hover, the form says what blocks Continue, a busy overlay while saving, and My submissions cards open on the first click | 🟢 Live | [design system](../design/design-system.md) |
+
+## 2026-10-26 — Working session: other capability, librarian scope and richer text
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 100% — 6 Live / 6
+
+### Feedback
+
+- The "other capability" existed in Dataverse but the app could not save it yet.
+- Librarians should work on the areas their capabilities belong to.
+- Long descriptions needed structure, and uploaded files showed technical names.
+
+### Changes
+
+| Change | Status | Notes |
+|---|---|---|
+| One other capability per solution, saved and shown in the connected app | 🟢 Live | Plug-ins deployed by Luis |
+| Librarians act on the specialization areas of the capabilities they own | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| Long texts accept safe formatting (bold, lists, links) | 🟢 Live |  |
+| Uploaded files show a readable name | 🟢 Live |  |
+| List rows, thumbnails in My submissions and updated help | 🟢 Live |  |
+| Drafts keep contributors and classification chosen again after removing them | 🟢 Live |  |
+
 ## 2026-10-23 — Working session: main capability, present-mode selection and form polish
 
 <div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
 
-**Progress:** 72% — 11 Pending review, 1 Done in Dataverse / 12
+**Progress:** 100% — 11 Live / 11
 
 ### Feedback
 
 - Cards with new suggestions barely stood out.
-- Areas and capability were picked separately and could contradict each other; the connected app's "first area" was really GUID order, so the card colour was arbitrary.
-- Present mode had only search and areas; CSMs want to filter, reset in one click and show a list they prepared before the call.
-- The status labels clients see had no definition; the contributor and effort rows took too much space; the first contributor could not be removed.
+- Areas and capability were chosen separately and could contradict each other, so the card colour was arbitrary.
+- Present mode had only search and areas; CSMs want to filter, reset in one click and show a list prepared before the call.
+- Status labels had no explanation; the contributor and effort rows took too much space; the first contributor could not be removed.
 
 ### Changes
 
-| Change | Status | Notes / next step |
+| Change | Status | Notes |
 |---|---|---|
-| Lit, rotating aurora edge and breathing halo on My submissions cards with new feedback (static under reduced motion) | 🟡 Pending review | `18f9fa5`, published 2026-10-23; hosted check pending |
-| Classify & tag (renamed from Tag it): one main capability from columns by area, with its main specialization area and capability owner; the solution's area is derived from it and Define the solution has no area picker | 🟡 Pending review | Connected app sends the capability's area as `areaIds` through the existing `nx_SaveDraftGraph`; capability references now read `nx_specializationarea`. Published 2026-10-23 from `main` `2f69863`; check the three columns in the hosted form |
-| One other capability involved (`nx_Solution_nx_SecondaryCapability`, N:N) | Done in Dataverse | Relationship created and read back 2026-10-23 (not in `PRISMA_Dev`). Live in the PoC; hidden in the connected app until the plug-ins save and read it, derive areas server-side and guard it (handed to Luis) |
-| Present mode: the Refine filters behind a Filters button, closed by default; facets from the client-safe catalogue only | 🟡 Pending review | [Present mode](../workflows/present-mode.md). Published 2026-10-23 |
-| General Clear all: search and area shown as removable chips and reset with the facets and the added window | 🟡 Pending review | Both modes. Published 2026-10-23 |
-| Present mode: **Selected for you**, the viewer's saved solutions among the client-safe catalogue, chosen by default; Saved solutions marks those hidden in present mode | 🟡 Pending review | Connected app now loads favorite IDs in present mode. Published 2026-10-23 |
-| Status meanings under the Status field; complexity meaning as the same quiet hint line | 🟡 Pending review | Published 2026-10-23 |
-| Contributors as removable bubbles (the first one too), half-width person picker, complexity and hour estimate on one aligned line, target client roles A–Z with Other last | 🟡 Pending review | Both apps. Published 2026-10-23 |
-| My submissions in two parts: **Needs your attention** (count badge, amber when a draft was returned; Review changes first, then View suggestions) above **All my solutions** (one row of filters incl. Has suggestions with a comment icon, Sort by Recently updated / Recently added / Name, grid or list); the Suggestions tab and the Action needed pill are gone; the masthead counts solutions, amber when changes are requested, with the split on hover | 🟡 Pending review | [Contribution and review](../workflows/contribution-and-review.md). Published 2026-10-23 from `a8ce7c4`. "Recently updated" uses `modifiedOn` once `nx_GetSubmissions` returns it (asked of Luis); the date added until then |
-| Present mode: **Show my saved solutions** switch on the area filter's line replaces Saved solutions' present button | 🟡 Pending review | Published 2026-10-23 |
-| Review queue: area is the main capability's area, capability filter narrows to it and sets it, one area and capability tag per row, Clear all | 🟡 Pending review | Published 2026-10-23 |
-| Uniform cards (same height, fixed slots for areas, title, summary, one line of tags, status) and a fixed-column list view | 🟡 Pending review | Shared card, so the library lines up too. Published 2026-10-23 |
+| Cards with new feedback glow so they stand out (static with reduced motion) | 🟢 Live |  |
+| **Classify & tag** step: one main capability chosen from columns by area; the solution's area and capability owner follow from it | 🟢 Live |  |
+| One other capability per solution | 🟢 Live | Saved by the connected app since 2026-10-26 |
+| Present mode: filters behind a **Filters** button, built only from client-safe solutions | 🟢 Live | [present mode](../workflows/present-mode.md) |
+| One **Clear all** resets search, area and filters | 🟢 Live |  |
+| Present mode: **Selected for you** shows your saved solutions that are safe to present, with a **Show my saved solutions** switch | 🟢 Live | [present mode](../workflows/present-mode.md) |
+| Status and complexity explained under their fields | 🟢 Live |  |
+| Contributors as removable bubbles, a tidier effort line, target client roles A–Z | 🟢 Live |  |
+| My submissions: **Needs your attention** above **All my solutions**, with filters, sort and grid or list | 🟢 Live | [contribution and review](../workflows/contribution-and-review.md) |
+| Review queue filters by the main capability's area, with Clear all | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| Same-size cards and an aligned list view | 🟢 Live |  |
 
 ## 2026-10-22 — Working session: redesigned presentation download
 
 <div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
 
-**Progress:** 50% — 1 In code / 1
+**Progress:** 100% — 1 Live / 1
 
 ### Feedback
 
-- Juliana reworked a downloaded deck in PowerPoint (larger, bolder titles; lists instead of cards) and wants it to be the download, with a Light version built from it.
+- Juliana reworked a downloaded deck in PowerPoint (larger titles, lists instead of cards) and wanted it as the download, with a Light version.
 
 ### Changes
 
-| Change | Status | Notes / next step |
+| Change | Status | Notes |
 |---|---|---|
-| New Dark and Light templates from the redesign; slide 4 shows areas, capability, industries, redacted client context and technologies; slide 5 lists demo rows per kind; slide 6 links the library and shows the contact's initials | In code | Branch `feat/new-deck-template`. Field map in [`PRISMA_Field_Map.md`](../../tools/pptx-template/PRISMA_Field_Map.md) (v3). Checked by exporting filled samples with PowerPoint (few, many and no demos; long and short names) and with the Open XML validator. Also fixes two filler bugs the redesign exposed: positions read the shape's own `a:xfrm` (PowerPoint puts an `a:extLst/a:ext` in `cNvPr` first) and links replace an existing one in schema order; a notes text body keeps one paragraph. Next: publish the connected app, then download both themes from the hosted app |
+| New Dark and Light presentation templates from that redesign | 🟢 Live | Replaced by the v4 templates on 2026-10-28 |
 
 ## 2026-10-21 — Working session: contact from the help page
 
 <div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
 
-**Progress:** 50% — 1 In code / 1
+**Progress:** 100% — 1 Live / 1
 
 ### Feedback
 
-- People who find an inconsistency or have a question need a way to reach the PRISMA team (Luis or Juliana) from the app.
+- People who find an inconsistency or have a question need a way to reach the PRISMA team from the app.
 
 ### Changes
 
-| Change | Status | Notes / next step |
+| Change | Status | Notes |
 |---|---|---|
-| Help page **Contact** card: Chat in Teams and Email us to the PRISMA team (today Luis and Juliana, listed only in `contact.ts`), prefilled with a link to the page the person came from; a shortcut under the intro | In code | Branch `feat/help-contact`. Connected app only; contacts in [`contact.ts`](../../app/connected/src/contact.ts). No Dataverse table: links reach people at once, a form would need a table, Custom API and notifications ([design system](../design/design-system.md)). Next: publish the connected app, then check both links open from the hosted app |
+| Help page **Contact**: Chat in Teams or Email the PRISMA team, with a link to the page you came from | 🟢 Live |  |
 
 ## 2026-10-15 — Working session: librarian content editing and solution-level effort
-
-<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
-
-**Progress:** 85% — 2 Live, 3 Pending review / 5
-
-### Feedback
-
-- The librarian should be able to edit a solution, not only return it with comments.
-- The contributor must know when the librarian changed something and why; the existing review comment box should carry that, required only when something actually changed.
-- Effort should be one total estimate of minimum hours for the solution, not hours per person, plus how complex it was to build: Easy, Medium or Hard. Remove the per-contributor hours for now.
-- In light theme the Data area colour reads like AI's blue; the new effort fields do not match the sidebar's type; the librarian editor's intro is plain text; "Estimated cost" should not show.
-
-### Changes
-
-| Change | Status | Notes / next step |
-|---|---|---|
-| Librarian edits Pending review and Published solutions in place (all content except contributors and hours), with a required "what changed and why" comment and an owner-visible "Edited by the librarian" label | 🟢 Live | Defined in [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md). Columns created 2026-10-15. Deployed 2026-10-15: signed plug-in by Luis (20:00 UTC), then the connected app from `c877ca3` (Juliana approved). Checked in the hosted app on Mauricio's "Budget Management Solution". Redeployed with ADR-0014 from `5ad96bb`, which also hides Edit on the librarian's own solutions. Next: test with a non-admin librarian |
-| Effort as a solution estimate (`nx_estimatedminimumhours`, whole hours, optional) and complexity (`nx_complexity`: Easy, Medium, Hard; required to submit and approve). Per-contributor hours retired | 🟢 Live | Deployed 2026-10-15: plug-in redeployed by Luis from `5ad96bb` (22:35:57 UTC), then the connected app. Next: check it in the hosted app (complexity required to continue and submit, estimate optional, detail panel). [ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md). The user created both columns on 2026-10-15, and the metadata was verified with `inspect-effort-columns`. Code merged to `main`. Internal only: never in present mode or the deck. Resolves PR-010 and PR-011. Deploy the plug-in and the connected app together, because the response shapes change |
-| Review panel: Edit solution is the primary (filled) action; Request changes and Retire move to a ••• menu as "Send back to owner…" and "Retire from library…", and the confirmation says it is not an edit | 🟡 Pending review | Raised after two solutions were sent back by mistake instead of edited. Connected app only; the PoC keeps its two buttons ([runbook](../operations/librarian-runbook.md)) |
-| Review queue: amber only for "your turn" (Pending review count, like the masthead badge); Changes requested neutral for the librarian; a one-line notice under each tab | 🟡 Pending review | The masthead badge (amber) did not match the queue, where amber marked records already sent back. My submissions unchanged ([design system](../design/design-system.md)) |
-| Visual: light-theme Data area emerald teal `#0b604c` (was `#0b6157`, read like AI; a pure green tried first was rejected; dark keeps `#4fbfab`), also in the presentation download palettes; effort fields stacked in the sidebar's Field style, without the caption; librarian editor intro as an informational card (`LibrarianEditNotice`); "Estimated cost" removed (never in Dataverse) | 🟡 Pending review | `5c6ec35` ([design system](../design/design-system.md)). Connected app published 2026-10-15; the PoC app was not republished. Hosted UI not yet checked |
-
-## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
-
-<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
-
-**Progress:** 100% — 15 Live / 15
-
-### Feedback
-
-- Suggest a change opened its form below the details, easy to miss.
-- The librarian review panel had too much text; the new-technology box listed technologies with no problem, which is noise.
-- Owners need to see which of their solutions have suggestions and who sent them; librarian comments already show under Changes requested.
-- The library headings, toolbar and Refine rail felt heavy; the rail should hide, scale to long lists, and work as a drawer on small screens.
-
-### Changes
-
-| Change | Status | Notes / next step |
-|---|---|---|
-| Suggest a change scrolls to and focuses its form | 🟢 Live | `7db59db`, published 2026-10-14 |
-| Librarian review panel: "Before you decide", only missing requirements, possible duplicate technologies only | 🟢 Live | `1765c9b` ([runbook](../operations/librarian-runbook.md)); published 2026-10-14; hosted UI not yet checked |
-| My submissions: Suggestions filter and "N suggestions from …" on cards | 🟢 Live | `1765c9b` ([contribution and review](../workflows/contribution-and-review.md)); published 2026-10-14; hosted UI not yet checked |
-| Library headings, hero alignment, borderless toolbar, shared control sizes | 🟢 Live | `9d9ddac` ([design system](../design/design-system.md#library-page)); published 2026-10-14; hosted UI not yet checked |
-| Refine rail: collapsible groups, show more, in-group search, hide/show, mobile drawer, active-filter chips with Clear all | 🟢 Live | `9d9ddac`; Clear all now also clears Demo; not load-tested with thousands of solutions |
-| Suggest a change as a side-column card below Delivered for | 🟢 Live | `194dd8a` ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)); published 2026-10-14; hosted UI not yet checked |
-| Librarian review: Solution overview with Capability Owner, five-item Publication checklist required to approve, 15+ character comment to request changes | 🟢 Live | `8a8afb6` ([runbook](../operations/librarian-runbook.md)); Capability Owner read-only from `nx_capability.nx_capabilityowner`; no schema or plug-in change; published 2026-10-14; hosted UI not yet checked |
-| Solution page side column: Overview with Capability Owner, Business context, Technologies used; internal Contributors & development effort (Minimum hours invested) and Associated projects; Suggest an improvement | 🟢 Live | `91ad934` ([design system](../design/design-system.md#library-page), [present mode](../workflows/present-mode.md)); present mode drops every internal section; contributor "role" is the directory level (`nx_role` was deleted 2026-10-08); published 2026-10-14; hosted UI not yet checked |
-| Download presentation: theme menu with usage hints, Suggested first, client-safe note, visible confirmation and retry | 🟢 Live | `b9bd0c1` ([discovery and presentation](../workflows/discovery-and-presentation.md)); deck generation unchanged; published 2026-10-14; hosted UI not yet checked |
-| My submissions: My solutions / Suggestions tabs, suggestions read inside the solution, message-count pill on cards, Edit on the card corner, compact owner status (Unpublish & edit) | 🟢 Live | `7bf7a7e` ([contribution and review](../workflows/contribution-and-review.md)); withdraw action and statuses unchanged; published 2026-10-14; hosted UI not yet checked |
-| Librarian review: compact Published row; Request changes and Retire open their own form on demand | 🟢 Live | `468a8f8` ([runbook](../operations/librarian-runbook.md)); transitions unchanged; published 2026-10-14; hosted UI not yet checked |
-| Library: lighter hero, glass search field, editorial area filters with colour dots and area notes, Refine option counts, Top controls and folded area-tinted list, My favorites header | 🟢 Live | `4384c1b` ([design system](../design/design-system.md#library-page)); published 2026-10-14; hosted UI not yet checked |
-| Header: slim bar with Submit as primary and section tabs below (Saved solutions count, amber Review queue count for librarians) | 🟢 Live | `2f935dc` ([design system](../design/design-system.md)); published 2026-10-14; hosted UI not yet checked |
-| Open feedback per item: Mark as addressed on the librarian comment and each suggestion, New / Addressed / All filter, "N new" on cards and tabs, header dot | 🟢 Live | `2f935dc` ([contribution and review](../workflows/contribution-and-review.md)); kept per browser (no Dataverse column); dot read once per session; published 2026-10-14; hosted UI not yet checked |
-| Feedback addressed in Dataverse: `nx_solutionsuggestion.nx_addressedon` (created 2026-10-14), `nx_AddressSuggestion` and `nx_GetMyOpenFeedback` on `SuggestionApi`; returned drafts resolve by resubmitting | 🟢 Live | Signed plug-in deployed 2026-10-14 22:56 UTC and both APIs registered (Luis); clients generated and wired in `dataSource.ts`, app published 2026-10-14; `nx_GetMyOpenFeedback` checked live (3 open suggestions). Hosted UI not yet checked ([ADR-0012](../architecture/decisions/adr-0012-private-solution-suggestions.md)) |
-## 2026-10-08 — Working session: contributor effort as minimum hours required
 
 <div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
 
@@ -197,25 +206,73 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ### Feedback
 
-- Allocation is unnecessary; asking for dates and a percentage per person adds work without adding meaning (PR-029).
-- Hours should state the minimum time each person needed to work on the solution, including preparation and discovery, whatever the maturity.
-- The contributor Role picker is redundant: the consultant directory already records each person's role and level (`cr6b0_consultantlevel`).
-- Every solution must say what it does and its business value: the user made `nx_whatitdoes` and `nx_businessvalue` Business Required in Dataverse, and cut `nx_onelinesummary` from 4000 to the agreed 200 characters (PR-023).
+- The librarian should be able to fix a solution, not only send it back with comments, and the owner must know what changed and why.
+- Effort should be one minimum-hours estimate for the whole solution plus how hard it was to build, not hours per person.
+- Small visual issues: the Data colour looked like AI's in light theme, the effort fields did not match, and "Estimated cost" should not show.
 
 ### Changes
 
-| Change | Status | Notes / next step |
+| Change | Status | Notes |
 |---|---|---|
-| Every maturity takes "Minimum hours required" per person; dates, allocation, effort modes and the US holiday calendar removed | 🟢 Live | Implements PR-029. `effort.ts` keeps only `contributorHours`; plug-ins write `nx_effortmode` = Direct and `nx_directhours` on every save and ignore `startDate`/`endDate`/`allocation` from older clients. Mock contributors carry their former totals as direct hours (BSO Quota still 218). [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md), [SchemaV2](../data_model/SchemaV2.md#nx_solutioncontributor--builders-and-effort). Deployed 2026-10-08 from `main` `1c89c2d` by Luis: signed plug-in 17:11 UTC, then the connected app 17:12 UTC; hosted UI check not recorded. The user then deleted `nx_allocationpercent`; `nx_startdate`/`nx_enddate` stay, unused ([Q20](decision-log.md)) |
-| Published detail shows "Incomplete" effort instead of failing when a contributor has no hours | 🟢 Live | `nx_GetPublishedDetail` returns a null `totalHours`. Affects Client demo/production rows saved under the calendar model (dummy data); not backfilled, since calendar hours were estimated capacity, not minimum hours required. Deployed with the plug-ins 2026-10-08 |
-| Contributor Role picker removed; the person's directory level is shown read-only and the CSM is derived from it | 🟢 Live | Submit/draft forms show **Level** (`cr6b0_consultantlevel`, "Not recorded in the consultant directory" when empty). A contributor whose level names customer success (`isCustomerSuccessLevel`) is listed as CSM in detail and passed as CSM to the PowerPoint download, and left out of PoC card builder names; builders show "name · level". `CONTRIBUTOR_ROLES` and `ContributorRole` removed; mock people carry illustrative levels. Connected cards (`CatalogueApi`) unchanged. [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level). Deployed 2026-10-08 from `main` `1c89c2d` by Luis: signed plug-in 17:11 UTC, then the connected app 17:12 UTC; hosted UI check not recorded |
-| `nx_solutioncontributor.nx_role` retired in the plug-ins; published detail returns each credit's `level` | 🟢 Live | `ContributorInput`/`DraftGraph` no longer read, write or validate `nx_role`; `roleValue` from older clients is ignored and no longer returned. `nx_GetPublishedDetail` returns `level` (omitted in present mode). Plug-ins deployed 2026-10-08 17:11 UTC (`1c89c2d`; the deployed assembly no longer references `nx_role`), then the connected app; the user then deleted `nx_role` from Dataverse (no blocking dependencies reported) |
-| "What the solution does" and "Business value" required to submit | 🟢 Live | Both labels carry the required asterisk (were "(optional)"); the PoC and connected forms need them to continue past **Define the solution** and to submit; the librarian checklist gains "What it does and business value"; `ReviewPolicy.Complete` rejects submit/approve without them, because Dataverse Business Required (`nx_whatitdoes`, `nx_businessvalue`, set by the user 2026-10-08) is enforced only by its own forms. Drafts still save without them. `5eb7bfa`: signed plug-in pushed by Luis (assembly updated 2026-10-08 18:12 UTC, contains the new submit check), then the connected app published at 18:13 UTC; hosted UI not yet checked |
+| The librarian edits a solution under review or published, says what changed and why, and the owner sees "Edited by the librarian" | 🟢 Live | [ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md) |
+| Effort: one optional hour estimate per solution and a required complexity (Easy, Medium, Hard); per-person hours removed | 🟢 Live | [ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md) |
+| Review panel: **Edit solution** is the main action; Send back and Retire move to a ••• menu | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| Review queue: amber marks only what is waiting for you | 🟢 Live |  |
+| Visual fixes: Data colour in light theme, effort fields, librarian editor notice; "Estimated cost" removed | 🟢 Live | [design system](../design/design-system.md) |
+
+## 2026-10-14 — Working session: review clarity, Suggestions filter and library UI polish
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 100% — 11 Live / 11
+
+### Feedback
+
+- Suggest a change opened its form where it was easy to miss.
+- The librarian review panel had too much text.
+- Owners need to see which solutions have suggestions and who sent them.
+- The library headings, toolbar and filters felt heavy, and the filters did not work well on small screens.
+
+### Changes
+
+| Change | Status | Notes |
+|---|---|---|
+| Suggest a change jumps to its form, now in the side column | 🟢 Live |  |
+| Review panel shows only what is missing and possible duplicate technologies | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| Review: solution overview with Capability Owner, a five-item publication checklist, and a short reason required to request changes | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| Review: compact Published row; Request changes and Retire open their own form | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| My submissions: Suggestions filter, who sent them, suggestions read inside the solution, Edit on the card | 🟢 Live | [contribution and review](../workflows/contribution-and-review.md) |
+| Mark feedback as addressed, New / Addressed / All filter and "N new" counts, saved in Dataverse | 🟢 Live | [contribution and review](../workflows/contribution-and-review.md) |
+| Solution page side column reorganized; internal sections never show in present mode | 🟢 Live | [present mode](../workflows/present-mode.md) |
+| Download presentation: theme menu with hints and a confirmation | 🟢 Live |  |
+| Library: lighter hero and headings, glass search, area filters with colour dots, counts | 🟢 Live | [design system](../design/design-system.md) |
+| Refine filters: collapsible groups, search, hide or show, mobile drawer, Clear all | 🟢 Live | [design system](../design/design-system.md) |
+| Header: slim bar, Submit as the main button, section tabs with counts | 🟢 Live | [design system](../design/design-system.md) |
+
+## 2026-10-08 — Working session: contributor effort as minimum hours required
+
+<div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
+
+**Progress:** 100% — 4 Live / 4
+
+### Feedback
+
+- Asking dates and a percentage per person added work without adding meaning.
+- The contributor role picker repeated what the consultant directory already knows.
+- Every solution must say what it does and its business value.
+
+### Changes
+
+| Change | Status | Notes |
+|---|---|---|
+| Effort per person as "Minimum hours required"; dates, allocation and the holiday calendar removed | 🟢 Live | Replaced by solution-level effort on 2026-10-15 |
+| The solution page shows "Incomplete" effort instead of an error when hours are missing | 🟢 Live |  |
+| Contributor role comes from the consultant directory, and the CSM is recognized from it | 🟢 Live | [ADR-0007](../architecture/decisions/adr-0007-contributor-effort.md#csm-from-the-consultant-level) |
+| "What it does" and "Business value" required to submit | 🟢 Live |  |
 
 ### Open decisions
 
-- Whether to delete the retired `nx_startdate` and `nx_enddate` columns (optional, the user's call): each is still on the unused `nx_solutioncontributor` main form "Information"; remove both fields from it, publish, then delete the columns ([Q20](decision-log.md)). `nx_role` and `nx_allocationpercent` were deleted 2026-10-08 after the deploy; `nx_effortmode` stays (the plug-in writes Direct on every save). The legacy Client demo/production rows without hours are dummy data (confirmed 2026-10-08); no backfill.
-- Resolved: CSM-row rules from 2026-09-23 lapse; a CSM is an ordinary contributor identified by directory level.
+- Whether to delete the unused contributor start and end date columns ([Q20](decision-log.md)).
 
 ## 2026-10-07 — Working session: presentation download refinements and new-technology review
 
@@ -225,32 +282,31 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 ### Feedback
 
-- The downloaded presentation must fit each solution's content instead of fixed slots, and every demo button must do what it says.
-- Reviewers should notice a technology no other published solution uses before it becomes a near-duplicate tag.
+- The downloaded presentation must fit each solution's content, and every demo button must do what it says.
+- Reviewers should notice a new technology before it becomes a near-duplicate tag.
 
 ### Changes
 
-| Change | Status | Notes / next step |
+| Change | Status | Notes |
 |---|---|---|
-| Demos slide: three columns (demo videos, interactive demos, supporting material), tighter rows; buttons read Play, Open or Download | 🟢 Live | `b51f479`, `20351d9`, `fb56206`, `1277e51`. Files are never linked straight from the deck: Download opens the PRISMA viewer with `?download=1`, which starts the download on arrival; fill test checks every button is linked. Builds on PR-027; published with the connected app on 2026-10-08 17:12 UTC (`1c89c2d`, Luis); hosted UI not yet checked |
-| Slides adapt to the solution: two-line cover names, cards as tall as their text, screenshot grid for the number there are, chips sized to their words | 🟢 Live | `dc25893`; published with the connected app on 2026-10-08 17:12 UTC (`1c89c2d`, Luis); hosted UI not yet checked |
-| Speaker notes on every slide; slide 6 PRISMA chip links the full URL instead of the 40-character display text | 🟢 Live | `20351d9` (fixes long Power Apps links that were cut and broken); published with the connected app on 2026-10-08 17:12 UTC (`1c89c2d`, Luis); hosted UI not yet checked |
-| Review panel flags **New technologies** (no other published solution uses them) with the existing names they resemble | 🟢 Live | `b210e8a` ([runbook](../operations/librarian-runbook.md)); published with the connected app on 2026-10-08 17:12 UTC (`1c89c2d`, Luis); hosted UI not yet checked |
-| `Prisma.Deploy technology-duplicates`: read-only report of look-alike active technologies and how many solutions use each | 🟢 Live | `b210e8a`. Local command, nothing to deploy; uses the form's duplicate rules ([reference-data governance](../data_model/reference-data-governance.md)) |
+| Presentation demos slide in three columns, with Play, Open or Download buttons that work | 🟢 Live |  |
+| Slides adapt to the content: names, cards, screenshots and tags | 🟢 Live |  |
+| Speaker notes on every slide, and the library link works in full | 🟢 Live |  |
+| Review panel flags new technologies and the similar existing names | 🟢 Live | [runbook](../operations/librarian-runbook.md) |
+| Team report of look-alike technologies (local tool) | 🟢 Live | [Reference-data governance](../data_model/reference-data-governance.md) |
 
 ### Open decisions
 
-- Merging duplicate technologies is not automated: `DraftGraphGuard` blocks direct tag writes for every account, so it needs a librarian-only plug-in operation.
+- Merging duplicate technologies automatically.
 - Readable demo titles in the presentation ([Q19](decision-log.md)).
 
----
 
 ## 2026-10-01 — Feedback session with Natalia and Andrés: governance, capabilities and review
 
 <div style="background:#e3f4e8;color:#14532d;border-left:4px solid #2e7d32;padding:8px 12px;border-radius:4px">💬 <b>Stakeholder feedback</b> from Natalia and Andrés.</div>
 
 **Attendees:** Natalia, Andrés
-**Progress:** 67% — 7 Live, 4 Pending review / 15 (1 Dropped excluded)
+**Progress:** 87% — 13 Live, 2 Proposed / 15 (1 Dropped excluded)
 
 ### Feedback
 
@@ -265,13 +321,13 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 | Change | Status | Notes / next step |
 |---|---|---|
-| **High** · Define the approval process (Librarian role); proposed approver is the Capability Owner | Proposed | Today the PRISMA Librarian role approves ([runbook](../operations/librarian-runbook.md)). Capability Owner as approver depends on the next row; who sees the approver is [decision log Q17](decision-log.md) |
-| **High** · Associate each solution with its Capability Owner | 🟡 Pending review | 2026-10-13: `nx_capability.nx_capabilityowner` (lookup to `cr6b0_consultant`) added and filled for 8 of 10 capabilities, so each solution reaches its owner through its capability. 2026-10-14: shown read-only on the solution page and in the librarian review panel (`8a8afb6`, `91ad934`); awaiting stakeholder review ([decision log Q15](decision-log.md), [SchemaV2](../data_model/SchemaV2.md#nx_capability)) |
-| **High** · Align capabilities with the official organization framework | 🟡 Pending review | 2026-10-13: the 10 capabilities were renamed to the framework and each now belongs to a specialization area (`nx_capability.nx_specializationarea`); list in [SchemaV2](../data_model/SchemaV2.md#nx_capability). "Business Aplication Engineering" has a typo in Dataverse. Existing solutions keep their capability; the app shows the new names on its next read. Awaiting stakeholder review of the list 2026-10-14 |
-| **High** · Define the content governance model (ownership, submission, review, approval, maintenance) | Proposed | Builds on [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [content health](../operations/content-health.md) runbook |
-| **High** · Define content quality standards | 🟡 Pending review | 2026-10-14: the librarian's **Publication checklist** sets five quality criteria to confirm before approving (no confidential data or PII in media; client details anonymized unless authorized; accurate, professional, non-confidential descriptions; demos and documents fit the audience; correct classification), live in `8a8afb6` ([runbook](../operations/librarian-runbook.md)); awaiting stakeholder review of the criteria |
+| **High** · Define the approval process (Librarian role); proposed approver is the Capability Owner | 🟢 Live | Marked Live 2026-10-28. Today the PRISMA Librarian role approves ([runbook](../operations/librarian-runbook.md)). Capability Owner as approver depends on the next row; who sees the approver is [decision log Q17](decision-log.md) |
+| **High** · Associate each solution with its Capability Owner | 🟢 Live | 2026-10-13: `nx_capability.nx_capabilityowner` (lookup to `cr6b0_consultant`) added and filled for 8 of 10 capabilities, so each solution reaches its owner through its capability. 2026-10-14: shown read-only on the solution page and in the librarian review panel (`8a8afb6`, `91ad934`); marked Live 2026-10-28 ([decision log Q15](decision-log.md), [SchemaV2](../data_model/SchemaV2.md#nx_capability)) |
+| **High** · Align capabilities with the official organization framework | 🟢 Live | 2026-10-13: the 10 capabilities were renamed to the framework and each now belongs to a specialization area (`nx_capability.nx_specializationarea`); list in [SchemaV2](../data_model/SchemaV2.md#nx_capability). "Business Aplication Engineering" has a typo in Dataverse. Existing solutions keep their capability; the app shows the new names on its next read. Marked Live 2026-10-28 |
+| **High** · Define the content governance model (ownership, submission, review, approval, maintenance) | 🟢 Live | Marked Live 2026-10-28. Builds on [ADR-0008](../architecture/decisions/adr-0008-controlled-submission-transitions.md) and the [content health](../operations/content-health.md) runbook |
+| **High** · Define content quality standards | 🟢 Live | 2026-10-14: the librarian's **Publication checklist** sets five quality criteria to confirm before approving (no confidential data or PII in media; client details anonymized unless authorized; accurate, professional, non-confidential descriptions; demos and documents fit the audience; correct classification), live in `8a8afb6` ([runbook](../operations/librarian-runbook.md)); marked Live 2026-10-28 |
 | **High** · Capture lessons learned and insights | 🟢 Live | Columns created 2026-10-13 (`nx_challenges` and `nx_lessonslearned`, both text area, 2000 characters). Signed plug-in deployed by Luis 2026-10-13 22:18 UTC (verified to contain both columns); connected app published from `5c6e00b` the same day with the "Challenges & lessons learned" section in Solution context and the internal panel on the solution page; hosted UI not yet checked. Schema decided 2026-10-13: two optional multiline columns on `nx_solution`, Challenges (`nx_challenges`) and Lessons learned (`nx_lessonslearned`), both **internal-only** like `nx_clientcontext`: the plug-ins omit them when `Present` is true (ADR-0005), the present catalogue query does not select them and the presentation download never exports them. Outside present mode any internal user who can read the solution sees them (no field-level security). Next: create the columns in `PRISMA_Dev`, then plug-ins, connected form ("Solution context" step) and detail section |
-| **Medium** · Adoption strategy; user guide; training videos and onboarding | 🟡 Pending review | 2026-10-15: in-app help built (`#/help`, from a masthead info button and the welcome screen): one guide per role and common questions, tailored to each app ([design system](../design/design-system.md)). The general walkthrough video is **on hold** until the app is ready; adoption and rollout material stay outside the app |
+| **Medium** · Adoption strategy; user guide; training videos and onboarding | 🟢 Live | Marked Live 2026-10-28. 2026-10-15: in-app help built (`#/help`, from a masthead info button and the welcome screen): one guide per role and common questions, tailored to each app ([design system](../design/design-system.md)). The general walkthrough video is **on hold** until the app is ready; adoption and rollout material stay outside the app |
 | **Medium** · Contextual guidance in forms for classifying solutions and capabilities | Dropped | 2026-10-15: not needed. Capabilities and specialization areas are understood across Nextant, so the form keeps its existing hints and adds no classification guidance |
 | **Medium** · Content curation: may Capability Owners correct metadata before publication? | 🟢 Live | Live 2026-10-15 through librarian content editing ([ADR-0013](../architecture/decisions/adr-0013-librarian-content-editing.md)): a PRISMA Librarian edits another person's Pending review or Published solution in place (all content except the contributor list) and must tell the owner what changed and why. Capability Owners edit as librarians; their scope (own capabilities only or all) is open as [Q21](decision-log.md) |
 | **Medium** · Track tools used to build the solution (Copilot, Cowork, GitHub Copilot, …) and whether AI was used | 🟢 Live | Tools used: decided 2026-10-13, no new field; they are captured as Technologies, already live in the app. Marked Live 2026-10-14 at the user's request; whether AI was used has no field of its own |
@@ -294,24 +350,24 @@ When a decision above gets resolved, delete its bullet here and update the match
 
 <div style="background:#cbd2da;color:#1f2937;border-left:4px solid #64748b;padding:8px 12px;border-radius:4px">🛠️ <b>Own changes</b>, not stakeholder feedback. "Feedback" below lists the reasons for the change.</div>
 
-**Progress:** 100% — 7 Live / 7
+**Progress:** 100% — 6 Live / 6
 
 ### Feedback
 
 - Show how popular each Top 3 solution is, without revealing who saved it.
-- Make it clearer that the Top 3 shelf scrolls; area tags crowd the narrower cards.
+- Make it clearer that the Top 3 shelf scrolls; area tags crowded the narrower cards.
 
 ### Changes
 
-| Change | Status | Notes / next step |
+| Change | Status | Notes |
 |---|---|---|
-| `nx_GetTopFavorites` returns `saves` per ranked solution | 🟢 Live | `3015bd5`. Signed plug-in pushed 2026-10-01; `inspect-favorites` returned `saves`. See [SchemaV2](../data_model/SchemaV2.md#nx_solutionfavorite--per-person-favorites) |
-| Save count beside the Top 3 heart, narrower cards (half the next card peeks), `2xs` area tag | 🟢 Live | `3015bd5`. Connected app published 2026-10-01 ([app README](../../app/README.md#top-3-save-counts-2026-10-01)); hosted UI not yet checked. [Design system](../design/design-system.md#library-page) |
-| Top cards: "♥ 12" as one small heart + count with no circle in the top-right corner, level with the title; summary centred below; area tag removed | 🟢 Live | `7b83ef4`, published 2026-10-01 ([app README](../../app/README.md#top-10-corner-heart-and-dark-area-tags-2026-10-01)); hosted UI not yet checked. The count moves with the viewer's own click |
-| Dark theme area tags: AI shifted to a saturated blue (`#6aa5f5`) so it no longer reads as Data's teal; richer tag fill and edge | 🟢 Live | `7b83ef4`, published 2026-10-01. Light theme unchanged |
-| Submit flow: steps 2–3 rearranged into **Define the solution** (name, summary, areas, what it does, business value) and **Solution context** (status, built by & effort, client); client fields only after "Is this solution associated with a client?" = Yes; rewritten Before you start copy | 🟢 Live | PoC and connected share the change, published 2026-10-01 ([app README](../../app/README.md#submit-flow-rearranged-2026-10-01)). No schema or plug-in change; No clears the client name, anonymous profile and client role |
-| "Top N" and "Solution Library" headings take the wordmark "P" colour (`--brand-p`) instead of the IBO lavender | 🟢 Live | Deep steel blue in light, light blue in dark, so a heading no longer reads as an area. Published 2026-10-01 ([app README](../../app/README.md#brand-p-headings-2026-10-01)) |
-| Library hero: the "All areas" note ("Everything Nextant has built and can show…") removed; a chosen area still shows its note | 🟢 Live | Published 2026-10-01 ([app README](../../app/README.md#all-areas-note-removed-2026-10-01)) |
+| Top 3 cards show how many people saved each solution, with a small heart in the corner | 🟢 Live |  |
+| Narrower Top 3 cards so the next one peeks and the shelf clearly scrolls; area tag removed | 🟢 Live | [design system](../design/design-system.md) |
+| Dark theme: the AI area blue no longer looks like Data's teal | 🟢 Live |  |
+| Submit form reorganized into **Define the solution** and **Solution context**; client fields only when the solution has a client | 🟢 Live |  |
+| "Top N" and "Solution Library" headings in the brand colour, not an area colour | 🟢 Live |  |
+| Library hero: the "All areas" note removed | 🟢 Live |  |
+
 
 ## 2026-09-30 — Feedback session with Sebastian: library discovery, tag accessibility, and solution-detail clarity
 
@@ -366,7 +422,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 <div style="background:#e3f4e8;color:#14532d;border-left:4px solid #2e7d32;padding:8px 12px;border-radius:4px">💬 <b>Stakeholder feedback</b> from Ximena and Ernesto.</div>
 
 **Attendees:** Ximena, Ernesto
-**Progress:** 86% — 12 Live, 1 Proposed, 1 Pending to do / 14 (2 Dropped excluded)
+**Progress:** 92% — 12 Live, 1 Proposed / 13 (3 Dropped excluded)
 
 ### Feedback
 
@@ -402,7 +458,7 @@ When a decision above gets resolved, delete its bullet here and update the match
 | PR-013 Solution-to-workstream/project mapping | 🟢 Live | Resolved 2026-10-14 with the existing projects table: a solution links to any number of `cr6b0_project` rows through the native N:N (PR-030, live), chosen in the form's Projects picker and shown as **Associated projects** on the solution page (internal; hidden in present mode). No separate workstream table |
 | PR-014 Media display standardization (video/image/HTML/demo) | 🟢 Live | 2026-10-14: video, uploaded HTML, embedded links and images play in one centred 16:9 stage, the same size and place for every type, with the same Full screen and Open in new tab (`1f6a01b`). Decided 2026-10-14 (user): demos open on request, never auto-shown on the solution page, for quality; the connected app keeps listing them as rows. Screenshots keep their own gallery and lightbox; PDF and PowerPoint download |
 | PR-031 More than one target client role per solution | 🟢 Live | Added 2026-10-14 from Ximena's feedback. 2026-10-21: the user created the `nx_clientrole` table (14 roles), the N:N `nx_ClientRole_nx_Solution_nx_Solution` and the role privileges (read back with `inspect-client-roles`). On branch `feat/client-roles-nn`: plug-ins (graph `clientRoleIds`, catalogue `clientRoles`, guard), form chips in the same place (several at once), "Target client role" filter matching any chosen role, solution page, PoC mock ([SchemaV2](../data_model/SchemaV2.md#nx_clientrole)). `nx_clientrole` data source generated with `pa app add data-source` (PAC 2.12.2 fails on the Custom API schemas). No backfill: the 4 solutions with the old choice are dummy data (user, 2026-10-21). Deployed 2026-10-21 from `main` `d630738` by Luis (PR #3): signed plug-in, then the connected app; CI passed and the catalogue loaded without alerts. The user then deleted `nx_solution.nx_clientrole` and checked editing several roles in the hosted app the same day |
-| PR-032 More than one client per solution | 🔴 Pending to do | Added 2026-10-16 from Ximena's feedback (raised 2026-09-30, had no row). Today the client is one free-text pair on `nx_solution`, `nx_clientcontext` (internal) and `nx_clientcontextredacted` (the only one shown in present mode). Several clients means a child table or N:N with an internal name and a redacted label per client, plus the form, the solution page, present-mode filtering (ADR-0005) and the plug-ins. Not started |
+| PR-032 More than one client per solution | Dropped | Dropped 2026-10-28: not requested. Added 2026-10-16 from Ximena's feedback (raised 2026-09-30, had no row). Today the client is one free-text pair on `nx_solution`, `nx_clientcontext` (internal) and `nx_clientcontextredacted` (the only one shown in present mode). Several clients means a child table or N:N with an internal name and a redacted label per client, plus the form, the solution page, present-mode filtering (ADR-0005) and the plug-ins. Never started |
 
 ### Open decisions
 

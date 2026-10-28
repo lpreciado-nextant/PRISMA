@@ -1,6 +1,6 @@
 # Reference data governance
 
-**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse; capabilities replaced by the organization framework with area and owner (2026-10-13); client roles became a reference table (2026-10-21); current active references seeded and verified in Nextant Pulse Prod (2026-10-26) · **Last updated:** 2026-10-26
+**Status:** Active governance aligned with the two-field story model; approved starter taxonomy seeded in Nextant Pulse; capabilities replaced by the organization framework with area and owner (2026-10-13); client roles became a reference table (2026-10-21); current active references seeded and verified in Nextant Pulse Prod (2026-10-26) · **Last updated:** 2026-10-28
 **Source:** [End-to-end design §6.4](../design/end-to-end-design.md#64-reference-data-governance) · Column specs in the [schema spec (v2)](SchemaV2.md)
 
 ## Vocabularies
@@ -48,7 +48,7 @@ Seeded in **Nextant Pulse** on 2026-09-22 after user approval: 43 additions, bri
 
 **Changed 2026-10-13:** the six starter capabilities were replaced by the organization's capability framework. Each capability now belongs to a specialization area (`nx_specializationarea`) and can name a **Capability Owner** (`nx_capabilityowner`, a consultant), who owns its definition and is the proposed contact for review ([decision log Q15](../delivery/decision-log.md)). A solution's own areas remain a separate N:N; nothing requires them to include its capability's area.
 
-**Read back 2026-10-23:** 13 active capabilities (none inactive), now including four IBO ones; AI Transformation is gone, two names changed, and every capability has an owner. Listed in `nx_sortordernumber` order.
+**Read back 2026-10-23:** 13 active capabilities (none inactive), now including four IBO ones; AI Transformation is gone, two names changed, and every capability has an owner. Listed in `nx_sortordernumber` order. **Added 2026-10-28:** Business Intelligence (data, owner Juan Sebastian Uribe), listed last because its sort position is not recorded.
 
 | Capability | Area | Capability Owner |
 |---|---|---|
@@ -65,6 +65,7 @@ Seeded in **Nextant Pulse** on 2026-09-22 after user approval: 43 additions, bri
 | Operational Transformation | ibo | Catalina Vasquez |
 | Change Management & Adoption | ibo | Mary Thomason |
 | AI-Enabled Operations & Governance | ibo | Valentina Velosa |
+| Business Intelligence | data | Juan Sebastian Uribe |
 
 One-line purposes for each capability are still to be written with their owners; until then, pick the capability whose owner you would ask about the solution. Describe the specific problem and benefit in Business Value.
 
