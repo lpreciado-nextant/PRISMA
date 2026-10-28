@@ -1,4 +1,6 @@
-# PRISMA × Nextant — Plantilla de presentación por solución (v3)
+# PRISMA × Nextant — Plantilla de presentación por solución (v4)
+
+**v4 (2026-10-28):** el diseño es la presentación Dark que Juliana rehízo en PowerPoint: el contenido va en tarjetas, los valores de la diapositiva 4 en píldoras (una por valor) y el logo de PRISMA arriba a la derecha. La portada ya no lleva presentador ni fecha, y la diapositiva 2 ya no lleva imagen. La Light se deriva de la Dark con la paleta, el fondo y los logos de la Light anterior.
 
 **v3 (2026-10-22):** el diseño es la presentación que Juliana rehízo en PowerPoint sobre una descarga de PRISMA APP (Aptos, fondo con aurora, listas con puntos en vez de tarjetas). La versión Light se deriva de la Dark con la paleta, el fondo y los logos de la Light anterior. Cada diapositiva sigue usando solo campos que la app ya tiene.
 
@@ -13,11 +15,11 @@
 
 | # | Slide | Datos de la página de la solución |
 |---|-------|-----------------------------------|
-| 1 | Portada | Área, madurez, nombre, descripción corta, primera captura |
-| 2 | What it does | "What the solution does", "Business value", una captura |
+| 1 | Portada | Área, madurez, nombre, descripción corta, imagen de portada |
+| 2 | What it does | "What the solution does" y, en su tarjeta, "Business value" |
 | 3 | See it in action | Hasta 6 capturas |
-| 4 | What it's built on | Áreas de especialización, capability, industrias, contexto de cliente anonimizado y tecnologías |
-| 5 | Walkthroughs and live demos | Demo videos (hasta 3), Interactive demos (hasta 2) y Supporting material (hasta 3), en filas por tipo |
+| 4 | What it's built on | Cuatro tarjetas de píldoras: áreas de especialización, capability, contexto de negocio (industrias y contexto de cliente anonimizado) y tecnologías |
+| 5 | Walkthroughs and live demos | Una tarjeta por tipo: Demo videos (hasta 3), Interactive demos (hasta 2) y Supporting material (hasta 3) |
 | 6 | Next step | Tres pasos fijos, enlace a la biblioteca de PRISMA y el contacto (CSM) |
 
 ## Campos de texto
@@ -25,18 +27,18 @@
 | Token | Slide | Límite | Obligatorio | Origen en la página |
 |-------|-------|--------|-------------|---------------------|
 | `{{area_name}}` | 1 | lista | Sí | Área principal (AI & Automation, Data Solutions, Intelligent Business Operations): la insignia de la portada |
-| `{{area_names}}` | 4 | 90 | Sí | Todas las áreas, la principal primero, separadas por " · " |
+| `{{area_1}}` … `{{area_3}}` | 4 | 32 c/u | Sí (mín. 1) | Cada área, la principal primero, en su píldora. Las que no se usan desaparecen |
+| `{{area_names}}` | notas | 90 | Sí | Todas las áreas, separadas por " · " |
 | `{{capability}}` | 4 | 40 | Sí | Capability |
-| `{{client_context}}` | 4 | 60 | No | Contexto de cliente **anonimizado** (`nx_clientcontextredacted`); nunca el nombre del cliente. Vacío: desaparece con su etiqueta |
+| `{{client_context}}` | 4 | 60 | No | Contexto de cliente **anonimizado** (`nx_clientcontextredacted`), en una píldora bajo la etiqueta CLIENT CONTEXT; nunca el nombre del cliente. Vacío: desaparece con su etiqueta |
 | `{{maturity_label}}` | 1 | lista | Sí | Insignia de madurez (Live, Working prototype, Idea / Concept) |
 | `{{solution_title}}` | 1 | 60 | Sí | Título (dos líneas como máximo; un nombre largo achica la letra) |
 | `{{tagline}}` | 1 | 170 | Sí | Descripción corta (completa: en la tarjeta de la app se ve cortada) |
-| `{{presenter_name}}` | 1 | 30 | Sí | Usuario que descarga (Entra ID) |
-| `{{presentation_date}}` | 1 | 20 | No | Fecha de descarga |
 | `{{description}}` | 2 | 520 | Sí | What the solution does |
 | `{{business_value}}` | 2 | 200 | Sí | Business value |
-| `{{industries}}` | 4 | 60 | No | Industries, separadas por " · ". Vacío: desaparece con su etiqueta |
-| `{{tech_1}}` … `{{tech_8}}` | 4 | 30 c/u | Sí (mín. 1) | Tecnologías. Las que no se usan desaparecen con su punto |
+| `{{industry_1}}` … `{{industry_4}}` | 4 | 30 c/u | No | Industrias, cada una en su píldora. Sin ninguna: desaparece la etiqueta |
+| `{{industries}}` | notas | 60 | No | Industries, separadas por " · " |
+| `{{tech_1}}` … `{{tech_8}}` | 4 | 30 c/u | Sí (mín. 1) | Tecnologías, cada una en su píldora. Las que no se usan desaparecen |
 | `{{video_1_title}}` … `_3_title`, `{{video_N_url}}` | 5 | 40 | No | Demo videos |
 | `{{interactive_1_title}}`, `_2_title`, `{{interactive_N_url}}` | 5 | 40 | No | Interactive demos |
 | `{{supporting_1_title}}` … `_3_title`, `{{supporting_N_url}}` | 5 | 40 | No | Supporting material |
@@ -46,11 +48,11 @@
 | `{{tech_list}}` | notas 4 | — | No | Tecnologías separadas por comas |
 | `{{csm_name}}` `{{csm_email}}` `{{csm_initials}}` | 6 | 28 / 35 / 2 | Sí | Contacto: el CSM, el colaborador cuyo nivel en el directorio de consultores (`cr6b0_consultantlevel`) dice Customer Success (en Forge: Andres Perez); si no hay, quien descarga. Las iniciales van en el círculo |
 
-**Acomodo automático (solo en la app):** en la portada, cada insignia mide lo que su texto, el título usa dos líneas como máximo (un nombre largo achica la letra) y la descripción corta y la línea de acento van justo debajo. En la diapositiva 2, el valor de negocio va debajo de la descripción y cada barra mide lo que su bloque; si no caben, los dos textos se achican juntos. Las capturas se reparten según cuántas haya (1 grande, 2 lado a lado, 3 con una principal, 4 en 2×2, 5–6 en 3×2). Las tecnologías fluyen de izquierda a derecha y saltan de fila; sin industria ni contexto de cliente suben al lugar de "Business context". Si la solución no tiene CSM, el contacto es quien descarga.
+**Acomodo automático (solo en la app):** en la portada, cada insignia mide lo que su texto, el título usa dos líneas como máximo (un nombre largo achica la letra) y la descripción corta va justo debajo. Cada píldora de la diapositiva 4 mide lo que su texto y fluyen de izquierda a derecha, saltando de fila; si no caben en su tarjeta, se achican. Con muchas industrias y contexto de cliente, las tarjetas de arriba crecen y las de abajo bajan; sin industria ni contexto de cliente, la tarjeta de tecnologías ocupa toda la columna derecha. Las capturas se reparten según cuántas haya (1 grande, 2 lado a lado, 3 con una principal, 4 en 2×2, 5–6 en 3×2). Si la solución no tiene CSM, el contacto es quien descarga.
 
 **Notas del orador:** cada diapositiva trae notas con los datos de la solución (qué decir, valor, tecnologías) y, en la 5, la lista de enlaces completos de los demos para pegar en el navegador. Las líneas de demos que no existen se eliminan.
 
-Las filas de demos sin título se eliminan solas, igual que el encabezado de un tipo sin filas. Si caben, todas las filas van en una columna con el espaciado del diseño; si no, cada tipo ocupa su columna (títulos a 15 pt, en dos líneas). Sin ningún demo, la nota invita a pedir una demostración en vivo. El botón de cada fila dice lo que hace (`{kind}_N_action` desde la app): **PLAY ↗** para videos, **OPEN ↗** para HTML y enlaces, **DOWNLOAD ↓** para archivos (PDF, PowerPoint, Word…); el título también enlaza. Un archivo no se descarga directo desde la presentación: el enlace abre PRISMA (con sesión de Nextant) y la descarga empieza sola al llegar; los archivos protegidos nunca quedan expuestos en el `.pptx`.
+Las filas de demos sin título se eliminan solas; un tipo sin filas pierde su tarjeta y las demás se reparten el ancho. Un título largo se achica para quedar en dos líneas dentro de su fila. Sin ningún demo, la nota invita a pedir una demostración en vivo. El botón de cada fila dice lo que hace (`{kind}_N_action` desde la app): **PLAY ↗** para videos, **OPEN ↗** para HTML y enlaces, **DOWNLOAD ↓** para archivos (PDF, PowerPoint, Word…); el título también enlaza. Un archivo no se descarga directo desde la presentación: el enlace abre PRISMA (con sesión de Nextant) y la descarga empieza sola al llegar; los archivos protegidos nunca quedan expuestos en el `.pptx`.
 
 ## Imágenes
 
@@ -58,8 +60,7 @@ Cada imagen llena su marco con esquinas redondeadas (recorte centrado). Las capt
 
 | Clave | Slide | Proporción | Tamaño recomendado |
 |-------|-------|------------|--------------------|
-| `cover_image` | 1 | 1.6:1 | 1600 × 1000 px |
-| `feature_image` | 2 | 1.4:1 | 1500 × 1050 px |
+| `cover_image` | 1 | 1.46:1 | 1600 × 1100 px |
 | `shot_1` … `shot_6` | 3 | 1.9:1 | 1500 × 800 px |
 
 ## Lo que dejé fuera a propósito
@@ -86,18 +87,18 @@ La app encuentra cada pieza por su nombre (Selection Pane de PowerPoint). Para c
 
 | Diapositiva | Formas |
 |---|---|
-| 1 | `area_dot` `badge_area_text` `maturity_dot` `badge_maturity_text` `Text 1` (título) `tagline` `cover_accent_rule` `presenter` `presentation_date` `img_cover_image` |
-| 2 | `description_label` `description` `description_accent` `value_label` `business_value` `value_accent` `img_feature_image` |
+| 1 | `cover_card` `area_dot` `badge_area_text` `maturity_dot` `badge_maturity_text` `Text 1` (título) `tagline` `img_cover_image` |
+| 2 | `description_label` `description` `description_accent` `value_card` `value_label` `business_value` `value_accent` |
 | 3 | `img_shot_1` … `img_shot_6` |
-| 4 | `overview_dot` `overview_value` `capability_dot` `capability_value` `context_eyebrow` `industry_label` `industry_dot` `industry_value` `client_label` `client_dot` `client_value` `right_section_rule` `tech_eyebrow` `tech_dot_N` `tech_N` (1–8) |
-| 5 | `video_label` `interactive_label` `supporting_label`; por fila `row_{kind}_{N}_icon` `_play` `_title` `_btn_text` `_rule`; `demo_note` |
+| 4 | `overview_card` `overview_eyebrow` `overview_label` `area_1`–`area_3`; `capability_card` `capability_eyebrow` `capability_value`; `context_card` `context_eyebrow` `industry_label` `industry_1`–`industry_4` `client_label` `client_value`; `tech_card` `tech_eyebrow` `tech_1`–`tech_8` |
+| 5 | por tipo `{kind}_card` `{kind}_icon` `{kind}_glyph` `{kind}_label`; por fila `row_{kind}_{N}_box` `_title` `_btn_text`; `demo_note` |
 | 6 | `Text 1` (título) `library_link` `contact_initials` `csm_name` `csm_email` |
 
-La plantilla trae las filas de demo en tres columnas y las tecnologías en una grilla; la app las reacomoda en cada descarga.
+La plantilla trae todas las píldoras y filas en una posición de ejemplo; la app las reacomoda en cada descarga.
 
 ## Developer Kit
 
-`kit/fill_prisma_template.py` (requiere `pip install python-pptx`; sin el acomodo automático: filas y tecnologías quedan donde las trae la plantilla) y `kit/forge_sample/` con el JSON de entrada y las imágenes de ejemplo. Las plantillas viven solo en `app/src/assets/deck/` (las usa la app); no hay copias aquí.
+`kit/fill_prisma_template.py` (requiere `pip install python-pptx`; sin el acomodo automático: píldoras y filas quedan donde las trae la plantilla) y `kit/forge_sample/` con el JSON de entrada y las imágenes de ejemplo. Las plantillas viven solo en `app/src/assets/deck/` (las usa la app); no hay copias aquí.
 
 Desde `tools/pptx-template/kit`:
 

@@ -58,6 +58,8 @@ test("slide 4 lists every area, the capability and only the redacted client cont
   const fields = buildDeckFields({ ...input, solution, libraryUrl: "https://prisma.nextant.com/", csm: { name: "Juliana Castelblanco", email: "j@nextant.com" } });
   assert.equal(fields.area_name, "Data Solutions");
   assert.equal(fields.area_names, "Data Solutions · AI & Automation");
+  // One pill per area and per industry on slide 4.
+  assert.deepEqual([fields.area_1, fields.area_2, fields.area_3], ["Data Solutions", "AI & Automation", undefined]);
   assert.equal(fields.capability, "Data Engineering");
   assert.equal(fields.client_context, "A national retailer");
   assert.equal(fields.library_href, "https://prisma.nextant.com/");
@@ -67,7 +69,7 @@ test("slide 4 lists every area, the capability and only the redacted client cont
 
 test("image keys and file names", () => {
   const keys = deckImageKeys({ thumbnail: "t", images: Array.from({ length: 8 }, (_, i) => ({ id: `${i}`, src: `s${i}` })) });
-  assert.deepEqual(keys.map((k) => k.key), ["cover_image", "feature_image", "shot_1", "shot_2", "shot_3", "shot_4", "shot_5", "shot_6"]);
+  assert.deepEqual(keys.map((k) => k.key), ["cover_image", "shot_1", "shot_2", "shot_3", "shot_4", "shot_5", "shot_6"]);
   assert.equal(deckFileName({ name: "POC Forge: v2" }, "light"), "PRISMA-POC-Forge-v2-Light.pptx");
   assert.equal(fit("short", 10), "short");
 });

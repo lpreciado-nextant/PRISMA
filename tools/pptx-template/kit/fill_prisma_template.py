@@ -9,8 +9,8 @@ solution.json  = { "fields": { "solution_title": "...", ... },
 See PRISMA_Field_Map.md for every field. Requires: pip install python-pptx
 
 This is the kit's reference filler. The app's filler (app/src/lib/deckTemplate.ts) is the source of truth and adds
-the adaptive layout (cover stacking, text fitting, screenshot grid, technologies flowing, demo rows in one column or
-three) that this script does not do: here demo rows and technologies keep the template's default places.
+the adaptive layout (badge widths, text fitting, screenshot grid, pills flowing and growing cards, demo cards sharing the
+width) that this script does not do: here pills and demo rows keep the template's default places.
 """
 import copy, io, json, re, sys, zipfile
 from pptx import Presentation
@@ -28,6 +28,8 @@ MATURITY_KEY = {"live": "live", "working prototype": "proto", "idea / concept": 
 LINKS = {"library_link": "library_href"}  # slide 6: "Explore the Library"
 TEXT_LINKS = {"csm_email": "csm_email"}  # text run becomes a link
 ROW_KINDS = {"video": 3, "interactive": 2, "supporting": 3}  # demo rows: video_N_title / video_N_url ...
+# Slide 4's pills, one value each (area_N, industry_N, tech_N fields).
+PILLS = [f"area_{i}" for i in range(1, 4)] + [f"industry_{i}" for i in range(1, 5)] + [f"tech_{i}" for i in range(1, 9)]
 
 
 def open_template(path):
@@ -128,10 +130,10 @@ def main(template, data_json, out):
         # recolour badges by area / maturity
         if area:
             if "area_dot" in named: set_color(named["area_dot"]._element, area)
-            if "badge_area_text" in named: set_color(named["badge_area_text"]._element, area, text=True, fills=False, lines=False)
+            if "badge_area_text" in named: set_color(named["badge_area_text"]._element, area, text=True)  # pill: tint, border and text
         if mat:
             if "maturity_dot" in named: set_color(named["maturity_dot"]._element, mat)
-            if "badge_maturity_text" in named: set_color(named["badge_maturity_text"]._element, mat, text=True, fills=False, lines=False)
+            if "badge_maturity_text" in named: set_color(named["badge_maturity_text"]._element, mat, text=True)
         # images
         for key, frame in [(n[4:], s) for n, s in named.items() if n.startswith("img_") and not n.endswith("_label")]:
             label = named.get(f"img_{key}_label")
@@ -148,16 +150,15 @@ def main(template, data_json, out):
         for shp in list(slide.shapes):
             if shp.has_text_frame:
                 fill_text_frame(shp.text_frame, fields)
-        # drop unused technologies, and an empty industry or client context with its label
-        for i in range(1, 9):
-            t, dot = named.get(f"tech_{i}"), named.get(f"tech_dot_{i}")
-            if t is not None and not t.text_frame.text.strip():
-                t._element.getparent().remove(t._element)
-                if dot is not None: dot._element.getparent().remove(dot._element)
-        for field, parts in (("industries", ("industry_label", "industry_value", "industry_dot")), ("client_context", ("client_label", "client_value", "client_dot"))):
-            if not fields.get(field):
-                for nm in parts:
-                    if nm in named: named[nm]._element.getparent().remove(named[nm]._element)
+        # drop unused pills (areas, industries, technologies), and an empty industry or client context with its label
+        for nm in PILLS:
+            if nm in named and not named[nm].text_frame.text.strip():
+                named[nm]._element.getparent().remove(named[nm]._element)
+        if not any(fields.get(f"industry_{i}") for i in range(1, 5)) and "industry_label" in named:
+            named["industry_label"]._element.getparent().remove(named["industry_label"]._element)
+        if not fields.get("client_context"):
+            for nm in ("client_label", "client_value"):
+                if nm in named: named[nm]._element.getparent().remove(named[nm]._element)
         # demo rows: drop unused rows and empty sections; a used row links its title and button, which says what it does
         for kind, mx in ROW_KINDS.items():
             used = 0
@@ -173,8 +174,9 @@ def main(template, data_json, out):
                         named[f"row_{kind}_{n}_{part}"].click_action.hyperlink.address = url if url.startswith("http") else "https://" + url
                 if action and f"row_{kind}_{n}_btn_text" in named:
                     named[f"row_{kind}_{n}_btn_text"].text_frame.paragraphs[0].runs[0].text = f"{action.upper()}  {'↓' if action == 'Download' else '↗'}"
-            if not used and f"{kind}_label" in named:
-                named[f"{kind}_label"]._element.getparent().remove(named[f"{kind}_label"]._element)
+            if not used:  # a kind without demos loses its card
+                for part in ("card", "icon", "glyph", "label"):
+                    if f"{kind}_{part}" in named: named[f"{kind}_{part}"]._element.getparent().remove(named[f"{kind}_{part}"]._element)
         # hyperlinks
         def to_url(val):
             return val if val.startswith(("http", "mailto:")) else ("mailto:" + val if "@" in val else "https://" + val)

@@ -17,7 +17,7 @@ export type DeckVariant = "dark" | "light";
 export interface DeckFields {
   /** Primary specialization area: the cover badge. */
   area_name: string;
-  /** Every specialization area, primary first (slide 4). */
+  /** Every specialization area, primary first, joined for the notes; slide 4 shows each as `area_N`. */
   area_names: string;
   capability: string;
   /** The redacted client context, the only client-facing client text (slide 4); empty hides the field. */
@@ -29,6 +29,7 @@ export interface DeckFields {
   presentation_date: string;
   description: string;
   business_value: string;
+  /** Industries joined for the notes; slide 4 shows each as `industry_N`. */
   industries: string;
   cta_headline: string;
   /** Full PRISMA link to the solution, in the notes; never truncated. */
@@ -67,12 +68,14 @@ export interface DeckInput {
 export const DECK_LIMITS: Record<string, number> = {
   solution_title: 60, tagline: 170, presenter_name: 30, presentation_date: 20,
   description: 520, business_value: 200, industries: 60,
-  tech: 30, demo_title: 40, cta_headline: 60, csm_name: 28, csm_email: 35,
+  tech: 30, area: 32, industry: 30, demo_title: 40, cta_headline: 60, csm_name: 28, csm_email: 35,
   area_names: 90, capability: 40, client_context: 60,
 };
 
 export const CTA_HEADLINE = "Let's build this together";
 export const MAX_TECH = 8;
+export const MAX_AREAS = 3;
+export const MAX_INDUSTRIES = 4;
 export const MAX_VIDEOS = 3;
 export const MAX_INTERACTIVES = 2;
 export const MAX_SUPPORTING = 3;
@@ -139,6 +142,9 @@ export function buildDeckFields(input: DeckInput): DeckFields {
     csm_email: fit(csm?.name ? csm.email : presenter.email, DECK_LIMITS.csm_email),
     csm_initials: initials(contact),
   };
+  // Slide 4's pills: one value each.
+  areas.slice(0, MAX_AREAS).forEach((area, index) => { fields[`area_${index + 1}`] = fit(area, DECK_LIMITS.area); });
+  solution.industries.slice(0, MAX_INDUSTRIES).forEach((industry, index) => { fields[`industry_${index + 1}`] = fit(industry, DECK_LIMITS.industry); });
   solution.technologies.slice(0, MAX_TECH).forEach((tech, index) => { fields[`tech_${index + 1}`] = fit(tech, DECK_LIMITS.tech); });
   const demos = (kind: "video" | "interactive" | "supporting", list: DeckDemo[], max: number) => list.filter((demo) => demo.title.trim()).slice(0, max).forEach((demo, index) => {
     fields[`${kind}_${index + 1}_title`] = fit(demo.title, DECK_LIMITS.demo_title);
@@ -155,10 +161,8 @@ export function buildDeckFields(input: DeckInput): DeckFields {
 export function deckImageKeys(solution: Pick<Solution, "thumbnail" | "images">): { key: string; src: string }[] {
   const shots = (solution.images ?? []).map((image) => image.src).filter(Boolean).slice(0, MAX_SHOTS);
   const cover = solution.thumbnail ?? shots[0];
-  const feature = shots[0] ?? solution.thumbnail;
   const out: { key: string; src: string }[] = [];
   if (cover) out.push({ key: "cover_image", src: cover });
-  if (feature) out.push({ key: "feature_image", src: feature });
   shots.forEach((src, index) => out.push({ key: `shot_${index + 1}`, src }));
   return out;
 }

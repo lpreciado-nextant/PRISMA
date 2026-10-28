@@ -2,6 +2,7 @@
   "fields": {
     "area_name": "AI & Automation",
     "area_names": "AI & Automation",
+    "area_1": "AI & Automation",
     "capability": "AI & Agent Engineering",
     "client_context": "",
     "maturity_label": "Working prototype",
@@ -16,6 +17,8 @@
     "tech_3": "Azure Functions",
     "tech_list": "Azure OpenAI, Microsoft Foundry, Azure Functions",
     "industries": "Cross-industry · IT",
+    "industry_1": "Cross-industry",
+    "industry_2": "IT",
     "video_1_title": "Forge walkthrough",
     "video_1_url": "https://example.com/prisma/forge_sample/video-1",
     "video_1_action": "Play",
@@ -31,7 +34,6 @@
   },
   "images": {
     "cover_image": "forge_sample/cover.png",
-    "feature_image": "forge_sample/shot_3.png",
     "shot_1": "forge_sample/shot_1.png",
     "shot_2": "forge_sample/shot_2.png",
     "shot_3": "forge_sample/shot_3.png",

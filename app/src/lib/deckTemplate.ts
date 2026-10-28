@@ -105,7 +105,7 @@ export function estimateLines(text: string, width: number, size: number, bold: b
  * Fixed boxes do not push their neighbours: a long title would run into the tagline below it. Shrinks the filled
  * text until the estimate fits the box, down to 60% of the template size. PowerPoint's own autofit only runs on edit.
  */
-function fitText(shape: Element, floor = 0.6): { size: number; lines: number } | undefined {
+function fitText(shape: Element, floor = 0.6): void {
   const runs = Array.from(shape.getElementsByTagNameNS(NS.a, "rPr"));
   const base = Number(runs[0]?.getAttribute("sz"));
   const box = shapeXfrm(shape)?.getElementsByTagNameNS(NS.a, "ext")[0];
@@ -116,20 +116,11 @@ function fitText(shape: Element, floor = 0.6): { size: number; lines: number } |
   let size = base / 100;
   while (size > (base / 100) * floor && estimateLines(text, width, size, bold, display) * size * 1.2 > height) size -= 2;
   if (size !== base / 100) setSize(shape, size);
-  return { size, lines: estimateLines(text, width, size, bold, display) };
 }
 
 /** True for a run set in the display face (Aptos Display), which is narrower than the text face. */
 function isDisplay(rPr: Element | undefined): boolean {
   return /display/i.test(rPr?.getElementsByTagNameNS(NS.a, "latin")[0]?.getAttribute("typeface") ?? "");
-}
-
-/** Lines the shape's text needs at `pt` points in its own box width. */
-function linesAt(shape: Element, pt: number): number {
-  const width = Number(shapeXfrm(shape)?.getElementsByTagNameNS(NS.a, "ext")[0]?.getAttribute("cx")) / 12700;
-  const text = Array.from(shape.getElementsByTagNameNS(NS.a, "p")).map((para) => para.textContent ?? "").join("\n");
-  const rPr = shape.getElementsByTagNameNS(NS.a, "rPr")[0];
-  return estimateLines(text, width, pt, rPr?.getAttribute("b") === "1", isDisplay(rPr));
 }
 
 function setSize(shape: Element, pt: number): void {
@@ -189,7 +180,8 @@ function pictureFor(doc: Document, frame: Element, rId: string, image: DeckImage
   let l = 0, t = 0;
   if (img > box) l = (1 - box / img) / 2; else t = (1 - img / box) / 2;
   const pct = (v: number) => Math.round(v * 100000);
-  const xml = `<p:pic xmlns:p="${NS.p}" xmlns:a="${NS.a}" xmlns:r="${NS.r}"><p:nvPicPr><p:cNvPr id="${id}" name="${shapeName(frame).replace("img_", "picture_")}" descr=""/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${rId}"/><a:srcRect l="${pct(l)}" r="${pct(l)}" t="${pct(t)}" b="${pct(t)}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm><a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 6000"/></a:avLst></a:prstGeom></p:spPr></p:pic>`;
+  const corner = frame.getElementsByTagNameNS(NS.a, "gd")[0]?.getAttribute("fmla") ?? "val 6000";
+  const xml = `<p:pic xmlns:p="${NS.p}" xmlns:a="${NS.a}" xmlns:r="${NS.r}"><p:nvPicPr><p:cNvPr id="${id}" name="${shapeName(frame).replace("img_", "picture_")}" descr=""/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${rId}"/><a:srcRect l="${pct(l)}" r="${pct(l)}" t="${pct(t)}" b="${pct(t)}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${w}" cy="${h}"/></a:xfrm><a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="${corner}"/></a:avLst></a:prstGeom></p:spPr></p:pic>`;
   return doc.importNode(new DOMParser().parseFromString(xml, "application/xml").documentElement, true);
 }
 
@@ -208,126 +200,116 @@ function place(shape: Element | undefined, box: Box): void {
 }
 const inches = (shape: Element) => { const b = xfrm(shape); return { x: b.x / EMU_IN, y: b.y / EMU_IN, w: b.w / EMU_IN, h: b.h / EMU_IN }; };
 const textOf = (shape: Element | undefined) => (shape?.textContent ?? "").trim();
-/** Height of `lines` lines at `pt` points, in inches; `spacing` is the paragraph's line spacing (1.2 = single). */
-const linesHeight = (lines: number, pt: number, spacing = 1.2) => (lines * pt * spacing) / 72;
-/** Width of a short label in the templates' mono font, in inches (`spaced`: the badges' wider letter spacing). */
-const monoWidth = (text: string, pt: number, spaced = false) => text.length * pt * (spaced ? 0.0112 : 0.0084);
 /** Width of a one-line label in the text font, in inches, with estimateLines' glyph widths. */
 const textWidth = (text: string, pt: number, bold: boolean) => (text.length * pt * (bold ? 0.5 : 0.48)) / 72;
+const sizeOf = (shape: Element | undefined, fallback: number) => Number(shape?.getElementsByTagNameNS(NS.a, "rPr")[0]?.getAttribute("sz")) / 100 || fallback;
 /** A one-line label: never wraps, whatever the width estimate. */
 function noWrap(shape: Element | undefined): void { shape?.getElementsByTagNameNS(NS.a, "bodyPr")[0]?.setAttribute("wrap", "none"); }
 
-const COVER_TITLE_Y = 2.02;
-const DEMO_PARTS = ["icon", "play", "title", "btn_text", "rule"];
+/** Slide 4's pills, one value each: areas, industries, the client context and technologies. Empty ones go. */
+const CHIPS = [...[1, 2, 3].map((n) => `area_${n}`), "capability_value", ...[1, 2, 3, 4].map((n) => `industry_${n}`), "client_value", ...Array.from({ length: 8 }, (_, i) => `tech_${i + 1}`)];
+const CHIP_PAD = 0.44, CHIP_GAP = 0.11, CHIP_H = 0.42, CHIP_PITCH = 0.53;
+const DEMO_PARTS = ["box", "title", "btn_text"];
 
 /** Sizes set before the text is filled, so fitting starts from them and only shrinks what really overflows. */
 function presetSlide(named: Map<string, Element>): void {
-  if (named.has("badge_area_text")) { // the cover's only title is "Text 1": two lines at most; a long name shrinks
-    const title = named.get("Text 1");
-    place(title, { y: COVER_TITLE_Y, h: linesHeight(2, 48) + 0.02 });
-    if (title) setSize(title, 48);
-    for (const name of ["badge_area_text", "badge_maturity_text"]) noWrap(named.get(name));
-  }
-  // Text boxes taller than the design's, so fitting measures the text rather than the drawn box.
-  place(named.get("description"), { h: 2.4 });
-  place(named.get("business_value"), { h: 1.0 });
-  for (const [name, h] of [["overview_value", 1.0], ["capability_value", 0.8], ["industry_value", 1.2], ["client_value", 1.2]] as const) place(named.get(name), { h });
-  for (let i = 1; i <= 8; i++) { noWrap(named.get(`tech_${i}`)); place(named.get(`tech_${i}`), { w: 5.6 }); }
+  for (const name of ["badge_area_text", "badge_maturity_text", ...CHIPS]) noWrap(named.get(name));
+  // The tagline may run to four lines under the title, inside the cover card.
+  place(named.get("tagline"), { h: 2.0 });
 }
 
 /**
- * Slide 5 lists demos in sections (demo videos, interactive demos, supporting material). Few rows share one column at
- * the design's spacing; when they do not fit, each section takes its own column. Unused rows and empty sections go.
+ * Lays pills left to right from `left`, wrapping at `right`, each as wide as its words. Returns the last row's bottom.
+ * A row past `bottom` makes every pill smaller and the rows closer instead of leaving the card.
+ */
+function flowChips(chips: Element[], left: number, right: number, top: number, bottom = Infinity): number {
+  const rows = (pt: number, pitch: number) => {
+    let x = left, y = top;
+    const spots = chips.map((chip) => {
+      const w = Math.min(textWidth(textOf(chip), pt, true) + CHIP_PAD * pt / 14, right - left);
+      if (x + w > right && x > left) { x = left; y += pitch; }
+      const spot = { x, y, w };
+      x += w + CHIP_GAP;
+      return spot;
+    });
+    return { spots, end: y };
+  };
+  let pt = 14, h = CHIP_H, pitch = CHIP_PITCH, layout = rows(pt, pitch);
+  if (layout.end + h > bottom) { pt = 12; h = 0.36; pitch = 0.44; layout = rows(pt, pitch); }
+  if (layout.end + h > bottom) { pt = 11; h = 0.32; pitch = 0.38; layout = rows(pt, pitch); }
+  chips.forEach((chip, i) => {
+    const { x, y, w } = layout.spots[i];
+    if (pt !== 14) setSize(chip, pt);
+    // A pill wider than the card (a long client context) keeps the card's width and a smaller face.
+    if (w >= right - left) setSize(chip, Math.max(10, Math.floor(pt * (right - left) / (textWidth(textOf(chip), pt, true) + CHIP_PAD))));
+    place(chip, { x, y, w, h });
+  });
+  return layout.end + h;
+}
+
+/**
+ * Slide 5 has a card per kind of demo (videos, interactive demos, supporting material), each with up to three rows. A
+ * kind without rows loses its card and the others share the width. With no demos at all, the note invites a walkthrough.
  */
 function layoutDemos(named: Map<string, Element>, fields: Fields): void {
-  const TOP = 2.4, LAST_RULE = 6.0, LABEL = 0.62, SECTION_GAP = 0.3, LEFT = 0.7, WIDTH = 11.93, COLUMN_GAP = 0.45;
-  const sections = Object.entries(ROW_KINDS).map(([kind, max]) => {
+  const LEFT = 0.69, WIDTH = 11.94, GAP = 0.28, TOP = 2.08, FIRST_ROW = 3.03, ROW_PITCH = 0.84;
+  const kinds = Object.entries(ROW_KINDS).map(([kind, max]) => {
     const rows = Array.from({ length: max }, (_, i) => i + 1).filter((n) => fields[`${kind}_${n}_title`]);
     for (let n = 1; n <= max; n++) if (!rows.includes(n)) for (const part of DEMO_PARTS) remove(named.get(`row_${kind}_${n}_${part}`));
-    if (!rows.length) remove(named.get(`${kind}_label`));
+    if (!rows.length) for (const part of ["card", "icon", "glyph", "label"]) remove(named.get(`${kind}_${part}`));
     return { kind, rows };
-  }).filter((section) => section.rows.length);
-  const total = sections.reduce((sum, section) => sum + section.rows.length, 0);
-  if (!total) { // nothing to open: the note invites a live walkthrough instead
+  }).filter((entry) => entry.rows.length);
+  if (!kinds.length) {
     const note = named.get("demo_note")?.getElementsByTagNameNS(NS.a, "t")[0];
     if (note) note.textContent = "Ask your Nextant contact for a live walkthrough of this solution.";
     place(named.get("demo_note"), { y: TOP });
     return;
   }
-  const space = LAST_RULE - TOP;
-  let pitch = Math.min(1.15, (space - sections.length * LABEL - (sections.length - 1) * SECTION_GAP) / total);
-  const columns = pitch < 0.72 ? sections.length : 1;
-  if (columns > 1) pitch = Math.min(1.15, (space - LABEL) / Math.max(...sections.map((section) => section.rows.length)));
-  const width = (WIDTH - COLUMN_GAP * (columns - 1)) / columns, button = columns > 1 ? 1.15 : 1.75, gutter = columns > 1 ? 0.62 : 0.72;
-  let y = TOP, bottom = TOP;
-  sections.forEach(({ kind, rows }, index) => {
-    const x = columns > 1 ? LEFT + index * (width + COLUMN_GAP) : LEFT;
-    y = columns > 1 ? TOP : index ? y + SECTION_GAP : TOP;
-    place(named.get(`${kind}_label`), { x, y, w: Math.min(width, 4) });
-    y += LABEL;
-    for (const n of rows) {
+  const width = (WIDTH - GAP * (kinds.length - 1)) / kinds.length;
+  kinds.forEach(({ kind, rows }, index) => {
+    const x = LEFT + index * (width + GAP);
+    place(named.get(`${kind}_card`), { x, w: width });
+    place(named.get(`${kind}_icon`), { x: x + 0.34 });
+    const glyph = named.get(`${kind}_glyph`);
+    if (glyph) place(glyph, { x: x + 0.34 + (inches(named.get(`${kind}_icon`) ?? glyph).w - inches(glyph).w) / 2 + (kind === "supporting" ? 0 : 0.02) });
+    place(named.get(`${kind}_label`), { x: x + 0.92, w: width - 1.15 });
+    rows.forEach((n, i) => {
       const part = (name: string) => named.get(`row_${kind}_${n}_${name}`);
-      place(part("icon"), { x: x + 0.02, y: y + 0.06 });
-      place(part("play"), { x: x + 0.2, y: y + 0.21 });
-      place(part("title"), { x: x + gutter, y, w: width - gutter - button - 0.05, h: 0.58 });
-      if (part("title")) setSize(part("title")!, columns > 1 ? 15 : 18); // the design's 18 pt in one column; two equal lines in three
-      place(part("btn_text"), { x: x + width - 0.22 - button, y, w: button, h: 0.58 });
-      const rule = y + Math.min(0.72, pitch - 0.06);
-      place(part("rule"), { x, y: rule, w: width });
-      bottom = Math.max(bottom, rule);
-      y += pitch;
-    }
+      const y = FIRST_ROW + i * ROW_PITCH, right = x + width - 0.23;
+      const button = textWidth(textOf(part("btn_text")), 12, true) + 0.6;
+      place(part("box"), { x: x + 0.23, y, w: width - 0.46 });
+      place(part("btn_text"), { x: right - 0.15 - button, y: y + 0.18, w: button });
+      // Two lines at most: a longer title shrinks inside the row instead of spilling out of it.
+      place(part("title"), { x: x + 0.39, y: y + 0.07, w: right - 0.15 - button - 0.12 - (x + 0.39), h: 0.58 });
+    });
   });
-  place(named.get("demo_note"), { y: bottom + 0.5 });
 }
 
-function layoutSlide(named: Map<string, Element>, fitted: Map<Element, { size: number; lines: number }>, images: Record<string, DeckImage>, fields: Fields): void {
-  // Cover: each badge as wide as its words, the tagline right under the title, the accent rule under the tagline.
+function layoutSlide(named: Map<string, Element>, images: Record<string, DeckImage>, fields: Fields): void {
+  // Cover: each badge as wide as its words, side by side above the picture.
   if (named.has("badge_area_text")) {
-    let x = 0.72;
+    let x = inches(named.get("badge_area_text")!).x;
     for (const kind of ["area", "maturity"]) {
-      const text = named.get(`badge_${kind}_text`), size = Number(text?.getElementsByTagNameNS(NS.a, "rPr")[0]?.getAttribute("sz")) / 100 || 10.5;
-      const w = monoWidth(textOf(text), size, true) + 0.06;
-      place(named.get(`${kind}_dot`), { x });
-      place(text, { x: x + 0.16, w });
-      x += 0.16 + w + 0.3;
+      const text = named.get(`badge_${kind}_text`);
+      if (!text) continue;
+      const w = textWidth(textOf(text), sizeOf(text, 13), true) + 0.71;
+      place(text, { x, w });
+      place(named.get(`${kind}_dot`), { x: x + 0.16 });
+      x += w + 0.13;
     }
-    const title = named.get("Text 1"), fit = title && fitted.get(title), tagline = named.get("tagline");
-    if (title && fit && tagline) {
-      const h = linesHeight(fit.lines, fit.size);
-      place(title, { h });
-      const y = COVER_TITLE_Y + h + 0.28;
-      place(tagline, { y, h: Math.max(0.4, 5.0 - y) });
-      const line = fitText(tagline, 0.5);
-      const end = y + (line ? linesHeight(line.lines, line.size, 1.34) : 0.4);
-      place(named.get("cover_accent_rule"), { y: Math.min(5.25, Math.max(4.58, end + 0.45)) });
+    // The tagline follows the title, one line or two, at the design's distance.
+    const title = named.get("Text 1"), tagline = named.get("tagline");
+    if (title && tagline) {
+      const { y, w } = inches(title), size = sizeOf(title, 44);
+      const lines = estimateLines(textOf(title), w * 72, size, true, isDisplay(title.getElementsByTagNameNS(NS.a, "rPr")[0]));
+      place(tagline, { y: y + (lines * size * 1.2) / 72 + 0.78 });
     }
-  }
-
-  // What it does: the business value right under the description; each accent bar as tall as its block.
-  const description = named.get("description"), value = named.get("business_value");
-  if (description && value && named.has("description_accent")) {
-    let d = fitted.get(description), v = fitted.get(value);
-    const top = inches(description).y, height = (a = d, b = v) => (a ? linesHeight(a.lines, a.size, 1.32) : 0.4) + 0.97 + (b ? linesHeight(b.lines, b.size, 1.32) : 0.4);
-    // A long description would push the business value into the footer: both texts step down together.
-    for (let size = Math.min(d?.size ?? 99, v?.size ?? 99) - 0.5; d && v && top + height() > 6.55 && size >= 11; size -= 0.5) {
-      setSize(description, size); setSize(value, size);
-      d = { size, lines: linesAt(description, size) }; v = { size, lines: linesAt(value, size) };
-    }
-    const dh = d ? linesHeight(d.lines, d.size, 1.32) : 0.4, vh = v ? linesHeight(v.lines, v.size, 1.32) : 0.4;
-    const descriptionEnd = top + dh;
-    place(description, { h: dh + 0.05 });
-    place(named.get("description_accent"), { h: descriptionEnd + 0.2 - inches(named.get("description_accent")!).y });
-    const label = descriptionEnd + 0.61;
-    place(named.get("value_label"), { y: label });
-    place(value, { y: label + 0.36, h: vh + 0.05 });
-    place(named.get("value_accent"), { y: label - 0.03, h: vh + 0.36 + 0.22 });
   }
 
   // Screenshots: a grid for the number there are, instead of fixed small slots.
   const shots = Array.from({ length: 6 }, (_, i) => `shot_${i + 1}`).filter((key) => named.has(`img_${key}`) && images[key]);
   if (shots.length) {
-    const left = 0.7, width = 11.93, top = 2.35, height = 4.27, gx = 0.3, gy = 0.29;
+    const left = 0.5, width = 12.33, top = 1.92, height = 4.42, gx = 0.17, gy = 0.22;
     const cells: { x: number; y: number; w: number; h: number }[] = [];
     const row = (count: number, w: number, h: number, y: number) => {
       const start = left + (width - (count * w + (count - 1) * gx)) / 2;
@@ -336,36 +318,42 @@ function layoutSlide(named: Map<string, Element>, fitted: Map<Element, { size: n
     if (shots.length === 1) row(1, Math.min(width, height * 1.78), height, top);
     else if (shots.length === 2) row(2, (width - gx) / 2, Math.min(height, (width - gx) / 2 / 1.6), top);
     else if (shots.length === 3) {
-      const side = { w: width - 7.2 - gx, h: (height - gy) / 2 };
-      cells.push({ x: left, y: top, w: 7.2, h: height }, { x: left + 7.2 + gx, y: top, ...side }, { x: left + 7.2 + gx, y: top + side.h + gy, ...side });
+      const main = 7.6, side = { w: width - main - gx, h: (height - gy) / 2 };
+      cells.push({ x: left, y: top, w: main, h: height }, { x: left + main + gx, y: top, ...side }, { x: left + main + gx, y: top + side.h + gy, ...side });
     } else if (shots.length === 4) { const h = (height - gy) / 2; row(2, h * 1.78, h, top); row(2, h * 1.78, h, top + h + gy); }
     else { const w = (width - 2 * gx) / 3, h = Math.min((height - gy) / 2, w / 1.9); row(3, w, h, top); row(shots.length - 3, w, h, top + h + gy); }
     shots.forEach((key, i) => place(named.get(`img_${key}`), cells[i]));
   }
 
-  // Built on: an empty industry or client context leaves no label; technologies flow left to right and wrap.
+  // Built on: four cards of pills. An empty industry or client context leaves no label; with neither, the
+  // technologies card takes the whole right column.
   if (named.has("tech_eyebrow")) {
-    for (const [field, parts] of [["industries", ["industry_label", "industry_value", "industry_dot"]], ["client_context", ["client_label", "client_value", "client_dot"]]] as const) {
-      if (!fields[field]) parts.forEach((part) => remove(named.get(part)));
+    const chips = (names: string[]) => names.map((name) => named.get(name)).filter((chip): chip is Element => !!chip?.parentNode);
+    const LEFT = 1.03, RIGHT = 6.19, CONTEXT_LEFT = 7.14, CONTEXT_RIGHT = 12.31;
+    flowChips(chips(["area_1", "area_2", "area_3"]), LEFT, RIGHT, 3.06);
+    const industries = chips(["industry_1", "industry_2", "industry_3", "industry_4"]);
+    if (!industries.length) remove(named.get("industry_label"));
+    if (!fields.client_context) { remove(named.get("client_label")); remove(named.get("client_value")); }
+    let y = 2.67, end = y; // the context card's first label
+    if (industries.length) { place(named.get("industry_label"), { y }); end = flowChips(industries, CONTEXT_LEFT, CONTEXT_RIGHT, y + 0.39); y = end + 0.2; }
+    if (fields.client_context) { place(named.get("client_label"), { y }); end = flowChips(chips(["client_value"]), CONTEXT_LEFT, CONTEXT_RIGHT, y + 0.39); }
+    // A full context card grows; both top cards keep one height and the bottom row moves down.
+    const TOP = 2.39, BOTTOM = 6.91, topEnd = Math.max(4.54, end + 0.22);
+    let bottomTop = topEnd + 0.22;
+    if (topEnd > 4.54) for (const name of ["overview_card", "context_card"]) place(named.get(name), { h: topEnd - TOP });
+    place(named.get("capability_card"), { y: bottomTop, h: BOTTOM - bottomTop });
+    place(named.get("capability_eyebrow"), { y: bottomTop + 0.28 });
+    flowChips(chips(["capability_value"]), LEFT, RIGHT, bottomTop + 0.67);
+    if (!industries.length && !fields.client_context) {
+      for (const name of ["context_card", "context_eyebrow"]) remove(named.get(name));
+      bottomTop = TOP;
     }
-    // No business context at all: the technologies move up into its place instead of leaving it empty.
-    const noContext = !fields.industries && !fields.client_context;
-    if (noContext) {
-      remove(named.get("context_eyebrow")); remove(named.get("right_section_rule"));
-      place(named.get("tech_eyebrow"), { y: inches(named.get("context_eyebrow") ?? named.get("tech_eyebrow")!).y });
-    }
-    const LEFT = 6.95, RIGHT = 12.63;
-    let x = LEFT, y = noContext ? 2.62 : 5.37;
-    for (let i = 1; i <= 8; i++) {
-      const text = named.get(`tech_${i}`);
-      if (!text?.parentNode) continue;
-      const size = Number(text.getElementsByTagNameNS(NS.a, "rPr")[0]?.getAttribute("sz")) / 100 || 11.5;
-      const w = textWidth(textOf(text), size, true) + 0.08;
-      if (x + 0.17 + w > RIGHT && x > LEFT) { x = LEFT; y += 0.45; }
-      place(named.get(`tech_dot_${i}`), { x, y: y + 0.06 });
-      place(text, { x: x + 0.17, y, w, h: 0.25 });
-      x += 0.17 + w + 0.3;
-    }
+    place(named.get("tech_eyebrow"), { y: bottomTop + 0.28 });
+    const techEnd = flowChips(chips(Array.from({ length: 8 }, (_, i) => `tech_${i + 1}`)), CONTEXT_LEFT, CONTEXT_RIGHT, bottomTop + 0.67, BOTTOM - 0.15);
+    // Everything at once (three rows of pills under a full context card) runs the bottom row into the free margin.
+    const bottom = Math.max(BOTTOM, techEnd + 0.18);
+    place(named.get("tech_card"), { y: bottomTop, h: bottom - bottomTop });
+    if (bottom > BOTTOM) place(named.get("capability_card"), { h: bottom - inches(named.get("capability_card")!).y });
   }
 }
 
@@ -392,11 +380,11 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
 
     if (area) {
       if (named.has("area_dot")) recolour(named.get("area_dot")!, area, { fills: true });
-      if (named.has("badge_area_text")) recolour(named.get("badge_area_text")!, area, { text: true });
+      if (named.has("badge_area_text")) recolour(named.get("badge_area_text")!, area, { fills: true, text: true });
     }
     if (maturity) {
       if (named.has("maturity_dot")) recolour(named.get("maturity_dot")!, maturity, { fills: true });
-      if (named.has("badge_maturity_text")) recolour(named.get("badge_maturity_text")!, maturity, { text: true });
+      if (named.has("badge_maturity_text")) recolour(named.get("badge_maturity_text")!, maturity, { fills: true, text: true });
     }
 
     for (const [kind, max] of Object.entries(ROW_KINDS)) { // demo rows: the button says what it does; title and button link
@@ -412,21 +400,16 @@ export async function fillDeckTemplate(template: ArrayBuffer | Uint8Array, field
 
     // Text is filled after the rows are laid out, so a demo title shrinks only when its final box is too small.
     presetSlide(named);
-    const fitted = new Map<Element, { size: number; lines: number }>();
     for (const shape of Array.from(tree.getElementsByTagNameNS(NS.p, "sp"))) {
       if (!/\{\{/.test(shape.textContent ?? "")) continue;
       fillParagraphs(shape, fields);
-      const fit = fitText(shape, shape === named.get("tagline") || shapeName(shape) === "Text 1" ? 0.5 : 0.6);
-      if (fit) fitted.set(shape, fit);
+      // Pills and badges never wrap: they take their words' width in the layout instead of shrinking.
+      if (!CHIPS.includes(shapeName(shape))) fitText(shape, shape === named.get("tagline") || shapeName(shape) === "Text 1" ? 0.5 : 0.6);
     }
-
-    for (let i = 1; i <= 8; i++) { // unused technologies
-      const tech = named.get(`tech_${i}`);
-      if (tech && !(tech.textContent ?? "").trim()) { remove(tech); remove(named.get(`tech_dot_${i}`)); }
-    }
+    for (const name of CHIPS) if (named.has(name) && !textOf(named.get(name))) remove(named.get(name)); // unused pills
 
     // Layout before pictures: a picture takes its frame's final box.
-    layoutSlide(named, fitted, images, fields);
+    layoutSlide(named, images, fields);
 
     // images: the glass frame stays behind a picture; an unused screenshot slot disappears, other empty frames stay clean
     for (const [name, frame] of Array.from(named)) {
