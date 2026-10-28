@@ -110,17 +110,20 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
 
   return <section className="animate-rise mx-auto w-full max-w-[980px] px-4 pt-8 pb-24 sm:px-6" aria-labelledby="help-title">
     <button type="button" className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-(--ink-2)" onClick={() => navigate("/")}><Icon name="chevronLeft" size={15} />Back to the library</button>
-    <p className="eyebrow mt-4">Help</p>
-    <h1 id="help-title" className="mt-2 text-[28px] font-bold">How PRISMA works</h1>
-    <p className="mt-2 max-w-[68ch] text-[15px] text-(--ink-2)">PRISMA brings Nextant&apos;s solutions, demos, and prototypes together in one place, making it easy to discover, reuse, and showcase what we&apos;ve built.</p>
-    {contact && <button type="button" onClick={() => jump("help-contact")} className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-[14px] font-semibold text-(--accent)"><Icon name="message" size={15} />Need help or noticed an issue? Contact us</button>}
-    <ol aria-label="How a solution gets into PRISMA" className="mt-5 grid gap-3 sm:grid-cols-3">
-      {([["plus", "Share", "Contributors submit the solutions they've built."], ["shield", "Review", "A Librarian checks its quality, clarity, and content before publishing it."], ["present", "Discover & Present", "Anyone at Nextant can find it, reuse it, and present it to clients."]] as const).map(([icon, title, text], index) => <li key={title} className="border-y-2 py-3" style={{ borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)" }}>
-        {/* A flat process strip, not cards: a rule above and below sets each step apart; the guide buttons below are the clickable surfaces. */}
-        <span className="flex items-center gap-2 text-[15px] font-semibold"><span style={{ color: "var(--accent)" }}><Icon name={icon} size={16} /></span><span className="font-mono text-[12px] text-(--ink-3)">{index + 1} · </span>{title}</span>
-        <span className="mt-1 block text-[13.5px] text-(--ink-2)">{text}</span>
-      </li>)}
-    </ol>
+    {/* The introduction, the contact shortcut and the three steps share one panel. */}
+    <div className="glass glass-lite glass-sheen mt-4 rounded-[24px] p-6 sm:p-8">
+      <p className="eyebrow">Help</p>
+      <h1 id="help-title" className="mt-2 text-[28px] font-bold">How PRISMA works</h1>
+      <p className="mt-2 max-w-[68ch] text-[15px] text-(--ink-2)">PRISMA brings Nextant&apos;s solutions, demos, and prototypes together in one place, making it easy to discover, reuse, and showcase what we&apos;ve built.</p>
+      {contact && <button type="button" onClick={() => jump("help-contact")} className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-[14px] font-semibold text-(--accent)"><Icon name="message" size={15} />Need help or noticed an issue? Contact us</button>}
+      <ol aria-label="How a solution gets into PRISMA" className="mt-5 grid gap-3 sm:grid-cols-3">
+        {([["plus", "Share", "Contributors submit the solutions they've built."], ["shield", "Review", "A Librarian checks its quality, clarity, and content before publishing it."], ["present", "Discover & Present", "Anyone at Nextant can find it, reuse it, and present it to clients."]] as const).map(([icon, title, text], index) => <li key={title} className="border-y-2 py-3" style={{ borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)" }}>
+          {/* A flat process strip, not cards: a rule above and below sets each step apart; the guide buttons below are the clickable surfaces. */}
+          <span className="flex items-center gap-2 text-[15px] font-semibold"><span style={{ color: "var(--accent)" }}><Icon name={icon} size={16} /></span><span className="font-mono text-[12px] text-(--ink-3)">{index + 1} · </span>{title}</span>
+          <span className="mt-1 block text-[13.5px] text-(--ink-2)">{text}</span>
+        </li>)}
+      </ol>
+    </div>
 
     <div className="mt-6">
       <button type="button" aria-expanded={demoOpen} aria-controls="help-demo" onClick={() => setDemoOpen(open => !open)} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg text-[15px] font-semibold text-(--accent) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)">
