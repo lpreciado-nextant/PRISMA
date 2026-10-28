@@ -35,7 +35,10 @@ test("export never carries effort, builders or client names", () => {
 test("fields respect template limits and fall back by slot", () => {
   const solution: Solution = { ...base, name: "N".repeat(80), summary: "word ".repeat(100), technologies: Array.from({ length: 12 }, (_, i) => `Tech ${i}`), clientSafeReviewed: true, publicationStatus: "Published", status: "Live in production" };
   const fields = buildDeckFields({ ...input, solution, videos: [{ title: "Walkthrough", url: "https://x" }, { title: " " }], interactives: [] });
-  assert.ok(fields.solution_title.length <= 60 && fields.tagline.length <= 170 && fields.tagline.endsWith("…"));
+  assert.ok(fields.solution_title.length <= 60 && fields.tagline.length <= 200 && fields.tagline.endsWith("…"));
+  // A summary at the app's own 200-character limit reaches the cover whole.
+  const summary = "A centralized business intelligence solution that consolidates sales, revenue, and customer data into interactive Power BI dashboards, enabling real-time performance monitoring and faster decisions.";
+  assert.equal(buildDeckFields({ ...input, solution: { ...solution, summary } }).tagline, summary);
   assert.equal(fields.maturity_label, "Live");
   assert.equal(fields.tech_8, "Tech 7");
   assert.equal(fields.tech_9, undefined);

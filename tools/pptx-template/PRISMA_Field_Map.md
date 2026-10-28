@@ -1,6 +1,6 @@
 # PRISMA × Nextant — Plantilla de presentación por solución (v4)
 
-**v4 (2026-10-28):** el diseño es la presentación Dark que Juliana rehízo en PowerPoint: el contenido va en tarjetas, los valores de la diapositiva 4 en píldoras (una por valor) y el logo de PRISMA arriba a la derecha. La portada ya no lleva presentador ni fecha, y la diapositiva 2 ya no lleva imagen. La Light se deriva de la Dark con la paleta, el fondo y los logos de la Light anterior.
+**v4 (2026-10-28):** el diseño es la presentación Dark que Juliana rehízo en PowerPoint: el contenido va en tarjetas, los valores de la diapositiva 4 en píldoras (una por valor) y el logo de PRISMA arriba a la derecha. La portada ya no lleva presentador ni fecha, y la diapositiva 2 ya no lleva imagen. La Light se deriva de la Dark con la paleta y el fondo de la Light anterior, con las correcciones de Juliana: su logo (el prisma sobre una ficha clara), las tarjetas sobre el color de fondo del tema al 72% y la tarjeta de Business value sin relleno ni borde.
 
 **v3 (2026-10-22):** el diseño es la presentación que Juliana rehízo en PowerPoint sobre una descarga de PRISMA APP (Aptos, fondo con aurora, listas con puntos en vez de tarjetas). La versión Light se deriva de la Dark con la paleta, el fondo y los logos de la Light anterior. Cada diapositiva sigue usando solo campos que la app ya tiene.
 
@@ -33,7 +33,7 @@
 | `{{client_context}}` | 4 | 60 | No | Contexto de cliente **anonimizado** (`nx_clientcontextredacted`), en una píldora bajo la etiqueta CLIENT CONTEXT; nunca el nombre del cliente. Vacío: desaparece con su etiqueta |
 | `{{maturity_label}}` | 1 | lista | Sí | Insignia de madurez (Live, Working prototype, Idea / Concept) |
 | `{{solution_title}}` | 1 | 60 | Sí | Título (dos líneas como máximo; un nombre largo achica la letra) |
-| `{{tagline}}` | 1 | 170 | Sí | Descripción corta (completa: en la tarjeta de la app se ve cortada) |
+| `{{tagline}}` | 1 | 200 | Sí | Descripción corta, completa (el campo admite 200 caracteres; en la tarjeta de la app se ve cortada) |
 | `{{description}}` | 2 | 520 | Sí | What the solution does |
 | `{{business_value}}` | 2 | 200 | Sí | Business value |
 | `{{industry_1}}` … `{{industry_4}}` | 4 | 30 c/u | No | Industrias, cada una en su píldora. Sin ninguna: desaparece la etiqueta |

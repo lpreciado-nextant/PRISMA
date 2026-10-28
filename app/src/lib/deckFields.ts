@@ -66,7 +66,8 @@ export interface DeckInput {
 }
 
 export const DECK_LIMITS: Record<string, number> = {
-  solution_title: 60, tagline: 170, presenter_name: 30, presentation_date: 20,
+  // The tagline takes the one-line summary's own 200-character limit, so the cover never cuts it.
+  solution_title: 60, tagline: 200, presenter_name: 30, presentation_date: 20,
   description: 520, business_value: 200, industries: 60,
   tech: 30, area: 32, industry: 30, demo_title: 40, cta_headline: 60, csm_name: 28, csm_email: 35,
   area_names: 90, capability: 40, client_context: 60,
