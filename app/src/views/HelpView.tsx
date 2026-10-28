@@ -15,7 +15,7 @@ const contactButton = "inline-flex min-h-10 items-center gap-2 rounded-lg px-4 p
  * It never sits in the hero flow (search → grid → detail → viewer) and is not offered in present mode. `connected` adds
  * what only the Dataverse app does (librarian editing, Dataverse permissions); the PoC shows the shared basics.
  * Guide buttons toggle their content without changing the hash, which belongs to the router.
- * `contact` (connected only) adds "Questions or something looks wrong?" with a Teams chat and an email to the PRISMA team.
+ * `contact` (connected only) adds "Need help or noticed an issue?" with a Teams chat and an email to the PRISMA team.
  */
 export function HelpView({ connected = false, librarian = true, contact }: { connected?: boolean; librarian?: boolean; contact?: HelpContact }) {
   const [activeGuide, setActiveGuide] = useState<string | null>(null);
@@ -57,7 +57,8 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
       <p className="mt-5"><b>Important:</b> Suggestions are optional. You decide whether to apply them. Marking a suggestion as Addressed simply means you've reviewed it; it doesn't automatically change your solution.</p>
     </div> }] : []),
     ...(librarian ? [{ id: "help-review", icon: "clipboardCheck" as const, eyebrow: "Librarians", title: "Review and Curate", steps: [
-      <><b>Review submissions:</b> Open the <b>Review Queue</b> and select a solution. Check its content using the <b>Publication Checklist</b>.{connected ? " You'll see solutions from all capabilities within your area, while Global Librarians can review all submissions." : ""}</>,
+      <><b>Review submissions:</b> Open the <b>Review Queue</b> and select a solution. Check its content using the <b>Publication Checklist</b>.{connected ? <> You review and decide on solutions from every capability in your area. Choose <b>All areas</b> to see other areas' solutions as <b>View only</b>. Global Librarians can review all submissions.</> : ""}</>,
+      <><b>Resolve possible duplicate technologies:</b> If a submitted technology looks like one already in PRISMA, the review shows <b>Possible duplicate technologies</b>. For each one, choose <b>Use existing</b> or <b>Keep submitted</b>. When two submitted technologies may overlap, remove one or <b>Keep both</b>. You can approve only after deciding on every one.</>,
       <><b>Approve or Request Changes:</b> Approve solutions that are ready to publish. If significant changes are needed, select <b>Request Changes</b> and explain what the owner needs to fix before resubmitting.</>,
       ...(connected ? [
         <><b>Make minor corrections before publishing:</b> Use <b>Edit Solution</b> to make small corrections directly to a user's submission before approving it, such as fixing typos, formatting, or minor content issues. For larger changes, use <b>Request Changes</b> so the owner can update the solution.</>,
@@ -73,15 +74,36 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
       <span className="mt-2 block">Present Mode helps prevent accidental exposure of sensitive information during client presentations, but it does not replace security permissions.</span>
     </> },
     ...(connected ? [
-      { question: "Why can't I edit a solution after submitting it?", answer: <>Submitted and published solutions are locked so the librarian reviews exactly what you sent. Use <b>Withdraw &amp; edit</b> (pending) or <b>Unpublish &amp; edit</b> (published) from the solution's page in My submissions, then resubmit.</> },
-      { question: "Why isn't Download presentation offered?", answer: <>The deck is only produced for published solutions that are cleared for clients, and it never includes effort, builder names or internal notes.</> },
+      { question: "Why can't I edit a solution after submitting it?", answer: <>
+        <p>Submitted and published solutions are locked to keep their content consistent during the review process.</p>
+        <p className="mt-2">To make changes, go to <b>My Submissions</b>, open your solution, and select <b>Withdraw &amp; Edit</b> (if pending review) or <b>Unpublish &amp; Edit</b> (if published). Once you&apos;ve made your changes, resubmit it for review.</p>
+      </> },
+      { question: "Why can't I download a presentation?", answer: <>
+        <p>The <b>Download Presentation</b> option is only available for published solutions that are approved for client presentations.</p>
+        <p className="mt-2">Presentations automatically exclude internal information, such as development effort, contributor names, and internal notes.</p>
+      </> },
     ] : []),
-    { question: "What do complexity and estimated hours mean?", answer: <>How hard the whole solution was to build (Easy, Medium or Hard; required to submit) and, optionally, the least time it took in whole hours, including preparation and discovery. Both are internal and never shown to clients.</> },
-    { question: "Who sees my drafts?", answer: <>{connected ? "A draft stays with you until you submit it; then librarians review it. Published solutions are visible to everyone with access to PRISMA." : "In this local preview, drafts and submissions live in this browser only."}</> },
-    ...(connected ? [{ question: "Why does My submissions keep showing \"pending\"?", answer: <>It counts your solutions with feedback still waiting for you: suggestions until you mark them <b>Addressed</b>, and change requests until you resubmit the solution. Reading a suggestion does not clear it; marking it addressed does.</> }] : []),
+    { question: "What do complexity and estimated hours mean?", answer: <>
+      <p><b>Complexity</b> describes how difficult the solution was to develop: Easy, Medium, or Hard. This field is required when submitting a solution.</p>
+      <p className="mt-2"><b>Estimated hours</b> represents the approximate time spent developing the solution, including preparation and discovery. This field is optional.</p>
+      <p className="mt-2">Both fields are for internal use only and are never shown to clients.</p>
+    </> },
+    { question: "Who can see my drafts?", answer: connected ? <>
+      <p>Only you can see your drafts until you submit them for review.</p>
+      <p className="mt-2">Once submitted, authorized Librarians can review them. After publication, the solution becomes available to everyone with access to PRISMA.</p>
+    </> : <>In this local preview, drafts and submissions live in this browser only.</> },
+    ...(connected ? [{ question: "Why does My Submissions still show pending feedback?", answer: <>
+      <p>The pending feedback indicator means there is something that still needs your attention:</p>
+      <ul className="mt-2 space-y-1.5">
+        <li className="flex items-start gap-2.5"><span aria-hidden="true" className="mt-[0.6em] size-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} /><span className="min-w-0"><b>Suggestions:</b> Remain pending until you mark them as <b>Addressed</b>. Simply reading them won&apos;t clear the notification.</span></li>
+        <li className="flex items-start gap-2.5"><span aria-hidden="true" className="mt-[0.6em] size-1.5 shrink-0 rounded-full" style={{ background: "var(--accent)" }} /><span className="min-w-0"><b>Changes Requested:</b> Remain pending until you update and resubmit your solution.</span></li>
+      </ul>
+      <p className="mt-2">Remember, suggestions are optional recommendations. You can decide whether to implement them before marking them as Addressed.</p>
+    </> }] : []),
     ...(connected ? [{ question: "Why can't I edit my own solution from the Review Queue?", answer: <>
-      <span className="block">As a Librarian, you can make minor corrections to other users' solutions during review. For larger changes, use <b>Request Changes</b> so the owner can update the content.</span>
-      <span className="mt-2 block">To edit your own solution, go to <b>My Submissions</b>, select <b>Withdraw &amp; Edit</b> (or <b>Unpublish &amp; Edit</b> if already published), make your changes, and resubmit it for approval.</span>
+      <p>Librarians can make minor corrections to other users&apos; solutions directly from the Review Queue. For larger changes, they should select <b>Request Changes</b> so the solution owner can make the updates.</p>
+      <p className="mt-2">However, you cannot edit your own solution from the Review Queue.</p>
+      <p className="mt-2">To make changes to your own solution, go to <b>My Submissions</b>, open it, and select <b>Withdraw &amp; Edit</b> or <b>Unpublish &amp; Edit</b>, depending on its status. Make your changes and resubmit it for review.</p>
     </> }] : []),
   ];
   const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
@@ -90,12 +112,13 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     <button type="button" className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold text-(--ink-2)" onClick={() => navigate("/")}><Icon name="chevronLeft" size={15} />Back to the library</button>
     <p className="eyebrow mt-4">Help</p>
     <h1 id="help-title" className="mt-2 text-[28px] font-bold">How PRISMA works</h1>
-    <p className="mt-2 max-w-[68ch] text-[15px] text-(--ink-2)">PRISMA is where Nextant keeps the demos, prototypes and products it has built, so anyone can find the right one and show it to a client.</p>
-    {contact && <button type="button" onClick={() => jump("help-contact")} className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-[14px] font-semibold text-(--accent)"><Icon name="message" size={15} />Questions or something looks wrong? Contact us</button>}
+    <p className="mt-2 max-w-[68ch] text-[15px] text-(--ink-2)">PRISMA brings Nextant&apos;s solutions, demos, and prototypes together in one place, making it easy to discover, reuse, and showcase what we&apos;ve built.</p>
+    {contact && <button type="button" onClick={() => jump("help-contact")} className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-[14px] font-semibold text-(--accent)"><Icon name="message" size={15} />Need help or noticed an issue? Contact us</button>}
     <ol aria-label="How a solution gets into PRISMA" className="mt-5 grid gap-3 sm:grid-cols-3">
-      {([["plus", "Share", "A team adds a solution it built."], ["shield", "Review", "A librarian checks it is complete and safe to show clients."], ["present", "Find & present", "Anyone at Nextant finds it and presents it live."]] as const).map(([icon, title, text], index) => <li key={title} className="flex items-start gap-3 rounded-[18px] border border-(--glass-edge) p-4">
-        <span className="grid size-9 shrink-0 place-items-center rounded-full" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}><Icon name={icon} size={17} /></span>
-        <span className="min-w-0"><span className="block text-[15px] font-semibold"><span className="font-mono text-[12px] text-(--ink-3)">{index + 1} · </span>{title}</span><span className="mt-0.5 block text-[13.5px] text-(--ink-2)">{text}</span></span>
+      {([["plus", "Share", "Contributors submit the solutions they've built."], ["shield", "Review", "A Librarian checks its quality, clarity, and content before publishing it."], ["present", "Discover & Present", "Anyone at Nextant can find it, reuse it, and present it to clients."]] as const).map(([icon, title, text], index) => <li key={title} className="border-t-2 pt-3" style={{ borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)" }}>
+        {/* A flat process strip, not cards: the guide buttons below are the clickable surfaces. */}
+        <span className="flex items-center gap-2 text-[15px] font-semibold"><span style={{ color: "var(--accent)" }}><Icon name={icon} size={16} /></span><span className="font-mono text-[12px] text-(--ink-3)">{index + 1} · </span>{title}</span>
+        <span className="mt-1 block text-[13.5px] text-(--ink-2)">{text}</span>
       </li>)}
     </ol>
 
@@ -136,7 +159,7 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[15px] font-semibold">
             {item.question}<Icon name="chevronDown" size={16} className="shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" />
           </summary>
-          <p className="mt-2 text-[14.5px] leading-relaxed text-(--ink-2)">{item.answer}</p>
+          <div className="mt-2 text-[14.5px] leading-relaxed text-(--ink-2)">{item.answer}</div>
         </details>)}
       </div>
     </section>

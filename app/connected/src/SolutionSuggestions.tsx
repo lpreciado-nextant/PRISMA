@@ -59,12 +59,12 @@ export function SuggestionsPanel({ list, canAddress = false }: { list: Suggestio
         <Icon name="message" size={16} />Suggestions
         <span className="rounded-full px-2 py-px font-mono text-[11.5px] font-normal" style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)", color: "var(--accent)" }}>{list.suggestions.length}</span>
       </h2>
-      <p className="flex items-center gap-1.5 text-[12px] text-(--ink-3)"><Icon name="shield" size={12} />Private · owner, this solution's contributors and the librarian</p>
+      <p className="flex items-center gap-1.5 text-[12px] text-(--ink-3)"><Icon name="lock" size={12} />Private · Solution owner, its contributors &amp; Librarian</p>
     </div>
-    <p className="mb-4 text-[13.5px] text-(--ink-2)">{canAddress
-      ? "Review feedback on this solution. Mark suggestions as addressed once reviewed, whether or not you apply the changes."
-      : "Feedback on this solution. The owner marks suggestions as addressed from My submissions."}</p>
-    {list.suggestions.length === 0 ? <p className="text-[14px] text-(--ink-3)">No suggestions yet. Colleagues who view this solution can send one.</p> : <>
+    {list.suggestions.length === 0 ? <p className="text-[14px] text-(--ink-3)">No suggestions from colleagues yet.</p> : <>
+      <p className="mb-4 text-[13.5px] text-(--ink-2)">{canAddress
+        ? "Review feedback on this solution. Mark suggestions as addressed once reviewed, whether or not you apply the changes."
+        : "Feedback on this solution. The owner marks suggestions as addressed from My submissions."}</p>
       {/* What is still to address, what has been, or everything. */}
       <div role="group" aria-label="Show suggestions" className="mb-4 flex flex-wrap gap-1.5">
         {views.map(option => <button key={option.value} type="button" aria-pressed={view === option.value} onClick={() => setView(option.value)} className="area-filter inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-[7px] px-2.5 text-[13px]">

@@ -90,6 +90,9 @@ test("help guides start collapsed with accessible controls in both app targets",
       assert.match(html, /id="help-demo" hidden=""/);
       assert.doesNotMatch(html, /<video|<source/);
       assert.ok(html.indexOf("Watch the demo") < html.indexOf('aria-label="Guides"'));
+      // The librarian guide settles possible duplicate technologies before approval.
+      if (librarian) assert.match(html, /Resolve possible duplicate technologies:.*You can approve only after deciding on every one\..*Approve or Request Changes:/s);
+      assert.doesNotMatch(html, /within your area/);
     }
   }
 });
@@ -992,9 +995,10 @@ test("tag pickers show chosen tags first, list only what is left and search only
 test("suggestions: readers see a private list with author and date; others get a short form", async () => {
   const ui = await server.ssrLoadModule("/connected/src/SolutionSuggestions.tsx");
   const empty = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: [] } });
-  assert.match(empty, /Suggestions<span[^>]*>0<\/span>.*Private · owner, this solution&#x27;s contributors and the librarian/s);
+  assert.match(empty, /Suggestions<span[^>]*>0<\/span>.*Private · Solution owner, its contributors &amp; Librarian/s);
   assert.doesNotMatch(empty, /internal only/);
-  assert.match(empty, /No suggestions yet\./);
+  assert.match(empty, /No suggestions from colleagues yet\./);
+  assert.doesNotMatch(empty, /Feedback on this solution|Review feedback/);
   const item = [{ id: "a", text: "Add an export to Excel.", author: "Ana Gómez", createdOn: "2026-10-13T15:04:05Z" }];
   // The uploader: the description, a Pending / Addressed / All filter (Pending first while any is open) and a check on each.
   const one = render(ui.SuggestionsPanel, { list: { canRead: true, suggestions: item }, canAddress: true });
@@ -1130,10 +1134,11 @@ test("help page: one guide per role and common questions, tailored to the app, w
   assert.match(connected, /Download Presentation.*Suggest an Improvement.*Unpublish &amp; Edit.*Edit Solution.*Confirm Changes.*Send Back to Owner/s);
   assert.match(connected, /Why can&#x27;t I edit my own solution from the Review Queue\?/);
   // Plain introduction: what PRISMA is, then share → review → find and present.
-  assert.match(poc, /demos, prototypes and products.*1 · <\/span>Share.*2 · <\/span>Review.*3 · <\/span>Find &amp; present/s);
+  assert.match(poc, /solutions, demos, and prototypes together in one place.*1 · <\/span>Share.*Contributors submit.*2 · <\/span>Review.*quality, clarity, and content.*3 · <\/span>Discover &amp; Present/s);
   // Suggestions exist only in the connected app: who sees them, why they stay pending, who marks them, what Addressed means.
   assert.match(connected, /Change Requests &amp; Suggestions.*<h3[^>]*>Change Requests<\/h3>.*cannot be published until they are resolved.*<h3[^>]*>Suggestions<\/h3>.*Suggest an Improvement.*visible only to the solution owner, contributors, and Librarians.*until the owner marks them as <b>Addressed<\/b>.*Suggestions are optional/s);
-  assert.match(connected, /Why does My submissions keep showing &quot;pending&quot;\?/);
+  assert.match(connected, /Why does My Submissions still show pending feedback\?.*<li[^>]*>.*<b>Suggestions:<\/b>.*<li[^>]*>.*<b>Changes Requested:<\/b>/s);
+  assert.match(connected, /Why can&#x27;t I download a presentation\?.*Who can see my drafts\?.*Only you can see your drafts/s);
   assert.doesNotMatch(poc, /Change Requests &amp; Suggestions|Addressed/);
   // Librarian guidance only for librarians in the connected app.
   const contributor = render(HelpView, { connected: true, librarian: false });
@@ -1141,9 +1146,9 @@ test("help page: one guide per role and common questions, tailored to the app, w
   // The hash belongs to the router: shortcuts are buttons, never in-page anchors.
   assert.doesNotMatch(connected, /href="#/);
   // Contact appears only when the connected app passes it: a shortcut at the top and a card with Teams and email.
-  assert.doesNotMatch(poc + connected, /Questions or something looks wrong|Questions or Issues/);
+  assert.doesNotMatch(poc + connected, /Need help or noticed an issue|Questions or Issues/);
   const contact = render(HelpView, { connected: true, contact: { teams: "https://teams.microsoft.com/l/chat/0/0?users=a", email: "mailto:a@example.com?subject=PRISMA" } });
-  assert.match(contact, /<button[^>]*>.*Questions or something looks wrong\? Contact us<\/button>.*Common questions.*id="help-contact".*Questions or Issues\?.*Reach out to our support team/s);
+  assert.match(contact, /<button[^>]*>.*Need help or noticed an issue\? Contact us<\/button>.*Common questions.*id="help-contact".*Questions or Issues\?.*Reach out to our support team/s);
   assert.match(contact, /href="https:\/\/teams\.microsoft\.com\/l\/chat\/0\/0\?users=a" target="_blank" rel="noopener noreferrer"[^>]*>.*Chat in Teams/s);
   assert.match(contact, /href="mailto:a@example\.com\?subject=PRISMA"[^>]*>.*Email us/s);
 });
