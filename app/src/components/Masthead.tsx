@@ -188,6 +188,8 @@ function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailab
     { path: "/my-submissions", label: draftOnly ? "My drafts" : "My submissions", icon: "folderOpen", active: path === "/my-submissions" || path.startsWith("/submission/") || path.startsWith("/submit"), open: openFeedbackItems || undefined, urgent: feedback.changes > 0, openHint, openSplit },
     ...(reviewAvailable ? [{ path: "/review", label: "Review queue", icon: "clipboardCheck" as const, active: path === "/review" || path.startsWith("/review/"), pending: reviewCount || undefined }] : []),
   ];
+  // Refresh re-reads the open tab, so it names it.
+  const refreshLabel = `Refresh ${path === "/" ? "the library" : (items.find(item => item.active)?.label ?? "this page").toLowerCase()}`;
   const primary = items.slice(0, favoriteCount !== undefined ? 2 : 1);
   const rest = items.slice(primary.length);
   return (
@@ -198,10 +200,10 @@ function SectionNav({ path, favoriteCount, reviewCount, draftOnly, reviewAvailab
           {rest.length > 0 && <div className="sm:hidden">
             <OverflowMenu label="More sections" items={rest.map(item => ({ label: item.label, icon: item.icon, onSelect: () => navigate(item.path) }))} />
           </div>}
-          {onRefresh && <button type="button" onClick={onRefresh} disabled={refreshing} aria-label={refreshing ? "Refreshing the library" : "Refresh the library"}
+          {onRefresh && <button type="button" onClick={onRefresh} disabled={refreshing} aria-label={refreshing ? "Refreshing…" : refreshLabel}
             className="hover-hint section-nav-refresh relative grid h-9 w-9 cursor-pointer place-items-center rounded-xl disabled:cursor-progress">
             <Icon name="refresh" size={17} className={refreshing ? "section-nav-refresh-spin" : undefined} />
-            <span aria-hidden="true" className="hover-hint-text hover-hint-text--end">{refreshing ? "Refreshing…" : "Refresh the library"}</span>
+            <span aria-hidden="true" className="hover-hint-text hover-hint-text--end">{refreshing ? "Refreshing…" : refreshLabel}</span>
           </button>}
         </div>}
       </div>

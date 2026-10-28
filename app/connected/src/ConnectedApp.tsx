@@ -114,9 +114,11 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   const [pendingFavorites, setPendingFavorites] = useState<Set<string>>(new Set());
   const [topRanking, setTopRanking] = useState<TopFavorite[]>([]);
   const [topVersion, setTopVersion] = useState(0);
-  // The library's Refresh button: each press re-reads the catalogue, saved solutions and the review count.
+  // The section tabs' Refresh button: each press re-reads the open tab (the catalogue on Library and Saved solutions,
+  // the list on My submissions and the Review queue), saved solutions and the review count.
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [listRefreshing, setListRefreshing] = useState(false);
   const previousRefresh = useRef(0);
   const main = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -281,7 +283,8 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   useEffect(() => {
     const previous = previousPath.current;
     previousPath.current = route.path;
-    const refresh = previousRefresh.current !== refreshVersion;
+    // My submissions and the Review queue re-read their own lists; the catalogue waits for the library.
+    const refresh = previousRefresh.current !== refreshVersion && (route.path === "/" || route.path === "/favorites");
     previousRefresh.current = refreshVersion;
     if (!refresh && (route.path !== "/" || previous === "/")) return;
     const controller = new AbortController();
@@ -322,11 +325,13 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   const showBanner = present && bannerVisible && !focused;
   // Present mode is offered where a solution is shown to a client: the library, saved solutions and a solution's pages.
   const presentAvailable = route.path === "/" || route.path === "/favorites" || section === "s";
+  // Refresh sits at the end of the section tabs, in the same place on each tab's own page.
+  const refreshable = route.path === "/" || (!present && (route.path === "/favorites" || route.path === "/my-submissions" || route.path === "/review"));
 
   return <div className="min-h-full" style={{ "--sticky-top": showBanner ? "9.75rem" : "6rem" } as CSSProperties}>
     <Background />
     {!focused && <Masthead user={user} theme={theme} onToggleTheme={onToggleTheme} present={present} onTogglePresent={onTogglePresent} readOnly={!entered || state.kind !== "ready" || !user.live} reviewAvailable={librarian} reviewCount={librarian ? reviewPending : undefined} favoriteCount={present ? undefined : favorites?.size}
-      presentAvailable={presentAvailable} onRefresh={route.path === "/" && state.kind === "ready" ? () => setRefreshVersion(version => version + 1) : undefined} refreshing={refreshing} />}
+      presentAvailable={presentAvailable} onRefresh={refreshable && state.kind === "ready" ? () => setRefreshVersion(version => version + 1) : undefined} refreshing={refreshing || listRefreshing} />}
     {showBanner && <PresentBanner onDismiss={() => setBannerVisible(false)} />}
     <main key={route.path} ref={main} tabIndex={-1} className="focus-visible:outline-none">
       <Suspense fallback={<LoadingState variant="page" label="Loading..." />}>
@@ -334,7 +339,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
         : state.kind === "host-required" ? <Message title="Power Apps sign-in required" message="Open this app through Power Apps Local Play in your signed-in browser." onRetry={onRetry} />
         : state.kind === "error" ? <Message title="Catalogue unavailable" message="Check your Dataverse access and connection, then retry." onRetry={onRetry} alert />
         : !present && route.path === "/submit" ? <DraftsView draftId={route.query.get("draft") ?? undefined} owner={user.userPrincipalName} />
-        : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} />
+        : !present && (route.path === "/my-submissions" || route.path === "/review") ? <SubmissionsView review={route.path === "/review"} refresh={refreshVersion} onRefreshing={setListRefreshing} />
         : !present && segments.length === 3 && segments[0] === "review" && segments[2] === "edit" ? <DraftsView key={route.path} draftId={segments[1]} owner={user.userPrincipalName} librarian />
         : !present && segments.length === 2 && (segments[0] === "submission" || segments[0] === "review") ? <SubmissionView key={route.path} id={segments[1]} review={segments[0] === "review"} technologyUse={technologyUse} />
         : !present && route.path === "/help" ? <HelpView connected librarian={librarian} contact={contactLinks(PRISMA_CONTACTS, (appLocation && shareUrl(appLocation, beforeHelp)) || `#${beforeHelp}`)} />

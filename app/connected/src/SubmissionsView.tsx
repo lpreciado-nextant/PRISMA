@@ -47,15 +47,24 @@ const TRANSITION_LABELS: Record<string, string> = {
 };
 const UNPUBLISH = { title: "Unpublish to edit?", label: "Unpublish & edit", body: "It leaves the Solution Library and returns to Draft so you can edit it. It is published again once a librarian approves it." };
 
-export function SubmissionsView({ review }: { review: boolean }) {
+/**
+ * `refresh` changes with each press of the section tabs' Refresh button: the list is re-read in place, keeping the open
+ * tab and filters, and `onRefreshing` reports the re-read so the button can spin.
+ */
+export function SubmissionsView({ review, refresh = 0, onRefreshing }: { review: boolean; refresh?: number; onRefreshing?: (busy: boolean) => void }) {
   const [state, setState] = useState<{ entries: { solution: Solution; rowVersion: string; owner?: string; imageCount?: number; attachmentCount?: number; manage?: boolean }[]; librarian: boolean; capabilityAreas: Record<string, SpecializationArea>; scope?: ReviewScope } | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const uncertainDeletes = useRef(new Set<string>());
   const lifetime = useRef<AbortController | null>(null);
+  const firstRefresh = useRef(refresh);
+  const reportRefreshing = useRef(onRefreshing);
+  useEffect(() => { reportRefreshing.current = onRefreshing; });
   useEffect(() => {
     const controller = new AbortController();
     lifetime.current = controller;
+    const refreshing = refresh !== firstRefresh.current;
+    if (refreshing) reportRefreshing.current?.(true);
     const timeout = window.setTimeout(() => { controller.abort(); setError(true); }, 20_000);
     void Promise.all([loadSubmissions(workflowApi, review, controller.signal), loadDraftReferences(readRows, controller.signal)]).then(([result, references]) => {
       controller.signal.throwIfAborted();
@@ -75,9 +84,12 @@ export function SubmissionsView({ review }: { review: boolean }) {
       };
       uncertainDeletes.current.clear();
       setState({ entries: result.records.map(record => ({ solution: submissionSolution(record, names), rowVersion: record.core.rowVersion, owner: record.owner, imageCount: record.imageCount, attachmentCount: record.attachmentCount, ...(record.manage === undefined ? {} : { manage: record.manage }) })), librarian: result.librarian, capabilityAreas, ...(scope?.areas.length ? { scope } : {}) });
-    }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => window.clearTimeout(timeout));
-    return () => { controller.abort(); window.clearTimeout(timeout); };
-  }, [review, attempt]);
+    }).catch(() => { if (!controller.signal.aborted) setError(true); }).finally(() => {
+      window.clearTimeout(timeout);
+      if (refreshing && !controller.signal.aborted) reportRefreshing.current?.(false);
+    });
+    return () => { controller.abort(); window.clearTimeout(timeout); if (refreshing) reportRefreshing.current?.(false); };
+  }, [review, attempt, refresh]);
   // Suggestions exist only on published solutions: one read each, in parallel. A failed read just leaves that card out.
   const [suggestionRows, setSuggestionRows] = useState<Record<string, Suggestion[]>>();
   const published = review ? "" : (state?.entries ?? []).filter(entry => entry.solution.publicationStatus === "Published").map(entry => entry.solution.id).join(",");
@@ -92,7 +104,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
       } catch { return [] as [string, Suggestion[]][]; }
     })).then(lists => { if (!controller.signal.aborted) setSuggestionRows(Object.fromEntries(lists.flat())); });
     return () => controller.abort();
-  }, [published]);
+  }, [published, refresh]);
   // No published solutions: nothing to read, so the Suggestions tab is simply empty.
   const rows: Record<string, Suggestion[]> | undefined = published ? suggestionRows : {};
   const suggestions = rows && Object.fromEntries(Object.entries(rows).map(([id, list]): [string, SuggestionSummary] => [id, { count: list.length, authors: [...new Set(list.map(row => row.author))], ids: list.map(row => row.id) }]));
@@ -121,8 +133,7 @@ export function SubmissionsView({ review }: { review: boolean }) {
     // Needs your attention lists returned drafts and new suggestions; each solution shows its suggestions inside.
     return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onDelete={remove}
       renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />}
-      renderPoster={solution => <SubmissionThumbnail solution={solution} />}
-      actions={<button type="button" title="Refresh submissions" aria-label="Refresh submissions" className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold hover:bg-(--glass-edge)" style={{ color: "var(--ink-2)" }} onClick={() => { setState(null); setSuggestionRows(undefined); setAttempt(current => current + 1); }}><Icon name="refresh" size={15} />Refresh</button>} />;
+      renderPoster={solution => <SubmissionThumbnail solution={solution} />} />;
   }
   return <ReviewQueue entries={state.entries} connected capabilityAreas={state.capabilityAreas} scope={state.scope} />;
 }
