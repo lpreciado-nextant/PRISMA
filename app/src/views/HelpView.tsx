@@ -115,8 +115,8 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     <p className="mt-2 max-w-[68ch] text-[15px] text-(--ink-2)">PRISMA brings Nextant&apos;s solutions, demos, and prototypes together in one place, making it easy to discover, reuse, and showcase what we&apos;ve built.</p>
     {contact && <button type="button" onClick={() => jump("help-contact")} className="mt-3 inline-flex cursor-pointer items-center gap-1.5 text-[14px] font-semibold text-(--accent)"><Icon name="message" size={15} />Need help or noticed an issue? Contact us</button>}
     <ol aria-label="How a solution gets into PRISMA" className="mt-5 grid gap-3 sm:grid-cols-3">
-      {([["plus", "Share", "Contributors submit the solutions they've built."], ["shield", "Review", "A Librarian checks its quality, clarity, and content before publishing it."], ["present", "Discover & Present", "Anyone at Nextant can find it, reuse it, and present it to clients."]] as const).map(([icon, title, text], index) => <li key={title} className="border-t-2 pt-3" style={{ borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)" }}>
-        {/* A flat process strip, not cards: the guide buttons below are the clickable surfaces. */}
+      {([["plus", "Share", "Contributors submit the solutions they've built."], ["shield", "Review", "A Librarian checks its quality, clarity, and content before publishing it."], ["present", "Discover & Present", "Anyone at Nextant can find it, reuse it, and present it to clients."]] as const).map(([icon, title, text], index) => <li key={title} className="border-y-2 py-3" style={{ borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)" }}>
+        {/* A flat process strip, not cards: a rule above and below sets each step apart; the guide buttons below are the clickable surfaces. */}
         <span className="flex items-center gap-2 text-[15px] font-semibold"><span style={{ color: "var(--accent)" }}><Icon name={icon} size={16} /></span><span className="font-mono text-[12px] text-(--ink-3)">{index + 1} · </span>{title}</span>
         <span className="mt-1 block text-[13.5px] text-(--ink-2)">{text}</span>
       </li>)}
