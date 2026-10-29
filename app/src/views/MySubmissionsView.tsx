@@ -213,10 +213,11 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
         {FILTERS.filter(option => option !== "Has suggestions" || suggestions).map(option => {
           const total = count(option);
           return <Chip key={option} active={filter === option} pressed={filter === option} onClick={() => setFilter(option)}>
-            {/* Changes requested carries an amber dot while any exist; Has suggestions a blue comment icon, so it never reads as a status. */}
+            {/* Changes requested carries an amber dot while any exist, Has suggestions a blue one; its comment icon before the count keeps it from reading as a status. */}
             {option === "Changes requested" && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--proto)" }} />}
-            {option === "Has suggestions" && <span aria-hidden="true" className="inline-flex" style={{ color: filter === option ? "currentColor" : "var(--accent)" }}><Icon name="message" size={13} /></span>}
+            {option === "Has suggestions" && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />}
             {option}
+            {option === "Has suggestions" && <span aria-hidden="true" className="inline-flex" style={{ color: filter === option ? "currentColor" : "var(--accent)" }}><Icon name="message" size={13} /></span>}
             <span className="font-mono text-[11px] opacity-75">{total}</span>
           </Chip>;
         })}
