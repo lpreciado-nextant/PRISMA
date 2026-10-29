@@ -118,6 +118,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const openSuggestionsOn = (solution: Solution) => openFeedback((suggestions?.[solution.id]?.ids ?? []).map(suggestionFeedbackKey)).length;
   const matches = (solution: Solution, option: Filter) => option === "All" || (option === "Has suggestions" ? (suggestions?.[solution.id]?.count ?? 0) > 0 : submissionState(solution) === option);
   const count = (option: Filter) => entries.filter(({ solution }) => matches(solution, option)).length;
+  const pendingSuggestions = entries.some(({ solution }) => openSuggestionsOn(solution) > 0);
   const filtered = entries.filter(({ solution }) => matches(solution, filter));
   // The chosen order; under Has suggestions, the solutions with new ones still come first, most first.
   const ordered = [...filtered].sort(({ solution: left }, { solution: right }) => sort === "name"
@@ -213,9 +214,9 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
         {FILTERS.filter(option => option !== "Has suggestions" || suggestions).map(option => {
           const total = count(option);
           return <Chip key={option} active={filter === option} pressed={filter === option} onClick={() => setFilter(option)}>
-            {/* Changes requested carries an amber dot while any exist, Has suggestions a blue one; its comment icon before the count keeps it from reading as a status. */}
+            {/* Changes requested carries an amber dot while any exist, Has suggestions a blue one while any is pending; its comment icon before the count keeps it from reading as a status. */}
             {option === "Changes requested" && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--proto)" }} />}
-            {option === "Has suggestions" && total > 0 && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />}
+            {option === "Has suggestions" && pendingSuggestions && filter !== option && <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--accent)" }} />}
             {option}
             {option === "Has suggestions" && <span aria-hidden="true" className="inline-flex" style={{ color: filter === option ? "currentColor" : "var(--accent)" }}><Icon name="message" size={13} /></span>}
             <span className="font-mono text-[11px] opacity-75">{total}</span>
