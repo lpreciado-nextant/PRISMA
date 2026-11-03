@@ -1206,11 +1206,11 @@ test("open feedback: items counted one by one on cards, tabs and the My submissi
   // The breakdown counts are filters of the attention rows only, both off by default.
   assert.match(html, /aria-label="Show in Needs your attention".*aria-pressed="false"[^>]*>1 changes requested<.*aria-pressed="false"[^>]*>2 pending suggestions</s);
   // "Suggestions" keeps every solution that ever had one, with a blue dot while any is new; no suggestions, no chip.
-  assert.match(html, /aria-pressed="false"[^>]*><span aria-hidden="true" class="inline-flex" style="color:var\(--accent\)"><svg.*?<\/svg><\/span>Has suggestions<span[^>]*>1<\/span>/);
+  assert.match(html, /aria-pressed="false"[^>]*><span aria-hidden="true" class="h-1\.5 w-1\.5 rounded-full" style="background:var\(--accent\)"><\/span>Has suggestions<span aria-hidden="true" class="inline-flex" style="color:var\(--accent\)"><svg.*?<\/svg><\/span><span[^>]*>1<\/span>/);
   assert.doesNotMatch(render(MySubmissionsView, { entries, connected: true }), /Has suggestions/);
   // All addressed: still counted (history), but no dot.
   const addressed = render(MySubmissionsView, { entries: [entries[1]], connected: true, suggestions: { live: { count: 2, authors: [], ids: [] } } });
-  assert.match(addressed, /aria-pressed="false"[^>]*><span aria-hidden="true" class="inline-flex"[^>]*><svg.*?<\/svg><\/span>Has suggestions<span[^>]*>1<\/span>/);
+  assert.match(addressed, /aria-pressed="false"[^>]*>Has suggestions<span aria-hidden="true" class="inline-flex"[^>]*><svg.*?<\/svg><\/span><span[^>]*>1<\/span>/);
   // Sorted by the last change by default, beside the layout toggle.
   assert.match(html, /aria-label="Sort my solutions".*Sort by.*Recently updated.*aria-label="Layout"/s);
   assert.equal((html.match(/card-unread/g) ?? []).length, 2);
