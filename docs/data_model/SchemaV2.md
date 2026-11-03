@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative · matches the live tables in Nextant Pulse (`PRISMA_Dev`) · **Last updated:** 2026-10-28
+**Status:** Authoritative · matches the live tables in Nextant Pulse (`PRISMA_Dev`); the optional contributor sort-order column is also deployed in managed production 1.0.0.6, still unused · **Last updated:** 2026-11-03
 
 The data model behind PRISMA: what each Dataverse table holds, its columns with their live logical names, and the rules the plug-ins enforce on them. It replaces the [v1 schema](nextant-solution-library-dataverse-schema.md). Why each design was chosen lives in the ADRs; how it changed over time is in [History](#history) at the end.
 
@@ -98,7 +98,7 @@ erDiagram
         lookup nx_solution FK
         lookup nx_builtby FK
         choice nx_effortmode "always direct"
-        int nx_sortorder "dev only, unused"
+        int nx_sortorder "dev and production, unused"
     }
     nx_demoasset {
         guid nx_demoassetid PK
@@ -280,7 +280,7 @@ One row per person credited on a solution. Credit only: being listed grants no a
 | Solution | `nx_solution` | Lookup → `nx_solution` | Yes | |
 | Built by | `nx_builtby` | Lookup → `cr6b0_consultant` | Yes | One person per row |
 | Effort mode | `nx_effortmode` | Choice | Yes | Written as `direct` on every save; must stay. `calendar` is only on old rows |
-| Sort order | `nx_sortorder` | Whole number | No | **In dev only, not used yet.** Created by the user 2026-10-28 to keep contributors in the order they were added; the plug-in change that writes and reads it is parked |
+| Sort order | `nx_sortorder` | Whole number | No | **In dev and production, not used yet.** Created by the user 2026-10-28 and promoted with separate approval in managed release 1.0.0.6 on 2026-11-03; the plug-in change that writes and reads contributor order is parked |
 | Direct hours | `nx_directhours` | Decimal | No | 🗄️ Retired 2026-10-15: effort is now the solution's estimate and complexity |
 | Start date | `nx_startdate` | Date | No | 🗄️ Retired 2026-10-08 |
 | End date | `nx_enddate` | Date | No | 🗄️ Retired 2026-10-08 |
@@ -617,7 +617,7 @@ Environment variables: `nx_MediaBlobContainerUrl` (the container URL) and `nx_Me
 | `nx_solutioncontributor.nx_directhours` | 2026-10-15 | Needs a separately approved deletion |
 | `nx_solutioncontributor.nx_startdate`, `nx_enddate` | 2026-10-08 | Optional: remove them from the unused "Information" form, publish, then delete ([Q20](../delivery/decision-log.md)) |
 | `nx_solution.nx_reviewedon` | Created 2026-10-02, never used | Delete, or reuse if review dates return ([Q16](../delivery/decision-log.md)) |
-| `nx_solutioncontributor.nx_sortorder` | Created in dev 2026-10-28 | Not retired: waiting for its plug-in change |
+| `nx_solutioncontributor.nx_sortorder` | Created in dev 2026-10-28; production 2026-11-03 | Not retired: waiting for its plug-in change |
 
 Not read by the connected app yet: `nx_solution.nx_image` and the whole `nx_demorequest` table. Rows saved under the old effort models are test data and are not backfilled.
 
@@ -728,3 +728,4 @@ One line per change to the model; details in the linked ADRs and the [change log
 - **2026-10-23** — Capability list read back: 13 active, four in Intelligent Business Operations, AI Transformation removed, every capability with an owner.
 - **2026-10-23 / 26** — Other capability (`nx_Solution_nx_SecondaryCapability`), saved by the plug-ins from 2026-10-26; areas derived from capabilities; capability owners scope librarians; uploaded files get display names.
 - **2026-10-28** — `nx_solutioncontributor.nx_sortorder` created in dev (not used yet); Business Intelligence capability (Data Solutions, owner Juan Sebastian Uribe).
+- **2026-11-03** - Optional `nx_solutioncontributor.nx_sortorder` promoted with explicit approval in [managed release 1.0.0.6](../architecture/technical-architecture.md#production-release-1006-2026-11-03); still unused, with no contributor-ordering behavior or reference-data migration included.

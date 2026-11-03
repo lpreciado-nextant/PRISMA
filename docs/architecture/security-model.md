@@ -1,6 +1,6 @@
 # Security model
 
-**Status:** Dev capability-owner SA scope and role migration deployed 2026-10-26; cross-area queue reading explicitly approved 2026-10-27, with rollout evidence maintained in the technical architecture. Production contributor/reader access and named global librarians configured. Reference Append and contributor re-selection fixes deployed; Juliana confirmed progression to Media. Four licensing exceptions and broader non-admin acceptance remain open · **Last updated:** 2026-10-27
+**Status:** Dev capability-owner SA scope and role migration deployed 2026-10-26; cross-area queue reading explicitly approved 2026-10-27, with rollout evidence maintained in the technical architecture. Production contributor/reader access and named global librarians configured; Juliana's separately approved PRISMA and System Administrator access verified 2026-10-27. Reference Append and contributor re-selection fixes deployed; Juliana confirmed progression to Media. Four licensing exceptions and broader non-admin acceptance remain open · **Last updated:** 2026-10-27
 **Source:** [End-to-end design §7.4](../design/end-to-end-design.md#74-security-model)
 
 ## Principles
@@ -223,6 +223,16 @@ This completes group-level app sharing alongside the existing contributor role/p
 The user explicitly approved **PRISMA Global Librarian** access for `ssanchez@nextant.com`, `avega@nextant.com` and `nsilva@nextant.com` in Nextant Pulse Prod. Each resolved to a unique enabled human Dataverse account. Applied nine missing memberships in one transaction: PRISMA Librarian, PRISMA Global Librarian and PRISMA Core Draft Librarian field-security profile for each recipient. Readback verified all required memberships and preservation of every preexisting direct role, profile and team membership.
 
 The final direct Global Librarian membership list is `lpreciado@nextant.com`, `ssanchez@nextant.com`, `avega@nextant.com` and `nsilva@nextant.com`. These recipients may perform authorized librarian workflows across all specialization areas, rather than only areas derived from capability ownership. No System Administrator role, app/co-owner share, licence, Consultant ownership or role/profile definition was added or changed. Natalia's preexisting administrator privileges were preserved. Existing group-based app and reader access remains unchanged. The recipients should renew their sessions; actual signed-in global workflows were not exercised under their identities by this provisioning pass.
+
+### Juliana production role alignment (2026-10-27)
+
+**Status:** Approved assignments applied and read back; recipient sign-in not tested. **Last updated:** 2026-10-27.
+
+The user requested matching production access for `jcastelblanco@nextant.com`, then explicitly limited the grant to **all PRISMA roles and System Administrator**, excluding Luis's unrelated business roles. Verified production organization `b3aa4d34-8957-f011-8ee3-7c1e52172903`, operator `lpreciado@nextant.com`, and Juliana's enabled human account (`systemuserid=0b0e0e10-a557-f011-877a-7c1e5216826d`, Entra object `b889fbe6-6d71-48cd-be96-67b85f48d7e8`) in the same business unit.
+
+Applied six missing associations in one atomic changeset: System Administrator, PRISMA CSM, PRISMA Librarian and PRISMA Global Librarian roles, plus PRISMA CSM and PRISMA Core Draft Librarian field-security profiles. Existing PRISMA Contributor role/profile remained. At `2026-10-27T20:44:38Z`, all six responses were HTTP 204 and readback confirmed the five required roles and three PRISMA profiles; the System Administrator field-security profile was also present after role assignment.
+
+All prior direct memberships were preserved, all four team memberships were unchanged, and the production app's 16 permission entries were unchanged, including Juliana's existing CanView access. No unrelated business role, app ownership/co-owner permission, licence, tenant/Azure role, role/profile definition, deployment or business record was changed. Juliana is now an additional production global librarian and an environment System Administrator, so she is no longer a non-admin acceptance identity. She should renew her session; actual signed-in workflow behavior was not tested by this assignment pass.
 
 ### Classification association privilege correction (2026-10-26)
 
