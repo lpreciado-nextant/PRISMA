@@ -52,13 +52,12 @@ after(async () => { await server?.close(); if (cacheDirectory) await rm(cacheDir
 test("Markdown editors preserve accessible fields, limits and literal saved source", () => {
   const html = render(form.StoryFields, { whatItDoes: "**Saved source**", businessValue: "- Benefit", onChange: noop });
   assert.equal((html.match(/class="markdown-editor"/g) ?? []).length, 2);
-  assert.equal((html.match(/maxLength="4000"/g) ?? []).length, 2);
-  assert.equal((html.match(/role="tablist"/g) ?? []).length, 2);
-  assert.match(html, /<textarea[^>]+>\*\*Saved source\*\*<\/textarea>/);
+  // The Write/Preview tabs and the textarea are gone: the field is one rich editor (loaded on demand) that stores Markdown.
+  assert.doesNotMatch(html, /role="tablist"|<textarea|Preview|>Write</);
   assert.match(html, /<label for="[^"]+">/);
   assert.doesNotMatch(html, /<label[^>]*><button/);
   const lessons = render(form.LessonsFields, { challenges: "**Internal**", lessonsLearned: "", onChange: noop });
-  assert.equal((lessons.match(/maxLength="2000"/g) ?? []).length, 2);
+  assert.equal((lessons.match(/class="markdown-editor"/g) ?? []).length, 2);
 });
 
 test("Markdown detail formatting preserves present-mode exclusion of internal narratives", async () => {
@@ -399,7 +398,7 @@ test("story section contains only the two narrative fields in both adapters", as
   assert.match(html, /What does it do, and why does it matter\?/);
   assert.match(html, /What the solution does/);
   assert.match(html, /Business value/);
-  assert.equal((html.match(/<textarea/g) ?? []).length, 2);
+  assert.equal((html.match(/class="markdown-editor"/g) ?? []).length, 2);
   // Both are Business Required in Dataverse (nx_whatitdoes, nx_businessvalue): each label carries the required mark.
   assert.equal((html.match(/\(required\)/g) ?? []).length, 2);
   assert.doesNotMatch(html, /(optional)|Optional/);
@@ -875,15 +874,15 @@ test("section cards carry one section-level visibility badge and mixed sections 
   const inCards = element => renderToStaticMarkup(createElement(SectionCardsContext.Provider, { value: true }, element));
   const built = render(form.NamedSection, { title: "Built by & effort", children: createElement("p", null, "Contributor 1") });
   assert.match(built, /<h3[^>]*>Built by &amp; effort<\/h3>/);
-  assert.equal((built.match(/Internal only/g) ?? []).length, 1);
-  assert.match(built, /used for internal tracking only/);
+  assert.equal((built.match(/>Internal only</g) ?? []).length, 1);
+  assert.match(built, /Internal tracking only/);
   const client = render(form.ClientFields, { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, selectedRoles: [], roles: ["Chief of Staff"], onRoles: noop, framed: true });
-  assert.equal((client.match(/Internal only/g) ?? []).length, 1);
-  assert.equal((client.match(/Shown to clients/g) ?? []).length, 2);
+  assert.equal((client.match(/>Internal only</g) ?? []).length, 1);
+  assert.equal((client.match(/>Shown to clients</g) ?? []).length, 2);
   // Multi-card steps stay unframed; single-section steps become cards.
   for (const title of ["Define the solution", "Solution context"]) assert.doesNotMatch(inCards(createElement(form.StepShell, { title })), /rounded-\[20px\] border/);
   assert.match(inCards(createElement(form.StepShell, { title: "Classify & tag" })), /<h2[^>]*>Classify &amp; tag<\/h2>.*Shown to clients/);
-  assert.doesNotMatch(render(form.StepShell, { title: "Classify & tag" }), /Shown to clients/);
+  assert.doesNotMatch(render(form.StepShell, { title: "Classify & tag" }), /cursor-help/);
 });
 
 test("my submissions filters by review state and keeps card controls outside the open button", async () => {
@@ -968,10 +967,10 @@ test("owner status panel tints by state, keeps actions on the right and shows th
 test("challenges and lessons learned are optional, internal and limited to the Dataverse length", () => {
   const html = render(form.LessonsFields, { challenges: "", lessonsLearned: "", onChange: noop });
   assert.match(html, /Challenges &amp; lessons learned/);
-  assert.match(html, /Internal only: never shown in presentation mode\./);
+  assert.match(html, /What made it hard and what the next team should know\. Internal only\./);
   assert.match(html, /Challenges<span[^>]*>\(optional\)/);
   assert.match(html, /Lessons learned<span[^>]*>\(optional\)/);
-  assert.equal((html.match(/maxLength="2000"/g) ?? []).length, 2);
+  assert.equal((html.match(/class="markdown-editor"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /\(required\)/);
 });
 

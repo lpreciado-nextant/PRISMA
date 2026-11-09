@@ -1793,3 +1793,9 @@
 .card-shell:hover > .card-heart {
   translate: 0 -5px;
 }
+
+/* Rich-text field: the editable area reads like the published text and grows with it. */
+.markdown-editor .rich-editor-body { min-height: 8rem; padding: .625rem .875rem; font-size: 15px; color: var(--ink); outline: none; }
+.markdown-editor .rich-editor-body p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; height: 0; pointer-events: none; color: var(--ink-3); }
+.markdown-tool[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--ink); }
+.markdown-editor[aria-disabled="true"] { opacity: .6; }

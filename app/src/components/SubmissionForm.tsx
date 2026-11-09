@@ -34,17 +34,17 @@ const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> 
 
 const STEP_INTRODUCTIONS: Record<string, string> = {
   "Before you start": "Help keep PRISMA content safe and ready to present to clients.",
-  "Define the solution": "What it is and why it matters: the card and the story CSMs tell.",
-  "Solution context": "Where it stands, who built it, and whether a client is involved.",
+  "Define the solution": "What it is and why it matters, as CSMs will tell it.",
+  "Solution context": "Where it stands, who built it, and any client involved.",
   Status: "How mature the solution is today.",
-  "Solution details": "The card's first impression. Name it like a product, not a project code, and say in one line what it does.",
-  Client: "Who this was built for, and how to talk about them in front of other clients.",
-  "Challenges & lessons learned": "What made it hard and what you would tell the next team. Internal only: never shown in presentation mode.",
-  "Built by & effort": "Add the contributors who worked on this solution and estimate the effort it took to build. This information is used for internal tracking only.",
-  "What does it do, and why does it matter?": "CSMs rely on this step most. Write it for someone who wasn't on the project.",
-  "Classify & tag": "Classify your solution by selecting its main capability and area, then add relevant technologies, industries, and linked projects to help CSMs find it later.",
-  Media: "Add at least one screenshot. A thumbnail, video, slides or HTML demo are optional.",
-  "Review & submit": "This is how the card will look in the library once it's approved.",
+  "Solution details": "The card's first impression: a product-like name and a one-line summary.",
+  Client: "Who it was built for, and how to describe them to other clients.",
+  "Challenges & lessons learned": "What made it hard and what the next team should know. Internal only.",
+  "Built by & effort": "Who built it and how long it took. Internal tracking only.",
+  "What does it do, and why does it matter?": "Write it for someone who wasn't on the project.",
+  "Classify & tag": "Pick the main capability, then add technologies, industries and projects so CSMs can find it.",
+  Media: "Add at least one screenshot. Thumbnail, video, slides and HTML demo are optional.",
+  "Review & submit": "This is how the card will look in the library once approved.",
 };
 
 export const submissionInputClass = "w-full rounded-xl border bg-transparent px-3.5 py-2.5 text-[15px] outline-none transition-colors duration-200 border-(--glass-edge) text-(--ink) placeholder:text-(--ink-3) focus:border-(--accent)";
@@ -511,7 +511,9 @@ export type Visibility = "internal" | "client";
 export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
   const internal = visibility === "internal";
   const color = internal ? "var(--proto)" : "var(--accent)";
-  return <span className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[9.5px] tracking-[0.08em] uppercase" style={{ color, borderColor: `color-mix(in srgb, ${color} 40%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}><Icon name={internal ? "eyeOff" : "present"} size={11} />{internal ? "Internal only" : "Shown to clients"}</span>;
+  const text = internal ? "Internal only" : "Shown to clients";
+  // An icon in a round bubble keeps the headings quiet; the tooltip and the hidden text carry the words.
+  return <span title={text} className="inline-grid size-6 shrink-0 cursor-help place-items-center rounded-full border" style={{ color, borderColor: `color-mix(in srgb, ${color} 40%, transparent)`, background: `color-mix(in srgb, ${color} 10%, transparent)` }}><Icon name={internal ? "eyeOff" : "present"} size={12} /><span className="sr-only">{text}</span></span>;
 }
 
 /** A level-3 SectionCard whose icon, description and visibility come from the section metadata. */
@@ -521,18 +523,13 @@ export function NamedSection({ title, children }: { title: string; children: Rea
 }
 
 /** The bordered section pattern: icon, title with an optional section-level visibility badge, description, grouped content. */
-export function SectionCard({ level = 2, icon, title, description, visibility, children }: { level?: 2 | 3; icon: IconName; title: string; description?: string; visibility?: Visibility; children: ReactNode }) {
+export function SectionCard({ level = 2, title, description, visibility, children }: { level?: 2 | 3; icon: IconName; title: string; description?: string; visibility?: Visibility; children: ReactNode }) {
   const id = useId();
   const Heading = level === 2 ? "h2" : "h3";
   return <section aria-labelledby={id} className={`min-w-0 rounded-[20px] border border-(--glass-edge) ${level === 3 ? "p-4 sm:p-5" : "p-5 sm:p-6"}`} style={{ background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
-    <div className="flex items-start gap-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "color-mix(in srgb, var(--accent) 16%, transparent)", color: "var(--accent)" }}><Icon name={icon} size={16} /></span>
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1"><Heading id={id} className={`${level === 2 ? "text-[20px]" : "text-[17px]"} font-semibold`}>{title}</Heading>{visibility && <VisibilityBadge visibility={visibility} />}</div>
-        {description && <p className="mt-0.5 text-[13px] text-(--ink-3)">{description}</p>}
-      </div>
-    </div>
-    <div className={`flex min-w-0 flex-col border-t border-(--glass-edge) ${level === 3 ? "mt-4 gap-4 pt-4" : "mt-5 gap-5 pt-5"}`}>{children}</div>
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1"><Heading id={id} className={`${level === 2 ? "text-[20px]" : "text-[17px]"} font-semibold`}>{title}</Heading>{visibility && <VisibilityBadge visibility={visibility} />}</div>
+    {description && <p className="mt-0.5 text-[13px] text-(--ink-3)">{description}</p>}
+    <div className={`flex min-w-0 flex-col border-t border-(--glass-edge) ${level === 3 ? "mt-3 gap-4 pt-4" : "mt-4 gap-5 pt-5"}`}>{children}</div>
   </section>;
 }
 
@@ -613,9 +610,16 @@ export function ContributorRow({ index, person, level, onRemove, name }: { index
  */
 export function EffortFields({ hours, complexity, onHours, onComplexity, error }: { hours: string; complexity?: Complexity; onHours: (value: string) => void; onComplexity: (value: Complexity) => void; error?: string }) {
   const id = useId();
-  // Both are short, so they share a line from small screens up: complexity on the left half, the hour estimate on the
+  // Both are short, so they share a line from small screens up: the hour estimate on the left half, complexity on the
   // right half, lined up with the edge of the contributor picker above.
   return <div className="mt-5 grid min-w-0 items-start gap-5 sm:grid-cols-2 sm:gap-6">
+    {/* Same shape as complexity beside it (on the right): title, control, then the hint beneath, so both rows line up. */}
+    <div className="min-w-0 sm:max-w-[260px]"><label className="block min-w-0">
+      <span className="mb-2 block text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Estimated minimum hours<OptionalMark /></span>
+      <input type="number" inputMode="numeric" className={submissionInputClass.replace("py-2.5", "py-1.5")} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={`${id}-hours-hint${error ? ` ${id}-error` : ""}`} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} />
+    </label>
+      <p id={`${id}-hours-hint`} className="mt-1.5 text-[12px] leading-snug text-(--ink-3)">For the whole solution, including preparation and discovery.</p>
+      {error && <p id={`${id}-error`} role="alert" className="mt-1.5 text-[13px] text-(--proto)">{error}</p>}</div>
     <fieldset className="min-w-0">
       <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>How complex was it to build?<RequiredMark /></legend>
       <div className="flex flex-wrap gap-2">{COMPLEXITIES.map(option => <label key={option.value} title={option.hint} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${complexity === option.value ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
@@ -624,13 +628,6 @@ export function EffortFields({ hours, complexity, onHours, onComplexity, error }
       {complexity ? <div className="mt-1.5"><ChoiceNote title={complexity}>{COMPLEXITIES.find(option => option.value === complexity)?.hint}</ChoiceNote></div>
         : <p className="mt-1.5 text-[12px] text-(--ink-3)">Easy: familiar work. Medium: some new ground. Hard: new territory, many moving parts.</p>}
     </fieldset>
-    {/* Same shape as complexity beside it: title, control, then the hint beneath, so both rows line up. */}
-    <div className="min-w-0 sm:max-w-[260px]"><label className="block min-w-0">
-      <span className="mb-2 block text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>Estimated minimum hours<OptionalMark /></span>
-      <input type="number" inputMode="numeric" className={submissionInputClass.replace("py-2.5", "py-1.5")} min={0} max={MAX_ESTIMATED_HOURS} step={1} value={hours} aria-describedby={`${id}-hours-hint${error ? ` ${id}-error` : ""}`} aria-invalid={error ? true : undefined} onChange={event => onHours(event.target.value)} />
-    </label>
-      <p id={`${id}-hours-hint`} className="mt-1.5 text-[12px] leading-snug text-(--ink-3)">For the whole solution, including preparation and discovery.</p>
-      {error && <p id={`${id}-error`} role="alert" className="mt-1.5 text-[13px] text-(--proto)">{error}</p>}</div>
   </div>;
 }
 
