@@ -17,7 +17,7 @@ export type LightboxItem = {
  * keyboard (← → Home End Esc), swipe, a counter, the caption and a filmstrip.
  * Clicking the backdrop closes it. Built on a modal <dialog> for focus handling.
  */
-export function Lightbox({ items, start, onClose }: { items: LightboxItem[]; start: number; onClose: () => void }) {
+export function Lightbox({ items, start, onClose, size = "full" }: { items: LightboxItem[]; start: number; onClose: () => void; /** `medium` is a centred window instead of the whole screen. */ size?: "full" | "medium" }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const close = useRef<HTMLButtonElement>(null);
   const strip = useRef<HTMLOListElement>(null);
@@ -59,7 +59,7 @@ export function Lightbox({ items, start, onClose }: { items: LightboxItem[]; sta
         const keys: Record<string, () => void> = { ArrowLeft: () => go(index - 1), ArrowRight: () => go(index + 1), Home: () => setIndex(0), End: () => setIndex(count - 1) };
         if (count > 1 && keys[event.key]) { event.preventDefault(); keys[event.key](); }
       }}
-      className="lightbox"
+      className={size === "medium" ? "lightbox lightbox--medium" : "lightbox"}
     >
       <div className="flex items-center gap-3 px-4 pt-4 sm:px-6">
         <span className="font-mono text-[12px] tracking-[0.12em]" style={{ color: "var(--ink-2)" }} aria-live="polite">{index + 1} / {count}</span>

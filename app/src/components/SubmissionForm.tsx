@@ -269,8 +269,8 @@ export function SubmissionMedia({ capabilities, thumbnail, thumbnailStage, onRep
     {preparation.failure && <div className="min-w-0 border-t border-(--glass-edge) pt-4"><p role="alert" className="text-[14px]">Video compression could not finish in this browser. Nothing has been uploaded.</p><div className="mt-3 flex flex-wrap gap-3"><button type="button" onClick={preparation.cancel} className="min-h-10 cursor-pointer rounded-lg border border-(--glass-edge) px-3 text-[14px]">Cancel</button><button type="button" onClick={preparation.useOriginal} className="min-h-10 cursor-pointer rounded-lg bg-(--accent) px-3 text-[14px] text-(--on-accent)">Use original</button></div></div>}
     {preparation.note && <p role="status" className="text-[14px] text-(--ink-2)">{preparation.note}</p>}
     {preparation.preview && <LocalVideoPreview file={preparation.preview} onClose={preparation.closePreview} />}
-    {viewer?.kind === "images" && enlarge && <Lightbox start={viewer.start} onClose={() => setViewer(null)} items={images.filter(image => image.stage).map((image, position) => ({ id: image.id, caption: image.caption || undefined, label: `Screenshot ${position + 1}`, content: image.stage, thumb: image.preview }))} />}
-    {viewer?.kind === "thumbnail" && thumbnailStage && <Lightbox start={0} onClose={() => setViewer(null)} items={[{ id: "thumbnail", caption: "Appears on the solution card", label: "Card thumbnail", content: thumbnailStage, thumb: thumbnail }]} />}
+    {viewer?.kind === "images" && enlarge && <Lightbox size="medium" start={viewer.start} onClose={() => setViewer(null)} items={images.filter(image => image.stage).map((image, position) => ({ id: image.id, caption: image.caption || undefined, label: `Screenshot ${position + 1}`, content: image.stage, thumb: image.preview }))} />}
+    {viewer?.kind === "thumbnail" && thumbnailStage && <Lightbox size="medium" start={0} onClose={() => setViewer(null)} items={[{ id: "thumbnail", caption: "Appears on the solution card", label: "Card thumbnail", content: thumbnailStage, thumb: thumbnail }]} />}
     {children}
   </StepShell>;
 }
@@ -604,7 +604,7 @@ export function SubmissionReview({ card, preview, confirm, attachments, contribu
   attachments: number; contributors: string; effort: string; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
 }) {
   // Who sees each value is the round badge beside its label, as in the form (client-facing, or internal only).
-  const rows: [string, string, Visibility?][] = [["Attachments", `${attachments} additional files`, "client"], ["Built by", contributors, "internal"], ["Effort", effort, "internal"], ["Images", images, "client"], ["Safety", safety], ["Client", client || "No client", "internal"], ["Public context", context || "None", "client"], ...(role === undefined ? [] : [["Client role", role || "Not specified", "client"] as [string, string, Visibility]]), ["Next state", nextState]];
+  const rows: [string, string, Visibility?][] = [["Attachments", `${attachments} additional files`, "client"], ["Built by", contributors, "internal"], ["Images", images, "client"], ["Effort", effort, "internal"], ["Safety", safety], ["Client", client || "No client", "internal"], ["Public context", context || "None", "client"], ...(role === undefined ? [] : [["Client role", role || "Not specified", "client"] as [string, string, Visibility]]), ["Next state", nextState]];
   const [previewOpen, setPreviewOpen] = useState(false);
   return <StepShell title="Review & submit"><div className="grid min-w-0 items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
     <div className="mx-auto flex w-full max-w-[400px] min-w-0 flex-col gap-3">
@@ -682,7 +682,7 @@ export function EffortFields({ hours, complexity, onHours, onComplexity, error }
       {error && <p id={`${id}-error`} role="alert" className="mt-1.5 text-[13px] text-(--proto)">{error}</p>}</div>
     <fieldset className="min-w-0">
       <legend className="mb-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>How complex was it to build?<RequiredMark /></legend>
-      <div className="flex flex-wrap gap-2">{COMPLEXITIES.map(option => <label key={option.value} title={option.hint} className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${complexity === option.value ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
+      <div className="flex flex-wrap gap-2">{COMPLEXITIES.map(option => <label key={option.value} title={option.hint} className={`inline-flex w-24 cursor-pointer items-center justify-center gap-2 rounded-full border px-4 py-1.5 text-[13px] font-semibold focus-within:outline-2 focus-within:outline-(--accent) ${complexity === option.value ? "border-(--accent) bg-(--accent) text-(--on-accent)" : "border-(--glass-edge) text-(--ink-2)"}`}>
         <input type="radio" className="sr-only" name={`${id}-complexity`} checked={complexity === option.value} onChange={() => onComplexity(option.value)} />{option.value}
       </label>)}</div>
       {complexity ? <div className="mt-1.5"><ChoiceNote title={complexity}>{COMPLEXITIES.find(option => option.value === complexity)?.hint}</ChoiceNote></div>

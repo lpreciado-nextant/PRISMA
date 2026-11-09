@@ -1587,6 +1587,22 @@
   .lightbox:not([open]) {
     display: none;
   }
+  /* A centred window for checking an image while editing, not the whole screen. */
+  .lightbox--medium {
+    inset: 0;
+    width: min(920px, calc(100vw - 2rem));
+    height: min(640px, calc(100dvh - 2rem));
+    margin: auto;
+    border: 1px solid var(--glass-edge);
+    border-radius: 22px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--ground) 96%, transparent);
+  }
+  .lightbox--medium::backdrop {
+    background: rgb(0 0 0 / 0.55);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
   .lightbox::backdrop {
     background: transparent;
   }
