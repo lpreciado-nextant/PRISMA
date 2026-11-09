@@ -1,5 +1,5 @@
 import { TagPicker } from "../../src/components/TagPicker";
-import { ContributorEditor, ContributorRow, PersonPicker } from "../../src/components/SubmissionForm";
+import { ContributorEditor, ContributorRow, PersonPicker, VisibilityBadge } from "../../src/components/SubmissionForm";
 import type { Contributor, DraftGraph, GraphReferences } from "./draftGraph";
 
 export function DraftGraphEditor({ graph, references, section, onChange, onCreateTechnology }: { graph: DraftGraph; references: GraphReferences; section: "contributors" | "tags"; onChange: (graph: DraftGraph) => void; onCreateTechnology?: (name: string) => Promise<void> }) {
@@ -26,7 +26,7 @@ export function DraftGraphEditor({ graph, references, section, onChange, onCreat
         { key: "industryIds", reference: "industries", label: "Industries", hint: "Industries where it applies." },
         { key: "projectIds", reference: "projects", label: "Projects", hint: "Client projects where it was used." },
       ] as const).map(section => <div key={section.key} className={`min-w-0 ${section.key === "projectIds" ? "lg:col-span-2" : ""}`}>
-        {references[section.reference] === null ? <p className="text-[14px] text-(--ink-2)">{section.label} unavailable. Existing selections retained.</p> : <TagPicker label={section.label} hint={section.hint} optional governed={section.reference !== "technologies"} allowNew={section.reference === "technologies" && !!onCreateTechnology} onCreate={onCreateTechnology} options={(references[section.reference] ?? []).map(option => option.id)} selected={graph[section.key]} getLabel={id => references[section.reference]?.find(option => option.id === id)?.name ?? "Unavailable selection"} onChange={selected => onChange({ ...graph, [section.key]: selected })} />}
+        {references[section.reference] === null ? <p className="text-[14px] text-(--ink-2)">{section.label} unavailable. Existing selections retained.</p> : <TagPicker label={section.label} hint={section.hint} badge={<VisibilityBadge visibility={section.key === "projectIds" ? "internal" : "client"} />} optional governed={section.reference !== "technologies"} allowNew={section.reference === "technologies" && !!onCreateTechnology} onCreate={onCreateTechnology} options={(references[section.reference] ?? []).map(option => option.id)} selected={graph[section.key]} getLabel={id => references[section.reference]?.find(option => option.id === id)?.name ?? "Unavailable selection"} onChange={selected => onChange({ ...graph, [section.key]: selected })} />}
       </div>)}</div>}
   </div>;
 }

@@ -22,7 +22,7 @@ import { effortSummary, estimatedHours } from "../lib/effort";
 import { capabilityAreas } from "../lib/areas";
 import { assertSubmissionReady, UNTITLED_SOLUTION } from "../lib/submissions";
 import { assetPurpose, purposeAllows } from "../lib/assetPurpose";
-import { NamedSection, SolutionDetailsFields, CapabilityFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, LessonsFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, EffortFields, StepShell, PersonPicker, StatusField } from "../components/SubmissionForm";
+import { NamedSection, SolutionDetailsFields, CapabilityFields, ClientFields, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, StoryFields, LessonsFields, SubmissionReview, SubmissionMedia, ImageUploadZone, ContributorEditor, ContributorRow, EffortFields, StepShell, PersonPicker, StatusField, VisibilityBadge } from "../components/SubmissionForm";
 import { BusyOverlay } from "../components/BusyOverlay";
 import { ImageFramer } from "../components/ImageFramer";
 
@@ -421,8 +421,8 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
               mainOwner={draft.capabilities[0] ? CAPABILITIES.find(capability => capability.name === draft.capabilities[0])?.owner ?? null : undefined}
               onMain={value => set("capabilities", [value])} onSecondary={value => set("secondaryCapabilities", value)} />
             </div>
-            <TagPicker label="Technologies" optional options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
-            <TagPicker label="Industries" optional governed hint="Industries where it applies." options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
+            <TagPicker label="Technologies" optional badge={<VisibilityBadge visibility="client" />} options={optionsFrom("technologies")} selected={draft.technologies} onChange={(v) => set("technologies", v)} allowNew />
+            <TagPicker label="Industries" optional badge={<VisibilityBadge visibility="client" />} governed hint="Industries where it applies." options={optionsFrom("industries")} selected={draft.industries} onChange={(v) => set("industries", v)} />
           </StepShell>
         )}
 

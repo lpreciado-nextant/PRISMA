@@ -197,17 +197,17 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
     <Notice icon="shieldAlert" tone="var(--proto)" title="Before uploading">Remove confidential information, personal data and client identifiers.</Notice>
   </>}>
     <fieldset disabled={preparation.busy} className="flex min-w-0 flex-col gap-5">
-    <div><p className="mb-1.5 text-[13.5px] font-semibold">Card thumbnail</p><p className="mb-2 text-[12px] text-(--ink-3)">The card grid's hero image, shown at 16:9. Best at 1920 × 1080 px (at least 1280 × 720). Without one, the card gets a generated poster.</p>
+    <div><p className="mb-1.5 flex flex-wrap items-center gap-2 text-[13.5px] font-semibold">Card thumbnail<VisibilityBadge visibility="client" /></p><p className="mb-2 text-[12px] text-(--ink-3)">The card grid's hero image, shown at 16:9. Best at 1920 × 1080 px (at least 1280 × 720). Without one, the card gets a generated poster.</p>
       {thumbnail ? <div className="flex flex-wrap items-center gap-4"><div className="h-24 w-40 shrink-0 overflow-hidden rounded-[12px] border border-(--glass-edge)">{onPreviewThumbnail ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={onPreviewThumbnail} aria-label="Preview thumbnail">{thumbnail}</button> : thumbnail}</div><button type="button" disabled={disabled} onClick={onRemoveThumbnail} className="cursor-pointer rounded-lg border border-(--glass-edge) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink-2) disabled:opacity-40">Remove</button></div> : thumbnailUpload}
     </div>
-    <div><p className="mb-1.5 text-[13.5px] font-semibold">Detail screenshots · {images.length}/6<RequiredMark /></p><p className="mb-2 text-[12px] text-(--ink-3)">At least one image showing the experience or outcome. A thumbnail alone does not meet this requirement. Best at 1600–2560 px wide. Pixels matter on screen, not DPI.</p>
+    <div><p className="mb-1.5 flex flex-wrap items-center gap-2 text-[13.5px] font-semibold"><span>Detail screenshots · {images.length}/6<RequiredMark /></span><VisibilityBadge visibility="client" /></p><p className="mb-2 text-[12px] text-(--ink-3)">At least one image showing the experience or outcome. A thumbnail alone does not meet this requirement. Best at 1600–2560 px wide. Pixels matter on screen, not DPI.</p>
       <div className="flex flex-col gap-3">{!!images.length && <div className="grid gap-3 sm:grid-cols-2">{images.map(image => <MediaReorderItem key={image.id} id={image.id} ids={images.map(item => item.id)} label={`Screenshot ${images.indexOf(image) + 1}`} group="images" disabled={disabled || attachmentDisabled || linkedDirty} onReorder={onReorderImages} className="min-w-0 overflow-hidden rounded-[14px] border border-(--glass-edge)">
         <div className="aspect-[16/10] w-full overflow-hidden">{onPreviewImage ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={() => onPreviewImage(image.id)} aria-label={`Preview screenshot ${images.indexOf(image) + 1}`}>{image.preview}</button> : image.preview}</div><div className="flex items-center gap-2 p-2"><input disabled={disabled} className={`${submissionInputClass} h-8 min-w-0 flex-1 rounded-lg px-2.5 py-0 text-[12.5px]`} value={image.caption} onChange={event => onCaption(image.id, event.target.value)} placeholder="e.g. Unmatched invoices awaiting review" maxLength={200} aria-label="Screenshot caption" aria-describedby={`caption-hint-${image.id}`} /><button type="button" disabled={disabled} onClick={() => onRemoveImage(image.id)} aria-label="Remove this screenshot" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg text-(--ink-3) disabled:opacity-40"><Icon name="close" size={14} /></button></div>
         <p id={`caption-hint-${image.id}`} className="px-3 pb-3 text-[12px] text-(--ink-3)">Describe the screen or result shown.</p>
       </MediaReorderItem>)}</div>}{images.length < 6 && imageUpload}</div>
     </div>
     <div className="flex min-w-0 flex-col gap-4">
-      <div><p className="text-[13.5px] font-semibold">Demos and material<OptionalMark /></p><p className="mt-0.5 text-[12px] text-(--ink-3)">Add each file where it belongs: demos and background material are kept apart. Up to 6 in total.{local ? " Local preview only." : ""}</p></div>
+      <div><p className="flex flex-wrap items-center gap-2 text-[13.5px] font-semibold"><span>Demos and material<OptionalMark /></span><VisibilityBadge visibility="client" /></p><p className="mt-0.5 text-[12px] text-(--ink-3)">Add each file where it belongs: demos and background material are kept apart. Up to 6 in total.{local ? " Local preview only." : ""}</p></div>
       {ATTACHMENT_SECTIONS.map(section => {
         const items = attachments.filter(item => item.purpose === section.purpose);
         const links = !!onLinkedAsset && section.links;
@@ -420,7 +420,7 @@ export function CapabilityFields<Value extends string>({ groups, main, secondary
   const remaining = all.filter(option => option.value !== main && !secondary.includes(option.value)).map(option => option.value);
   const mainGroup = all.find(option => option.value === main)?.group;
   const single = maxSecondary === 1;
-  const heading = (label: string, required: boolean) => <span className="text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}>{label}{required ? <RequiredMark /> : <OptionalMark />}</span>;
+  const heading = (label: string, required: boolean) => <span className="inline-flex flex-wrap items-center gap-2 text-[13.5px] font-semibold" style={{ fontFamily: "var(--font-display)", color: "var(--ink)" }}><span>{label}{required ? <RequiredMark /> : <OptionalMark />}</span><VisibilityBadge visibility="client" /></span>;
   return <>
     <fieldset className="min-w-0">
       <legend className="float-left w-full">{heading("Main capability", true)}</legend>

@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { checkTechnologyName } from "../lib/technologyName";
 import { Chip } from "./Badges";
 import { Icon } from "./Icon";
@@ -8,7 +8,7 @@ import { OptionalMark, RequiredMark } from "./RequiredMark";
 /** Longer lists get a search box; short ones show every option at once. */
 const SEARCH_THRESHOLD = 12;
 
-export function TagPicker({ label, options, selected, onChange, governed = false, allowNew = false, getLabel = value => value, onCreate, required = false, optional = false, hint }: {
+export function TagPicker({ label, options, selected, onChange, governed = false, allowNew = false, getLabel = value => value, onCreate, required = false, optional = false, hint, badge }: {
   label: string; options: string[]; selected: string[]; onChange: (next: string[]) => void;
   governed?: boolean; allowNew?: boolean; getLabel?: (value: string) => string;
   onCreate?: (name: string) => Promise<void>;
@@ -16,6 +16,8 @@ export function TagPicker({ label, options, selected, onChange, governed = false
   required?: boolean; optional?: boolean;
   /** What the field is for, in one short line. */
   hint?: string;
+  /** Beside the label, such as who sees the field. */
+  badge?: ReactNode;
 }) {
   // A trailing "(…)" in the label, such as "(choose one)", reads as a note: small and regular weight, like "(optional)".
   const [, heading = label, note] = /^(.*?)\s*(\([^)]*\))$/.exec(label) ?? [];
@@ -53,7 +55,7 @@ export function TagPicker({ label, options, selected, onChange, governed = false
   };
   const toggle = (value: string) => onChange(selected.includes(value) ? selected.filter(entry => entry !== value) : [...selected, value]);
   return <fieldset className="min-w-0 border-t border-(--glass-edge) pt-5">
-    <legend className="float-left w-full text-[14px] font-semibold">{heading}{required ? <RequiredMark /> : optional && <OptionalMark />}{note && <span className="ml-1 text-[12px] font-normal text-(--ink-3)">{note}</span>}</legend>
+    <legend className="float-left w-full text-[14px] font-semibold">{heading}{required ? <RequiredMark /> : optional && <OptionalMark />}{note && <span className="ml-1 text-[12px] font-normal text-(--ink-3)">{note}</span>}{badge && <span className="ml-2 inline-flex align-middle">{badge}</span>}</legend>
     <p className="clear-left pt-0.5 text-[12px] text-(--ink-3)">{hint ?? (governed ? "Librarian-managed vocabulary" : "Tools, platforms and languages used to build the solution")}</p>
     {selected.length > 0 && <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label={`Selected ${heading.toLowerCase()}`}>
       {selected.map(value => <Chip key={value} active onClick={() => toggle(value)} title={`Remove ${getLabel(value)}`}><span className="sr-only">Remove </span>{getLabel(value)}<Icon name="close" size={12} /></Chip>)}
