@@ -103,8 +103,8 @@ export function SolutionCard({
 
       <div className="flex flex-1 flex-col gap-2 px-5 pt-4 pb-4">
         {/* Fixed slots: one line of areas, two of title, two of summary, one of tags, so every card lines up. */}
-        {/* Several areas use their initials (AI, DS, IBO) so they always fit one line; the full name is in the tooltip. */}
-        <div className="flex h-[22px] flex-nowrap gap-1.5 overflow-hidden">{solutionAreas(solution).map((area, _, all) => <AreaTag key={area} area={area} size="xs" short={all.length > 1} />)}</div>
+        {/* Always the full area name (initials like IBO confused users); several areas wrap onto a second line. */}
+        <div className="flex min-h-[22px] flex-wrap content-start gap-1.5 overflow-hidden" style={{ maxHeight: 48 }}>{solutionAreas(solution).map(area => <AreaTag key={area} area={area} size="xs" />)}</div>
 
         {/* Title and summary share a fixed block (two lines each), so the summary follows a short title closely. */}
         <div className="card-copy flex flex-col gap-2">
