@@ -855,7 +855,16 @@ test("review summary and success use the baseline presentation", () => {
   assert.match(html, /Effort.*~120 h · Medium/s);
   assert.doesNotMatch(html, /Total effort/);
   assert.match(html, /No client/);
-  assert.match(html, /rounded-xl border/);
+  // One compact summary in two columns, not a bordered box per value.
+  assert.match(html, /<h3[^>]*>Summary<\/h3>/);
+  assert.equal((html.match(/rounded-xl border/g) ?? []).length, 0);
+  assert.match(html, /<dl[^>]*sm:grid-cols-2/);
+  assert.doesNotMatch(html, /Ready to submit\?|Preview full solution/);
+  // With a preview and a confirmation: the preview button above the card, then a compact Ready to submit? section.
+  const full = render(form.SubmissionReview, { card: "Card", preview: "Preview", confirm: createElement("label", null, "Confirm", createElement("input", { type: "checkbox" })), attachments: 0, contributors: "Builder", effort: "", images: "", safety: "", client: "", context: "", nextState: "Pending review" });
+  assert.ok(full.indexOf("Preview full solution") < full.indexOf("Card") && full.indexOf("Card") < full.indexOf("Summary") && full.indexOf("Summary") < full.indexOf("Ready to submit?") && full.indexOf("Ready to submit?") < full.indexOf("Confirm"));
+  assert.match(full, /See exactly how your solution will appear in PRISMA\./);
+  assert.match(full, /Nothing is published until it is approved\./);
   assert.match(render(form.SubmissionSuccess, { name: "Example", onSubmissions: noop, onAnother: noop, children: "is pending review." }), /Now it&#x27;s pending review/);
 });
 

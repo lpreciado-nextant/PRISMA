@@ -583,15 +583,31 @@ export function LessonsFields({ challenges, lessonsLearned, onChange }: { challe
   </NamedSection>;
 }
 
-export function SubmissionReview({ card, preview, attachments, contributors, effort, images, safety, client, context, role, nextState, children }: {
-  card: ReactNode; /** The whole solution page as the published view will show it, below the card. */ preview?: ReactNode; attachments: number; contributors: string; effort: string; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
+export function SubmissionReview({ card, preview, confirm, attachments, contributors, effort, images, safety, client, context, role, nextState, children }: {
+  card: ReactNode; /** The whole solution page as the published view will show it, in a modal opened above the card. */ preview?: ReactNode;
+  /** The contributor's confirmation (a labelled checkbox), shown in a compact "Ready to submit?" section above `children`. */ confirm?: ReactNode;
+  attachments: number; contributors: string; effort: string; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
 }) {
   const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Effort", effort], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ...(role === undefined ? [] : [["Client role", role || "Not specified"]]), ["Next state", nextState]];
   const [previewOpen, setPreviewOpen] = useState(false);
-  return <StepShell title="Review & submit"><div className="grid min-w-0 items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]"><div className="pointer-events-none mx-auto w-full max-w-[400px]" inert>{card}</div><div className="flex min-w-0 flex-col gap-4">
-    {preview && <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={() => setPreviewOpen(true)} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2 text-[14px] font-semibold"><Icon name="maximize" size={16} />Preview full solution</button><span className="text-[13px] text-(--ink-3)">See the whole page as the library will show it.</span></div>}
-    {previewOpen && <PreviewDialog title="Full solution preview" onClose={() => setPreviewOpen(false)}>{preview}</PreviewDialog>}
-    <dl className="grid gap-2 text-[14px] sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="flex min-w-0 gap-3 rounded-xl border border-(--glass-edge) px-3.5 py-2.5"><dt className="w-24 shrink-0 font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="min-w-0 flex-1 break-words text-(--ink)">{value}</dd></div>)}</dl></div></div>{children}
+  return <StepShell title="Review & submit"><div className="grid min-w-0 items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
+    <div className="mx-auto flex w-full max-w-[400px] min-w-0 flex-col gap-3">
+      {preview && <button type="button" onClick={() => setPreviewOpen(true)} className="flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:brightness-110" style={{ borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)", background: "color-mix(in srgb, var(--accent) 10%, transparent)" }}>
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ background: "color-mix(in srgb, var(--accent) 18%, transparent)", color: "var(--accent)" }}><Icon name="maximize" size={18} /></span>
+        <span className="min-w-0"><span className="block text-[14.5px] font-semibold">Preview full solution</span><span className="block text-[12.5px] text-(--ink-2)">See exactly how your solution will appear in PRISMA.</span></span>
+      </button>}
+      <div className="pointer-events-none" inert>{card}</div>
+    </div>
+    <section aria-labelledby="review-summary" className="min-w-0 rounded-[16px] border border-(--glass-edge) p-4 sm:p-5">
+      <h3 id="review-summary" className="eyebrow">Summary</h3>
+      <dl className="mt-3 grid gap-x-8 gap-y-3.5 text-[14px] sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="min-w-0"><dt className="font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="mt-0.5 break-words text-(--ink)">{value}</dd></div>)}</dl>
+    </section>
+  </div>
+  {previewOpen && preview && <PreviewDialog title="Full solution preview" onClose={() => setPreviewOpen(false)}>{preview}</PreviewDialog>}
+  {confirm ? <section aria-labelledby="ready-to-submit" className="flex min-w-0 flex-col gap-3 rounded-[16px] border border-(--glass-edge) p-4 sm:p-5" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}>
+    <div><h3 id="ready-to-submit" className="text-[17px] font-semibold">Ready to submit?</h3><p className="mt-0.5 text-[13px] text-(--ink-2)">Submitting sends it to a librarian for review. Nothing is published until it is approved.</p></div>
+    {confirm}{children}
+  </section> : children}
   </StepShell>;
 }
 
