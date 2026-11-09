@@ -71,7 +71,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     setError("");
     let started = false;
     try {
-      if (!remove && !resume && (!files.length || files.length + state.media.filter(item => item.kind === kind).length > (kind === "thumbnail" ? 1 : 6))) throw new Error("Choose up to six files per media category and one thumbnail.");
+      if (!remove && !resume && (!files.length || (kind === "thumbnail" ? files.length > 1 : files.length + state.media.filter(item => item.kind === kind).length > 6))) throw new Error("Choose up to six files per media category and one thumbnail.");
       if (remove) setLocalVideo(null);
       else if (kind === "attachment") {
         const selected = files[0];
@@ -110,6 +110,16 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
         if (file.size > 5 * 1024 * 1024) throw new Error("Converted image exceeds 5 MB.");
       }
       controller.signal.throwIfAborted();
+      // A new thumbnail takes the place of the current one: the old file is removed first, in the same operation.
+      const previousThumbnail = file && !remove && kind === "thumbnail" ? next.media.find(item => item.kind === "thumbnail" && item.complete) : undefined;
+      if (previousThumbnail) {
+        started = true;
+        const before = next.rowVersion;
+        next = await mediaRequest(mediaApi.remove(saved.id, before, previousThumbnail.sessionId), controller.signal);
+        if (next.id !== saved.id || next.rowVersion === before) throw new Error("Unconfirmed media update.");
+        setState(next);
+        onVersion(next.rowVersion);
+      }
       const videoTransfer = !remove && kind === "attachment" && /\.(mp4|webm)$/i.test(file!.name);
       if (!videoTransfer) started = true;
       const version = next.rowVersion;
@@ -216,7 +226,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       onRenameAttachment={rename}
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
-      thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} thumbnailStage={thumbnail && <StageImage item={thumbnail} />} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
+      thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} thumbnailStage={thumbnail && <StageImage item={thumbnail} />} onReplaceThumbnail={file => setFraming(file)} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
       thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => files[0] && setFraming(files[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:9 · 1920 × 1080 px · you frame it next" />}
       images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" />, stage: <StageImage item={item} /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}

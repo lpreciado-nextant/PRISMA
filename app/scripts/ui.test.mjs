@@ -521,7 +521,9 @@ test("media files demos, interactive demos and supporting material in their own 
     attachments: [{ id: "video", name: "walkthrough.mp4", purpose: "Demo video" }, { id: "html", name: "demo.html", purpose: "Interactive demo" }, { id: "deck", name: "deck.pdf", purpose: "Supporting material" }] };
   const html = render(form.SubmissionMedia, props);
   assert.match(html, /Detail screenshots · 1\/6/);
-  assert.match(html, /aria-label="Screenshot caption"/);
+  // Each screenshot has a visible Description label; there is no per-card helper line.
+  assert.match(html, /<label[^>]*>Description<\/label>/);
+  assert.doesNotMatch(html, /Describe the screen or result shown/);
   // The notices sit under the legend line, above the first field.
   assert.ok(html.indexOf("Only the solution name is needed") < html.indexOf("What to show") && html.indexOf("What to show") < html.indexOf("Before uploading") && html.indexOf("Before uploading") < html.indexOf("Card thumbnail"));
   assert.ok(html.indexOf("Card thumbnail") < html.indexOf("Detail screenshots"));
@@ -546,15 +548,18 @@ test("media files demos, interactive demos and supporting material in their own 
   assert.match(linked, /Online demo:<\/strong> Share a link to an existing app or prototype\./);
   assert.match(linked, /Share links:<\/strong> Add links to documents, Excel workbooks, SharePoint, OneDrive/);
   assert.match(linked, /convert them to PDF or share a link instead\./);
-  // With preview-size images, a click shows the image in the preview above the cards instead of opening it below the step.
-  const staged = render(form.SubmissionMedia, { ...props, thumbnail: "Thumb", thumbnailStage: "Thumb large", onPreviewImage: noop, onPreviewThumbnail: noop,
+  // With viewing-size images, a click opens a modal that pages through the screenshots; there is no always-on preview above.
+  const staged = render(form.SubmissionMedia, { ...props, thumbnail: "Thumb", thumbnailStage: "Thumb large", onReplaceThumbnail: noop, onPreviewImage: noop, onPreviewThumbnail: noop,
     images: [{ id: "image", caption: "Overview", preview: "Small", stage: "Large one" }, { id: "image2", caption: "", preview: "Small 2", stage: "Large two" }] });
-  assert.ok(staged.indexOf("aria-label=\"Image preview\"") < staged.indexOf("Card thumbnail") && staged.indexOf("Large one") < staged.indexOf("Card thumbnail"));
-  assert.match(staged, /Click the thumbnail or a screenshot below to see it here\./);
-  assert.match(staged, /aria-label="Show screenshot 2 in the preview" aria-pressed="false"/);
-  assert.match(staged, /aria-label="Show thumbnail in the preview" aria-pressed="false"/);
+  assert.doesNotMatch(staged, /aria-label="Image preview"|Large one|Large two/);
+  assert.match(staged, /aria-label="View screenshot 2 larger"/);
+  assert.match(staged, /aria-label="View the card thumbnail larger"/);
   assert.doesNotMatch(staged, /aria-label="Preview screenshot|aria-label="Preview thumbnail"/);
-  assert.match(staged, /aria-label="Screenshot caption"/);
+  // The thumbnail stays its own compact block: small preview, where it appears, Replace and Remove.
+  assert.match(staged, /Appears on the solution card, at 16:9\. Best at 1920 × 1080 px\./);
+  assert.match(staged, /aria-label="Replace the card thumbnail"/);
+  assert.ok(staged.indexOf("Card thumbnail") < staged.indexOf("Detail screenshots"));
+  assert.match(staged, /aria-label="Remove screenshot 1"/);
   const stored = render(form.SubmissionMedia, { ...props, attachments: [{ id: "deck", name: "deck.pdf", purpose: "Supporting material", mime: "application/pdf", size: 2516582 }] });
   assert.match(stored, /PDF · 2\.4 MB · Downloaded, not previewed in PRISMA\./);
   assert.match(html, /has-\[:focus-visible\]:outline-offset-2/);

@@ -5,6 +5,7 @@ import { SectionCardsContext } from "./sectionCards";
 import { OptionalMark, RequiredLegend, RequiredMark } from "./RequiredMark";
 import { PreviewDialog } from "./PreviewDialog";
 import { Notice } from "./Notice";
+import { Lightbox } from "./Lightbox";
 import { LoadingState, ProgressRail } from "./LoadingState";
 import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
@@ -153,8 +154,8 @@ function MediaTips({ capabilities }: { capabilities: string[] }) {
   </>;
 }
 
-export function SubmissionMedia({ capabilities, thumbnail, thumbnailStage, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onRenameAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
-  capabilities: string[]; thumbnail?: ReactNode; /** The thumbnail at preview size; with it and each image's `stage`, a click shows the image in the preview above instead of opening it below. */ thumbnailStage?: ReactNode; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
+export function SubmissionMedia({ capabilities, thumbnail, thumbnailStage, onReplaceThumbnail, onRemoveThumbnail, thumbnailUpload, images, imageUpload, onCaption, onRemoveImage, onAttachment, attachments, onRemoveAttachment, onRenameAttachment, onPreviewThumbnail, onPreviewImage, onPreviewAttachment, onLinkedAsset, onLinkedPending, onReorderImages, onReorderAttachments, onPreparationBusy, disabled = false, attachmentDisabled = false, local = false, children }: {
+  capabilities: string[]; thumbnail?: ReactNode; /** The thumbnail at viewing size; with each image's `stage`, a click opens it in a modal (screenshots can be paged through). */ thumbnailStage?: ReactNode; /** Chooses a new thumbnail to frame and swap in for the current one. */ onReplaceThumbnail?: (file: File) => void; onRemoveThumbnail: () => void; thumbnailUpload: ReactNode;
   images: { id: string; preview: ReactNode; stage?: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
   /** A file added to one of the three sections; the section sets its purpose (ADR-0011). Videos arrive after compression. */
   onAttachment: (file: File, purpose: AssetPurpose) => void;
@@ -170,18 +171,9 @@ export function SubmissionMedia({ capabilities, thumbnail, thumbnailStage, onRem
   const [linkEditor, setLinkEditor] = useState<{ purpose: AssetPurpose; type: LinkAssetType; id?: string } | null>(null);
   const [linkedDirty, setLinkedDirty] = useState(false);
   const [nameEditor, setNameEditor] = useState<string | null>(null);
-  // The image shown large in the preview: what was last clicked, else the first screenshot, else the thumbnail.
-  const [shown, setShown] = useState<string | null>(null);
-  const stageRef = useRef<HTMLElement>(null);
-  const staged = !!thumbnailStage || images.some(image => image.stage);
-  const shownId = shown === "thumbnail" && thumbnailStage ? "thumbnail" : images.some(image => image.id === shown) ? shown : images[0]?.id ?? (thumbnailStage ? "thumbnail" : null);
-  const shownImage = images.find(image => image.id === shownId);
-  const showInPreview = (id: string) => {
-    setShown(id);
-    // The preview sits above the cards: bring it into view if the click was further down.
-    const frame = stageRef.current;
-    if (frame && frame.getBoundingClientRect().top < 0) frame.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-  };
+  // The modal viewer: the thumbnail on its own, or the screenshots from the one clicked, with previous and next.
+  const [viewer, setViewer] = useState<{ kind: "thumbnail" } | { kind: "images"; start: number } | null>(null);
+  const enlarge = images.some(image => image.stage);
   // The section a video was added to, carried through compression.
   const videoPurpose = useRef<AssetPurpose>("Demo video");
   const preparation = useVideoPreparation(file => onAttachment(file, videoPurpose.current), onPreparationBusy);
@@ -209,18 +201,22 @@ export function SubmissionMedia({ capabilities, thumbnail, thumbnailStage, onRem
     <Notice icon="shieldAlert" tone="var(--proto)" title="Before uploading">Remove confidential information, personal data and client identifiers.</Notice>
   </>}>
     <fieldset disabled={preparation.busy} className="flex min-w-0 flex-col gap-5">
-    {staged && shownId && <section ref={stageRef} aria-label="Image preview" className="min-w-0 rounded-[16px] border border-(--glass-edge) p-3 sm:p-4" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}>
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1"><p className="text-[13.5px] font-semibold">Preview · {shownId === "thumbnail" ? "Card thumbnail" : `Screenshot ${images.findIndex(image => image.id === shownId) + 1}`}</p><p className="text-[12px] text-(--ink-3)">Click the thumbnail or a screenshot below to see it here.</p></div>
-      <div className={`mx-auto w-full overflow-hidden rounded-[12px] border border-(--glass-edge) ${shownId === "thumbnail" ? "aspect-[16/9] max-w-[640px]" : "aspect-[16/10] max-w-[720px]"}`} style={{ background: "color-mix(in srgb, var(--ground) 70%, transparent)" }}>{shownId === "thumbnail" ? thumbnailStage : shownImage?.stage}</div>
-      {shownImage && !!shownImage.caption.trim() && <p className="mx-auto mt-2 max-w-[720px] text-center text-[13px] text-(--ink-2)">{shownImage.caption}</p>}
-    </section>}
-    <div><p className="mb-1.5 flex flex-wrap items-center gap-2 text-[13.5px] font-semibold">Card thumbnail<VisibilityBadge visibility="client" /></p><p className="mb-2 text-[12px] text-(--ink-3)">The card grid's hero image, shown at 16:9. Best at 1920 × 1080 px (at least 1280 × 720). Without one, the card gets a generated poster.</p>
-      {thumbnail ? <div className="flex flex-wrap items-center gap-4"><div className="h-24 w-40 shrink-0 overflow-hidden rounded-[12px] border border-(--glass-edge)">{staged && thumbnailStage ? <button type="button" className={`h-full w-full cursor-pointer ${shownId === "thumbnail" ? "ring-2 ring-(--accent) ring-inset" : ""}`} onClick={() => showInPreview("thumbnail")} aria-label="Show thumbnail in the preview" aria-pressed={shownId === "thumbnail"}>{thumbnail}</button> : onPreviewThumbnail ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={onPreviewThumbnail} aria-label="Preview thumbnail">{thumbnail}</button> : thumbnail}</div><button type="button" disabled={disabled} onClick={onRemoveThumbnail} className="cursor-pointer rounded-lg border border-(--glass-edge) px-3 py-1.5 text-[12.5px] font-semibold text-(--ink-2) disabled:opacity-40">Remove</button></div> : thumbnailUpload}
+    <div><p className="mb-1.5 flex flex-wrap items-center gap-2 text-[13.5px] font-semibold">Card thumbnail<VisibilityBadge visibility="client" /></p>
+      {thumbnail ? <div className="flex flex-wrap items-center gap-4">
+        <div className="h-[72px] w-32 shrink-0 overflow-hidden rounded-[10px]">{thumbnailStage ? <button type="button" className="h-full w-full cursor-zoom-in" onClick={() => setViewer({ kind: "thumbnail" })} aria-label="View the card thumbnail larger">{thumbnail}</button> : onPreviewThumbnail ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={onPreviewThumbnail} aria-label="Preview thumbnail">{thumbnail}</button> : thumbnail}</div>
+        <div className="min-w-0 flex-1"><p className="text-[12.5px] text-(--ink-2)">Appears on the solution card, at 16:9. Best at 1920 × 1080 px.</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {onReplaceThumbnail && <label className={`inline-flex min-h-8 items-center rounded-lg border border-(--glass-edge) px-3 text-[12.5px] font-semibold text-(--ink-2) has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-(--accent) ${disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer hover:bg-(--glass-edge)"}`}><input type="file" accept="image/png,image/jpeg,image/webp" disabled={disabled} className="sr-only" aria-label="Replace the card thumbnail" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onReplaceThumbnail(file); }} />Replace</label>}
+            <button type="button" disabled={disabled} onClick={onRemoveThumbnail} className="inline-flex min-h-8 cursor-pointer items-center rounded-lg border border-(--glass-edge) px-3 text-[12.5px] font-semibold text-(--ink-2) hover:bg-(--glass-edge) disabled:opacity-40">Remove</button>
+          </div></div>
+      </div> : <><p className="mb-2 text-[12px] text-(--ink-3)">Appears on the solution card, at 16:9. Best at 1920 × 1080 px (at least 1280 × 720). Without one, the card gets a generated poster.</p>{thumbnailUpload}</>}
     </div>
-    <div><p className="mb-1.5 flex flex-wrap items-center gap-2 text-[13.5px] font-semibold"><span>Detail screenshots · {images.length}/6<RequiredMark /></span><VisibilityBadge visibility="client" /></p><p className="mb-2 text-[12px] text-(--ink-3)">At least one image showing the experience or outcome. A thumbnail alone does not meet this requirement. Best at 1600–2560 px wide. Pixels matter on screen, not DPI.</p>
-      <div className="flex flex-col gap-3">{!!images.length && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{images.map(image => <MediaReorderItem key={image.id} id={image.id} ids={images.map(item => item.id)} label={`Screenshot ${images.indexOf(image) + 1}`} group="images" disabled={disabled || attachmentDisabled || linkedDirty} onReorder={onReorderImages} className="min-w-0 overflow-hidden rounded-[14px] border border-(--glass-edge)">
-        <div className="aspect-[16/10] w-full overflow-hidden">{image.stage ? <button type="button" className={`h-full w-full cursor-pointer ${shownId === image.id ? "ring-2 ring-(--accent) ring-inset" : ""}`} onClick={() => showInPreview(image.id)} aria-label={`Show screenshot ${images.indexOf(image) + 1} in the preview`} aria-pressed={shownId === image.id}>{image.preview}</button> : onPreviewImage ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={() => onPreviewImage(image.id)} aria-label={`Preview screenshot ${images.indexOf(image) + 1}`}>{image.preview}</button> : image.preview}</div><div className="flex items-center gap-2 p-2"><input disabled={disabled} className={`${submissionInputClass} h-8 min-w-0 flex-1 rounded-lg px-2.5 py-0 text-[12.5px]`} value={image.caption} onChange={event => onCaption(image.id, event.target.value)} placeholder="e.g. Unmatched invoices awaiting review" maxLength={200} aria-label="Screenshot caption" aria-describedby={`caption-hint-${image.id}`} /><button type="button" disabled={disabled} onClick={() => onRemoveImage(image.id)} aria-label="Remove this screenshot" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg text-(--ink-3) disabled:opacity-40"><Icon name="close" size={14} /></button></div>
-        <p id={`caption-hint-${image.id}`} className="px-3 pb-3 text-[12px] text-(--ink-3)">Describe the screen or result shown.</p>
+    <div><p className="mb-1.5 flex flex-wrap items-center gap-2 text-[13.5px] font-semibold"><span>Detail screenshots · {images.length}/6<RequiredMark /></span><VisibilityBadge visibility="client" /></p><p className="mb-3 text-[12px] text-(--ink-3)">Show the experience or outcome: at least one, up to 6. Best at 1600–2560 px wide. A thumbnail alone doesn't count.</p>
+      <div className="flex flex-col gap-4">{!!images.length && <div className="grid gap-x-4 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">{images.map((image, position) => <MediaReorderItem key={image.id} id={image.id} ids={images.map(item => item.id)} label={`Screenshot ${position + 1}`} group="images" disabled={disabled || attachmentDisabled || linkedDirty} onReorder={onReorderImages} className="min-w-0">
+        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-[12px]">{image.stage ? <button type="button" className="h-full w-full cursor-zoom-in" onClick={() => setViewer({ kind: "images", start: position })} aria-label={`View screenshot ${position + 1} larger`}>{image.preview}</button> : onPreviewImage ? <button type="button" className="h-full w-full cursor-pointer" disabled={disabled} onClick={() => onPreviewImage(image.id)} aria-label={`Preview screenshot ${position + 1}`}>{image.preview}</button> : image.preview}
+          <span aria-hidden="true" className="pointer-events-none absolute top-2 left-2 grid size-6 place-items-center rounded-full font-mono text-[11px] font-semibold text-(--ink)" style={{ background: "color-mix(in srgb, var(--ground) 80%, transparent)" }}>{position + 1}</span></div>
+        <label htmlFor={`caption-${image.id}`} className="mt-2 block text-[11.5px] font-semibold text-(--ink-2)">Description</label>
+        <div className="mt-1 flex items-center gap-2"><input id={`caption-${image.id}`} disabled={disabled} className={`${submissionInputClass} h-8 min-w-0 flex-1 rounded-lg px-2.5 py-0 text-[12.5px]`} value={image.caption} onChange={event => onCaption(image.id, event.target.value)} placeholder="e.g. Unmatched invoices awaiting review" maxLength={200} /><button type="button" disabled={disabled} onClick={() => onRemoveImage(image.id)} aria-label={`Remove screenshot ${position + 1}`} title="Remove" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-lg text-(--ink-3) hover:bg-(--glass-edge) disabled:opacity-40"><Icon name="close" size={14} /></button></div>
       </MediaReorderItem>)}</div>}{images.length < 6 && imageUpload}</div>
     </div>
     <div className="flex min-w-0 flex-col gap-4">
@@ -273,6 +269,8 @@ export function SubmissionMedia({ capabilities, thumbnail, thumbnailStage, onRem
     {preparation.failure && <div className="min-w-0 border-t border-(--glass-edge) pt-4"><p role="alert" className="text-[14px]">Video compression could not finish in this browser. Nothing has been uploaded.</p><div className="mt-3 flex flex-wrap gap-3"><button type="button" onClick={preparation.cancel} className="min-h-10 cursor-pointer rounded-lg border border-(--glass-edge) px-3 text-[14px]">Cancel</button><button type="button" onClick={preparation.useOriginal} className="min-h-10 cursor-pointer rounded-lg bg-(--accent) px-3 text-[14px] text-(--on-accent)">Use original</button></div></div>}
     {preparation.note && <p role="status" className="text-[14px] text-(--ink-2)">{preparation.note}</p>}
     {preparation.preview && <LocalVideoPreview file={preparation.preview} onClose={preparation.closePreview} />}
+    {viewer?.kind === "images" && enlarge && <Lightbox start={viewer.start} onClose={() => setViewer(null)} items={images.filter(image => image.stage).map((image, position) => ({ id: image.id, caption: image.caption || undefined, label: `Screenshot ${position + 1}`, content: image.stage, thumb: image.preview }))} />}
+    {viewer?.kind === "thumbnail" && thumbnailStage && <Lightbox start={0} onClose={() => setViewer(null)} items={[{ id: "thumbnail", caption: "Appears on the solution card", label: "Card thumbnail", content: thumbnailStage, thumb: thumbnail }]} />}
     {children}
   </StepShell>;
 }
