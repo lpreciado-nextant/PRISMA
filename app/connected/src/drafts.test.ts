@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EMPTY_DRAFT, coreFields, snapshot, loadDrafts, loadDraftReferences, saveDraft, type DraftApi, type SavedDraft } from "./drafts.ts";
 import { emptyGraph, graphPayload, initialContributor, isEmptyContributor, loadGraphReferences, parseGraph, persistDraftGraph, type DraftGraph, type GraphApi } from "./draftGraph.ts";
-import { hasCaptionChanges, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaName, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaApi } from "./media.ts";
+import { hasCaptionChanges, hasDuplicateOrder, repairMediaOrder, imageDataUrl, mediaRequest, parseMedia, parseUploadProgress, saveMediaCaptions, saveMediaName, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaApi } from "./media.ts";
 import { createTechnology, deleteSubmission, mediaAsset, parseSubmission, parsePublished, loadSubmissions, loadSubmissionCardDetails, saveLinkedAsset, submissionSolution, type WorkflowApi } from "./workflow.ts";
 import { parseRecovery, recoveryPayload } from "./draftRecovery.ts";
 import { validateLinkedAsset, type LinkedAssetInput } from "../../src/lib/linkedAssets.ts";
@@ -721,4 +721,22 @@ test("draft references give each capability its specialization area, in sort ord
   const capabilities = calls.find(([table]) => table === "capabilities")?.[1];
   assert.ok(capabilities?.select?.includes("_nx_specializationarea_value"));
   assert.equal(capabilities?.orderBy?.[0], "nx_sortordernumber asc");
+});
+
+test("repeated media order numbers are detected and repaired into one contiguous order", async () => {
+  const first = { id: draft.id, sessionId: draft.id, kind: "image" as const, name: "first.png", mime: "image/png", size: 1, received: 1, nextBlock: 1, complete: true, caption: "First", sortOrder: 1 };
+  const second = { ...first, id: spare, sessionId: spare, caption: "Second", sortOrder: 1 };
+  assert.equal(hasDuplicateOrder([first, second]), true);
+  assert.equal(hasDuplicateOrder([first, { ...second, sortOrder: 2 }]), false);
+  assert.equal(hasDuplicateOrder([first, { ...second, sortOrder: 1, complete: false }]), false);
+  const state = { id: draft.id, rowVersion: draft.rowVersion, sessionId: null, blockSize: 524288, media: [first, second] };
+  const api = { metadata: async (id: string, version: string, json: string) => {
+    assert.equal(version, draft.rowVersion);
+    assert.deepEqual(JSON.parse(json), [{ id: first.id, caption: "First", sortOrder: 0 }, { id: second.id, caption: "Second", sortOrder: 1 }]);
+    return result({ id, rowVersion: "90071992547409933", sessionId: null, blockSize: 524288, media: [{ ...first, sortOrder: 0 }, { ...second, sortOrder: 1 }] });
+  } };
+  const repaired = await repairMediaOrder(api, state as Parameters<typeof repairMediaOrder>[1], signal());
+  assert.deepEqual(repaired.media.map(item => item.sortOrder), [0, 1]);
+  assert.equal(hasDuplicateOrder(repaired.media), false);
+  await assert.rejects(repairMediaOrder({ metadata: async () => result({ id: draft.id, rowVersion: draft.rowVersion, sessionId: null, blockSize: 524288, media: [first, second] }) }, state as Parameters<typeof repairMediaOrder>[1], signal()), /not confirmed|Unconfirmed/);
 });

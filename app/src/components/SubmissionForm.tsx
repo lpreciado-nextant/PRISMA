@@ -36,7 +36,7 @@ const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> 
 
 const STEP_INTRODUCTIONS: Record<string, string> = {
   "Before you start": "Help keep PRISMA content safe and ready to present to clients.",
-  "Define the solution": "What it is and why it matters, as CSMs will tell it.",
+  "Define the solution": "What it is and why it matters.",
   "Solution context": "Where it stands, who built it, and any client involved.",
   Status: "How mature the solution is today.",
   "Solution details": "The card's first impression: a product-like name and a one-line summary.",
@@ -44,7 +44,7 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
   "Challenges & lessons learned": "What made it hard and what the next team should know. Internal only.",
   "Solution contributors": "Everyone who worked on it, including the CSM, and how complex it was. Internal tracking only.",
   "What does it do, and why does it matter?": "Write it for someone who wasn't on the project.",
-  "Classify & tag": "Pick the main capability, then add technologies, industries and projects so CSMs can find it.",
+  "Classify & tag": "Pick the main capability, then add technologies, industries and projects so it can be found later.",
   Media: "Add at least one screenshot. Thumbnail, video, slides and HTML demo are optional.",
   "Review & submit": "This is how the card will look in the library once approved.",
 };

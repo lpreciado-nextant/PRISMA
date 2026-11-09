@@ -12,7 +12,7 @@ import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/comp
 import { mediaApi, downloadMedia, workflowApi, transferApi } from "./dataSource";
 import { transferVideo, type PlaybackMode } from "./mediaTransfer";
 import { StreamingVideo } from "./StreamingVideo";
-import { imageDataUrl, mediaRequest, saveMediaCaptions, saveMediaName, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
+import { hasDuplicateOrder, repairMediaOrder, imageDataUrl, mediaRequest, saveMediaCaptions, saveMediaName, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
 import { defaultPurpose, type AssetPurpose } from "../../src/lib/assetPurpose";
 import type { SavedDraft } from "./drafts";
 import { mediaAsset, saveLinkedAsset } from "./workflow";
@@ -33,6 +33,8 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   const [preview, setPreview] = useState<MediaItem | null>(null);
   // The card thumbnail is framed to 16:9 before it is uploaded.
   const [framing, setFraming] = useState<File | null>(null);
+  // A chosen replacement waits for a confirmation: the current thumbnail is removed when the new one is saved.
+  const [replacement, setReplacement] = useState<File | null>(null);
   const [localVideo, setLocalVideo] = useState<File | null>(null);
   const [removeTarget, setRemoveTarget] = useState<MediaItem | null>(null);
   const operation = useRef<AbortController | null>(null);
@@ -144,6 +146,13 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       onVersion(next.rowVersion);
       setUploadFile(null);
       }
+      // The server numbers a new file "files so far + 1", which repeats a number after a file was removed from the middle.
+      // Saving the order as it is shown (1, 2, 3...) keeps it the same when the draft is reopened.
+      const repaired = hasDuplicateOrder(next.media) && next.media.every(item => item.complete) ? await repairMediaOrder(mediaApi, next, controller.signal) : null;
+      if (repaired) {
+        setState(repaired);
+        onVersion(repaired.rowVersion);
+      }
     } catch {
       setLocalVideo(null);
       if (!started) setUploadFile(null);
@@ -226,7 +235,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       onRenameAttachment={rename}
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
-      thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} thumbnailStage={thumbnail && <StageImage item={thumbnail} />} onReplaceThumbnail={file => setFraming(file)} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
+      thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} thumbnailStage={thumbnail && <StageImage item={thumbnail} />} onReplaceThumbnail={file => setReplacement(file)} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
       thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => files[0] && setFraming(files[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:9 · 1920 × 1080 px · you frame it next" />}
       images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" />, stage: <StageImage item={item} /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}
@@ -242,6 +251,9 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     {uploadFile && <PreparedFileDownload file={uploadFile} />}
     {!busy && !uncertain && !blocked && state?.media.filter(item => !item.complete && item.mime.startsWith("video/")).map(item => <label key={item.sessionId} className="block text-[14px]">Resume {item.name}<input type="file" accept=".mp4,.webm" className="mt-2 block max-w-full" disabled={disabled} onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) { setUploadFile(file); void mutate([file], "attachment", undefined, item); } }} /></label>)}
     {localVideo && !uncertain && !blocked && <LocalVideoPreview file={localVideo} onClose={() => setLocalVideo(null)} />}
+    {replacement && <ConfirmDialog title="Replace the card thumbnail?" confirmLabel="Continue" onCancel={() => setReplacement(null)} onConfirm={() => { const file = replacement; setReplacement(null); setFraming(file); }}>
+      <p className="text-[14px]">The current thumbnail is removed when the new one is saved. If that upload fails, you will need to add a thumbnail again.</p>
+    </ConfirmDialog>}
     {framing && <ImageFramer source={framing} name={framing.name} onCancel={() => setFraming(null)} onConfirm={file => { setFraming(null); void mutate([file], "thumbnail"); }} />}
     {preview && <MediaPreview key={preview.id} item={preview} solutionId={saved.id} mode="submission" onClose={() => setPreview(null)} />}
     {removeTarget && <ConfirmDialog title="Remove attachment?" confirmLabel="Remove attachment" onCancel={() => setRemoveTarget(null)} onConfirm={() => { setRemoveTarget(null); void mutate([], removeTarget.kind, removeTarget); }}><p className="mb-3 font-semibold text-(--ink)">{removeTarget.name}</p><p>This file will be removed from the saved draft.</p></ConfirmDialog>}

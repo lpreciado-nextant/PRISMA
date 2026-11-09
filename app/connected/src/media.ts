@@ -92,6 +92,19 @@ export async function mediaRequest(operation: Promise<unknown>, signal: AbortSig
   } finally { deadline.removeEventListener("abort", abort); }
 }
 
+/** Two saved files with the same order number would swap places when the draft is reopened (the server breaks ties by id). */
+export function hasDuplicateOrder(media: MediaItem[]): boolean {
+  const orders = media.filter(item => item.complete).map(item => item.sortOrder ?? 0);
+  return new Set(orders).size !== orders.length;
+}
+
+/** Saves the order as the files are shown (0, 1, 2...), so no two share a number; confirms the same files came back. */
+export async function repairMediaOrder(api: Pick<MediaApi, "metadata">, state: MediaState, signal: AbortSignal): Promise<MediaState> {
+  const next = await saveMediaOrder(api, state, state.media, state.media.map(item => item.id), signal);
+  if (next.id !== state.id || next.rowVersion === state.rowVersion) throw new Error("Unconfirmed media order.");
+  return next;
+}
+
 export function hasCaptionChanges(media: MediaItem[], captions: Record<string, string>): boolean {
   return media.some(item => item.kind === "image" && item.complete && captions[item.id] !== undefined && captions[item.id] !== (item.caption ?? ""));
 }
