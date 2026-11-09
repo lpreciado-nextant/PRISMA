@@ -3,6 +3,7 @@ import { Icon, type IconName } from "./Icon";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { SectionCardsContext } from "./sectionCards";
 import { OptionalMark, RequiredLegend, RequiredMark } from "./RequiredMark";
+import { PreviewDialog } from "./PreviewDialog";
 import { Notice } from "./Notice";
 import { LoadingState, ProgressRail } from "./LoadingState";
 import { Chip } from "./Badges";
@@ -559,11 +560,10 @@ export function SubmissionReview({ card, preview, attachments, contributors, eff
   card: ReactNode; /** The whole solution page as the published view will show it, below the card. */ preview?: ReactNode; attachments: number; contributors: string; effort: string; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
 }) {
   const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Effort", effort], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ...(role === undefined ? [] : [["Client role", role || "Not specified"]]), ["Next state", nextState]];
+  const [previewOpen, setPreviewOpen] = useState(false);
   return <StepShell title="Review & submit"><div className="pointer-events-none mx-auto w-full max-w-[400px]" inert>{card}</div>
-    {preview && <section aria-labelledby="full-preview-title" className="flex min-w-0 flex-col gap-3">
-      <div><h3 id="full-preview-title" className="text-[16px] font-semibold">Full solution preview</h3><p className="mt-1 text-[13.5px] text-(--ink-2)">This is the solution page as people will see it once it is published. It is read-only: go back to a step to change anything.</p></div>
-      <div className="min-w-0 rounded-[20px] border border-dashed border-(--glass-edge) p-3 sm:p-4" inert>{preview}</div>
-    </section>}
+    {preview && <div className="flex flex-wrap items-center justify-center gap-3"><button type="button" onClick={() => setPreviewOpen(true)} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2 text-[14px] font-semibold"><Icon name="maximize" size={16} />Preview full solution</button><span className="text-[13px] text-(--ink-3)">See the whole page as the library will show it.</span></div>}
+    {previewOpen && <PreviewDialog title="Full solution preview" onClose={() => setPreviewOpen(false)}>{preview}</PreviewDialog>}
     <dl className="grid gap-2 text-[14px] sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="flex min-w-0 gap-3 rounded-xl border border-(--glass-edge) px-3.5 py-2.5"><dt className="w-24 shrink-0 font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="min-w-0 flex-1 break-words text-(--ink)">{value}</dd></div>)}</dl>{children}
   </StepShell>;
 }
