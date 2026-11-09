@@ -21,11 +21,11 @@ export function DraftGraphEditor({ graph, references, section, onChange, onCreat
           level={person.personId ? references.people?.find(option => option.id === person.personId)?.level ?? null : undefined}
           person={<><PersonPicker value={people.find(option => option.id === person.personId) ?? { id: person.personId, name: person.personId ? "Existing consultant (inactive or unavailable)" : "" }} options={people} onChange={value => update(index, { personId: value.id })} />{references.people !== null && person.personId && !people.some(option => option.id === person.personId) && <p role="status" className="mt-2 text-[13px] text-(--proto)">This saved consultant is no longer active or available. Select an active consultant to replace them.</p>}</>} />;
       })}
-    </ContributorEditor> : <div className="space-y-5">{([
+    </ContributorEditor> : <div className="grid gap-5 lg:grid-cols-2">{([
         { key: "technologyIds", reference: "technologies", label: "Technologies", hint: "Tools, platforms and languages used to build the solution" },
         { key: "industryIds", reference: "industries", label: "Industries", hint: "Industries where it applies." },
         { key: "projectIds", reference: "projects", label: "Projects", hint: "Client projects where it was used." },
-      ] as const).map(section => <div key={section.key}>
+      ] as const).map(section => <div key={section.key} className={`min-w-0 ${section.key === "projectIds" ? "lg:col-span-2" : ""}`}>
         {references[section.reference] === null ? <p className="text-[14px] text-(--ink-2)">{section.label} unavailable. Existing selections retained.</p> : <TagPicker label={section.label} hint={section.hint} optional governed={section.reference !== "technologies"} allowNew={section.reference === "technologies" && !!onCreateTechnology} onCreate={onCreateTechnology} options={(references[section.reference] ?? []).map(option => option.id)} selected={graph[section.key]} getLabel={id => references[section.reference]?.find(option => option.id === id)?.name ?? "Unavailable selection"} onChange={selected => onChange({ ...graph, [section.key]: selected })} />}
       </div>)}</div>}
   </div>;

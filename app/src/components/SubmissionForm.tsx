@@ -358,20 +358,20 @@ export function SolutionDetailsFields<Area extends string, Status extends string
     if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));
     else if (selectedAreas.length < maxAreas) onAreas([...selectedAreas, option]);
   };
-  const naming = <>
+  const naming = <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
     <Field label="Solution name" required hint="A short product name people will remember."><input className={submissionInputClass} value={value.name} onChange={event => onText("name", event.target.value)} placeholder="e.g. Ledger Reconciler" maxLength={100} /></Field>
     <Field label="One-line summary" required hint={`Who it's for and what it does for them, in one sentence. ${value.summary.length}/200 characters.`}><input className={submissionInputClass} value={value.summary} onChange={event => onText("summary", event.target.value)} placeholder="e.g. Helps finance teams match invoices to payments." maxLength={200} /></Field>
-  </>;
+  </div>;
   const classification = <>
     {picker ?? (selectedAreas && onAreas
       ? <Field label="Specialization areas" required hint={`Choose up to ${maxAreas}. The first one you pick sets the card colour.`}><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={selectedAreas.includes(option.value)} onClick={() => toggleArea(option.value)}>{option.label}</Chip>)}</div></Field>
       : <Field label="Specialization area" required><div className="flex flex-wrap gap-2">{areas.map(option => <Chip key={option.value} active={area === option.value} onClick={() => onArea?.(option.value)}>{option.label}</Chip>)}</div></Field>)}
     {onStatus && status !== undefined && statuses && <StatusField status={status} statuses={statuses} onStatus={onStatus} />}
   </>;
-  if (picker === false) return grouped ? <FormSubsection title="Name & summary"><div className="flex min-w-0 flex-col gap-5">{naming}</div></FormSubsection> : naming;
+  if (picker === false) return grouped ? <FormSubsection title="Name & summary">{naming}</FormSubsection> : naming;
   if (!grouped) return <>{naming}{classification}</>;
   return <>
-    <FormSubsection title="Name & summary"><div className="flex min-w-0 flex-col gap-5">{naming}</div></FormSubsection>
+    <FormSubsection title="Name & summary">{naming}</FormSubsection>
     <FormSubsection title="Classification"><div className="flex min-w-0 flex-col gap-5">{classification}</div></FormSubsection>
   </>;
 }
@@ -524,7 +524,7 @@ export function NamedSection({ title, children }: { title: string; children: Rea
 export function SectionCard({ level = 2, icon, title, description, visibility, children }: { level?: 2 | 3; icon: IconName; title: string; description?: string; visibility?: Visibility; children: ReactNode }) {
   const id = useId();
   const Heading = level === 2 ? "h2" : "h3";
-  return <section aria-labelledby={id} className="min-w-0 rounded-[20px] border border-(--glass-edge) p-5 sm:p-6" style={{ background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
+  return <section aria-labelledby={id} className={`min-w-0 rounded-[20px] border border-(--glass-edge) ${level === 3 ? "p-4 sm:p-5" : "p-5 sm:p-6"}`} style={{ background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
     <div className="flex items-start gap-3">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "color-mix(in srgb, var(--accent) 16%, transparent)", color: "var(--accent)" }}><Icon name={icon} size={16} /></span>
       <div className="min-w-0">
@@ -532,7 +532,7 @@ export function SectionCard({ level = 2, icon, title, description, visibility, c
         {description && <p className="mt-0.5 text-[13px] text-(--ink-3)">{description}</p>}
       </div>
     </div>
-    <div className="mt-5 flex min-w-0 flex-col gap-5 border-t border-(--glass-edge) pt-5">{children}</div>
+    <div className={`flex min-w-0 flex-col border-t border-(--glass-edge) ${level === 3 ? "mt-4 gap-4 pt-4" : "mt-5 gap-5 pt-5"}`}>{children}</div>
   </section>;
 }
 
@@ -541,8 +541,10 @@ export function StoryFields({ whatItDoes, businessValue, onChange, nested = fals
   const id = useId();
   const Shell = nested ? NamedSection : StepShell;
   return <Shell title="What does it do, and why does it matter?">
+    <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
     <Field inputId={`${id}-description`} label="What the solution does" required hint="What a user does in it, and what they get out of it."><MarkdownEditor id={`${id}-description`} label="What the solution does" value={whatItDoes} onChange={value => onChange("whatItDoes", value)} placeholder="e.g. Upload invoices, review suggested matches, and export unmatched items." maxLength={4000} /></Field>
     <Field inputId={`${id}-value`} label="Business value" required hint="The problem it solves and why that matters. Add real numbers only if you have them."><MarkdownEditor id={`${id}-value`} label="Business value" value={businessValue} onChange={value => onChange("businessValue", value)} placeholder="e.g. Reduces manual invoice matching so finance can focus on exceptions." maxLength={4000} /></Field>
+    </div>
     {children}
   </Shell>;
 }
@@ -551,8 +553,10 @@ export function StoryFields({ whatItDoes, businessValue, onChange, nested = fals
 export function LessonsFields({ challenges, lessonsLearned, onChange }: { challenges: string; lessonsLearned: string; onChange: (key: "challenges" | "lessonsLearned", value: string) => void }) {
   const id = useId();
   return <NamedSection title="Challenges & lessons learned">
+    <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
     <Field inputId={`${id}-challenges`} label="Challenges" optional hint="Blockers, risks or difficulties you hit while building it."><MarkdownEditor id={`${id}-challenges`} label="Challenges" value={challenges} onChange={value => onChange("challenges", value)} placeholder="e.g. Test data arrived late, so matching rules were tuned on a small sample." maxLength={2000} /></Field>
     <Field inputId={`${id}-lessons`} label="Lessons learned" optional hint="Recommendations or implementation notes for the next team."><MarkdownEditor id={`${id}-lessons`} label="Lessons learned" value={lessonsLearned} onChange={value => onChange("lessonsLearned", value)} placeholder="e.g. Request data access in week one and agree on a sample with finance." maxLength={2000} /></Field>
+    </div>
   </NamedSection>;
 }
 
@@ -561,10 +565,10 @@ export function SubmissionReview({ card, preview, attachments, contributors, eff
 }) {
   const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Effort", effort], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ...(role === undefined ? [] : [["Client role", role || "Not specified"]]), ["Next state", nextState]];
   const [previewOpen, setPreviewOpen] = useState(false);
-  return <StepShell title="Review & submit"><div className="pointer-events-none mx-auto w-full max-w-[400px]" inert>{card}</div>
-    {preview && <div className="flex flex-wrap items-center justify-center gap-3"><button type="button" onClick={() => setPreviewOpen(true)} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2 text-[14px] font-semibold"><Icon name="maximize" size={16} />Preview full solution</button><span className="text-[13px] text-(--ink-3)">See the whole page as the library will show it.</span></div>}
+  return <StepShell title="Review & submit"><div className="grid min-w-0 items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]"><div className="pointer-events-none mx-auto w-full max-w-[400px]" inert>{card}</div><div className="flex min-w-0 flex-col gap-4">
+    {preview && <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={() => setPreviewOpen(true)} className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-(--glass-edge) px-4 py-2 text-[14px] font-semibold"><Icon name="maximize" size={16} />Preview full solution</button><span className="text-[13px] text-(--ink-3)">See the whole page as the library will show it.</span></div>}
     {previewOpen && <PreviewDialog title="Full solution preview" onClose={() => setPreviewOpen(false)}>{preview}</PreviewDialog>}
-    <dl className="grid gap-2 text-[14px] sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="flex min-w-0 gap-3 rounded-xl border border-(--glass-edge) px-3.5 py-2.5"><dt className="w-24 shrink-0 font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="min-w-0 flex-1 break-words text-(--ink)">{value}</dd></div>)}</dl>{children}
+    <dl className="grid gap-2 text-[14px] sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="flex min-w-0 gap-3 rounded-xl border border-(--glass-edge) px-3.5 py-2.5"><dt className="w-24 shrink-0 font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="min-w-0 flex-1 break-words text-(--ink)">{value}</dd></div>)}</dl></div></div>{children}
   </StepShell>;
 }
 

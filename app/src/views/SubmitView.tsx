@@ -320,7 +320,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
   }
 
   return (
-    <div className="mx-auto w-full max-w-[980px] px-4 pt-8 pb-24 sm:px-6">
+    <div className="mx-auto w-full max-w-[1160px] px-4 pt-8 pb-24 sm:px-6">
       <BusyOverlay label={saving ? savingDraft ? "Saving draft..." : "Submitting for review..." : undefined} />
       {framing && <ImageFramer source={framing} name="thumbnail" onCancel={() => setFraming(null)} onConfirm={file => {
         const reader = new FileReader();
