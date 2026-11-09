@@ -605,7 +605,8 @@ export function SubmissionReview({ card, preview, confirm, attachments, contribu
   /** The contributor's confirmation (a labelled checkbox), shown in a compact "Ready to submit?" section above `children`. */ confirm?: ReactNode;
   attachments: number; contributors: string; effort: string; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
 }) {
-  const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Effort", effort], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ...(role === undefined ? [] : [["Client role", role || "Not specified"]]), ["Next state", nextState]];
+  // Who sees each value is the round badge beside its label, as in the form (client-facing, or internal only).
+  const rows: [string, string, Visibility?][] = [["Attachments", `${attachments} additional files`, "client"], ["Built by", contributors, "internal"], ["Effort", effort, "internal"], ["Images", images, "client"], ["Safety", safety], ["Client", client || "No client", "internal"], ["Public context", context || "None", "client"], ...(role === undefined ? [] : [["Client role", role || "Not specified", "client"] as [string, string, Visibility]]), ["Next state", nextState]];
   const [previewOpen, setPreviewOpen] = useState(false);
   return <StepShell title="Review & submit"><div className="grid min-w-0 items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
     <div className="mx-auto flex w-full max-w-[400px] min-w-0 flex-col gap-3">
@@ -618,7 +619,7 @@ export function SubmissionReview({ card, preview, confirm, attachments, contribu
       </button>}
         <section aria-labelledby="review-summary" className="min-w-0 rounded-[16px] border border-(--glass-edge) p-4 sm:p-5">
       <h3 id="review-summary" className="eyebrow">Summary</h3>
-      <dl className="mt-3 grid gap-x-8 gap-y-3.5 text-[14px] sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="min-w-0"><dt className="font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="mt-0.5 break-words text-(--ink)">{value}</dd></div>)}</dl>
+      <dl className="mt-3 grid gap-x-8 gap-y-3.5 text-[14px] sm:grid-cols-2">{rows.map(([label, value, visibility]) => <div key={label} className="min-w-0"><dt className="flex items-center gap-1.5 font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}{visibility && <VisibilityBadge visibility={visibility} />}</dt><dd className="mt-0.5 break-words text-(--ink)">{value}</dd></div>)}</dl>
     </section>
     </div>
   </div>

@@ -868,6 +868,12 @@ test("review summary and success use the baseline presentation", () => {
   assert.match(html, /<h3[^>]*>Summary<\/h3>/);
   assert.equal((html.match(/rounded-xl border/g) ?? []).length, 0);
   assert.match(html, /<dl[^>]*sm:grid-cols-2/);
+  // Who sees each value is a round badge beside the label, not words: Built by, Effort and Client are internal.
+  assert.doesNotMatch(html, /Client \(internal\)/);
+  assert.match(html, /Built by<span[^>]*title="Internal only"/);
+  assert.match(html, /Effort<span[^>]*title="Internal only"/);
+  assert.match(html, /Client<span[^>]*title="Internal only"/);
+  assert.match(html, /Images<span[^>]*title="Shown to clients"/);
   assert.doesNotMatch(html, /Ready to submit\?|Preview full solution/);
   // With a preview and a confirmation: the card, the preview button above the summary, then a compact Ready to submit? section.
   const full = render(form.SubmissionReview, { card: "Card", preview: "Preview", confirm: createElement("label", null, "Confirm", createElement("input", { type: "checkbox" })), attachments: 0, contributors: "Builder", effort: "", images: "", safety: "", client: "", context: "", nextState: "Pending review" });
