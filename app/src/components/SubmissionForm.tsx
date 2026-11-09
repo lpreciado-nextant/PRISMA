@@ -24,6 +24,7 @@ export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Cla
 const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> = {
   "Before you start": { icon: "shield" },
   "Solution details": { icon: "file", visibility: "client" },
+  Status: { icon: "clock", visibility: "client" },
   Client: { icon: "briefcase" },
   "Solution contributors": { icon: "users", visibility: "internal" },
   "Challenges & lessons learned": { icon: "edit", visibility: "internal" },
@@ -492,11 +493,13 @@ export function ChoiceNote({ title, children }: { title: string; children: React
 }
 
 /** Maturity chips; the chosen one's meaning shows beneath in one quiet line. */
-export function StatusField<Status extends string>({ status, statuses, onStatus }: { status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void }) {
+export function StatusField<Status extends string>({ status, statuses, onStatus, framed = false }: { status: Status; statuses: { value: Status; label: string }[]; onStatus: (value: Status) => void; /** Inside the Status card, whose heading is the label. */ framed?: boolean }) {
   const chosen = statuses.find(option => option.value === status)?.label;
   const note = chosen ? (STATUS_NOTES as Record<string, string | undefined>)[chosen] : undefined;
+  const chips = <div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div>;
   return <div className="flex min-w-0 flex-col gap-1.5">
-    <Field label="Status" required badge={<VisibilityBadge visibility="client" />} hint="The label clients see on the card, in present mode too."><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
+    {framed ? <><p className="text-[12px] text-(--ink-3)">The label clients see on the card, in present mode too.</p>{chips}</>
+      : <Field label="Status" required badge={<VisibilityBadge visibility="client" />} hint="The label clients see on the card, in present mode too.">{chips}</Field>}
     {note && chosen && <ChoiceNote title={chosen}>{note}</ChoiceNote>}
   </div>;
 }
@@ -556,17 +559,17 @@ export function VisibilityBadge({ visibility }: { visibility: Visibility }) {
 }
 
 /** A level-3 SectionCard whose icon, description and visibility come from the section metadata. */
-export function NamedSection({ title, children }: { title: string; children: ReactNode }) {
+export function NamedSection({ title, required = false, children }: { title: string; /** Marks the heading like a required field (a card that is one field). */ required?: boolean; children: ReactNode }) {
   const meta = SECTION_META[title];
-  return <SectionCard level={3} icon={meta.icon} title={title} description={STEP_INTRODUCTIONS[title]} visibility={meta.visibility}>{children}</SectionCard>;
+  return <SectionCard level={3} icon={meta.icon} title={title} required={required} description={STEP_INTRODUCTIONS[title]} visibility={meta.visibility}>{children}</SectionCard>;
 }
 
 /** The bordered section pattern: icon, title with an optional section-level visibility badge, description, grouped content. */
-export function SectionCard({ level = 2, title, description, visibility, children }: { level?: 2 | 3; icon: IconName; title: string; description?: string; visibility?: Visibility; children: ReactNode }) {
+export function SectionCard({ level = 2, title, required = false, description, visibility, children }: { level?: 2 | 3; icon: IconName; title: string; required?: boolean; description?: string; visibility?: Visibility; children: ReactNode }) {
   const id = useId();
   const Heading = level === 2 ? "h2" : "h3";
   return <section aria-labelledby={id} className={`min-w-0 rounded-[20px] border border-(--glass-edge) ${level === 3 ? "p-4 sm:p-5" : "p-5 sm:p-6"}`} style={{ background: "color-mix(in srgb, var(--ink) 4%, transparent)" }}>
-    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1"><Heading id={id} className={`${level === 2 ? "text-[20px]" : "text-[17px]"} font-semibold`}>{title}</Heading>{visibility && <VisibilityBadge visibility={visibility} />}</div>
+    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1"><Heading id={id} className={`${level === 2 ? "text-[20px]" : "text-[17px]"} font-semibold`}>{title}{required && <RequiredMark />}</Heading>{visibility && <VisibilityBadge visibility={visibility} />}</div>
     {description && <p className="mt-0.5 text-[13px] text-(--ink-3)">{description}</p>}
     <div className={`flex min-w-0 flex-col border-t border-(--glass-edge) ${level === 3 ? "mt-3 gap-4 pt-4" : "mt-4 gap-5 pt-5"}`}>{children}</div>
   </section>;

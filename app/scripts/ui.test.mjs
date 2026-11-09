@@ -330,7 +330,7 @@ test("both adapters consume the shared form and review surfaces", async () => {
     assert.match(poc, new RegExp(`<${component}\\b`));
     assert.match(connected, new RegExp(`<${component}\\b`));
   }
-  // Both flows render Solution details (Define the solution) and Solution contributors and Client (Solution context) as section cards, with Status as a single field.
+  // Both flows render Solution details (Define the solution) and Status, Solution contributors and Client (Solution context) as section cards.
   for (const source of [poc, connected]) {
     assert.match(source, /<SolutionDetailsFields\b/);
     assert.match(source, /<ClientFields\b/);
@@ -338,9 +338,9 @@ test("both adapters consume the shared form and review surfaces", async () => {
   for (const source of [poc, connected]) {
     assert.match(source, /<NamedSection title="Solution details">/);
     assert.match(source, /<NamedSection title="Solution contributors">/);
-    // Status is a single field with its own badge, not a card with a second heading.
-    assert.match(source, /<StatusField\b/);
-    assert.doesNotMatch(source, /<NamedSection title="Status">/);
+    // Status is a card like the others, with one heading ("Status *" and the badge) and no label repeated inside.
+    assert.match(source, /<NamedSection title="Status" required>/);
+    assert.match(source, /<StatusField framed\b/);
     assert.match(source, /<StoryFields nested\b/);
     assert.match(source, /onAssociated=\{setClientAssociated\}/);
   }
@@ -361,6 +361,10 @@ test("status field explains the chosen maturity beneath the choices", () => {
   const html = render(form.StatusField, { status: "Client demo", statuses, onStatus: noop });
   assert.match(html, /The label clients see on the card, in present mode too\./);
   assert.match(html, /Status<[^]*?title="Shown to clients"/);
+  // Inside its card the label is left to the heading.
+  const framed = render(form.StatusField, { status: "Client demo", statuses, onStatus: noop, framed: true });
+  assert.doesNotMatch(framed, /<label|<legend/);
+  assert.match(framed, /The label clients see on the card, in present mode too\./);
   assert.match(html, /aria-live="polite"[^>]*>.*Client demo.*Polished and reliable enough to show clients/s);
   assert.doesNotMatch(html, /Built and working end to end|Running for at least one client/);
   // The connected app's values are Dataverse numbers: the note follows the label.
