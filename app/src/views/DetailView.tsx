@@ -67,7 +67,9 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels, aside, capabilityOwner, assetNewTabUrl }: {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels, aside, capabilityOwner, assetNewTabUrl, preview = false }: {
+  /** The contributor's pre-submission preview inside the editor: no back button or page padding; the caller makes it inert. */
+  preview?: boolean;
   /** "Open in new tab" for demos shown in the viewer (connected: the focused viewer in another browser tab). */
   assetNewTabUrl?: (asset: DemoAsset) => string | undefined;
   /** The capability's owner (`nx_capability.nx_capabilityowner`): `null` shows "Not assigned", omitted hides the row. Never in present mode. */
@@ -103,8 +105,8 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
   const people = effort ? effort.contributors : solution.contributors.map((contributor) => ({ name: contributor.builtBy.name, email: contributor.builtBy.email, level: contributor.builtBy.level }));
 
   return (
-    <div className="animate-rise mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6 [overflow-wrap:anywhere]">
-      <button
+    <div className={preview ? "mx-auto w-full max-w-[1340px] [overflow-wrap:anywhere]" : "animate-rise mx-auto w-full max-w-[1340px] px-4 pt-8 pb-24 sm:px-6 [overflow-wrap:anywhere]"}>
+      {!preview && <button
         type="button"
         onClick={() => onBack ? onBack() : navigate(onEdit ? "/my-submissions" : "/")}
         className="inline-flex cursor-pointer items-center gap-1.5 text-[13.5px] font-semibold"
@@ -112,14 +114,14 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
       >
         <Icon name="chevronLeft" size={15} />
         {backLabel ?? (onEdit ? "My submissions" : "Back to the library")}
-      </button>
+      </button>}
       {onEdit && <SubmissionStatusPanel state={submissionState(solution)} feedback={solution.reviewComments || undefined} local={!connected}
         actions={<button type="button" className={outlinedStatusButton} onClick={onEdit}><Icon name="edit" size={16} />Edit submission</button>} />}
       {reviewActions}
       {catalogueOnly && <p className="mt-4 text-[14px]" role="status" style={{ color: "var(--ink-2)" }}>Contributor details, media and delivery history are not loaded.</p>}
 
       {/* Title and summary beside the whole 16:9 thumbnail (the frame chosen at submission); stacked on small screens. */}
-      <section className="glass glass-lite glass-sheen mt-4 grid overflow-hidden rounded-[26px] lg:grid-cols-[minmax(0,1fr)_minmax(0,44%)] lg:items-center">
+      <section className={`glass glass-lite glass-sheen ${preview ? "" : "mt-4"} grid overflow-hidden rounded-[26px] lg:grid-cols-[minmax(0,1fr)_minmax(0,44%)] lg:items-center`}>
         <div className="p-4 pb-0 lg:order-last lg:p-6 lg:pl-0">
           <div className="aspect-[16/9] overflow-hidden rounded-[18px]" style={{ boxShadow: "0 0 0 1px var(--glass-edge), 0 22px 50px -28px rgba(0, 0, 0, 0.6)" }}>
             {poster ?? <Poster

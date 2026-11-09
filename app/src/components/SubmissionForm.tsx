@@ -48,12 +48,14 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
 
 export const submissionInputClass = "w-full rounded-xl border bg-transparent px-3.5 py-2.5 text-[15px] outline-none transition-colors duration-200 border-(--glass-edge) text-(--ink) placeholder:text-(--ink-3) focus:border-(--accent)";
 
-export function SubmissionSteps({ step, onStep, disabled = false, steps = SUBMISSION_STEPS }: { step: number; onStep: (step: number) => void; disabled?: boolean; steps?: readonly string[] }) {
+/** `forward` lets steps ahead be opened directly (true for all, or a test per step), not only the ones already passed. */
+export function SubmissionSteps({ step, onStep, disabled = false, forward = false, steps = SUBMISSION_STEPS }: { step: number; onStep: (step: number) => void; disabled?: boolean; forward?: boolean | ((index: number) => boolean); steps?: readonly string[] }) {
   return <ol className="mt-6 flex flex-wrap gap-2" aria-label="Submission steps">
     {steps.map((label, index) => {
+      const open = index < step || (index > step && (typeof forward === "function" ? forward(index) : forward));
       const state = index === step ? "current" : index < step ? "done" : "todo";
-      return <li key={label}><button type="button" disabled={disabled} onClick={() => index < step && onStep(index)} aria-current={state === "current" ? "step" : undefined}
-        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-40 ${index < step ? "cursor-pointer" : "cursor-default"}`}
+      return <li key={label}><button type="button" disabled={disabled} onClick={() => open && onStep(index)} aria-current={state === "current" ? "step" : undefined}
+        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold disabled:opacity-40 ${open ? "cursor-pointer" : "cursor-default"}`}
         style={{ fontFamily: "var(--font-display)", borderColor: state === "current" ? "var(--accent)" : "var(--glass-edge)", background: state === "current" ? "color-mix(in srgb, var(--accent) 16%, transparent)" : "transparent", color: state === "todo" ? "var(--ink-3)" : "var(--ink)" }}>
         <span className="grid h-4.5 w-4.5 place-items-center rounded-full font-mono text-[9.5px]" style={{ background: state === "done" ? "var(--live)" : "color-mix(in srgb, var(--ink) 12%, transparent)", color: state === "done" ? "var(--ground)" : "var(--ink-2)" }}>{state === "done" ? <Icon name="check" size={9} /> : index + 1}</span>{label}
       </button></li>;
@@ -553,11 +555,15 @@ export function LessonsFields({ challenges, lessonsLearned, onChange }: { challe
   </NamedSection>;
 }
 
-export function SubmissionReview({ card, attachments, contributors, effort, images, safety, client, context, role, nextState, children }: {
-  card: ReactNode; attachments: number; contributors: string; effort: string; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
+export function SubmissionReview({ card, preview, attachments, contributors, effort, images, safety, client, context, role, nextState, children }: {
+  card: ReactNode; /** The whole solution page as the published view will show it, below the card. */ preview?: ReactNode; attachments: number; contributors: string; effort: string; images: string; safety: string; client: string; context: string; role?: string; nextState: string; children?: ReactNode;
 }) {
   const rows = [["Attachments", `${attachments} additional files`], ["Built by", contributors], ["Effort", effort], ["Images", images], ["Safety", safety], ["Client (internal)", client || "No client"], ["Public context", context || "None"], ...(role === undefined ? [] : [["Client role", role || "Not specified"]]), ["Next state", nextState]];
   return <StepShell title="Review & submit"><div className="pointer-events-none mx-auto w-full max-w-[400px]" inert>{card}</div>
+    {preview && <section aria-labelledby="full-preview-title" className="flex min-w-0 flex-col gap-3">
+      <div><h3 id="full-preview-title" className="text-[16px] font-semibold">Full solution preview</h3><p className="mt-1 text-[13.5px] text-(--ink-2)">This is the solution page as people will see it once it is published. It is read-only: go back to a step to change anything.</p></div>
+      <div className="min-w-0 rounded-[20px] border border-dashed border-(--glass-edge) p-3 sm:p-4" inert>{preview}</div>
+    </section>}
     <dl className="grid gap-2 text-[14px] sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="flex min-w-0 gap-3 rounded-xl border border-(--glass-edge) px-3.5 py-2.5"><dt className="w-24 shrink-0 font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="min-w-0 flex-1 break-words text-(--ink)">{value}</dd></div>)}</dl>{children}
   </StepShell>;
 }

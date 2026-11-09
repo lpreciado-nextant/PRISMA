@@ -4,6 +4,7 @@ import { LoadingState } from "../../src/components/LoadingState";
 import { BusyOverlay } from "../../src/components/BusyOverlay";
 import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { SolutionCard } from "../../src/components/SolutionCard";
+import { DetailView } from "../../src/views/DetailView";
 import { StepShell, SubmissionSteps, SubmissionFooter, SubmissionSuccess, SubmissionSafety, NamedSection, EffortFields, SolutionDetailsFields, ClientFields, StoryFields, LessonsFields, SubmissionReview, StatusField, CapabilityFields } from "../../src/components/SubmissionForm";
 import type { Solution, SpecializationArea } from "../../src/types";
 import { guardNavigation, navigate, replaceQuery } from "../../src/lib/router";
@@ -16,6 +17,8 @@ import { COMPLEXITIES, COMPLEXITY_BY_CHOICE, effortSummary, estimatedHours } fro
 import { emptyGraph, graphPayload, initialContributor, isEmptyContributor, persistDraftGraph, loadGraphReferences, type GraphReferences, type DraftGraph } from "./draftGraph";
 import { createTechnology, parseSubmission, type SubmissionDetail } from "./workflow";
 import { hasCaptionChanges, saveMediaCaptions, type MediaItem } from "./media";
+import { mediaAsset } from "./workflow";
+import { PublishedGallery } from "./PublishedView";
 import { parseRecovery, recoveryKey, recoveryPayload } from "./draftRecovery";
 import { ProtectedImage } from "./ProtectedImage";
 import { LibrarianEditNotice } from "../../src/components/LibrarianEditNotice";
@@ -136,12 +139,22 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const changeGraph = (next: DraftGraph) => { setGraph(next); change("safetyAcknowledged", false); };
   // "Is this solution associated with a client?" Any client value already answers Yes. No clears the
   // client fields (so nothing hidden is saved); switching back to Yes restores them.
-  const [clientChoice, setClientChoice] = useState<boolean | null>(null);
+  // The answer "No" has no column of its own, so a re-opened draft recovers it: from the answer remembered in this browser, or
+  // because the draft already has detail images (the Media step is only reachable after the client question was answered).
+  // Either only counts while the draft holds no client data, so a hidden value is never mistaken for "No".
+  const answerKey = `prisma.clientAnswer.${owner}.${initial?.record.core.id ?? ""}`;
+  const [clientChoice, setClientChoice] = useState<boolean | null>(() => {
+    const core = initial?.record.core;
+    if (!core || core.clientContext.trim() || core.clientContextRedacted.trim() || (initial?.graph.graph.clientRoleIds.length ?? 0) > 0) return null;
+    if (initial?.media.some(item => item.kind === "image" && item.complete)) return false;
+    try { return localStorage.getItem(answerKey) === "no" ? false : null; } catch { return null; }
+  });
   // Client roles live in the graph (nx_clientrole N:N), so the stash keeps them beside the two client texts.
   const clientStash = useRef<{ text: Pick<CoreDraft, "clientContext" | "clientContextRedacted">; clientRoleIds: string[] } | null>(null);
   const clientAssociated = clientChoice ?? (draft.clientContext.trim() || draft.clientContextRedacted.trim() || graph.clientRoleIds.length > 0 ? true : undefined);
   const setClientAssociated = (associated: boolean) => {
     setClientChoice(associated);
+    if (initial) { try { if (associated) localStorage.removeItem(answerKey); else localStorage.setItem(answerKey, "no"); } catch { /* the answer is then recovered from the draft's images only */ } }
     const stash = associated ? clientStash.current : null;
     if (!associated) clientStash.current = { text: { clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted }, clientRoleIds: graph.clientRoleIds };
     else clientStash.current = null;
@@ -175,10 +188,10 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     } catch (error) { if (!controller.signal.aborted) setStatus("uncertain"); throw error; }
     finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", abort); saving.current = false; }
   };
-  const persist = async (action: "continue" | "close" | "submit") => {
+  const persist = async (action: "continue" | "close" | "submit", target?: number) => {
     const controller = lifetime.current;
     if (!controller || saving.current || status === "uncertain" || mediaBusy || mediaPending) return;
-    if (step === 0 && action === "continue") { setStep(1); return; }
+    if (step === 0 && action === "continue" && target === undefined) { setStep(1); return; }
     saving.current = true;
     setSavingAction(action);
     setStatus("saving");
@@ -217,7 +230,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
       setBaseline(next.graph);
       setCaptions({});
       clearRecovery();
-      if (action === "continue" && step === 4) {
+      if ((action === "continue" && step === 4) || target === 5) {
         const detail = parseSubmission(await workflowApi.read(next.core.id));
         operation.signal.throwIfAborted();
         if (detail.record.core.id !== next.core.id || detail.record.core.rowVersion !== next.core.rowVersion) throw new Error("Draft changed before review.");
@@ -231,7 +244,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
         setSaved(result.record.core);
         setSubmitted(true);
       } else if (action === "close") { recoverySuppressed.current = true; allowedNavigation.current = true; navigate(librarian ? reviewPath : "/my-submissions"); }
-      else { setStep(current => Math.min(current + 1, 5)); window.scrollTo({ top: 0, behavior: "instant" }); }
+      else { setStep(target ?? Math.min(step + 1, 5)); window.scrollTo({ top: 0, behavior: "instant" }); }
       setStatus("saved");
     } catch {
       if (!controller.signal.aborted) setStatus("uncertain");
@@ -330,6 +343,18 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
     : [...allNeeds, ...needs(!librarian && !draft.safetyAcknowledged && "The safety acknowledgment", captionsDirty && "Save your caption changes")];
   const canContinue = step === 0 ? accepted : step === 1 ? canSave && !!draft.summary.trim() && storyComplete : step === 2 ? canSave && !!draft.capabilityId : step === 3 ? canSave && effortComplete && clientValid : step === 4 ? complete : canSave;
   const goBack = (next: number) => { if (!locked && !(librarian && next === 0)) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); } };
+  // Any step can be opened directly. Going back or to a form step needs no save; the safety step must be accepted first, and Media
+  // and Review need the draft saved (and its media re-read for Review). Submitting still requires everything `complete` checks.
+  // A step can be opened ahead only when every earlier step's required fields are complete: the same checks as Continue.
+  const stepValid = [accepted, canSave && !!draft.summary.trim() && storyComplete, canSave && !!draft.capabilityId, canSave && effortComplete && clientValid, complete];
+  const reachable = (next: number) => next <= step || stepValid.slice(0, next).every(Boolean);
+  const goTo = (next: number) => {
+    if (next === step || locked) return;
+    if (next < step) { goBack(next); return; }
+    if (!reachable(next)) return;
+    if (next <= 3 || (next === 4 && saved && !dirty)) { setStep(next); window.scrollTo({ top: 0, behavior: "instant" }); return; }
+    void persist("continue", next);
+  };
 
   if (submitted) return <SubmissionSuccess name={draft.name} onSubmissions={() => navigate("/my-submissions")} onAnother={() => navigate("/submit")}>is pending librarian review. Your submission and media are saved in Dataverse. Nothing has been published.</SubmissionSuccess>;
 
@@ -351,7 +376,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
       recoverySuppressed.current = true; clearRecovery(); allowedNavigation.current = true; window.location.hash = pendingHash; setPendingHash(null);
     }}><p>{busy ? "Wait for the current save or media operation to finish before leaving." : "Unsaved edits and their tab recovery copy will be discarded. Changes already saved to Dataverse will remain."}</p></ConfirmDialog>}
     {confirmation && <ConfirmDialog title={confirmation === "leave" ? "Discard unsaved changes?" : "Reopen saved draft?"} confirmLabel={confirmation === "leave" ? "Discard & leave" : "Discard & reopen"} onCancel={() => setConfirmation(null)} onConfirm={() => { if (confirmation === "reopen") reopen(); else { recoverySuppressed.current = true; clearRecovery(); allowedNavigation.current = true; setConfirmation(null); navigate("/"); } }}><p>{confirmation === "leave" ? "Your unsaved edits will be discarded. Changes already saved to Dataverse will remain." : "The edits shown here will be discarded. The latest saved version in Dataverse will be used instead."}</p></ConfirmDialog>}
-    <SubmissionSteps step={step} disabled={locked} onStep={goBack} />
+    <SubmissionSteps step={step} disabled={locked} onStep={goTo} forward={reachable} />
     <div className="glass glass-lite glass-sheen animate-rise mt-5 rounded-[24px] p-6 sm:p-8">
       <fieldset disabled={locked} className="min-w-0">
         {step === 0 && <SubmissionSafety accepted={accepted} onChange={setAccepted} />}
@@ -381,7 +406,9 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
           mainArea={mainArea ? areaName(mainArea.name) : undefined} mainOwner={mainOwner} onMain={chooseCapability} onSecondary={chooseSecondary} /></div><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}
       </fieldset>
       {step === 4 && saved && <DraftMediaEditor saved={saved} captions={captions} onCaptions={setCaptions} embedded capabilities={preview.capabilities} blocked={dirty || status === "saving" || status === "uncertain"} onMedia={setMedia} onVersion={rowVersion => { setSaved(current => current ? { ...current, rowVersion, safetyAcknowledged: false } : current); setDraft(current => ({ ...current, safetyAcknowledged: false })); }} onBusy={setMediaBusy} onPending={setMediaPending} onReopen={() => setConfirmation("reopen")} />}
-      {step === 5 && <SubmissionReview card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}
+      {step === 5 && <SubmissionReview preview={<DetailView preview connected present={false} solution={{ ...preview, assets: media.filter(item => item.kind === "attachment" && item.complete).map(mediaAsset) }} effort={{ contributors: preview.contributors.map(person => ({ name: person.builtBy.name, level: person.builtBy.level })) }}
+        capabilityOwner={mainOwner === undefined ? undefined : mainOwner === null ? null : { name: mainOwner }} onAssetOpen={() => undefined} imageCount={media.filter(item => item.kind === "image" && item.complete).length} gallery={<PublishedGallery media={media} />}
+        poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} card={<SolutionCard solution={preview} present index={0} poster={thumbnail && <div className="h-full overflow-hidden"><ProtectedImage item={thumbnail} className="h-full w-full object-cover" /></div>} />} attachments={media.filter(item => item.kind === "attachment" && item.complete).length}
         contributors={preview.contributors.map(person => person.builtBy.name).join(", ")} effort={effortSummary(preview.estimatedMinimumHours, preview.complexity)}
         images={`${thumbnail ? "Thumbnail" : "Generated poster"} · ${media.filter(item => item.kind === "image" && item.complete).length} screenshots`} safety={draft.safetyAcknowledged ? "Acknowledged; review required" : "Not acknowledged"} client={draft.clientContext} context={draft.clientContextRedacted} nextState={publishedEdit ? "Published" : "Pending review"}>
         {!librarian && <label className="flex items-start gap-3 text-[15px]"><input disabled={locked} type="checkbox" className="mt-1 h-5 w-5 shrink-0" checked={draft.safetyAcknowledged} onChange={event => change("safetyAcknowledged", event.target.checked)} /><span>I confirm this content and all media are authorized and safe for client presentation.</span></label>}{!complete && <p role="alert">{librarian ? "Complete Define the solution, the client question, a capability and at least one detail image before saving." : "Complete Define the solution, Solution context (status, contributors, complexity and the client question), a capability and at least one detail image before submitting."}</p>}
