@@ -534,10 +534,10 @@ test("media files demos, interactive demos and supporting material in their own 
   // What each section takes and how it reaches a CSM; Word and Excel are not offered, and are explained.
   assert.match(html, /<summary[^>]*>What is a self-contained HTML file, and upload or link\?<\/summary>/);
   assert.match(html, /React, TSX, Vite or Figma Make projects cannot be uploaded as they are/);
-  assert.match(html, /CSMs download these files; PRISMA does not preview them\. Word and Excel can&#x27;t be uploaded/);
+  assert.match(html, /These files are downloaded; PRISMA does not preview them\. Word and Excel can&#x27;t be uploaded/);
   assert.doesNotMatch(html, /accept="[^"]*(docx|xlsx)/);
   const stored = render(form.SubmissionMedia, { ...props, attachments: [{ id: "deck", name: "deck.pdf", purpose: "Supporting material", mime: "application/pdf", size: 2516582 }] });
-  assert.match(stored, /PDF · 2\.4 MB · CSMs download it; PRISMA does not preview it\./);
+  assert.match(stored, /PDF · 2\.4 MB · Downloaded, not previewed in PRISMA\./);
   assert.match(html, /has-\[:focus-visible\]:outline-offset-2/);
   // Links are offered only where the caller can save them (connected), and never for demo videos.
   assert.doesNotMatch(html, /Add a link/);

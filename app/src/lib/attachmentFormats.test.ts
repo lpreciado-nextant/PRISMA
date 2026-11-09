@@ -31,9 +31,9 @@ test("a file in the wrong section says where it belongs", () => {
   assert.match(message("clip.mp4", "Interactive demo"), /belong in Demo videos/);
 });
 
-test("how each format reaches a CSM, and sizes read plainly", () => {
+test("how each format reaches viewers, and sizes read plainly", () => {
   assert.match(formatOfMime("text/html")!.how, /inside PRISMA/);
-  assert.match(formatOfMime("application/pdf")!.how, /download/);
+  assert.match(formatOfMime("application/pdf")!.how, /Downloaded/);
   assert.equal(formatOfMime("application/zip"), undefined);
   assert.equal(formatBytes(512), "512 B");
   assert.equal(formatBytes(2.4 * MB), "2.4 MB");

@@ -207,7 +207,7 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
       </MediaReorderItem>)}</div>}{images.length < 6 && imageUpload}</div>
     </div>
     <div className="flex min-w-0 flex-col gap-4">
-      <div><p className="text-[13.5px] font-semibold">Demos and material<OptionalMark /></p><p className="mt-0.5 text-[12px] text-(--ink-3)">Add each file where it belongs, so CSMs can tell a client demo from background material. Up to 6 in total.{local ? " Local preview only." : ""}</p></div>
+      <div><p className="text-[13.5px] font-semibold">Demos and material<OptionalMark /></p><p className="mt-0.5 text-[12px] text-(--ink-3)">Add each file where it belongs: demos and background material are kept apart. Up to 6 in total.{local ? " Local preview only." : ""}</p></div>
       {ATTACHMENT_SECTIONS.map(section => {
         const items = attachments.filter(item => item.purpose === section.purpose);
         const links = !!onLinkedAsset && section.links;
@@ -263,19 +263,19 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
 /** The Media step's attachment sections; the section a file is added to is its purpose (ADR-0011). */
 const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; upload: string; accept: string; hint: string; fileHint: string; links: boolean; recommended?: boolean; guide?: { summary: string; points: string[] } }[] = [
   { purpose: "Demo video", key: "demo", title: "Demo videos", upload: "Upload demo video", accept: ".mp4,.webm", links: false, recommended: true,
-    hint: "Walkthroughs CSMs can play to show the solution to clients, ideally 2–5 minutes. MP4 or WebM, up to 500 MB each. They play inside PRISMA.",
-    fileHint: "Walkthroughs CSMs can play to show the solution to clients, ideally 2–5 minutes. MP4 or WebM, up to 500 MB each. They play inside PRISMA." },
+    hint: "Walkthrough videos that show the solution, ideally 2–5 minutes. MP4 or WebM, up to 500 MB each. They play inside PRISMA.",
+    fileHint: "Walkthrough videos that show the solution, ideally 2–5 minutes. MP4 or WebM, up to 500 MB each. They play inside PRISMA." },
   { purpose: "Interactive demo", key: "interactive", title: "Interactive demo", upload: "Upload HTML file", accept: ".html,.htm", links: true,
-    hint: "Something CSMs can click through. Upload one self-contained HTML file (up to 25 MB), which opens inside PRISMA, or add a link to a hosted demo.",
-    fileHint: "Something CSMs can click through. Upload one self-contained HTML file (up to 25 MB), which opens inside PRISMA.",
+    hint: "Something people can click through. Upload one self-contained HTML file (up to 25 MB), which opens inside PRISMA, or add a link to a hosted demo.",
+    fileHint: "Something people can click through. Upload one self-contained HTML file (up to 25 MB), which opens inside PRISMA.",
     guide: { summary: "What is a self-contained HTML file, and upload or link?", points: [
       "Self-contained means a single .html file with its CSS, JavaScript, images and fonts inside it. Links to CDNs, fonts or separate files will not load, because the demo runs in a secure sandbox inside PRISMA: it cannot sign in, save data or reach outside services.",
       "React, TSX, Vite or Figma Make projects cannot be uploaded as they are. Build or export them into one HTML file, or host them and add a link.",
-      "An uploaded HTML file is stored and shown exactly as you submitted it. A link opens your hosted app, so CSMs always see what is live there: inside PRISMA when the site allows embedding, otherwise in a new tab. Power Apps and Power BI always open in a new tab.",
+      "An uploaded HTML file is stored and shown exactly as you submitted it. A link opens your hosted app, so viewers always see what is live there: inside PRISMA when the site allows embedding, otherwise in a new tab. Power Apps and Power BI always open in a new tab.",
     ] } },
   { purpose: "Supporting material", key: "supporting", title: "Supporting material", upload: "Upload file", accept: ".pdf,.ppt,.pptx,.mp4,.webm", links: true,
-    hint: "Slides, one-pagers and PDFs that help CSMs present the solution. Upload PDF or PowerPoint (.ppt, .pptx) up to 25 MB, or a non-demo video. CSMs download these files; PRISMA does not preview them. Word and Excel can't be uploaded: save them as PDF or share a link. Anything hosted elsewhere (SharePoint, OneDrive, a repository, a marketing page) can be added with Add a link.",
-    fileHint: "Slides, one-pagers and PDFs that help CSMs present the solution. Upload PDF or PowerPoint (.ppt, .pptx) up to 25 MB, or a non-demo video. CSMs download these files; PRISMA does not preview them. Word and Excel can't be uploaded: save them as PDF." },
+    hint: "Slides, one-pagers and PDFs that explain or present the solution. Upload PDF or PowerPoint (.ppt, .pptx) up to 25 MB, or a non-demo video. These files are downloaded; PRISMA does not preview them. Word and Excel can't be uploaded: save them as PDF or share a link. Anything hosted elsewhere (SharePoint, OneDrive, a repository, a marketing page) can be added with Add a link.",
+    fileHint: "Slides, one-pagers and PDFs that explain or present the solution. Upload PDF or PowerPoint (.ppt, .pptx) up to 25 MB, or a non-demo video. These files are downloaded; PRISMA does not preview them. Word and Excel can't be uploaded: save them as PDF." },
 ];
 
 export function AttachmentNameEditor({ name, disabled, onSave, onClose }: { name: string; disabled: boolean; onSave: (name: string) => Promise<void>; onClose: () => void }) {

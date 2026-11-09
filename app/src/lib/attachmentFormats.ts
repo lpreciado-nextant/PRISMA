@@ -1,7 +1,7 @@
 import type { AssetPurpose } from "./assetPurpose.ts";
 
 /**
- * What the Media step accepts in each section and how CSMs get to it. It mirrors the upload contract
+ * What the Media step accepts in each section and how it reaches viewers. It mirrors the upload contract
  * (`mediaContract.ts`): MP4 and WebM video up to 500 MB, HTML, PDF, PPT and PPTX up to 25 MB. Word and Excel are not accepted.
  */
 export type FormatInfo = { label: string; how: string };
@@ -10,8 +10,8 @@ const VIDEO: FormatInfo = { label: "Video", how: "Plays in PRISMA's video viewer
 const FORMATS: Record<string, FormatInfo> = {
   mp4: { label: "MP4 video", how: VIDEO.how }, webm: { label: "WebM video", how: VIDEO.how },
   html: { label: "HTML", how: "Opens inside PRISMA, in a secure sandbox." }, htm: { label: "HTML", how: "Opens inside PRISMA, in a secure sandbox." },
-  pdf: { label: "PDF", how: "CSMs download it; PRISMA does not preview it." },
-  ppt: { label: "PowerPoint", how: "CSMs download it; PRISMA does not preview it." }, pptx: { label: "PowerPoint", how: "CSMs download it; PRISMA does not preview it." },
+  pdf: { label: "PDF", how: "Downloaded, not previewed in PRISMA." },
+  ppt: { label: "PowerPoint", how: "Downloaded, not previewed in PRISMA." }, pptx: { label: "PowerPoint", how: "Downloaded, not previewed in PRISMA." },
 };
 const MIME_EXTENSION: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm", "text/html": "html", "application/pdf": "pdf",
   "application/vnd.ms-powerpoint": "ppt", "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx" };
