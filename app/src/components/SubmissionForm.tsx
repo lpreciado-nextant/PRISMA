@@ -399,9 +399,9 @@ export function SolutionDetailsFields<Area extends string, Status extends string
     if (selectedAreas.includes(option)) onAreas(selectedAreas.filter(entry => entry !== option));
     else if (selectedAreas.length < maxAreas) onAreas([...selectedAreas, option]);
   };
-  const naming = <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+  const naming = <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
     <Field label="Solution name" required hint="A short product name people will remember."><input className={submissionInputClass} value={value.name} onChange={event => onText("name", event.target.value)} placeholder="e.g. Ledger Reconciler" maxLength={100} /></Field>
-    <Field label="One-line summary" required hint={`Who it's for and what it does for them, in one sentence. ${value.summary.length}/200 characters.`}><input className={submissionInputClass} value={value.summary} onChange={event => onText("summary", event.target.value)} placeholder="e.g. Helps finance teams match invoices to payments." maxLength={200} /></Field>
+    <Field label="One-line summary" required hint={`Who it's for and what it does for them, in one sentence. ${value.summary.length}/200 characters.`}><textarea rows={2} className={`${submissionInputClass} min-h-[4.25rem] resize-y leading-snug`} value={value.summary} onChange={event => onText("summary", event.target.value.replace(/\s*\n\s*/g, " "))} onKeyDown={event => { if (event.key === "Enter") event.preventDefault(); }} placeholder="e.g. Helps finance teams match invoices to payments." maxLength={200} /></Field>
   </div>;
   const classification = <>
     {picker ?? (selectedAreas && onAreas
