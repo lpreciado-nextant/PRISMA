@@ -387,9 +387,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
           <StoryFields nested whatItDoes={draft.whatItDoes} businessValue={draft.businessValue} onChange={change} />
         </StepShell>}
         {step === 3 && <StepShell title="Solution context">
-          <NamedSection title="Status">
-            <StatusField status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
-          </NamedSection>
+          <StatusField status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
           <NamedSection title="Solution contributors">
             {librarian ? <p className="text-[14px] text-(--ink-2)">{preview.contributors.map(person => person.builtBy.name).join(", ") || "No contributors yet"}. Contributors are edited by the owner.</p>
               : <DraftGraphEditor graph={graph} references={graphReferences} section="contributors" onChange={changeGraph} />}

@@ -387,9 +387,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
 
         {step === 3 && safetyValid && (
           <StepShell title="Solution context">
-            <NamedSection title="Status">
-              <StatusField status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
-            </NamedSection>
+            <StatusField status={draft.status} statuses={STATUS_OPTIONS.map(value => ({ value, label: value }))} onStatus={value => set("status", value)} />
             <NamedSection title="Solution contributors">
             <ContributorEditor bare addDisabled={draft.contributors.some(contributor => !contributor.builtBy.id)} onAdd={() => set("contributors", [...draft.contributors, {
               id: crypto.randomUUID(), builtBy: { id: "", name: "", email: "" },

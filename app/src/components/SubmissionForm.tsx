@@ -24,7 +24,6 @@ export const SUBMISSION_STEPS = ["Before you start", "Define the solution", "Cla
 const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> = {
   "Before you start": { icon: "shield" },
   "Solution details": { icon: "file", visibility: "client" },
-  Status: { icon: "clock", visibility: "client" },
   Client: { icon: "briefcase" },
   "Solution contributors": { icon: "users", visibility: "internal" },
   "Challenges & lessons learned": { icon: "edit", visibility: "internal" },
@@ -38,7 +37,6 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
   "Before you start": "Help keep PRISMA content safe and ready to present to clients.",
   "Define the solution": "What it is and why it matters.",
   "Solution context": "Where it stands, who built it, and any client involved.",
-  Status: "How mature the solution is today.",
   "Solution details": "The card's first impression: a product-like name and a one-line summary.",
   Client: "Who it was built for, and how to describe them to other clients.",
   "Challenges & lessons learned": "What made it hard and what the next team should know. Internal only.",
@@ -498,7 +496,7 @@ export function StatusField<Status extends string>({ status, statuses, onStatus 
   const chosen = statuses.find(option => option.value === status)?.label;
   const note = chosen ? (STATUS_NOTES as Record<string, string | undefined>)[chosen] : undefined;
   return <div className="flex min-w-0 flex-col gap-1.5">
-    <Field label="Status" required hint="The label clients see on the card, in present mode too."><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
+    <Field label="Status" required badge={<VisibilityBadge visibility="client" />} hint="The label clients see on the card, in present mode too."><div className="flex flex-wrap gap-2">{statuses.map(option => <Chip key={option.value} active={status === option.value} onClick={() => onStatus(option.value)}>{option.label}</Chip>)}</div></Field>
     {note && chosen && <ChoiceNote title={chosen}>{note}</ChoiceNote>}
   </div>;
 }
