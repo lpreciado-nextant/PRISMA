@@ -12,6 +12,7 @@ import { mediaAsset, type PublishedDetail } from "./workflow";
 import type { MediaItem } from "./media";
 import { useMediaAction } from "./useMediaAction";
 import { ProtectedImage } from "./ProtectedImage";
+import { formatBytes } from "../../src/lib/attachmentFormats";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { shareUrl, type AppLocation } from "./deepLink";
 import { DownloadDeckButton } from "./DownloadDeckButton";
@@ -83,19 +84,31 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
     onAssetOpen={asset => void mediaAction.open(detail.media.find(item => item.id === asset.id))} />;
 }
 
-export function PublishedGallery({ media }: { media: MediaItem[] }) {
+/** `details` adds each image's pixel size and weight (the contributor's preview, to check resolution); the published page leaves it off. */
+export function PublishedGallery({ media, details = false }: { media: MediaItem[]; details?: boolean }) {
   const [open, setOpen] = useState<number | null>(null);
   const images = media.filter(item => item.kind === "image" && item.complete);
   return <>
-    <div className="grid gap-3 sm:grid-cols-2">{images.map((item, index) => <PublishedImage key={item.id} item={item} onOpen={() => setOpen(index)} />)}</div>
+    <div className="grid gap-3 sm:grid-cols-2">{images.map((item, index) => <PublishedImage key={item.id} item={item} details={details} onOpen={() => setOpen(index)} />)}</div>
     {open !== null && <Lightbox start={open} onClose={() => setOpen(null)} items={images.map(item => ({
       id: item.id, caption: item.caption, label: item.name,
-      content: <ProtectedImage item={item} className="max-h-full max-w-full object-contain" />,
+      content: details ? <DetailedImage item={item} className="max-h-full max-w-full object-contain" /> : <ProtectedImage item={item} className="max-h-full max-w-full object-contain" />,
       thumb: <ProtectedImage item={item} className="h-full w-full object-cover" />,
     }))} />}
   </>;
 }
 
-function PublishedImage({ item, onOpen }: { item: MediaItem; onOpen: () => void }) {
-  return <GalleryFigure caption={item.caption}><button className="group relative block aspect-[16/10] w-full cursor-zoom-in overflow-hidden" onClick={onOpen} aria-label={`View ${item.caption || item.name} larger`}><ProtectedImage item={item} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" /></button></GalleryFigure>;
+/** An image with its pixel size and weight in a corner chip. */
+function DetailedImage({ item, className, fill = false }: { item: MediaItem; className: string; fill?: boolean }) {
+  const [size, setSize] = useState<{ key: string; width: number; height: number } | null>(null);
+  const key = `${item.id}:${item.sessionId}`;
+  const known = size?.key === key ? size : null;
+  return <span className={fill ? "relative block h-full w-full" : "relative inline-flex max-h-full max-w-full"}>
+    <ProtectedImage item={item} className={className} onLoad={(width, height) => setSize({ key, width, height })} />
+    <span className="pointer-events-none absolute right-2 bottom-2 rounded-full px-2.5 py-0.5 font-mono text-[10.5px] text-(--ink)" style={{ background: "color-mix(in srgb, var(--ground) 80%, transparent)" }}>{known ? `${known.width} × ${known.height} px · ` : ""}{formatBytes(item.size)}</span>
+  </span>;
+}
+
+function PublishedImage({ item, onOpen, details }: { item: MediaItem; onOpen: () => void; details: boolean }) {
+  return <GalleryFigure caption={item.caption}><button className="group relative block aspect-[16/10] w-full cursor-zoom-in overflow-hidden" onClick={onOpen} aria-label={`View ${item.caption || item.name} larger`}>{details ? <DetailedImage fill item={item} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" /> : <ProtectedImage item={item} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />}</button></GalleryFigure>;
 }

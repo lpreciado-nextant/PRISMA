@@ -6,6 +6,7 @@ import { ImageFramer } from "../../src/components/ImageFramer";
 import { LocalVideoPreview, VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
 import { ProtectedImage } from "./ProtectedImage";
 import { primeImage } from "./imageCache";
+import { formatBytes } from "../../src/lib/attachmentFormats";
 import { screenshotSize } from "../../src/lib/framing";
 import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/components/SubmissionForm";
 import { mediaApi, downloadMedia, workflowApi, transferApi } from "./dataSource";
@@ -215,9 +216,9 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       onRenameAttachment={rename}
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
-      thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
+      thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} thumbnailStage={thumbnail && <StageImage item={thumbnail} />} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
       thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => files[0] && setFraming(files[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:9 · 1920 × 1080 px · you frame it next" />}
-      images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" /> }))}
+      images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" />, stage: <StageImage item={item} /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}
       imageUpload={<ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once · over 2560 px wide is reduced" />}
       attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, fileName: item.fileName, linkedAsset: item.linkedAsset, size: item.size, mime: item.mime, purpose: item.purpose ?? defaultPurpose(mediaAsset(item, 0).assetType), status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
@@ -312,5 +313,16 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
   return <div className="mt-6 border-t border-(--glass-edge) pt-5">
     <div className="mb-4 flex flex-wrap items-center gap-3"><h3 className="min-w-0 flex-1 break-all text-[18px] font-semibold">{item.name}</h3>{content && <a className={button} href={content.url} download={item.fileName ?? item.name}><Icon name="download" />Download</a>}<button className={button} onClick={onClose} aria-label="Close preview" title="Close preview"><Icon name="close" /></button></div>
     {stage}
+  </div>;
+}
+
+/** An image at preview size, whole (never cropped), with its pixel size and weight underneath. It shares the download of its card. */
+function StageImage({ item }: { item: MediaItem }) {
+  const [size, setSize] = useState<{ key: string; width: number; height: number } | null>(null);
+  const key = `${item.id}:${item.sessionId}`;
+  const known = size?.key === key ? size : null;
+  return <div className="relative h-full w-full">
+    <ProtectedImage item={item} className="h-full w-full object-contain" onLoad={(width, height) => setSize({ key, width, height })} />
+    <p className="pointer-events-none absolute right-2 bottom-2 rounded-full px-2.5 py-0.5 font-mono text-[10.5px] text-(--ink)" style={{ background: "color-mix(in srgb, var(--ground) 80%, transparent)" }}>{known ? `${known.width} × ${known.height} px · ` : ""}{formatBytes(item.size)}</p>
   </div>;
 }
