@@ -592,16 +592,18 @@ export function SubmissionReview({ card, preview, confirm, attachments, contribu
   const [previewOpen, setPreviewOpen] = useState(false);
   return <StepShell title="Review & submit"><div className="grid min-w-0 items-start gap-6 lg:grid-cols-[400px_minmax(0,1fr)]">
     <div className="mx-auto flex w-full max-w-[400px] min-w-0 flex-col gap-3">
-      {preview && <button type="button" onClick={() => setPreviewOpen(true)} className="flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:brightness-110" style={{ borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)", background: "color-mix(in srgb, var(--accent) 10%, transparent)" }}>
+      <div className="pointer-events-none" inert>{card}</div>
+    </div>
+    <div className="flex min-w-0 flex-col gap-4">
+      {preview && <button type="button" onClick={() => setPreviewOpen(true)} className="flex w-full max-w-[520px] cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:brightness-110" style={{ borderColor: "color-mix(in srgb, var(--accent) 45%, transparent)", background: "color-mix(in srgb, var(--accent) 10%, transparent)" }}>
         <span className="grid size-9 shrink-0 place-items-center rounded-lg" style={{ background: "color-mix(in srgb, var(--accent) 18%, transparent)", color: "var(--accent)" }}><Icon name="maximize" size={18} /></span>
         <span className="min-w-0"><span className="block text-[14.5px] font-semibold">Preview full solution</span><span className="block text-[12.5px] text-(--ink-2)">See exactly how your solution will appear in PRISMA.</span></span>
       </button>}
-      <div className="pointer-events-none" inert>{card}</div>
-    </div>
-    <section aria-labelledby="review-summary" className="min-w-0 rounded-[16px] border border-(--glass-edge) p-4 sm:p-5">
+        <section aria-labelledby="review-summary" className="min-w-0 rounded-[16px] border border-(--glass-edge) p-4 sm:p-5">
       <h3 id="review-summary" className="eyebrow">Summary</h3>
       <dl className="mt-3 grid gap-x-8 gap-y-3.5 text-[14px] sm:grid-cols-2">{rows.map(([label, value]) => <div key={label} className="min-w-0"><dt className="font-mono text-[10.5px] tracking-[0.1em] text-(--ink-3) uppercase">{label}</dt><dd className="mt-0.5 break-words text-(--ink)">{value}</dd></div>)}</dl>
     </section>
+    </div>
   </div>
   {previewOpen && preview && <PreviewDialog title="Full solution preview" onClose={() => setPreviewOpen(false)}>{preview}</PreviewDialog>}
   {confirm ? <section aria-labelledby="ready-to-submit" className="flex min-w-0 flex-col gap-3 rounded-[16px] border border-(--glass-edge) p-4 sm:p-5" style={{ background: "color-mix(in srgb, var(--ink) 3%, transparent)" }}>

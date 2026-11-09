@@ -860,9 +860,9 @@ test("review summary and success use the baseline presentation", () => {
   assert.equal((html.match(/rounded-xl border/g) ?? []).length, 0);
   assert.match(html, /<dl[^>]*sm:grid-cols-2/);
   assert.doesNotMatch(html, /Ready to submit\?|Preview full solution/);
-  // With a preview and a confirmation: the preview button above the card, then a compact Ready to submit? section.
+  // With a preview and a confirmation: the card, the preview button above the summary, then a compact Ready to submit? section.
   const full = render(form.SubmissionReview, { card: "Card", preview: "Preview", confirm: createElement("label", null, "Confirm", createElement("input", { type: "checkbox" })), attachments: 0, contributors: "Builder", effort: "", images: "", safety: "", client: "", context: "", nextState: "Pending review" });
-  assert.ok(full.indexOf("Preview full solution") < full.indexOf("Card") && full.indexOf("Card") < full.indexOf("Summary") && full.indexOf("Summary") < full.indexOf("Ready to submit?") && full.indexOf("Ready to submit?") < full.indexOf("Confirm"));
+  assert.ok(full.indexOf("Card") < full.indexOf("Preview full solution") && full.indexOf("Preview full solution") < full.indexOf("Summary") && full.indexOf("Summary") < full.indexOf("Ready to submit?") && full.indexOf("Ready to submit?") < full.indexOf("Confirm"));
   assert.match(full, /See exactly how your solution will appear in PRISMA\./);
   assert.match(full, /Nothing is published until it is approved\./);
   assert.match(render(form.SubmissionSuccess, { name: "Example", onSubmissions: noop, onAnother: noop, children: "is pending review." }), /Now it&#x27;s pending review/);
