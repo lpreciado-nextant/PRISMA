@@ -101,6 +101,9 @@ export default function ConnectedApp() {
 
 const TOP_RETRY_DELAYS = [2_000, 5_000, 10_000];
 
+/** A first read often fails while the sign-in or the host is still warming up; it is tried again before the person is told. */
+const CATALOGUE_RETRY_DELAYS = [1500, 4000];
+
 function CatalogueSession({ present, onTogglePresent, appLocation, theme, onToggleTheme, onRetry, entered, entering, onBegin, transitionComplete }: {
   present: boolean; onTogglePresent: () => void; appLocation?: AppLocation; theme: "light" | "dark";
   onToggleTheme: () => void; onRetry: () => void;
@@ -132,6 +135,8 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
   useEffect(() => {
     const controller = new AbortController();
     let authenticated = false;
+    let retryTimer: number | undefined;
+    // Covers signing in; once signed in, each catalogue attempt has its own limit below.
     const timeout = window.setTimeout(() => {
       controller.abort();
       setState({ kind: authenticated ? "error" : "host-required" });
@@ -147,9 +152,24 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
           if (present) clearRecoveries(sessionStorage);
         } catch { void 0; }
         authenticated = true;
+        window.clearTimeout(timeout);
         setUser(signedInUser);
-        const catalogue = await loadCatalogue(readRows, present, controller.signal, readCredits, readCatalogueGraph);
-        controller.signal.throwIfAborted();
+        // The page keeps its loading state through the retries, so a transient failure never shows "Catalogue unavailable".
+        const started = Date.now();
+        let catalogue: CatalogueSolution[] | undefined;
+        for (let retry = 0; !catalogue; retry++) {
+          const attemptController = new AbortController();
+          const stop = () => attemptController.abort();
+          controller.signal.addEventListener("abort", stop, { once: true });
+          const limit = window.setTimeout(stop, 20_000);
+          try { catalogue = await loadCatalogue(readRows, present, attemptController.signal, readCredits, readCatalogueGraph); }
+          catch (error) {
+            controller.signal.throwIfAborted();
+            if (retry >= CATALOGUE_RETRY_DELAYS.length || Date.now() - started > 30_000) throw error;
+          } finally { window.clearTimeout(limit); controller.signal.removeEventListener("abort", stop); }
+          if (!catalogue) await new Promise<void>(resolve => { retryTimer = window.setTimeout(resolve, CATALOGUE_RETRY_DELAYS[retry]); });
+          controller.signal.throwIfAborted();
+        }
         setState({ kind: "ready", catalogue });
       } catch {
         if (!authenticated && !controller.signal.aborted) { try { clearRecoveries(sessionStorage); } catch { void 0; } }
@@ -159,7 +179,7 @@ function CatalogueSession({ present, onTogglePresent, appLocation, theme, onTogg
       }
     }
     void load();
-    return () => { controller.abort(); window.clearTimeout(timeout); };
+    return () => { controller.abort(); window.clearTimeout(timeout); window.clearTimeout(retryTimer); };
   }, [present]);
   useEffect(() => {
     if (present || !user.live || !user.userPrincipalName) return;
