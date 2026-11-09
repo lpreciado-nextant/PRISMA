@@ -103,10 +103,10 @@ function DetailedImage({ item, className, fill = false }: { item: MediaItem; cla
   const [size, setSize] = useState<{ key: string; width: number; height: number } | null>(null);
   const key = `${item.id}:${item.sessionId}`;
   const known = size?.key === key ? size : null;
-  return <span className={fill ? "relative block h-full w-full" : "relative inline-flex max-h-full max-w-full"}>
-    <ProtectedImage item={item} className={className} onLoad={(width, height) => setSize({ key, width, height })} />
-    <span className="pointer-events-none absolute right-2 bottom-2 rounded-full px-2.5 py-0.5 font-mono text-[10.5px] text-(--ink)" style={{ background: "color-mix(in srgb, var(--ground) 80%, transparent)" }}>{known ? `${known.width} × ${known.height} px · ` : ""}{formatBytes(item.size)}</span>
-  </span>;
+  const chip = <span className="pointer-events-none absolute right-2 bottom-2 rounded-full px-2.5 py-0.5 font-mono text-[10.5px] text-(--ink)" style={{ background: "color-mix(in srgb, var(--ground) 80%, transparent)" }}>{known ? `${known.width} × ${known.height} px · ` : ""}{formatBytes(item.size)}</span>;
+  const image = <ProtectedImage item={item} className={className} onLoad={(width, height) => setSize({ key, width, height })} />;
+  // In a card the chip sits on the image; in the viewer the image stays a direct child of the stage (so it scales to fit) and the chip sits on the stage.
+  return fill ? <span className="relative block h-full w-full">{image}{chip}</span> : <>{image}{chip}</>;
 }
 
 function PublishedImage({ item, onOpen, details }: { item: MediaItem; onOpen: () => void; details: boolean }) {
