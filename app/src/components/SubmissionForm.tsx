@@ -68,15 +68,15 @@ export function SubmissionSteps({ step, onStep, disabled = false, forward = fals
 /** Steps with fields to fill explain the required marker; the safety gate and the final review have none. */
 const NO_FIELDS = new Set(["Before you start", "Review & submit"]);
 
-/** `notices` sit above the step title: guidance to read before the step itself. */
+/** `notices` sit under the legend, above the step's fields: guidance to read before filling it in. */
 export function StepShell({ title, lede, notices, children }: { title: string; lede?: string; notices?: ReactNode; children: ReactNode }) {
   const cards = useContext(SectionCardsContext);
   const introduction = lede ?? STEP_INTRODUCTIONS[title];
   const meta = SECTION_META[title];
-  const content = <>{!NO_FIELDS.has(title) && <RequiredLegend />}{children}</>;
-  const top = notices && <div className="mb-6 grid gap-1.5">{notices}</div>;
-  if (cards && meta) return <>{top}<SectionCard icon={meta.icon} title={title} description={introduction} visibility={meta.visibility}>{content}</SectionCard></>;
-  return <section>{top}<h2 className="text-[20px] font-semibold">{title}</h2>{introduction && <p className="mt-1 text-[14px] text-(--ink-3)">{introduction}</p>}<div className="mt-6 flex flex-col gap-5">{content}</div></section>;
+  // Notices come right under the legend, so they read as notes for filling in the step.
+  const content = <>{!NO_FIELDS.has(title) && <RequiredLegend />}{notices && <div className="grid gap-1.5">{notices}</div>}{children}</>;
+  if (cards && meta) return <SectionCard icon={meta.icon} title={title} description={introduction} visibility={meta.visibility}>{content}</SectionCard>;
+  return <section><h2 className="text-[20px] font-semibold">{title}</h2>{introduction && <p className="mt-1 text-[14px] text-(--ink-3)">{introduction}</p>}<div className="mt-6 flex flex-col gap-5">{content}</div></section>;
 }
 
 /**
@@ -221,7 +221,7 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
             {section.recommended && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>Recommended</span>}
           </div>
           <p className="mt-1 text-[12.5px] text-(--ink-2)">{links ? section.hint : section.fileHint}</p>
-          {section.guide && <details className="mt-2 text-[12.5px] text-(--ink-2)"><summary className="cursor-pointer font-semibold text-(--ink)">{section.guide.summary}</summary><ul className="mt-2 list-disc space-y-1.5 pl-5">{section.guide.points.map(point => <li key={point}>{point}</li>)}</ul></details>}
+          {section.guide && <details className="mt-2 text-[12.5px] text-(--ink-2)"><summary className="cursor-pointer font-semibold text-(--ink)">{section.guide.summary}</summary><ul className="mt-2 list-disc space-y-1.5 pl-5">{section.guide.points.filter(point => links || !point.links).map(point => <li key={point.label}><strong className="font-semibold text-(--ink)">{point.label}:</strong> {point.text.replace("{links}", links ? " or share a link" : "")}</li>)}</ul></details>}
           {picked?.purpose === section.purpose && ("error" in picked
             ? <p role="alert" className="mt-3 flex items-start gap-2 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={15} className="mt-0.5 shrink-0" /><span>{picked.error}</span></p>
             : <p role="status" className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-(--ink-2)"><Icon name="file" size={15} className="shrink-0" /><span className="min-w-0 break-all font-semibold text-(--ink)">{picked.name}</span><span className="font-mono text-[11px] uppercase">.{picked.extension} · {picked.size}</span><span className="basis-full pl-6 text-[12px] text-(--ink-3)">{picked.how}</span></p>)}
@@ -261,21 +261,26 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
 }
 
 /** The Media step's attachment sections; the section a file is added to is its purpose (ADR-0011). */
-const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; upload: string; accept: string; hint: string; fileHint: string; links: boolean; recommended?: boolean; guide?: { summary: string; points: string[] } }[] = [
+const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; upload: string; accept: string; hint: string; fileHint: string; links: boolean; recommended?: boolean; guide?: { summary: string; points: { label: string; text: string; links?: boolean }[] } }[] = [
   { purpose: "Demo video", key: "demo", title: "Demo videos", upload: "Upload demo video", accept: ".mp4,.webm", links: false, recommended: true,
     hint: "Walkthrough videos that show the solution, ideally 2–5 minutes. MP4 or WebM, up to 500 MB each. They play inside PRISMA.",
     fileHint: "Walkthrough videos that show the solution, ideally 2–5 minutes. MP4 or WebM, up to 500 MB each. They play inside PRISMA." },
   { purpose: "Interactive demo", key: "interactive", title: "Interactive demo", upload: "Upload HTML file", accept: ".html,.htm", links: true,
-    hint: "Something people can click through. Upload one self-contained HTML file (up to 25 MB), which opens inside PRISMA, or add a link to a hosted demo.",
-    fileHint: "Something people can click through. Upload one self-contained HTML file (up to 25 MB), which opens inside PRISMA.",
-    guide: { summary: "What is a self-contained HTML file, and upload or link?", points: [
-      "Self-contained means a single .html file with its CSS, JavaScript, images and fonts inside it. Links to CDNs, fonts or separate files will not load, because the demo runs in a secure sandbox inside PRISMA: it cannot sign in, save data or reach outside services.",
-      "React, TSX, Vite or Figma Make projects cannot be uploaded as they are. Build or export them into one HTML file, or host them and add a link.",
-      "An uploaded HTML file is stored and shown exactly as you submitted it. A link opens your hosted app, so viewers always see what is live there: inside PRISMA when the site allows embedding, otherwise in a new tab. Power Apps and Power BI always open in a new tab.",
+    hint: "Add a demo that users can open and try. Upload a single HTML file (up to 25 MB) or share a link to an online demo.",
+    fileHint: "Add a demo that users can open and try. Upload a single HTML file (up to 25 MB).",
+    guide: { summary: "How do I prepare my demo?", points: [
+      { label: "HTML file", text: "Upload a single .html file that includes everything needed to run the demo. It will open directly in PRISMA without requiring additional files or external connections." },
+      { label: "React, Vite, or Figma Make", text: "These projects can't be uploaded directly. Export them as a single HTML file or publish them online and share the link." },
+      { label: "Online demo", text: "Share a link to an existing app or prototype. It will open inside PRISMA when supported, or in a new tab.", links: true },
     ] } },
   { purpose: "Supporting material", key: "supporting", title: "Supporting material", upload: "Upload file", accept: ".pdf,.ppt,.pptx,.mp4,.webm", links: true,
-    hint: "Slides, one-pagers and PDFs that explain or present the solution. Upload PDF or PowerPoint (.ppt, .pptx) up to 25 MB, or a non-demo video. These files are downloaded; PRISMA does not preview them. Word and Excel can't be uploaded: save them as PDF or share a link. Anything hosted elsewhere (SharePoint, OneDrive, a repository, a marketing page) can be added with Add a link.",
-    fileHint: "Slides, one-pagers and PDFs that explain or present the solution. Upload PDF or PowerPoint (.ppt, .pptx) up to 25 MB, or a non-demo video. These files are downloaded; PRISMA does not preview them. Word and Excel can't be uploaded: save them as PDF." },
+    hint: "Add documents and resources that help explain or present your solution. Upload PDF or PowerPoint files (up to 25 MB), or share links to other materials.",
+    fileHint: "Add documents and resources that help explain or present your solution. Upload PDF or PowerPoint files (up to 25 MB).",
+    guide: { summary: "What files can I add?", points: [
+      { label: "Upload files", text: "PDF and PowerPoint (.ppt, .pptx) files are supported. These will be available for download." },
+      { label: "Share links", text: "Add links to documents, Excel workbooks, SharePoint, OneDrive, or other online resources.", links: true },
+      { label: "Other formats", text: "Word and Excel files can't be uploaded directly. You can convert them to PDF{links} instead." },
+    ] } },
 ];
 
 export function AttachmentNameEditor({ name, disabled, onSave, onClose }: { name: string; disabled: boolean; onSave: (name: string) => Promise<void>; onClose: () => void }) {

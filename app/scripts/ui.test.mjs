@@ -522,6 +522,8 @@ test("media files demos, interactive demos and supporting material in their own 
   const html = render(form.SubmissionMedia, props);
   assert.match(html, /Detail screenshots · 1\/6/);
   assert.match(html, /aria-label="Screenshot caption"/);
+  // The notices sit under the legend line, above the first field.
+  assert.ok(html.indexOf("Only the solution name is needed") < html.indexOf("What to show") && html.indexOf("What to show") < html.indexOf("Before uploading") && html.indexOf("Before uploading") < html.indexOf("Card thumbnail"));
   assert.ok(html.indexOf("Card thumbnail") < html.indexOf("Detail screenshots"));
   assert.ok(html.indexOf("Detail screenshots") < html.indexOf("Demo videos"));
   assert.ok(html.indexOf("Demo videos") < html.indexOf("walkthrough.mp4") && html.indexOf("walkthrough.mp4") < html.indexOf("Interactive demo"));
@@ -531,11 +533,19 @@ test("media files demos, interactive demos and supporting material in their own 
   assert.match(html, /accept=".mp4,.webm"/);
   assert.match(html, /accept=".html,.htm"/);
   assert.match(html, /accept=".pdf,.ppt,.pptx,.mp4,.webm"/);
-  // What each section takes and how it reaches a CSM; Word and Excel are not offered, and are explained.
-  assert.match(html, /<summary[^>]*>What is a self-contained HTML file, and upload or link\?<\/summary>/);
-  assert.match(html, /React, TSX, Vite or Figma Make projects cannot be uploaded as they are/);
-  assert.match(html, /These files are downloaded; PRISMA does not preview them\. Word and Excel can&#x27;t be uploaded/);
+  // What each section takes and how it reaches viewers; Word and Excel are not offered, and are explained.
+  assert.match(html, /<summary[^>]*>How do I prepare my demo\?<\/summary>/);
+  assert.match(html, /<strong[^>]*>React, Vite, or Figma Make:<\/strong> These projects can&#x27;t be uploaded directly\./);
+  assert.match(html, /<summary[^>]*>What files can I add\?<\/summary>/);
+  assert.match(html, /PDF and PowerPoint \(\.ppt, \.pptx\) files are supported\. These will be available for download\./);
+  assert.match(html, /Word and Excel files can&#x27;t be uploaded directly\. You can convert them to PDF instead\./);
+  assert.doesNotMatch(html, /Online demo:|Share links:/);
   assert.doesNotMatch(html, /accept="[^"]*(docx|xlsx)/);
+  const linked = render(form.SubmissionMedia, { ...props, onLinkedAsset: async () => {} });
+  assert.match(linked, /Upload a single HTML file \(up to 25 MB\) or share a link to an online demo\./);
+  assert.match(linked, /Online demo:<\/strong> Share a link to an existing app or prototype\./);
+  assert.match(linked, /Share links:<\/strong> Add links to documents, Excel workbooks, SharePoint, OneDrive/);
+  assert.match(linked, /convert them to PDF or share a link instead\./);
   const stored = render(form.SubmissionMedia, { ...props, attachments: [{ id: "deck", name: "deck.pdf", purpose: "Supporting material", mime: "application/pdf", size: 2516582 }] });
   assert.match(stored, /PDF · 2\.4 MB · Downloaded, not previewed in PRISMA\./);
   assert.match(html, /has-\[:focus-visible\]:outline-offset-2/);
