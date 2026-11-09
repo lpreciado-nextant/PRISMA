@@ -10,6 +10,7 @@ import { Chip } from "./Badges";
 import { SelectPicker } from "./SelectPicker";
 import type { AssetPurpose } from "../lib/assetPurpose";
 import { validateAttachmentName } from "../lib/attachmentName";
+import { checkAttachment, formatBytes, formatOfMime } from "../lib/attachmentFormats";
 import { LINK_ASSET_TYPES, assetTypeLabel, validateLinkedAsset, type LinkedAssetInput, type LinkAssetType } from "../lib/linkedAssets";
 import { useVideoPreparation } from "../lib/useVideoPreparation";
 import { LocalVideoPreview } from "./ViewerFrame";
@@ -157,7 +158,7 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
   images: { id: string; preview: ReactNode; caption: string }[]; imageUpload: ReactNode; onCaption: (id: string, caption: string) => void; onRemoveImage: (id: string) => void;
   /** A file added to one of the three sections; the section sets its purpose (ADR-0011). Videos arrive after compression. */
   onAttachment: (file: File, purpose: AssetPurpose) => void;
-  attachments: { id: string; name: string; fileName?: string; purpose: AssetPurpose; status?: ReactNode; linkedAsset?: LinkedAssetInput }[]; onRemoveAttachment: (id: string) => void;
+  attachments: { id: string; name: string; fileName?: string; purpose: AssetPurpose; status?: ReactNode; linkedAsset?: LinkedAssetInput; /** Stored size in bytes and media type, for the type · size · how it opens line. */ size?: number; mime?: string }[]; onRemoveAttachment: (id: string) => void;
   onRenameAttachment?: (id: string, name: string) => Promise<void>;
   onLinkedAsset?: (input: LinkedAssetInput, id: string | undefined, purpose: AssetPurpose) => Promise<void>; onLinkedPending?: (pending: boolean) => void;
   onPreviewThumbnail?: () => void; onPreviewImage?: (id: string) => void; onPreviewAttachment?: (id: string) => void;
@@ -174,7 +175,18 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
   const preparation = useVideoPreparation(file => onAttachment(file, videoPurpose.current), onPreparationBusy);
   useEffect(() => { onLinkedPending?.(linkedDirty || nameEditor !== null); return () => onLinkedPending?.(false); }, [linkedDirty, nameEditor, onLinkedPending]);
   const full = attachments.length >= 6;
+  // The file just chosen (name, type, size, how it opens), shown in its section while it uploads; or why it was refused.
+  const [picked, setPicked] = useState<{ purpose: AssetPurpose; name: string; extension: string; size: string; how: string } | { purpose: AssetPurpose; error: string } | null>(null);
+  const working = !!attachmentDisabled || preparation.busy;
+  const wasWorking = useRef(false);
+  useEffect(() => {
+    if (wasWorking.current && !working) setPicked(current => current && "error" in current ? current : null);
+    wasWorking.current = working;
+  }, [working]);
   const addFile = (file: File, purpose: AssetPurpose) => {
+    const check = checkAttachment(file, purpose);
+    if (!check.ok) { setPicked({ purpose, error: check.message }); return; }
+    setPicked({ purpose, name: file.name, extension: check.extension, size: check.size, how: check.info.how });
     if (/\.(mp4|webm)$/i.test(file.name)) { videoPurpose.current = purpose; void preparation.select(file); }
     else onAttachment(file, purpose);
   };
@@ -209,10 +221,14 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
             {section.recommended && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-semibold" style={{ color: "var(--accent)", background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>Recommended</span>}
           </div>
           <p className="mt-1 text-[12.5px] text-(--ink-2)">{links ? section.hint : section.fileHint}</p>
+          {section.guide && <details className="mt-2 text-[12.5px] text-(--ink-2)"><summary className="cursor-pointer font-semibold text-(--ink)">{section.guide.summary}</summary><ul className="mt-2 list-disc space-y-1.5 pl-5">{section.guide.points.map(point => <li key={point}>{point}</li>)}</ul></details>}
+          {picked?.purpose === section.purpose && ("error" in picked
+            ? <p role="alert" className="mt-3 flex items-start gap-2 text-[13px]" style={{ color: "var(--proto)" }}><Icon name="alert" size={15} className="mt-0.5 shrink-0" /><span>{picked.error}</span></p>
+            : <p role="status" className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-(--ink-2)"><Icon name="file" size={15} className="shrink-0" /><span className="min-w-0 break-all font-semibold text-(--ink)">{picked.name}</span><span className="font-mono text-[11px] uppercase">.{picked.extension} · {picked.size}</span><span className="basis-full pl-6 text-[12px] text-(--ink-3)">{picked.how}</span></p>)}
           {!!items.length && <ul className="mt-3 space-y-3">{items.map(item => <MediaReorderItem as="li" key={item.id} id={item.id} ids={items.map(entry => entry.id)} label={item.name} group={`attachments-${section.key}`} disabled={locked} onReorder={onReorderAttachments ? ids => reorderSection(section.purpose, ids) : undefined} className="min-w-0 border-b border-(--glass-edge) pb-3 last:border-b-0 last:pb-0">
             <div className="flex min-w-0 flex-wrap items-center gap-3">
               <Icon name={item.linkedAsset ? "link" : section.purpose === "Demo video" ? "play" : "file"} className="shrink-0" />
-              <div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{!item.linkedAsset && item.fileName && item.fileName !== item.name && <p className="break-words text-[12px] text-(--ink-3)">File: {item.fileName}</p>}{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{assetTypeLabel(item.linkedAsset.assetType)}</p>}{item.status}</div>
+              <div className="min-w-0 flex-1"><span className="break-words">{item.name}</span>{!item.linkedAsset && item.fileName && item.fileName !== item.name && <p className="break-words text-[12px] text-(--ink-3)">File: {item.fileName}</p>}{item.linkedAsset && <p className="text-[12px] text-(--ink-3)">{assetTypeLabel(item.linkedAsset.assetType)}</p>}{!item.linkedAsset && !item.status && item.mime && formatOfMime(item.mime) && <p className="text-[12px] text-(--ink-3)">{formatOfMime(item.mime)!.label}{item.size ? ` · ${formatBytes(item.size)}` : ""} · {formatOfMime(item.mime)!.how}</p>}{item.status}</div>
               {onRenameAttachment && !item.linkedAsset && <button type="button" disabled={locked || !!item.status} title="Edit display name" aria-label={`Edit display name for ${item.name}`} className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 text-[12.5px] disabled:opacity-40" onClick={() => setNameEditor(item.id)}><Icon name="edit" />Display name</button>}
               {onLinkedAsset && item.linkedAsset && <button type="button" disabled={locked} title="Edit link" aria-label={`Edit ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => { if (!linkedDirty) setLinkEditor({ purpose: section.purpose, type: item.linkedAsset!.assetType, id: item.id }); }}><Icon name="edit" /></button>}
               {onPreviewAttachment && <button type="button" disabled={disabled || !!item.status} title="Preview" aria-label={`Preview ${item.name}`} className="grid h-9 w-9 shrink-0 cursor-pointer place-items-center disabled:opacity-40" onClick={() => onPreviewAttachment(item.id)}><Icon name="play" /></button>}
@@ -245,16 +261,21 @@ export function SubmissionMedia({ capabilities, thumbnail, onRemoveThumbnail, th
 }
 
 /** The Media step's attachment sections; the section a file is added to is its purpose (ADR-0011). */
-const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; upload: string; accept: string; hint: string; fileHint: string; links: boolean; recommended?: boolean }[] = [
+const ATTACHMENT_SECTIONS: { purpose: AssetPurpose; key: string; title: string; upload: string; accept: string; hint: string; fileHint: string; links: boolean; recommended?: boolean; guide?: { summary: string; points: string[] } }[] = [
   { purpose: "Demo video", key: "demo", title: "Demo videos", upload: "Upload demo video", accept: ".mp4,.webm", links: false, recommended: true,
-    hint: "Upload video walkthroughs that CSMs can use to demonstrate the solution to clients. Videos should ideally be 2–5 minutes long and highlight key features and capabilities. You can add multiple videos in MP4 or WebM format (up to 500 MB each).",
-    fileHint: "Upload video walkthroughs that CSMs can use to demonstrate the solution to clients. Videos should ideally be 2–5 minutes long and highlight key features and capabilities. You can add multiple videos in MP4 or WebM format (up to 500 MB each)." },
+    hint: "Walkthroughs CSMs can play to show the solution to clients, ideally 2–5 minutes. MP4 or WebM, up to 500 MB each. They play inside PRISMA.",
+    fileHint: "Walkthroughs CSMs can play to show the solution to clients, ideally 2–5 minutes. MP4 or WebM, up to 500 MB each. They play inside PRISMA." },
   { purpose: "Interactive demo", key: "interactive", title: "Interactive demo", upload: "Upload HTML file", accept: ".html,.htm", links: true,
-    hint: "Add interactive demos or prototypes that allow CSMs to explore the solution firsthand. You can upload a self-contained HTML file (up to 25 MB) or share a link to a prototype, web app, Power Apps app, or Power BI report.",
-    fileHint: "Add interactive demos or prototypes that allow CSMs to explore the solution firsthand. You can upload a self-contained HTML file (up to 25 MB)." },
+    hint: "Something CSMs can click through. Upload one self-contained HTML file (up to 25 MB), which opens inside PRISMA, or add a link to a hosted demo.",
+    fileHint: "Something CSMs can click through. Upload one self-contained HTML file (up to 25 MB), which opens inside PRISMA.",
+    guide: { summary: "What is a self-contained HTML file, and upload or link?", points: [
+      "Self-contained means a single .html file with its CSS, JavaScript, images and fonts inside it. Links to CDNs, fonts or separate files will not load, because the demo runs in a secure sandbox inside PRISMA: it cannot sign in, save data or reach outside services.",
+      "React, TSX, Vite or Figma Make projects cannot be uploaded as they are. Build or export them into one HTML file, or host them and add a link.",
+      "An uploaded HTML file is stored and shown exactly as you submitted it. A link opens your hosted app, so CSMs always see what is live there: inside PRISMA when the site allows embedding, otherwise in a new tab. Power Apps and Power BI always open in a new tab.",
+    ] } },
   { purpose: "Supporting material", key: "supporting", title: "Supporting material", upload: "Upload file", accept: ".pdf,.ppt,.pptx,.mp4,.webm", links: true,
-    hint: "Add supporting materials that help CSMs understand and present the solution. You can upload slides, one-pagers, PDFs (up to 25 MB), or non-demo videos, and share links to relevant tools, repositories, or marketing resources.",
-    fileHint: "Add supporting materials that help CSMs understand and present the solution. You can upload slides, one-pagers, PDFs (up to 25 MB), or non-demo videos." },
+    hint: "Slides, one-pagers and PDFs that help CSMs present the solution. Upload PDF or PowerPoint (.ppt, .pptx) up to 25 MB, or a non-demo video. CSMs download these files; PRISMA does not preview them. Word and Excel can't be uploaded: save them as PDF or share a link. Anything hosted elsewhere (SharePoint, OneDrive, a repository, a marketing page) can be added with Add a link.",
+    fileHint: "Slides, one-pagers and PDFs that help CSMs present the solution. Upload PDF or PowerPoint (.ppt, .pptx) up to 25 MB, or a non-demo video. CSMs download these files; PRISMA does not preview them. Word and Excel can't be uploaded: save them as PDF." },
 ];
 
 export function AttachmentNameEditor({ name, disabled, onSave, onClose }: { name: string; disabled: boolean; onSave: (name: string) => Promise<void>; onClose: () => void }) {
