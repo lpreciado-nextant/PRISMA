@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { Icon } from "./Icon";
-import { CARD_ASPECT, MAX_ZOOM, clampFraming, coverScale, frameCrop, type Framing } from "../lib/framing";
+import { CARD_ASPECT, MAX_ZOOM, SHARP_WIDTH, clampFraming, coverScale, frameCrop, type Framing } from "../lib/framing";
 
 /**
  * Lets a contributor pan and zoom a card thumbnail inside the 16:9 card frame, then
@@ -133,6 +133,9 @@ export function ImageFramer({ source, name, onConfirm, onCancel }: {
   };
 
   const zoomPercent = Math.round(current.zoom * 100);
+  // Pixels are what matter on screen (DPI/PPI is only a print setting): what the file has, what the frame uses, what is saved.
+  const crop = image && width ? frameCrop(current, image.naturalWidth, image.naturalHeight, width) : null;
+  const soft = !!crop && crop.width < SHARP_WIDTH;
   return (
     <dialog
       ref={dialog}
@@ -176,6 +179,9 @@ export function ImageFramer({ source, name, onConfirm, onCancel }: {
         {!image && <p className="absolute inset-0 grid place-items-center text-[14px]" role="status" style={{ color: "var(--ink-2)" }}>{failed ? "This image can't be read. Choose another file." : "Loading image..."}</p>}
         <span className="framer-grid" aria-hidden="true" />
       </div>
+      {image && crop && <p className="mt-3 text-[12.5px]" role="status" style={{ color: soft ? "var(--proto)" : "var(--ink-3)" }}>
+        Your image is {image.naturalWidth} × {image.naturalHeight} px; the framed area is {Math.round(crop.width)} px wide and is saved as {crop.outputWidth} × {crop.outputHeight} px (16:9).{soft ? ` Under ${SHARP_WIDTH} px wide the card can look soft: use a larger image or zoom out.` : ""}
+      </p>}
 
       <div className="mt-4 flex items-center gap-3">
         <button type="button" disabled={!image || current.zoom <= 1} aria-label="Zoom out" onClick={() => zoomAt(current.zoom / 1.2)} className="glass grid size-9 shrink-0 cursor-pointer place-items-center rounded-full text-[18px] leading-none disabled:opacity-40">−</button>

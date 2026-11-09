@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CARD_ASPECT, clampFraming, frameCrop } from "./framing.ts";
+import { CARD_ASPECT, clampFraming, frameCrop, screenshotSize } from "./framing.ts";
 
 const near = (actual: number, expected: number) => assert(Math.abs(actual - expected) < 1e-6, `${actual} != ${expected}`);
 
@@ -36,4 +36,11 @@ test("output keeps 16:9, is never upscaled and is capped at 1920 wide", () => {
   const large = frameCrop({ zoom: 1, cx: 0.5, cy: 0.5 }, 6000, 4000, 640);
   assert.equal(large.outputWidth, 1920);
   assert.equal(large.outputHeight, 1080);
+});
+
+test("a screenshot wider than 2560 px is reduced with its proportions; smaller ones are untouched", () => {
+  assert.deepEqual(screenshotSize(3840, 2160), { width: 2560, height: 1440, reduced: true });
+  assert.deepEqual(screenshotSize(2560, 1600), { width: 2560, height: 1600, reduced: false });
+  assert.deepEqual(screenshotSize(1280, 720), { width: 1280, height: 720, reduced: false });
+  assert.equal(screenshotSize(10000, 1).height, 1);
 });

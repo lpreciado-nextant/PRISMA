@@ -5,6 +5,8 @@ import { ConfirmDialog } from "../../src/components/ConfirmDialog";
 import { ImageFramer } from "../../src/components/ImageFramer";
 import { LocalVideoPreview, VideoPlayer, ViewerFrame } from "../../src/components/ViewerFrame";
 import { ProtectedImage } from "./ProtectedImage";
+import { primeImage } from "./imageCache";
+import { screenshotSize } from "../../src/lib/framing";
 import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/components/SubmissionForm";
 import { mediaApi, downloadMedia, workflowApi, transferApi } from "./dataSource";
 import { transferVideo, type PlaybackMode } from "./mediaTransfer";
@@ -58,6 +60,8 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [busy]);
+  // Which file of a multi-file upload is running, so the wait names what it is doing.
+  const [batch, setBatch] = useState<{ index: number; total: number; name: string } | null>(null);
   const mutate = async (files: File[], kind: MediaKind, remove?: MediaItem, resume?: MediaItem, purpose?: AssetPurpose) => {
     if (operation.current || blocked || uncertain || !state || state.rowVersion !== saved.rowVersion) return;
     const controller = new AbortController();
@@ -80,18 +84,26 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
         if (confirmed) { next = confirmed; setState(next); onVersion(next.rowVersion); }
         onCaptions({});
       }
+      let position = 0;
       for (let file of remove ? [null] : files) {
+      if (file) setBatch({ index: ++position, total: files.length, name: file.name });
       if (file && kind !== "attachment") {
         if (file.size > 5 * 1024 * 1024) throw new Error("Image exceeds 5 MB.");
         const decoded = await createImageBitmap(file);
         if (decoded.width * decoded.height > 40_000_000) { decoded.close(); throw new Error("Image dimensions exceed limit."); }
-        if (/\.webp$/i.test(file.name)) {
+        // WebP is stored as PNG; a screenshot wider than 2560 px is reduced (same proportions), which also keeps it under 5 MB.
+        const target = kind === "image" ? screenshotSize(decoded.width, decoded.height) : { width: decoded.width, height: decoded.height, reduced: false };
+        const webp = /\.webp$/i.test(file.name);
+        if (webp || target.reduced) {
           const canvas = document.createElement("canvas");
-          canvas.width = decoded.width;
-          canvas.height = decoded.height;
-          canvas.getContext("2d")!.drawImage(decoded, 0, 0);
-          const png = await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Image conversion failed.")), "image/png"));
-          file = new File([png], file.name.replace(/\.webp$/i, ".png"), { type: "image/png" });
+          canvas.width = target.width;
+          canvas.height = target.height;
+          const context = canvas.getContext("2d")!;
+          context.imageSmoothingQuality = "high";
+          context.drawImage(decoded, 0, 0, target.width, target.height);
+          const jpeg = !webp && file.type === "image/jpeg";
+          const converted = await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Image conversion failed.")), jpeg ? "image/jpeg" : "image/png", jpeg ? 0.92 : undefined));
+          file = new File([converted], webp ? file.name.replace(/\.webp$/i, ".png") : file.name, { type: converted.type });
         }
         decoded.close();
         if (file.size > 5 * 1024 * 1024) throw new Error("Converted image exceeds 5 MB.");
@@ -111,6 +123,11 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
         setState(next);
         next = await saveMediaPurpose(mediaApi, next, next.media, added.id, purpose, controller.signal);
       }
+      // The image that just landed is shown from this browser's copy instead of being downloaded back.
+      if (file && !remove && kind !== "attachment") {
+        const landed = next.media.find(item => item.kind === kind && item.complete && !state.media.some(previous => previous.id === item.id));
+        if (landed) primeImage(landed, file);
+      }
       setState(next);
       setPreview(null);
       onVersion(next.rowVersion);
@@ -123,6 +140,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     } finally {
       operation.current = null;
       setHashing(null);
+      setBatch(null);
       setBusy(false);
     }
   };
@@ -184,6 +202,10 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       if (!controller.signal.aborted) { setUncertain(true); setError("Media order was not confirmed. Reopen the draft before retrying."); }
     } finally { operation.current = null; if (!controller.signal.aborted) setBusy(false); }
   };
+  // What the wait says: the file being sent (k of n, with its share of bytes once sending), or the captions being saved.
+  const sending = state?.media.find(item => !item.complete && item.kind !== "attachment");
+  const uploadPercent = sending && sending.size > 0 ? Math.min(99, Math.round(sending.received / sending.size * 100)) : undefined;
+  const uploadLabel = batch ? `Uploading ${batch.total > 1 ? `${batch.index} of ${batch.total}: ` : ""}${batch.name}${uploadPercent === undefined ? "" : ` · ${uploadPercent}%`}` : "Saving media...";
   const uploadDisabled = disabled || !!state?.media.some(item => !item.complete);
   const remove = (id: string) => setRemoveTarget(state?.media.find(item => item.id === id) ?? null);
   const open = (id: string) => setPreview(state?.media.find(item => item.id === id && item.complete) ?? null);
@@ -194,16 +216,16 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
       thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
-      thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => files[0] && setFraming(files[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · you frame it next" />}
+      thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => files[0] && setFraming(files[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:9 · 1920 × 1080 px · you frame it next" />}
       images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}
-      imageUpload={<ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once" />}
+      imageUpload={<ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once · over 2560 px wide is reduced" />}
       attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, fileName: item.fileName, linkedAsset: item.linkedAsset, purpose: item.purpose ?? defaultPurpose(mediaAsset(item, 0).assetType), status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
     {error && <p role="alert" className="mb-4 text-[14px]">{error}</p>}
     {uncertain && !busy && onReopen && <button type="button" className={button} onClick={onReopen}><Icon name="file" />Reopen saved draft</button>}
     {!state && !error && <LoadingState label="Loading media..." />}
     {error && !uncertain && <button className={button} onClick={() => { setError(""); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button>}
-    {busy && hashing === null && <LoadingState className="mt-4" label="Saving media..." />}
+    {busy && hashing === null && <LoadingState className="mt-4" label={uploadLabel} progress={uploadPercent} />}
     {hashing !== null && <LoadingState label={`Checking video identity: ${hashing}%`} progress={hashing} />}
     {busy && uploadFile && <button type="button" className={button} onClick={pauseUpload}><Icon name="close" />Pause upload</button>}
     {uploadFile && <PreparedFileDownload file={uploadFile} />}
