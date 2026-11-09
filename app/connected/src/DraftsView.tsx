@@ -390,7 +390,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
           <NamedSection title="Status">
             <StatusField status={String(draft.maturity)} statuses={MATURITY_OPTIONS.map(option => ({ value: String(option.value), label: option.label }))} onStatus={value => change("maturity", Number(value) as CoreDraft["maturity"])} />
           </NamedSection>
-          <NamedSection title="Built by & effort">
+          <NamedSection title="Solution contributors">
             {librarian ? <p className="text-[14px] text-(--ink-2)">{preview.contributors.map(person => person.builtBy.name).join(", ") || "No contributors yet"}. Contributors are edited by the owner.</p>
               : <DraftGraphEditor graph={graph} references={graphReferences} section="contributors" onChange={changeGraph} />}
             <EffortFields hours={hoursText} complexity={draft.complexityValue != null ? COMPLEXITY_BY_CHOICE[draft.complexityValue] : undefined} error={hoursError} onHours={changeHours}

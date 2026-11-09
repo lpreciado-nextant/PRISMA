@@ -129,9 +129,29 @@ export function SubmissionsView({ review, refresh = 0, onRefreshing }: { review:
     } catch { throw new Error("Deletion was not confirmed. Cancel and refresh submissions before retrying."); }
     finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", abort); }
   };
+  // Pending review → Draft (the same transition as the solution page's Withdraw & edit), then the editor opens on it.
+  const withdraw = async (solution: Solution) => {
+    const entry = state.entries.find(item => item.solution.id === solution.id);
+    const controller = lifetime.current;
+    if (!entry || !controller || controller.signal.aborted) throw new Error("Refresh submissions before withdrawing this record.");
+    const operation = new AbortController();
+    const abort = () => operation.abort();
+    controller.signal.addEventListener("abort", abort, { once: true });
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = parseSubmission(await Promise.race([
+        workflowApi.transition(solution.id, entry.rowVersion, "withdraw", "", false),
+        new Promise<never>((_, reject) => { timeout = setTimeout(() => { operation.abort(); reject(new Error("Withdraw timed out.")); }, 30_000); }),
+      ]));
+      operation.signal.throwIfAborted();
+      if (result.record.core.id !== solution.id || result.record.publication !== 125060003 || result.record.core.rowVersion === entry.rowVersion) throw new Error("Unconfirmed withdrawal.");
+      navigate(`/submit?draft=${solution.id}`);
+    } catch { throw new Error("The withdrawal was not confirmed. Refresh your submissions and check its state before retrying."); }
+    finally { clearTimeout(timeout); controller.signal.removeEventListener("abort", abort); }
+  };
   if (!review) {
     // Needs your attention lists returned drafts and new suggestions; each solution shows its suggestions inside.
-    return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onDelete={remove}
+    return <MySubmissionsView connected entries={state.entries} suggestions={suggestions} onOpen={open} onEdit={open} onWithdraw={withdraw} onDelete={remove}
       renderCard={(solution, index, manage) => <ConnectedSolutionCard solution={solution} index={index} present={false} owned manage={manage} onOpen={() => open(solution)} />}
       renderPoster={solution => <SubmissionThumbnail solution={solution} />} />;
   }

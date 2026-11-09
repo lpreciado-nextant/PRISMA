@@ -24,7 +24,7 @@ const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> 
   "Solution details": { icon: "file", visibility: "client" },
   Status: { icon: "clock", visibility: "client" },
   Client: { icon: "briefcase" },
-  "Built by & effort": { icon: "users", visibility: "internal" },
+  "Solution contributors": { icon: "users", visibility: "internal" },
   "Challenges & lessons learned": { icon: "edit", visibility: "internal" },
   "What does it do, and why does it matter?": { icon: "sparkle", visibility: "client" },
   "Classify & tag": { icon: "tag", visibility: "client" },
@@ -40,7 +40,7 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
   "Solution details": "The card's first impression: a product-like name and a one-line summary.",
   Client: "Who it was built for, and how to describe them to other clients.",
   "Challenges & lessons learned": "What made it hard and what the next team should know. Internal only.",
-  "Built by & effort": "Who built it and how long it took. Internal tracking only.",
+  "Solution contributors": "Everyone who worked on it, including the CSM, and how complex it was. Internal tracking only.",
   "What does it do, and why does it matter?": "Write it for someone who wasn't on the project.",
   "Classify & tag": "Pick the main capability, then add technologies, industries and projects so CSMs can find it.",
   Media: "Add at least one screenshot. Thumbnail, video, slides and HTML demo are optional.",
@@ -572,9 +572,9 @@ export function SubmissionReview({ card, preview, attachments, contributors, eff
 /** People as bubbles on one wrapping line, with "Add contributor" as the last bubble; a new person's picker takes a line. */
 export function ContributorEditor({ children, onAdd, addDisabled = false, bare = false }: { children: ReactNode; onAdd: () => void; addDisabled?: boolean; bare?: boolean }) {
   return <section aria-labelledby={bare ? undefined : "contributors-heading"} aria-label={bare ? "Contributors" : undefined} className={bare ? "min-w-0" : "mt-2 min-w-0 border-t border-(--glass-edge) pt-5"}>
-    {!bare && <h3 id="contributors-heading" className="text-[17px] font-semibold">Built by &amp; effort</h3>}
-    <p className={`${bare ? "" : "mt-1 "}text-[13px] text-(--ink-2)`}>Add everyone who worked on this solution, including the CSM.</p>
-    <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+    {!bare && <h3 id="contributors-heading" className="text-[17px] font-semibold">Solution contributors</h3>}
+    {!bare && <p className="mt-1 text-[13px] text-(--ink-2)">Add everyone who worked on this solution, including the CSM.</p>}
+    <div className={`${bare ? "" : "mt-3 "}flex min-w-0 flex-wrap items-center gap-2`}>
       {children}
       <button type="button" disabled={addDisabled} className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-(--glass-edge) px-3 py-1 text-[12.5px] font-medium text-(--ink-2) outline-none hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent) disabled:cursor-not-allowed disabled:opacity-40" onClick={onAdd}><Icon name="plus" size={13} />Add contributor</button>
     </div>

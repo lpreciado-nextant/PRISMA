@@ -5,7 +5,7 @@ import type { Contributor, DraftGraph, GraphReferences } from "./draftGraph";
 export function DraftGraphEditor({ graph, references, section, onChange, onCreateTechnology }: { graph: DraftGraph; references: GraphReferences; section: "contributors" | "tags"; onChange: (graph: DraftGraph) => void; onCreateTechnology?: (name: string) => Promise<void> }) {
   const update = (index: number, fields: Partial<Contributor>) => onChange({ ...graph, contributors: graph.contributors.map((person, position) => position === index ? { ...person, ...fields } : person) });
   return <div className="min-w-0 space-y-5">
-    {section === "contributors" ? <ContributorEditor addDisabled={!references.people?.length || graph.contributors.length >= 100 || graph.contributors.some(person => !person.personId)}
+    {section === "contributors" ? <ContributorEditor bare addDisabled={!references.people?.length || graph.contributors.length >= 100 || graph.contributors.some(person => !person.personId)}
       onAdd={() => onChange({ ...graph, contributors: [...graph.contributors, { id: null, personId: "" }] })}>
       {references.people === null && <p role="alert">Consultant directory unavailable. Existing contributor selections are retained.</p>}
       {graph.contributors.map((person, index) => {

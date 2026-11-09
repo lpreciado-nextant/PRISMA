@@ -47,7 +47,7 @@ function rememberedLayout(): "grid" | "list" {
  * items. Below, every solution as cards with one row of status filters. `suggestions` (connected only) also puts a
  * compact count on each card's footer.
  */
-export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, actions, renderCard, renderPoster, suggestions }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; renderPoster?: (solution: Solution) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>> }) {
+export function MySubmissionsView({ entries, onDelete, connected = false, onOpen, onEdit, onWithdraw, actions, renderCard, renderPoster, suggestions }: { entries: { solution: Solution }[]; onDelete?: (id: string) => Promise<void>; connected?: boolean; onOpen?: (solution: Solution) => void; onEdit?: (solution: Solution) => void; /** Connected: withdraws a Pending review submission back to Draft (resolves when confirmed, rejects with a message to show). */ onWithdraw?: (solution: Solution) => Promise<void>; actions?: React.ReactNode; renderCard?: (solution: Solution, index: number, manage: CardManagement) => React.ReactNode; renderPoster?: (solution: Solution) => React.ReactNode; suggestions?: Readonly<Record<string, SuggestionSummary>> }) {
   const [filter, setFilter] = useState<Filter>("All");
   const [attentionAll, setAttentionAll] = useState(false);
   const [attentionHidden, setAttentionHidden] = useState(rememberedAttentionHidden);
@@ -75,7 +75,23 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const [deleteTarget, setDeleteTarget] = useState<Solution | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [withdrawTarget, setWithdrawTarget] = useState<Solution | null>(null);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState("");
   const newSubmissionRef = useRef<HTMLButtonElement>(null);
+  const confirmWithdraw = async () => {
+    if (!withdrawTarget || withdrawing || !onWithdraw) return;
+    setWithdrawing(true);
+    setWithdrawError("");
+    try {
+      await onWithdraw(withdrawTarget);
+      setWithdrawTarget(null);
+    } catch (error) {
+      setWithdrawError(error instanceof Error ? error.message : "The withdrawal was not confirmed. Refresh and try again.");
+    } finally {
+      setWithdrawing(false);
+    }
+  };
   const confirmDelete = async () => {
     if (!deleteTarget || deleting || !onDelete) return;
     setDeleting(true);
@@ -93,6 +109,9 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const edit = (solution: Solution) => onEdit ? onEdit(solution) : navigate(`/submit/${solution.id}`);
   // Connected Pending review and Published records are not edited in place: they are withdrawn from their submission page.
   const editable = (solution: Solution) => !connected || solution.publicationStatus === "Draft";
+  const returnedState = (solution: Solution) => submissionState(solution) === "Changes requested";
+  const cornerClass = "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold shadow-sm backdrop-blur-sm transition-colors hover:brightness-110";
+  const cornerStyle = { color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)", background: "color-mix(in srgb, var(--ground) 88%, transparent)" };
   const manage = (solution: Solution): CardManagement => {
     const name = solution.name || "Untitled solution";
     const suggestionCount = suggestions?.[solution.id]?.count ?? 0;
@@ -102,7 +121,10 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       unread: openOn(solution).length,
       actionNeeded: submissionState(solution) === "Changes requested",
       // Edit sits on the image's top-right corner, readable over any thumbnail; the footer keeps the count and •••.
-      corner: editable(solution) ? <button type="button" aria-label={`Edit ${name}`} onClick={() => edit(solution)} className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold shadow-sm backdrop-blur-sm transition-colors hover:brightness-110" style={{ color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)", background: "color-mix(in srgb, var(--ground) 88%, transparent)" }}><Icon name="edit" size={14} />Edit</button> : undefined,
+      // The primary action by state: Edit (Draft), Edit & resubmit (Changes requested), View (Pending review, Published, Retired).
+      corner: editable(solution)
+        ? <button type="button" aria-label={`${returnedState(solution) ? "Edit & resubmit" : "Edit"} ${name}`} onClick={() => edit(solution)} className={cornerClass} style={cornerStyle}><Icon name="edit" size={14} />{returnedState(solution) ? "Edit & resubmit" : "Edit"}</button>
+        : <button type="button" aria-label={`View ${name}`} onClick={() => open(solution)} className={cornerClass} style={{ ...cornerStyle, color: "var(--ink)", borderColor: "var(--glass-edge)" }}><Icon name="present" size={14} />View</button>,
       actions: <>
         {/* A librarian edited it (ADR-0013); the solution page shows when and their explanation. */}
         {solution.librarianEditedOn && <span title={`Edited by the librarian on ${solution.librarianEditedOn}`} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-[12px] font-semibold" style={{ color: "var(--accent)" }}><Icon name="edit" size={13} />Edited by librarian</span>}
@@ -111,7 +133,11 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
           className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-[12.5px] font-semibold transition-colors hover:brightness-110" style={{ color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)", background: "color-mix(in srgb, var(--accent) 10%, transparent)" }}>
           <Icon name="message" size={15} />{suggestionCount}
         </button>}
-        {onDelete && <OverflowMenu label={`More actions for ${name}`} items={[{ label: "Delete submission", icon: "trash", onSelect: () => { setDeleteError(""); setDeleteTarget(solution); } }]} />}
+        {(onDelete || (onWithdraw && solution.publicationStatus === "Pending review")) && <OverflowMenu label={`More actions for ${name}`} items={[
+          // A Pending review submission is withdrawn to Draft before it can be edited, so a librarian is never reviewing a moving target.
+          ...(onWithdraw && solution.publicationStatus === "Pending review" ? [{ label: "Withdraw to edit", icon: "edit" as const, onSelect: () => { setWithdrawError(""); setWithdrawTarget(solution); } }] : []),
+          ...(onDelete ? [{ label: "Delete submission", icon: "trash" as const, onSelect: () => { setDeleteError(""); setDeleteTarget(solution); } }] : []),
+        ]} />}
       </>,
     };
   };
@@ -234,6 +260,10 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
     </>}
     </section>
     {feedbackTarget && <FeedbackPanel name={feedbackTarget.name || "Untitled solution"} feedback={feedbackTarget.reviewComments ?? ""} retired={feedbackTarget.publicationStatus === "Retired"} onClose={() => setFeedbackTarget(null)} onEdit={editable(feedbackTarget) ? () => { const target = feedbackTarget; setFeedbackTarget(null); edit(target); } : undefined} />}
+    {withdrawTarget && <ConfirmDialog title="Withdraw to edit?" confirmLabel={withdrawing ? "Withdrawing..." : "Withdraw & edit"} busy={withdrawing} onCancel={() => setWithdrawTarget(null)} onConfirm={confirmWithdraw}>
+      <p className="break-words text-[14px]">Withdrawing "{withdrawTarget.name || "Untitled solution"}" stops the current review and returns it to Draft. Everything you entered, including attachments, is kept. Submit it again when you are ready.</p>
+      {withdrawError && <p role="alert" className="mt-3 text-[14px]">{withdrawError}</p>}
+    </ConfirmDialog>}
     {deleteTarget && <ConfirmDialog title="Delete submission?" confirmLabel={deleting ? "Deleting..." : "Delete submission"} busy={deleting} onCancel={() => setDeleteTarget(null)} onConfirm={confirmDelete}>
       <p className="break-words text-[14px]">Permanently delete "{deleteTarget.name}" and its attached media from {connected ? "Dataverse" : "this browser"}? This cannot be undone.{deleteTarget.publicationStatus === "Published" ? " It will also be removed from the library and published access revoked." : ""}</p>
       {deleteError && <p role="alert" className="mt-3 text-[14px]">{deleteError}</p>}

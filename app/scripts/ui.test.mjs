@@ -330,14 +330,14 @@ test("both adapters consume the shared form and review surfaces", async () => {
     assert.match(poc, new RegExp(`<${component}\\b`));
     assert.match(connected, new RegExp(`<${component}\\b`));
   }
-  // Both flows render Solution details (Define the solution) and Status, Built by & effort and Client (Solution context) as section cards.
+  // Both flows render Solution details (Define the solution) and Status, Solution contributors and Client (Solution context) as section cards.
   for (const source of [poc, connected]) {
     assert.match(source, /<SolutionDetailsFields\b/);
     assert.match(source, /<ClientFields\b/);
   }
   for (const source of [poc, connected]) {
     assert.match(source, /<NamedSection title="Solution details">/);
-    assert.match(source, /<NamedSection title="Built by & effort">/);
+    assert.match(source, /<NamedSection title="Solution contributors">/);
     assert.match(source, /<NamedSection title="Status">/);
     assert.match(source, /<StoryFields nested\b/);
     assert.match(source, /onAssociated=\{setClientAssociated\}/);
@@ -872,8 +872,8 @@ test("select picker shows a greyed placeholder until a value is chosen", async (
 test("section cards carry one section-level visibility badge and mixed sections badge each field", async () => {
   const { SectionCardsContext } = await server.ssrLoadModule("/src/components/sectionCards.ts");
   const inCards = element => renderToStaticMarkup(createElement(SectionCardsContext.Provider, { value: true }, element));
-  const built = render(form.NamedSection, { title: "Built by & effort", children: createElement("p", null, "Contributor 1") });
-  assert.match(built, /<h3[^>]*>Built by &amp; effort<\/h3>/);
+  const built = render(form.NamedSection, { title: "Solution contributors", children: createElement("p", null, "Contributor 1") });
+  assert.match(built, /<h3[^>]*>Solution contributors<\/h3>/);
   assert.equal((built.match(/>Internal only</g) ?? []).length, 1);
   assert.match(built, /Internal tracking only/);
   const client = render(form.ClientFields, { value: { name: "", summary: "", clientContext: "", redacted: "" }, onText: noop, selectedRoles: [], roles: ["Chief of Staff"], onRoles: noop, framed: true });
@@ -919,8 +919,15 @@ test("my submissions filters by review state and keeps card controls outside the
   assert.match(html, /aria-label="Edit Draft one"/);
   // Edit sits on the image's top-right corner, before the title, not in the footer beside •••.
   assert.match(html, /card-poster.*?absolute top-3 right-3 z-\[2\]"><button[^>]*aria-label="Edit Draft one".*?card-open/s);
-  assert.match(html, /aria-label="Edit Returned one"/);
+  // The primary action by state: Edit & resubmit (returned), View (Pending review, Published); never Edit on those.
+  assert.match(html, /aria-label="Edit &amp; resubmit Returned one"/);
+  assert.match(html, /aria-label="View Pending one"/);
+  assert.match(html, /aria-label="View Live one"/);
   assert.doesNotMatch(html, /aria-label="Edit (Pending|Live) one"/);
+  // Withdraw to edit is a secondary action in the ••• menu of Pending review rows only, and needs the connected handler.
+  assert.doesNotMatch(html, /Withdraw to edit/);
+  const withdrawable = render(MySubmissionsView, { entries, connected: true, onDelete: async () => {}, onWithdraw: async () => {} });
+  assert.equal((withdrawable.match(/Withdraw to edit/g) ?? []).length, 1);
   assert.equal((html.match(/aria-haspopup="menu"/g) ?? []).length, 4);
   assert.match(html, /role="menu"[^>]*>.*Delete submission/);
   // A retired record carries the librarian's reason, opened the same way as returned feedback.

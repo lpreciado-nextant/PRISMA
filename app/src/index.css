@@ -1176,7 +1176,7 @@
       transition: none;
     }
   }
-  /* ---- Contributor bubbles (Built by & effort) ------------------------ */
+  /* ---- Contributor bubbles (Solution contributors) ------------------------ */
   .contributor-chip {
     display: inline-flex;
     max-width: 100%;
