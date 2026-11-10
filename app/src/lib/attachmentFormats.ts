@@ -10,7 +10,7 @@ const VIDEO: FormatInfo = { label: "Video", how: "Plays in PRISMA's video viewer
 const FORMATS: Record<string, FormatInfo> = {
   mp4: { label: "MP4 video", how: VIDEO.how }, webm: { label: "WebM video", how: VIDEO.how },
   html: { label: "HTML", how: "Opens inside PRISMA, in a secure sandbox." }, htm: { label: "HTML", how: "Opens inside PRISMA, in a secure sandbox." },
-  pdf: { label: "PDF", how: "Downloaded, not previewed in PRISMA." },
+  pdf: { label: "PDF", how: "Preview or download from the solution page." },
   ppt: { label: "PowerPoint", how: "Downloaded, not previewed in PRISMA." }, pptx: { label: "PowerPoint", how: "Downloaded, not previewed in PRISMA." },
 };
 const MIME_EXTENSION: Record<string, string> = { "video/mp4": "mp4", "video/webm": "webm", "text/html": "html", "application/pdf": "pdf",

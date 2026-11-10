@@ -81,6 +81,7 @@ export function PublishedView({ solution, present, assetId, autoDownload = false
     capabilityOwner={capabilityOwner}
     assetNewTabUrl={asset => demoTabUrl(asset.id)}
     reviewActions={mediaAction.downloading ? <LoadingState className="mt-4" label={mediaAction.message} /> : mediaAction.message && <p className="mt-4 text-[14px] text-(--ink-2)" role={mediaAction.failed ? "alert" : "status"}>{mediaAction.message}</p>}
+    onAssetPreview={asset => navigate(`/s/${solution.id}/demo/${asset.id}`)}
     onAssetOpen={asset => void mediaAction.open(detail.media.find(item => item.id === asset.id))} />;
 }
 

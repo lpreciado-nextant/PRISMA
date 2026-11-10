@@ -301,7 +301,8 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
       const html = item.mime === "text/html" ? await blob.text() : undefined;
       const image = item.kind !== "attachment" ? await imageDataUrl(blob) : undefined;
       if (!active) return;
-      url = image ?? URL.createObjectURL(blob);
+      // The browser's PDF viewer needs the blob typed as a PDF.
+      url = image ?? URL.createObjectURL(item.mime === "application/pdf" && blob.type !== item.mime ? new Blob([blob], { type: item.mime }) : blob);
       if (html !== undefined) {
         const document = new DOMParser().parseFromString(html, "text/html");
         const policy = document.createElement("meta");
@@ -329,6 +330,9 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
   const stage = error ? <p role="alert" className="p-6">Media could not be downloaded.</p> : !content ? <LoadingState variant="media" className={viewerTitle ? "h-full w-full" : "h-64"} label="Loading preview..." />
     : item.kind !== "attachment" ? <img src={content.url} alt={item.caption || item.name} className={viewerTitle ? "h-full w-full object-contain" : "max-h-[65vh] w-full object-contain"} />
     : content.html !== undefined ? <iframe title={item.name} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={content.html} className={`${viewerTitle ? "h-full" : "h-[65vh]"} w-full border-0 bg-white`} />
+    // A PDF is shown by the browser's own viewer, which Chrome blocks inside a sandboxed frame. A PDF runs no page script and the frame is the
+    // blob this session just downloaded, so it is the one user file shown without `sandbox`; Download stays beside it.
+    : item.mime === "application/pdf" ? <iframe title={item.name} src={content.url} referrerPolicy="no-referrer" className={`${viewerTitle ? "h-full" : "h-[65vh]"} w-full border-0 bg-white`} />
     : item.mime.startsWith("video/") ? <VideoPlayer key={content.url} src={content.url} name={item.name} fileName={item.fileName} className={viewerTitle ? "h-full w-full" : "max-h-[65vh] w-full"} />
     : <div className="grid h-full place-items-center p-6 text-center"><a className={button} href={content.url} download={item.fileName ?? item.name}><Icon name="download" /><span className="break-all">{item.name}</span></a></div>;
   if (viewerTitle) return <ViewerFrame {...frame} name={viewerTitle} kind={item.kind === "attachment" ? mediaAsset(item, 0).assetType : "Screenshot"} onClose={onClose} actions={content && <a className={button} href={content.url} download={item.fileName ?? item.name} aria-label={`Download ${item.name}`} title="Download"><Icon name="download" /></a>}>{stage}</ViewerFrame>;

@@ -33,7 +33,7 @@ test("a file in the wrong section says where it belongs", () => {
 
 test("how each format reaches viewers, and sizes read plainly", () => {
   assert.match(formatOfMime("text/html")!.how, /inside PRISMA/);
-  assert.match(formatOfMime("application/pdf")!.how, /Downloaded/);
+  assert.match(formatOfMime("application/pdf")!.how, /Preview or download/);
   assert.equal(formatOfMime("application/zip"), undefined);
   assert.equal(formatBytes(512), "512 B");
   assert.equal(formatBytes(2.4 * MB), "2.4 MB");

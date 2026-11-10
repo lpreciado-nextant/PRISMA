@@ -7,6 +7,7 @@ import { assetPurpose, type AssetPurpose } from "../lib/assetPurpose";
 import { Icon } from "../components/Icon";
 import { Poster } from "../components/Poster";
 import { navigate } from "../lib/router";
+import { extensionOf } from "../lib/attachmentFormats";
 import { assetTypeLabel } from "../lib/linkedAssets";
 import { DemoStage } from "../components/DemoStage";
 import { solutionAreas } from "../lib/areas";
@@ -67,7 +68,7 @@ function behaviourFor(asset: DemoAsset): Behaviour {
   return map[asset.assetType];
 }
 
-export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, poster, favoritable = false, favorite, panels, aside, capabilityOwner, assetNewTabUrl, preview = false }: {
+export function DetailView({ solution, present, onEdit, onBack, backLabel, actions, reviewActions, assetBasePath, catalogueOnly = false, connected = false, effort, gallery, imageCount, onAssetOpen, onAssetPreview, poster, favoritable = false, favorite, panels, aside, capabilityOwner, assetNewTabUrl, preview = false }: {
   /** The contributor's pre-submission preview inside the editor: no back button or page padding; the caller makes it inert. */
   preview?: boolean;
   /** "Open in new tab" for demos shown in the viewer (connected: the focused viewer in another browser tab). */
@@ -88,6 +89,8 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
   poster?: React.ReactNode;
   imageCount?: number;
   onAssetOpen?: (asset: DemoAsset) => void;
+  /** Connected: a Preview button beside Download on PDF files, which opens them in the viewer without saving them. */
+  onAssetPreview?: (asset: DemoAsset) => void;
   /** Controls the favorite heart instead of the PoC's local browser-only store. */
   favorite?: { saved: boolean; pending?: boolean; onToggle: () => void; saves?: number };
 }) {
@@ -198,7 +201,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
       ) : mainDemo && (
         <div className="mt-6">
           <Panel title="Main demo">
-            <ul><AssetRow solution={solution} asset={mainDemo} basePath={assetBasePath} onOpen={onAssetOpen} newTabUrl={assetNewTabUrl?.(mainDemo)} /></ul>
+            <ul><AssetRow solution={solution} asset={mainDemo} basePath={assetBasePath} onOpen={onAssetOpen} onPreview={onAssetPreview} newTabUrl={assetNewTabUrl?.(mainDemo)} /></ul>
           </Panel>
         </div>
       )}
@@ -220,7 +223,7 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
           {!catalogueOnly && assetSections.map((section) => <Panel key={section.purpose} title={`${mainDemo && assetPurpose(mainDemo) === section.purpose ? `More ${section.title.toLowerCase()}` : section.title} · ${section.items.length}`}>
             <ul className="flex flex-col gap-3">
               {section.items.map((asset) => (
-                <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} onOpen={onAssetOpen} newTabUrl={assetNewTabUrl?.(asset)} />
+                <AssetRow key={asset.id} solution={solution} asset={asset} basePath={assetBasePath} onOpen={onAssetOpen} onPreview={onAssetPreview} newTabUrl={assetNewTabUrl?.(asset)} />
               ))}
             </ul>
           </Panel>)}
@@ -445,8 +448,9 @@ const ASSET_SECTIONS: { purpose: AssetPurpose; title: string }[] = [
   { purpose: "Supporting material", title: "Supporting material" },
 ];
 
-function AssetRow({ solution, asset, basePath, onOpen, newTabUrl }: { solution: Solution; asset: DemoAsset; basePath?: string; onOpen?: (asset: DemoAsset) => void; newTabUrl?: string }) {
+function AssetRow({ solution, asset, basePath, onOpen, onPreview, newTabUrl }: { solution: Solution; asset: DemoAsset; basePath?: string; onOpen?: (asset: DemoAsset) => void; onPreview?: (asset: DemoAsset) => void; newTabUrl?: string }) {
   const behaviour = behaviourFor(asset);
+  const previewable = !!onPreview && behaviour.mode === "download" && !asset.externalUrl && extensionOf(asset.fileName ?? asset.name) === "pdf";
 
   const act = () => {
     if (onOpen) { onOpen(asset); return; }
@@ -491,6 +495,9 @@ function AssetRow({ solution, asset, basePath, onOpen, newTabUrl }: { solution: 
       {/* A demo shown in the viewer can also open on its own in another tab; the main action stays the in-app viewer. */}
       {newTabUrl && behaviour.mode === "viewer" && <a href={newTabUrl} target="_blank" rel="noopener noreferrer" aria-label={`Open ${asset.name} in a new tab`} title="Open in new tab"
         className="grid size-9 shrink-0 place-items-center rounded-xl border" style={{ borderColor: "var(--glass-edge)", color: "var(--ink-2)" }}><Icon name="external" size={15} /></a>}
+      {previewable && <button type="button" onClick={() => onPreview(asset)} aria-label={`Preview ${asset.name}`}
+        className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border px-4 py-2 text-[13.5px] font-semibold"
+        style={{ fontFamily: "var(--font-display)", borderColor: "var(--glass-edge)", color: "var(--ink)" }}><Icon name="eye" size={15} />Preview</button>}
       <button
         type="button"
         onClick={act}
