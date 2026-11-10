@@ -12,6 +12,7 @@ import { ImageUploadZone, SubmissionMedia, UploadProgress } from "../../src/comp
 import { mediaApi, downloadMedia, workflowApi, transferApi } from "./dataSource";
 import { transferVideo, type PlaybackMode } from "./mediaTransfer";
 import { StreamingVideo } from "./StreamingVideo";
+import { PdfPages } from "./PdfPages";
 import { hasDuplicateOrder, repairMediaOrder, imageDataUrl, mediaRequest, saveMediaCaptions, saveMediaName, saveMediaOrder, saveMediaPurpose, uploadMedia, type MediaItem, type MediaKind, type MediaState } from "./media";
 import { defaultPurpose, type AssetPurpose } from "../../src/lib/assetPurpose";
 import type { SavedDraft } from "./drafts";
@@ -278,7 +279,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
   /** The demo alone, as opened in its own tab. */
   focused?: boolean }) {
   const frame = { newTabUrl, focused };
-  const [content, setContent] = useState<{ url: string; html?: string } | null>(null);
+  const [content, setContent] = useState<{ url: string; html?: string; blob?: Blob } | null>(null);
   const [error, setError] = useState(false);
   const downloaded = useRef(false);
   // A presentation's link to a file (`?download=1`) starts the download once; the Download button stays for a blocked one.
@@ -301,8 +302,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
       const html = item.mime === "text/html" ? await blob.text() : undefined;
       const image = item.kind !== "attachment" ? await imageDataUrl(blob) : undefined;
       if (!active) return;
-      // The browser's PDF viewer needs the blob typed as a PDF.
-      url = image ?? URL.createObjectURL(item.mime === "application/pdf" && blob.type !== item.mime ? new Blob([blob], { type: item.mime }) : blob);
+      url = image ?? URL.createObjectURL(blob);
       if (html !== undefined) {
         const document = new DOMParser().parseFromString(html, "text/html");
         const policy = document.createElement("meta");
@@ -310,7 +310,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
         policy.content = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
         document.head.prepend(policy);
         setContent({ url, html: `<!doctype html>${document.documentElement.outerHTML}` });
-      } else setContent({ url });
+      } else setContent({ url, blob });
     }).catch(() => { if (active) setError(true); });
     return () => { active = false; controller.abort(); if (url?.startsWith("blob:")) URL.revokeObjectURL(url); };
   }, [item, solutionId, mode]);
@@ -330,9 +330,7 @@ export function MediaPreview({ item, onClose, viewerTitle, solutionId, mode = "s
   const stage = error ? <p role="alert" className="p-6">Media could not be downloaded.</p> : !content ? <LoadingState variant="media" className={viewerTitle ? "h-full w-full" : "h-64"} label="Loading preview..." />
     : item.kind !== "attachment" ? <img src={content.url} alt={item.caption || item.name} className={viewerTitle ? "h-full w-full object-contain" : "max-h-[65vh] w-full object-contain"} />
     : content.html !== undefined ? <iframe title={item.name} sandbox="allow-scripts" referrerPolicy="no-referrer" srcDoc={content.html} className={`${viewerTitle ? "h-full" : "h-[65vh]"} w-full border-0 bg-white`} />
-    // A PDF is shown by the browser's own viewer, which Chrome blocks inside a sandboxed frame. A PDF runs no page script and the frame is the
-    // blob this session just downloaded, so it is the one user file shown without `sandbox`; Download stays beside it.
-    : item.mime === "application/pdf" ? <iframe title={item.name} src={content.url} referrerPolicy="no-referrer" className={`${viewerTitle ? "h-full" : "h-[65vh]"} w-full border-0 bg-white`} />
+    : item.mime === "application/pdf" && content.blob ? <PdfPages blob={content.blob} name={item.name} className={viewerTitle ? "h-full" : "h-[65vh]"} />
     : item.mime.startsWith("video/") ? <VideoPlayer key={content.url} src={content.url} name={item.name} fileName={item.fileName} className={viewerTitle ? "h-full w-full" : "max-h-[65vh] w-full"} />
     : <div className="grid h-full place-items-center p-6 text-center"><a className={button} href={content.url} download={item.fileName ?? item.name}><Icon name="download" /><span className="break-all">{item.name}</span></a></div>;
   if (viewerTitle) return <ViewerFrame {...frame} name={viewerTitle} kind={item.kind === "attachment" ? mediaAsset(item, 0).assetType : "Screenshot"} onClose={onClose} actions={content && <a className={button} href={content.url} download={item.fileName ?? item.name} aria-label={`Download ${item.name}`} title="Download"><Icon name="download" /></a>}>{stage}</ViewerFrame>;
