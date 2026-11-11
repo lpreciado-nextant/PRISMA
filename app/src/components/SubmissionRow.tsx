@@ -31,7 +31,7 @@ export function SubmissionRow({ solution, index, manage, onOpen, poster }: { sol
     <div className="submission-row-state"><SubmissionStatus state={state} /></div>
     <div className="submission-row-signal card-control min-w-0">{signal}</div>
     <div className="submission-row-actions card-control flex items-center justify-end gap-2">
-      {manage.corner}
+      {!manage.cornerIsView && manage.corner}
       {manage.actions}
     </div>
   </div>;

@@ -124,6 +124,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       actionNeeded: submissionState(solution) === "Changes requested",
       // Edit sits on the image's top-right corner, readable over any thumbnail; the footer keeps the count and •••.
       // The primary action by state: Edit (Draft), Edit & resubmit (Changes requested), View (Pending review, Published, Retired).
+      cornerIsView: !editable(solution),
       corner: editable(solution)
         ? <button type="button" aria-label={`${returnedState(solution) ? "Edit & resubmit" : "Edit"} ${name}`} onClick={() => edit(solution)} className={`${cornerClass} whitespace-nowrap`} style={returnedState(solution) ? returnedStyle : cornerStyle}><Icon name="edit" size={14} />{returnedState(solution) ? "Edit & resubmit" : "Edit"}</button>
         : <button type="button" aria-label={`View ${name}`} onClick={() => open(solution)} className={cornerClass} style={{ ...cornerStyle, color: "var(--ink)", borderColor: "var(--glass-edge)" }}><Icon name="present" size={14} />View</button>,

@@ -17,7 +17,8 @@ import { FavoriteButton } from "./FavoriteButton";
  * the card's edge and shows "N new" until the owner addresses them.
  */
 /** `actionNeeded`: the librarian returned it (Changes requested); it outranks `unread` with an amber glow (the band already says so). */
-export type CardManagement = { actions: ReactNode; corner?: ReactNode; onFeedback?: () => void; unread?: number; actionNeeded?: boolean };
+/** `cornerIsView`: the corner button only opens the solution, which the list row's name already does, so the row omits it. */
+export type CardManagement = { actions: ReactNode; corner?: ReactNode; cornerIsView?: boolean; onFeedback?: () => void; unread?: number; actionNeeded?: boolean };
 
 /** One line of tags that never wraps: each truncates with an ellipsis, then "+N" for the rest. */
 function CardTags({ tags, more }: { tags: string[]; more: number }) {
