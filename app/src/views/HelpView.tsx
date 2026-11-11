@@ -68,6 +68,22 @@ export function HelpView({ connected = false, librarian = true, contact }: { con
     ] }] : []),
   ];
   const questions: { question: string; answer: ReactNode }[] = [
+    { question: "What is a Solution in PRISMA?", answer: <>
+      <p>A <b>Solution</b> in PRISMA represents anything we have created, implemented, or delivered at Nextant to address a business need, solve a challenge, or create value for a client.</p>
+      <p className="mt-2">It doesn&apos;t have to be a technical product or a fully developed application. A solution can take many forms, including:</p>
+      <ul className="mt-2 list-disc space-y-1 pl-5">
+        <li><b>Applications &amp; Tools:</b> Custom applications, internal tools, dashboards, or digital products.</li>
+        <li><b>Automation:</b> Automated workflows, AI agents, bots, integrations, or processes that reduce manual effort and improve efficiency.</li>
+        <li><b>Prototypes &amp; Demos:</b> Proofs of concept (PoCs), MVPs, prototypes, or demos that showcase an idea, technology, or potential solution.</li>
+        <li><b>Data &amp; Analytics:</b> BI solutions, reports, data models, pipelines, analytics platforms, or data-driven capabilities.</li>
+        <li><b>Methodologies &amp; Frameworks:</b> Reusable approaches, accelerators, technical frameworks, or structured methodologies.</li>
+        <li><b>Process Improvements:</b> Optimized workflows, redesigned processes, operational improvements, or new ways of working.</li>
+        <li><b>Projects &amp; Implementations:</b> Successful client engagements, implementations, or initiatives that demonstrate how we addressed a specific business challenge.</li>
+      </ul>
+      <p className="mt-2"><b>The goal of PRISMA</b> is to showcase the value we create at Nextant, make our capabilities and expertise visible, and build a repository of reusable knowledge and real-world examples.</p>
+      <p className="mt-2">This allows our teams and CSMs to discover what we have built, understand the problems we can solve, identify opportunities to reuse existing work, and share relevant examples with potential clients.</p>
+      <p className="mt-2"><b>If it demonstrates a capability, solves a problem, or showcases value delivered by Nextant, it can be a Solution in PRISMA!</b></p>
+    </> },
     { question: "What does Present Mode hide?", answer: <>
       <span className="block">Present Mode hides internal information, including real client names (replaced by anonymous descriptions), contributors, CSMs, development effort, project details, and internal notes.</span>
       <span className="mt-2 block">It also temporarily hides My Submissions, Saved Solutions, and the Review Queue to keep the experience focused on client-ready content.</span>

@@ -112,6 +112,8 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
   const returnedState = (solution: Solution) => submissionState(solution) === "Changes requested";
   const cornerClass = "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-[13px] font-semibold shadow-sm backdrop-blur-sm transition-colors hover:brightness-110";
   const cornerStyle = { color: "var(--accent)", borderColor: "color-mix(in srgb, var(--accent) 35%, transparent)", background: "color-mix(in srgb, var(--ground) 88%, transparent)" };
+  // A returned submission's action takes the amber of its "Changes requested" signal, so the two read as one.
+  const returnedStyle = { color: "color-mix(in srgb, var(--proto) 85%, var(--ink))", borderColor: "color-mix(in srgb, var(--proto) 45%, transparent)", background: "color-mix(in srgb, var(--proto) 14%, var(--ground))" };
   const manage = (solution: Solution): CardManagement => {
     const name = solution.name || "Untitled solution";
     const suggestionCount = suggestions?.[solution.id]?.count ?? 0;
@@ -123,7 +125,7 @@ export function MySubmissionsView({ entries, onDelete, connected = false, onOpen
       // Edit sits on the image's top-right corner, readable over any thumbnail; the footer keeps the count and •••.
       // The primary action by state: Edit (Draft), Edit & resubmit (Changes requested), View (Pending review, Published, Retired).
       corner: editable(solution)
-        ? <button type="button" aria-label={`${returnedState(solution) ? "Edit & resubmit" : "Edit"} ${name}`} onClick={() => edit(solution)} className={cornerClass} style={cornerStyle}><Icon name="edit" size={14} />{returnedState(solution) ? "Edit & resubmit" : "Edit"}</button>
+        ? <button type="button" aria-label={`${returnedState(solution) ? "Edit & resubmit" : "Edit"} ${name}`} onClick={() => edit(solution)} className={`${cornerClass} whitespace-nowrap`} style={returnedState(solution) ? returnedStyle : cornerStyle}><Icon name="edit" size={14} />{returnedState(solution) ? "Edit & resubmit" : "Edit"}</button>
         : <button type="button" aria-label={`View ${name}`} onClick={() => open(solution)} className={cornerClass} style={{ ...cornerStyle, color: "var(--ink)", borderColor: "var(--glass-edge)" }}><Icon name="present" size={14} />View</button>,
       actions: <>
         {/* A librarian edited it (ADR-0013); the solution page shows when and their explanation. */}

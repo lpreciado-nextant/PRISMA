@@ -147,7 +147,7 @@ export function SolutionCard({
                 onClick={manage.onFeedback}
                 aria-label={`View feedback for ${solution.name}`}
                 className="card-control inline-flex shrink-0 cursor-pointer items-center gap-1 text-[13px] font-semibold hover:underline"
-                style={{ color: "var(--accent)" }}
+                style={{ color: manage.actionNeeded ? "color-mix(in srgb, var(--proto) 85%, var(--ink))" : "var(--accent)" }}
               >
                 View feedback
                 <Icon name="arrowRight" size={13} />
