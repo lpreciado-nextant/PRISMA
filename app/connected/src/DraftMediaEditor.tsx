@@ -65,7 +65,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
     return () => window.removeEventListener("beforeunload", warn);
   }, [busy]);
   // Which file of a multi-file upload is running, so the wait names what it is doing.
-  const [batch, setBatch] = useState<{ index: number; total: number; name: string } | null>(null);
+  const [batch, setBatch] = useState<{ index: number; total: number; name: string; kind: MediaKind } | null>(null);
   const mutate = async (files: File[], kind: MediaKind, remove?: MediaItem, resume?: MediaItem, purpose?: AssetPurpose) => {
     if (operation.current || blocked || uncertain || !state || state.rowVersion !== saved.rowVersion) return;
     const controller = new AbortController();
@@ -90,7 +90,7 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       }
       let position = 0;
       for (let file of remove ? [null] : files) {
-      if (file) setBatch({ index: ++position, total: files.length, name: file.name });
+      if (file) setBatch({ index: ++position, total: files.length, name: file.name, kind });
       if (file && kind !== "attachment") {
         if (file.size > 5 * 1024 * 1024) throw new Error("Image exceeds 5 MB.");
         const decoded = await createImageBitmap(file);
@@ -227,7 +227,10 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
   const sending = state?.media.find(item => !item.complete && item.kind !== "attachment");
   const uploadPercent = sending && sending.size > 0 ? Math.min(99, Math.round(sending.received / sending.size * 100)) : undefined;
   const uploadLabel = batch ? `Uploading ${batch.total > 1 ? `${batch.index} of ${batch.total}: ` : ""}${batch.name}${uploadPercent === undefined ? "" : ` · ${uploadPercent}%`}` : "Saving media...";
-  const uploadDisabled = disabled || !!state?.media.some(item => !item.complete);
+  // Image uploads show their wait right under the drop zone they came from; other waits stay at the bottom of the section.
+  const inlineKind = busy && hashing === null && batch && ((batch.kind === "thumbnail" && !thumbnail) || batch.kind === "image") ? batch.kind : null;
+  const waitFor = (kind: MediaKind) => inlineKind === kind ? <LoadingState className="mt-3" label={uploadLabel} progress={uploadPercent} /> : null;
+  const uploadDisabled = disabled ||!!state?.media.some(item => !item.complete);
   const remove = (id: string) => setRemoveTarget(state?.media.find(item => item.id === id) ?? null);
   const open = (id: string) => setPreview(state?.media.find(item => item.id === id && item.complete) ?? null);
   return <section className={embedded ? "min-w-0" : "mt-12 border-t border-(--glass-edge) pt-8"}>
@@ -237,16 +240,16 @@ export function DraftMediaEditor({ saved, blocked, captions, onCaptions, onVersi
       onReorderImages={ids => void reorder("image", ids)} onReorderAttachments={ids => void reorder("attachment", ids)}
       onPreviewThumbnail={thumbnail ? () => open(thumbnail.id) : undefined} onPreviewImage={open} onPreviewAttachment={open}
       thumbnail={thumbnail && <ProtectedImage item={thumbnail} className="h-full w-full object-cover" />} thumbnailStage={thumbnail && <StageImage item={thumbnail} />} onReplaceThumbnail={file => setReplacement(file)} onRemoveThumbnail={() => thumbnail && setRemoveTarget(thumbnail)}
-      thumbnailUpload={<ImageUploadZone disabled={uploadDisabled} onFiles={files => files[0] && setFraming(files[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:9 · 1920 × 1080 px · you frame it next" />}
+      thumbnailUpload={<><ImageUploadZone disabled={uploadDisabled} onFiles={files => files[0] && setFraming(files[0])} line="Upload a screenshot for the card." sub="PNG, JPG or WebP · 16:9 · 1920 × 1080 px · you frame it next" />{waitFor("thumbnail")}</>}
       images={(state?.media ?? []).filter(item => item.kind === "image" && item.complete).map(item => ({ id: item.id, caption: captions[item.id] ?? item.caption ?? "", preview: <ProtectedImage item={item} className="h-full w-full object-cover" />, stage: <StageImage item={item} /> }))}
       onCaption={(id, caption) => onCaptions({ ...captions, [id]: caption })} onRemoveImage={remove}
-      imageUpload={<ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once · over 2560 px wide is reduced" />}
+      imageUpload={<><ImageUploadZone disabled={uploadDisabled} multiple onFiles={files => void mutate(files, "image")} line="Add detail screenshots — flows, dashboards, the moments worth narrating." sub="Up to 6 · select several at once · over 2560 px wide is reduced" />{waitFor("image")}</>}
       attachments={(state?.media ?? []).filter(item => item.kind === "attachment" || !item.complete).map(item => ({ id: item.id, name: item.name, fileName: item.fileName, linkedAsset: item.linkedAsset, size: item.size, mime: item.mime, purpose: item.purpose ?? defaultPurpose(mediaAsset(item, 0).assetType), status: !item.complete && <UploadProgress name={item.name} received={item.received} size={item.size} active={busy} /> }))} onRemoveAttachment={remove}>
     {error && <p role="alert" className="mb-4 text-[14px]">{error}</p>}
     {uncertain && !busy && onReopen && <button type="button" className={button} onClick={onReopen}><Icon name="file" />Reopen saved draft</button>}
     {!state && !error && <LoadingState label="Loading media..." />}
     {error && !uncertain && <button className={button} onClick={() => { setError(""); setAttempt(current => current + 1); }}><Icon name="arrowRight" />Retry</button>}
-    {busy && hashing === null && <LoadingState className="mt-4" label={uploadLabel} progress={uploadPercent} />}
+    {busy && hashing === null && !inlineKind && <LoadingState className="mt-4" label={uploadLabel} progress={uploadPercent} />}
     {hashing !== null && <LoadingState label={`Checking video identity: ${hashing}%`} progress={hashing} />}
     {busy && uploadFile && <button type="button" className={button} onClick={pauseUpload}><Icon name="close" />Pause upload</button>}
     {uploadFile && <PreparedFileDownload file={uploadFile} />}
