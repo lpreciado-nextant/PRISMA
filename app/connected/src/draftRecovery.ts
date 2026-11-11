@@ -20,9 +20,9 @@ export function parseRecovery(text: string, owner: string, id?: string): DraftRe
   if (value.uncertain !== undefined && typeof value.uncertain !== "boolean") throw new Error("Invalid recovery operation state.");
   const draft = value.draft;
   // Recoveries written before challenges and lessons learned existed have neither field.
-  if (draft && typeof draft === "object") { draft.challenges ??= ""; draft.lessonsLearned ??= ""; }
+  if (draft && typeof draft === "object") { draft.challenges ??= ""; draft.lessonsLearned ??= ""; draft.bestPractices ??= ""; }
   if (!draft || Object.keys(EMPTY_DRAFT).some(key => typeof draft[key as keyof CoreDraft] !== typeof EMPTY_DRAFT[key as keyof CoreDraft]) || !MATURITY_OPTIONS.some(option => option.value === draft.maturity)) throw new Error("Invalid recovery draft.");
-  for (const [key, limit] of Object.entries({ name: 100, summary: 200, whatItDoes: 4000, businessValue: 4000, clientContext: 200, clientContextRedacted: 200, challenges: 2000, lessonsLearned: 2000 })) if ((draft[key as keyof CoreDraft] as string).length > limit) throw new Error("Invalid recovery text.");
+  for (const [key, limit] of Object.entries({ name: 100, summary: 200, whatItDoes: 4000, businessValue: 4000, clientContext: 200, clientContextRedacted: 200, challenges: 2000, lessonsLearned: 2000, bestPractices: 2000 })) if ((draft[key as keyof CoreDraft] as string).length > limit) throw new Error("Invalid recovery text.");
   if (draft.capabilityId && !guid.test(draft.capabilityId)) throw new Error("Invalid recovery reference.");
   if ((draft.estimatedMinimumHours != null && (!Number.isInteger(draft.estimatedMinimumHours) || draft.estimatedMinimumHours < 0 || draft.estimatedMinimumHours > MAX_ESTIMATED_HOURS))
     || (draft.complexityValue != null && !COMPLEXITY_BY_CHOICE[draft.complexityValue])) throw new Error("Invalid recovery effort.");

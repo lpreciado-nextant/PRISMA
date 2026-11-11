@@ -27,7 +27,7 @@ const SECTION_META: Record<string, { icon: IconName; visibility?: Visibility }> 
   Status: { icon: "clock", visibility: "client" },
   Client: { icon: "briefcase" },
   "Solution contributors": { icon: "users", visibility: "internal" },
-  "Challenges & lessons learned": { icon: "edit", visibility: "internal" },
+  "Challenges, lessons & best practices": { icon: "edit", visibility: "internal" },
   "What does it do, and why does it matter?": { icon: "sparkle", visibility: "client" },
   "Classify & tag": { icon: "tag", visibility: "client" },
   Media: { icon: "image", visibility: "client" },
@@ -40,7 +40,7 @@ const STEP_INTRODUCTIONS: Record<string, string> = {
   "Solution context": "Where it stands, who built it, and any client involved.",
   "Solution details": "The card's first impression: a product-like name and a one-line summary.",
   Client: "Who it was built for, and how to describe them to other clients.",
-  "Challenges & lessons learned": "What made it hard and what the next team should know. Internal only.",
+  "Challenges, lessons & best practices": "What made it hard, what the next team should know and what worked well. Internal only.",
   "Solution contributors": "Everyone who worked on it, including the CSM, and how complex it was. Internal tracking only.",
   "What does it do, and why does it matter?": "Write it for someone who wasn't on the project.",
   "Classify & tag": "Pick the main capability, then add technologies, industries and projects so it can be found later.",
@@ -588,13 +588,14 @@ export function StoryFields({ whatItDoes, businessValue, onChange, nested = fals
   </Shell>;
 }
 
-/** Optional, internal-only reflections (`nx_challenges`, `nx_lessonslearned`); never part of present mode. */
-export function LessonsFields({ challenges, lessonsLearned, onChange }: { challenges: string; lessonsLearned: string; onChange: (key: "challenges" | "lessonsLearned", value: string) => void }) {
+/** Optional, internal-only reflections (`nx_challenges`, `nx_lessonslearned`, `nx_bestpractices`); never part of present mode. */
+export function LessonsFields({ challenges, lessonsLearned, bestPractices, onChange }: { challenges: string; lessonsLearned: string; bestPractices: string; onChange: (key: "challenges" | "lessonsLearned" | "bestPractices", value: string) => void }) {
   const id = useId();
-  return <NamedSection title="Challenges & lessons learned">
-    <div className="grid min-w-0 items-start gap-5 lg:grid-cols-2">
+  return <NamedSection title="Challenges, lessons & best practices">
+    <div className="grid min-w-0 items-start gap-5 lg:grid-cols-3">
     <Field inputId={`${id}-challenges`} label="Challenges" optional hint="Blockers, risks or difficulties you hit while building it."><MarkdownEditor id={`${id}-challenges`} label="Challenges" value={challenges} onChange={value => onChange("challenges", value)} placeholder="e.g. Test data arrived late, so matching rules were tuned on a small sample." maxLength={2000} /></Field>
     <Field inputId={`${id}-lessons`} label="Lessons learned" optional hint="Recommendations or implementation notes for the next team."><MarkdownEditor id={`${id}-lessons`} label="Lessons learned" value={lessonsLearned} onChange={value => onChange("lessonsLearned", value)} placeholder="e.g. Request data access in week one and agree on a sample with finance." maxLength={2000} /></Field>
+    <Field inputId={`${id}-practices`} label="Best practices" optional hint="What worked well and is worth reusing: approaches, patterns or tools."><MarkdownEditor id={`${id}-practices`} label="Best practices" value={bestPractices} onChange={value => onChange("bestPractices", value)} placeholder="e.g. Keep prompts in versioned files and review them like code." maxLength={2000} /></Field>
     </div>
   </NamedSection>;
 }

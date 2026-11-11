@@ -17,9 +17,10 @@ export interface CoreDraft {
   businessValue: string;
   clientContext: string;
   clientContextRedacted: string;
-  /** Internal only (`nx_challenges`, `nx_lessonslearned`); never read in present mode. */
+  /** Internal only (`nx_challenges`, `nx_lessonslearned`, `nx_bestpractices`); never read in present mode. */
   challenges: string;
   lessonsLearned: string;
+  bestPractices: string;
   safetyAcknowledged: boolean;
   /** `nx_estimatedminimumhours`: whole-hour estimate for the whole solution. Optional; internal only. */
   estimatedMinimumHours?: number;
@@ -40,11 +41,11 @@ export interface DraftApi {
 export const EMPTY_DRAFT: CoreDraft = {
   name: "", summary: "", capabilityId: "", maturity: 125060004,
   whatItDoes: "", businessValue: "", clientContext: "",
-  clientContextRedacted: "", challenges: "", lessonsLearned: "", safetyAcknowledged: false,
+  clientContextRedacted: "", challenges: "", lessonsLearned: "", bestPractices: "", safetyAcknowledged: false,
 };
 
 const GUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
-const TEXT_FIELDS = ["name", "summary", "capabilityId", "whatItDoes", "businessValue", "clientContext", "clientContextRedacted", "challenges", "lessonsLearned"] as const;
+const TEXT_FIELDS = ["name", "summary", "capabilityId", "whatItDoes", "businessValue", "clientContext", "clientContextRedacted", "challenges", "lessonsLearned", "bestPractices"] as const;
 
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid draft response.");
@@ -76,7 +77,7 @@ export function coreFields(draft: CoreDraft): CoreDraft {
     name: draft.name, summary: draft.summary, capabilityId: draft.capabilityId,
     maturity: draft.maturity, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
     clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted,
-    challenges: draft.challenges, lessonsLearned: draft.lessonsLearned,
+    challenges: draft.challenges, lessonsLearned: draft.lessonsLearned, bestPractices: draft.bestPractices,
     safetyAcknowledged: draft.safetyAcknowledged,
     ...(draft.estimatedMinimumHours != null ? { estimatedMinimumHours: draft.estimatedMinimumHours } : {}),
     ...(draft.complexityValue != null ? { complexityValue: draft.complexityValue } : {}),

@@ -22,7 +22,7 @@ namespace Prisma.Plugins
         public static readonly string[] CoreColumns = {
             "nx_solutionname", "nx_onelinesummary", "nx_whatitdoes", "nx_businessvalue",
             "nx_capability", "nx_status", "nx_clientcontext", "nx_clientcontextredacted", "nx_safetyacknowledged",
-            "nx_challenges", "nx_lessonslearned", "nx_estimatedminimumhours", "nx_complexity"
+            "nx_challenges", "nx_lessonslearned", "nx_bestpractices", "nx_estimatedminimumhours", "nx_complexity"
         };
         /// <summary>Live `nx_solution.nx_complexity` choice values: Easy, Medium, Hard. Required at submit/publication.</summary>
         public static readonly int[] ComplexityValues = { 125060000, 125060001, 125060002 };
@@ -33,7 +33,8 @@ namespace Prisma.Plugins
             { "businessValue", "nx_businessvalue" },
             { "clientContext", "nx_clientcontext" }, { "clientContextRedacted", "nx_clientcontextredacted" },
             // Internal only (never in present mode); both columns are 2000 characters in Dataverse.
-            { "challenges", "nx_challenges" }, { "lessonsLearned", "nx_lessonslearned" }
+            { "challenges", "nx_challenges" }, { "lessonsLearned", "nx_lessonslearned" },
+            { "bestPractices", "nx_bestpractices" }
         };
 
         public static Entity Parse(string json)
@@ -60,7 +61,7 @@ namespace Prisma.Plugins
                 if (raw != null && !(raw is string)) throw Invalid(pair.Key + " must be text.");
                 var text = ((string)raw ?? "").Trim();
                 var limit = pair.Key == "name" ? 100 : pair.Key == "whatItDoes" || pair.Key == "businessValue" ? 4000
-                    : pair.Key == "challenges" || pair.Key == "lessonsLearned" ? 2000 : 200;
+                    : pair.Key == "challenges" || pair.Key == "lessonsLearned" || pair.Key == "bestPractices" ? 2000 : 200;
                 if (text.Length > limit) throw Invalid(pair.Key + " exceeds " + limit + " characters.");
                 if (pair.Key == "name" && (text.Length == 0 || text.Equals("Untitled solution", StringComparison.OrdinalIgnoreCase)))
                     throw Invalid("Enter an authored solution name.");

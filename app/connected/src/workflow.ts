@@ -40,7 +40,7 @@ export function submissionSolution(record: Submission, names: Record<string, str
     specializationArea: specializationAreas[0] ?? "ai", specializationAreas, status: MATURITY_OPTIONS.find(option => option.value === core.maturity)!.label as Solution["status"], publicationStatus: PUBLICATIONS[record.publication] as Solution["publicationStatus"],
     reviewOutcome: record.outcome === 125060001 ? "Changes requested" : record.outcome === 125060002 ? "Approved" : "None", reviewComments: record.comments,
     safetyAcknowledged: core.safetyAcknowledged, clientSafeReviewed: record.cleared, clientContext: core.clientContext || undefined, clientContextRedacted: core.clientContextRedacted || undefined,
-    challenges: core.challenges || undefined, lessonsLearned: core.lessonsLearned || undefined,
+    challenges: core.challenges || undefined, lessonsLearned: core.lessonsLearned || undefined, bestPractices: core.bestPractices || undefined,
     ...(core.estimatedMinimumHours != null ? { estimatedMinimumHours: core.estimatedMinimumHours } : {}),
     ...(core.complexityValue != null ? { complexity: COMPLEXITY_BY_CHOICE[core.complexityValue] } : {}),
     dateAdded: record.dateAdded ?? "", ...(record.modifiedOn ? { updatedOn: record.modifiedOn } : {}), libraryNotes: record.libraryNotes, ...(record.librarianEditedOn ? { librarianEditedOn: record.librarianEditedOn } : {}), searchKeywords: "", contributors: [], assets: [], technologies: [], industries: [], clientRoles: [], capabilities: core.capabilityId ? [names[core.capabilityId] ?? "Unavailable capability"] : [],

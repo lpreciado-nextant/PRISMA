@@ -56,21 +56,22 @@ test("Markdown editors preserve accessible fields, limits and literal saved sour
   assert.doesNotMatch(html, /role="tablist"|<textarea|Preview|>Write</);
   assert.match(html, /<label for="[^"]+">/);
   assert.doesNotMatch(html, /<label[^>]*><button/);
-  const lessons = render(form.LessonsFields, { challenges: "**Internal**", lessonsLearned: "", onChange: noop });
-  assert.equal((lessons.match(/class="markdown-editor"/g) ?? []).length, 2);
+  const lessons = render(form.LessonsFields, { challenges: "**Internal**", lessonsLearned: "", bestPractices: "", onChange: noop });
+  assert.equal((lessons.match(/class="markdown-editor"/g) ?? []).length, 3);
 });
 
 test("Markdown detail formatting preserves present-mode exclusion of internal narratives", async () => {
   const { DetailView } = await server.ssrLoadModule("/src/views/DetailView.tsx");
   const { SOLUTIONS } = await server.ssrLoadModule("/src/data/solutions.ts");
-  const solution = { ...SOLUTIONS[0], whatItDoes: "**Public narrative**", businessValue: "- Public benefit", challenges: "*PRIVATE-NOTE*", lessonsLearned: "PRIVATE-LESSON" };
+  const solution = { ...SOLUTIONS[0], whatItDoes: "**Public narrative**", businessValue: "- Public benefit", challenges: "*PRIVATE-NOTE*", lessonsLearned: "PRIVATE-LESSON", bestPractices: "PRIVATE-PRACTICE" };
   const normal = render(DetailView, { solution, present: false });
   const present = render(DetailView, { solution, present: true });
   assert.match(normal, /<strong>Public narrative<\/strong>/);
   assert.match(normal, /<em>PRIVATE-NOTE<\/em>/);
   assert.match(present, /<strong>Public narrative<\/strong>/);
   assert.match(present, /<li>Public benefit<\/li>/);
-  assert.doesNotMatch(present, /PRIVATE-NOTE|PRIVATE-LESSON/);
+  assert.match(normal, /PRIVATE-PRACTICE/);
+  assert.doesNotMatch(present, /PRIVATE-NOTE|PRIVATE-LESSON|PRIVATE-PRACTICE/);
 });
 
 test("help guides start collapsed with accessible controls in both app targets", async () => {
@@ -1024,13 +1025,14 @@ test("owner status panel tints by state, keeps actions on the right and shows th
   assert.doesNotMatch(published, /Your submission|Live in the library|Safety acknowledged|Cleared for presentation/);
 });
 
-test("challenges and lessons learned are optional, internal and limited to the Dataverse length", () => {
-  const html = render(form.LessonsFields, { challenges: "", lessonsLearned: "", onChange: noop });
-  assert.match(html, /Challenges &amp; lessons learned/);
-  assert.match(html, /What made it hard and what the next team should know\. Internal only\./);
+test("challenges, lessons learned and best practices are optional, internal and limited to the Dataverse length", () => {
+  const html = render(form.LessonsFields, { challenges: "", lessonsLearned: "", bestPractices: "", onChange: noop });
+  assert.match(html, /Challenges, lessons &amp; best practices/);
+  assert.match(html, /What made it hard, what the next team should know and what worked well\. Internal only\./);
   assert.match(html, /Challenges<span[^>]*>\(optional\)/);
   assert.match(html, /Lessons learned<span[^>]*>\(optional\)/);
-  assert.equal((html.match(/class="markdown-editor"/g) ?? []).length, 2);
+  assert.match(html, /Best practices<span[^>]*>\(optional\)/);
+  assert.equal((html.match(/class="markdown-editor"/g) ?? []).length, 3);
   assert.doesNotMatch(html, /\(required\)/);
 });
 

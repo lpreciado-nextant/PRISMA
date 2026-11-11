@@ -268,7 +268,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
   const preview: Solution = {
     id: saved?.id ?? "preview", name: draft.name, summary: draft.summary, whatItDoes: draft.whatItDoes, businessValue: draft.businessValue,
     specializationArea: selectedAreas[0] ?? "ai", specializationAreas: selectedAreas, status: MATURITY_OPTIONS.find(option => option.value === draft.maturity)?.label as Solution["status"],
-    publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted, challenges: draft.challenges, lessonsLearned: draft.lessonsLearned,
+    publicationStatus: "Draft", safetyAcknowledged: draft.safetyAcknowledged, clientSafeReviewed: false, clientContext: draft.clientContext, clientContextRedacted: draft.clientContextRedacted, challenges: draft.challenges, lessonsLearned: draft.lessonsLearned, bestPractices: draft.bestPractices,
     clientRoles: (graphReferences.clientRoles ?? []).filter(option => graph.clientRoleIds.includes(option.id)).map(option => option.name),
     contributors: graph.contributors.map((person, index) => ({ id: person.id ?? String(index), builtBy: { id: person.personId, name: graphReferences.people?.find(option => option.id === person.personId)?.name ?? "Unavailable consultant", email: "", level: graphReferences.people?.find(option => option.id === person.personId)?.level } })),
     estimatedMinimumHours: draft.estimatedMinimumHours, complexity: draft.complexityValue != null ? COMPLEXITY_BY_CHOICE[draft.complexityValue] : undefined,
@@ -400,7 +400,7 @@ function DraftEditor({ initial, references, graphReferences: initialGraphReferen
             selectedRoles={graph.clientRoleIds} roles={graphReferences.clientRoles?.map(option => option.id)} onRoles={clientRoleIds => changeGraph({ ...graph, clientRoleIds })}
             getRoleLabel={id => graphReferences.clientRoles?.find(option => option.id === id)?.name ?? "Unavailable client role"}
             associated={clientAssociated} onAssociated={setClientAssociated} />
-          <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={change} />
+          <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} bestPractices={draft.bestPractices} onChange={change} />
         </StepShell>}
         {step === 2 && <StepShell title="Classify & tag"><div className="flex min-w-0 flex-col gap-5"><CapabilityFields groups={capabilityGroups} main={draft.capabilityId || undefined} secondary={graph.secondaryCapabilityIds}
           mainArea={mainArea ? areaName(mainArea.name) : undefined} mainOwner={mainOwner} onMain={chooseCapability} onSecondary={chooseSecondary} /></div><DraftGraphEditor graph={graph} references={graphReferences} section="tags" onChange={changeGraph} onCreateTechnology={addTechnology} /></StepShell>}

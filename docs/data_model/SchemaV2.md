@@ -1,6 +1,6 @@
 # Nextant Solution Library — Dataverse schema (v2)
 
-**Status:** Authoritative · matches the live tables in Nextant Pulse (`PRISMA_Dev`); the optional contributor sort-order column is also deployed in managed production 1.0.0.6, still unused · **Last updated:** 2026-11-03
+**Status:** Authoritative · matches the live tables in Nextant Pulse (`PRISMA_Dev`); the optional contributor sort-order column is also deployed in managed production 1.0.0.6, still unused · **Last updated:** 2026-11-11
 
 The data model behind PRISMA: what each Dataverse table holds, its columns with their live logical names, and the rules the plug-ins enforce on them. It replaces the [v1 schema](nextant-solution-library-dataverse-schema.md). Why each design was chosen lives in the ADRs; how it changed over time is in [History](#history) at the end.
 
@@ -76,6 +76,7 @@ erDiagram
         text nx_clientcontextredacted
         text nx_challenges "internal"
         text nx_lessonslearned "internal"
+        text nx_bestpractices "internal"
         choice nx_status
         choice nx_publicationstatus
         choice nx_reviewoutcome
@@ -218,6 +219,7 @@ The reusable solution — the unit of value a CSM finds and presents.
 | Client context (redacted) | `nx_clientcontextredacted` | Text | When client is set | The only client text present mode shows. Written by the contributor; names are never scrubbed automatically |
 | Challenges | `nx_challenges` | Text area (2000) | No | 🔒 Internal. Blockers and difficulties met while building it. Not searched |
 | Lessons learned | `nx_lessonslearned` | Text area (2000) | No | 🔒 Internal. Recommendations for the next team. Not searched |
+| Best practices | `nx_bestpractices` | Text area (2000) | No | 🔒 Internal. What worked well and is worth reusing. Not searched. Created in dev 2026-11-11; reaches production only through `PRISMA_Release` |
 
 **Effort** ([ADR-0014](../architecture/decisions/adr-0014-solution-effort-estimate-and-complexity.md))
 
@@ -724,6 +726,7 @@ One line per change to the model; details in the linked ADRs and the [change log
 - **2026-10-13** — `nx_challenges` and `nx_lessonslearned`; `nx_solutionsuggestion` (ADR-0012); capabilities renamed to the framework, with area and owner.
 - **2026-10-14** — `nx_solutionsuggestion.nx_addressedon`.
 - **2026-10-15** — Librarian editing columns (ADR-0013); solution-level `nx_estimatedminimumhours` and `nx_complexity`, per-person hours retired (ADR-0014).
+- **2026-11-11** — `nx_bestpractices` (internal, 2000) in dev, shown beside challenges and lessons learned.
 - **2026-10-21** — `nx_clientrole` table and its N:N; the old `nx_solution.nx_clientrole` choice deleted.
 - **2026-10-23** — Capability list read back: 13 active, four in Intelligent Business Operations, AI Transformation removed, every capability with an owner.
 - **2026-10-23 / 26** — Other capability (`nx_Solution_nx_SecondaryCapability`), saved by the plug-ins from 2026-10-26; areas derived from capabilities; capability owners scope librarians; uploaded files get display names.

@@ -114,6 +114,8 @@ export interface Solution {
   challenges?: string;
   /** `nx_lessonslearned` (2000). Internal only: never read or shown in present mode. */
   lessonsLearned?: string;
+  /** `nx_bestpractices` (2000). Internal only: never read or shown in present mode. */
+  bestPractices?: string;
   /** Data URL or image URL for the card poster; stands in for the Dataverse Image column. */
   thumbnail?: string;
   /** Additional screenshots shown on the detail page (`nx_solutionimage`, 1:N). */

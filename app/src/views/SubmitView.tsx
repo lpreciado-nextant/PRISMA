@@ -53,6 +53,7 @@ interface Draft {
   /** Internal only; stripped from the present catalogue. */
   challenges: string;
   lessonsLearned: string;
+  bestPractices: string;
 }
 
 const EMPTY_DRAFT: Draft = {
@@ -77,6 +78,7 @@ const EMPTY_DRAFT: Draft = {
   complexity: "",
   challenges: "",
   lessonsLearned: "",
+  bestPractices: "",
 };
 
 const DRAFT_KEY = "nsl.draft.v2";
@@ -154,7 +156,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       assets: initialSolution.assets, clientContext: initialSolution.clientContext ?? "",
       redacted: initialSolution.clientContextRedacted ?? "", clientRoles: initialSolution.clientRoles.filter((role): role is ClientRole => (CLIENT_ROLES as string[]).includes(role)),
       estimatedHours: initialSolution.estimatedMinimumHours === undefined ? "" : String(initialSolution.estimatedMinimumHours), complexity: initialSolution.complexity ?? "",
-      challenges: initialSolution.challenges ?? "", lessonsLearned: initialSolution.lessonsLearned ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
+      challenges: initialSolution.challenges ?? "", lessonsLearned: initialSolution.lessonsLearned ?? "", bestPractices: initialSolution.bestPractices ?? "", safetyAcknowledged: initialSolution.publicationStatus === "Draft" && initialSolution.safetyAcknowledged,
     } : loadDraft(draftKey);
     if (saved.contributors.length) return saved;
     return { ...saved, contributors: [{
@@ -278,6 +280,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
       clientRoles: draft.clientRoles,
       challenges: draft.challenges.trim() || undefined,
       lessonsLearned: draft.lessonsLearned.trim() || undefined,
+      bestPractices: draft.bestPractices.trim() || undefined,
       thumbnail: draft.thumbnail || undefined,
       images: draft.images.map(({ id, src, caption }) => ({ id, src, caption: caption || undefined })),
       dateAdded: initialSolution?.dateAdded ?? new Date().toISOString().slice(0, 10),
@@ -408,7 +411,7 @@ export function SubmitView({ user, draftKey = DRAFT_KEY, activeStep, onStepChang
             <EffortFields hours={draft.estimatedHours} complexity={draft.complexity || undefined} onHours={value => set("estimatedHours", value)} onComplexity={value => set("complexity", value)} error={hoursError} />
             </NamedSection>
             <ClientFields framed value={draft} onText={set} selectedRoles={draft.clientRoles} roles={CLIENT_ROLES} onRoles={(value) => set("clientRoles", value)} associated={clientAssociated} onAssociated={setClientAssociated} />
-            <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} onChange={set} />
+            <LessonsFields challenges={draft.challenges} lessonsLearned={draft.lessonsLearned} bestPractices={draft.bestPractices} onChange={set} />
           </StepShell>
         )}
 

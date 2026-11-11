@@ -228,11 +228,12 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
             </ul>
           </Panel>)}
 
-          {!present && (solution.challenges || solution.lessonsLearned) && (
-            <Panel title="Challenges & lessons learned · internal only">
+          {!present && (solution.challenges || solution.lessonsLearned || solution.bestPractices) && (
+            <Panel title="Challenges, lessons & best practices · internal only">
               <dl className="flex flex-col gap-4 text-[15px]">
                 {solution.challenges && <div><dt className="eyebrow mb-1">Challenges</dt><dd><Markdown>{solution.challenges}</Markdown></dd></div>}
                 {solution.lessonsLearned && <div><dt className="eyebrow mb-1">Lessons learned</dt><dd><Markdown>{solution.lessonsLearned}</Markdown></dd></div>}
+                {solution.bestPractices && <div><dt className="eyebrow mb-1">Best practices</dt><dd><Markdown>{solution.bestPractices}</Markdown></dd></div>}
               </dl>
             </Panel>
           )}

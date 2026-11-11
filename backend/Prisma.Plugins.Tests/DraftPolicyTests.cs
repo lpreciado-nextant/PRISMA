@@ -18,6 +18,9 @@ namespace Prisma.Plugins.Tests
             var lessons = DraftPolicy.Parse(Input(",\"challenges\":\" Late data access \",\"lessonsLearned\":\"Ask for access first\""));
             Assert.Equal("Late data access", lessons.GetAttributeValue<string>("nx_challenges"));
             Assert.Equal("Ask for access first", lessons.GetAttributeValue<string>("nx_lessonslearned"));
+            Assert.Equal("Reuse the template", DraftPolicy.Parse(Input(",\"bestPractices\":\" Reuse the template \"")).GetAttributeValue<string>("nx_bestpractices"));
+            Assert.Null(DraftPolicy.Parse(Input("")).GetAttributeValue<string>("nx_bestpractices"));
+            Assert.Contains("nx_bestpractices", DraftPolicy.CoreColumns);
             Assert.Null(DraftPolicy.Parse(Input("")).GetAttributeValue<string>("nx_challenges"));
             Assert.Contains("nx_challenges", DraftPolicy.CoreColumns);
             Assert.Contains("nx_lessonslearned", DraftPolicy.CoreColumns);
@@ -539,6 +542,8 @@ namespace Prisma.Plugins.Tests
                 Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"" + field + "\":\"" + new string('x', 201) + "\"")));
             Assert.NotNull(DraftPolicy.Parse(Input(",\"whatItDoes\":\"" + new string('x', 4000) + "\"")));
             Assert.NotNull(DraftPolicy.Parse(Input(",\"lessonsLearned\":\"" + new string('x', 2000) + "\"")));
+            Assert.NotNull(DraftPolicy.Parse(Input(",\"bestPractices\":\"" + new string('x', 2000) + "\"")));
+            Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"bestPractices\":\"" + new string('x', 2001) + "\"")));
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse(Input(",\"challenges\":\"" + new string('x', 2001) + "\"")));
             Assert.Throws<InvalidPluginExecutionException>(() => DraftPolicy.Parse("[]"));
         }
