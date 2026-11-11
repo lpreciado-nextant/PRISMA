@@ -595,7 +595,7 @@ export function LessonsFields({ challenges, lessonsLearned, bestPractices, onCha
     <div className="grid min-w-0 items-start gap-5 lg:grid-cols-3">
     <Field inputId={`${id}-challenges`} label="Challenges" optional hint="Blockers, risks or difficulties you hit while building it."><MarkdownEditor id={`${id}-challenges`} label="Challenges" value={challenges} onChange={value => onChange("challenges", value)} placeholder="e.g. Test data arrived late, so matching rules were tuned on a small sample." maxLength={2000} /></Field>
     <Field inputId={`${id}-lessons`} label="Lessons learned" optional hint="Recommendations or implementation notes for the next team."><MarkdownEditor id={`${id}-lessons`} label="Lessons learned" value={lessonsLearned} onChange={value => onChange("lessonsLearned", value)} placeholder="e.g. Request data access in week one and agree on a sample with finance." maxLength={2000} /></Field>
-    <Field inputId={`${id}-practices`} label="Best practices" optional hint="What worked well and is worth reusing: approaches, patterns or tools."><MarkdownEditor id={`${id}-practices`} label="Best practices" value={bestPractices} onChange={value => onChange("bestPractices", value)} placeholder="e.g. Keep prompts in versioned files and review them like code." maxLength={2000} /></Field>
+    <Field inputId={`${id}-practices`} label="Best practices" optional hint="What worked well and is worth reusing."><MarkdownEditor id={`${id}-practices`} label="Best practices" value={bestPractices} onChange={value => onChange("bestPractices", value)} placeholder="e.g. Showing the client a first version every two weeks brought feedback early and avoided rework." maxLength={2000} /></Field>
     </div>
   </NamedSection>;
 }

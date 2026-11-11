@@ -228,16 +228,6 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
             </ul>
           </Panel>)}
 
-          {!present && (solution.challenges || solution.lessonsLearned || solution.bestPractices) && (
-            <Panel title="Challenges, lessons & best practices · internal only">
-              <dl className="flex flex-col gap-4 text-[15px]">
-                {solution.challenges && <div><dt className="eyebrow mb-1">Challenges</dt><dd><Markdown>{solution.challenges}</Markdown></dd></div>}
-                {solution.lessonsLearned && <div><dt className="eyebrow mb-1">Lessons learned</dt><dd><Markdown>{solution.lessonsLearned}</Markdown></dd></div>}
-                {solution.bestPractices && <div><dt className="eyebrow mb-1">Best practices</dt><dd><Markdown>{solution.bestPractices}</Markdown></dd></div>}
-              </dl>
-            </Panel>
-          )}
-
           {!present && solution.libraryNotes && (
             <div
               className="glass glass-lite rounded-[20px] p-5"
@@ -353,6 +343,31 @@ export function DetailView({ solution, present, onEdit, onBack, backLabel, actio
           {!present && aside}
         </div>
       </div>
+
+      {/* Internal reflections span the full width under the two columns: one column per filled field (up to three), stacked on small screens. */}
+      {!present && (() => {
+        const reflections = [
+          { label: "Challenges", text: solution.challenges },
+          { label: "Lessons learned", text: solution.lessonsLearned },
+          { label: "Best practices", text: solution.bestPractices },
+        ].filter((item) => item.text);
+        if (reflections.length === 0) return null;
+        const columns = reflections.length === 3 ? "lg:grid-cols-3" : reflections.length === 2 ? "lg:grid-cols-2" : "";
+        return (
+          <div className="mt-6">
+            <Panel title="Challenges, lessons & best practices · internal only">
+              <dl className={`grid gap-x-8 gap-y-6 text-[15px] ${columns}`}>
+                {reflections.map((item) => (
+                  <div key={item.label} className="min-w-0 lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-(--glass-edge) lg:[&:not(:first-child)]:pl-8">
+                    <dt className="eyebrow mb-2">{item.label}</dt>
+                    <dd><Markdown>{item.text ?? ""}</Markdown></dd>
+                  </div>
+                ))}
+              </dl>
+            </Panel>
+          </div>
+        );
+      })()}
     </div>
   );
 }
